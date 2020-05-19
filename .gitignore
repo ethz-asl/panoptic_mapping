@@ -1,0 +1,6 @@
+# clion stuff
+cmake-build-debug/
+.idea/
+
+# data
+data/
