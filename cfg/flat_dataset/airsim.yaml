@@ -24,6 +24,9 @@ sensors:
       AutoExposureMaxBrightness: 0.64
       AutoExposureMinBrightness: 0.03
       MotionBlurAmount: 0
+      TargetGamma: 1.0
+      ProjectionMode: ""
+      OrthoWidth: 5.12
     T_B_S:
       - [1, 0, 0, 0.3]
       - [0, 1, 0, 0]
@@ -39,6 +42,14 @@ sensors:
       Width: 640
       Height: 480
       FOV_Degrees: 90
+      AutoExposureSpeed: 100
+      AutoExposureBias: 0
+      AutoExposureMaxBrightness: 0.64
+      AutoExposureMinBrightness: 0.03
+      MotionBlurAmount: 0
+      TargetGamma: 1.0
+      ProjectionMode: ""
+      OrthoWidth: 5.12
     T_B_S:
       - [1, 0, 0, 0.3]
       - [0, 1, 0, 0]
@@ -53,6 +64,36 @@ sensors:
       Width: 640
       Height: 480
       FOV_Degrees: 90
+      AutoExposureSpeed: 0
+      AutoExposureBias: 0
+      AutoExposureMaxBrightness: 0
+      AutoExposureMinBrightness: 0
+      MotionBlurAmount: 0
+      TargetGamma: 1.0
+      ProjectionMode: ""
+      OrthoWidth: 5.12
+    T_B_S:
+      - [1, 0, 0, 0.3]
+      - [0, 1, 0, 0]
+      - [0, 0, 1, 0]
+      - [0, 0, 0, 1]
+      
+  Id_cam:
+    sensor_type: Camera
+    image_type: Infrared
+    rate: 10
+    CaptureSettings:   
+      Width: 640
+      Height: 480
+      FOV_Degrees: 90
+      AutoExposureSpeed: 0
+      AutoExposureBias: 0
+      AutoExposureMaxBrightness: 0
+      AutoExposureMinBrightness: 0
+      MotionBlurAmount: 0
+      TargetGamma: 1.0
+      ProjectionMode: ""
+      OrthoWidth: 5.12
     T_B_S:
       - [1, 0, 0, 0.3]
       - [0, 1, 0, 0]
@@ -64,11 +105,18 @@ sensors:
 #    rate: 100
     
 processors:
-  RGB_pcl:
+#  RGB_pcl:
+#    processor_type: DepthToPointcloud
+#    depth_camera_name: Depth_cam
+#    color_camera_name: Scene_cam
+#  Seg_pcl:
+#    processor_type: DepthToPointcloud
+#    depth_camera_name: Depth_cam
+#    color_camera_name: Seg_cam
+  Pointcloud:
     processor_type: DepthToPointcloud
     depth_camera_name: Depth_cam
     color_camera_name: Scene_cam
-  Seg_pcl:
-    processor_type: DepthToPointcloud
-    depth_camera_name: Depth_cam
-    color_camera_name: Seg_cam
+    segmentation_camera_name: Id_cam
+    max_ray_length: 5
+    use_infrared_compensation: true
