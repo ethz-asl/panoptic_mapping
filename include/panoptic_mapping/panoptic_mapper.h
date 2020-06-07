@@ -6,13 +6,13 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <voxblox/integrator/tsdf_integrator.h>
 #include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
-#include "panoptic_mapping/input/label_handler.h"
 #include "panoptic_mapping/core/submap.h"
 #include "panoptic_mapping/core/submap_collection.h"
+#include "panoptic_mapping/input/label_handler.h"
+#include "panoptic_mapping/input/pointcloud_integrator_base.h"
 #include "panoptic_mapping/visualization/tsdf_visualizer.h"
 
 
@@ -51,7 +51,7 @@ class PanopticMapper {
   // members
   SubmapCollection submaps_;
   LabelHandler label_handler_;
-  std::unique_ptr<voxblox::FastTsdfIntegrator> tsdf_integrator_;
+  std::unique_ptr<PointcloudIntegratorBase> pointcloud_integrator_;
   voxgraph::TfTransformer tf_transformer_;
   TsdfVisualizer tsdf_visualizer_;
 

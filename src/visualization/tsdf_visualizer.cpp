@@ -6,7 +6,7 @@
 
 namespace panoptic_mapping {
 
-bool TsdfVisualizer::setupConfigFromRos(const ros::NodeHandle &nh) {
+bool TsdfVisualizer::setupFromRos(const ros::NodeHandle &nh) {
   config_ = voxblox::getMeshIntegratorConfigFromRosParam(nh);
 }
 

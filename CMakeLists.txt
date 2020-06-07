@@ -34,6 +34,8 @@ cs_add_library(${PROJECT_NAME}
         src/core/submap.cpp
         src/core/submap_collection.cpp
         src/input/label_handler.cpp
+        src/input/pointcloud_integrator_factory.cpp
+        src/input/naive_integrator.cpp
         #src/input/pointcloud_integrator.cpp
         src/visualization/tsdf_visualizer.cpp
         )

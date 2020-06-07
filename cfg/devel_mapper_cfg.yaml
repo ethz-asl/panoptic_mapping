@@ -9,13 +9,15 @@ T_base_sensor:
 label_path: /home/lukas/catkin_ws/src/panoptic_mapping/data/flat_dataset/labels.csv
 
 tsdf_voxel_size: 0.1
+
 tsdf_integrator:
-  horizontal_resolution: 640
-  vertical_resolution: 480
-  vertical_fov_deg: 73.7397952
-  min_ray_length_m: 0.1
-  max_ray_length_m: 5
-  voxel_carving_enabled: false
+  integrator_type: naive
+#  horizontal_resolution: 640
+#  vertical_resolution: 480
+#  vertical_fov_deg: 73.7397952
+#  min_ray_length_m: 0.1
+#  max_ray_length_m: 5
+#  voxel_carving_enabled: false
 
 
 #  truncation_distance: 0.2

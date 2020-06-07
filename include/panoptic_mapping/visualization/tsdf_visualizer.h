@@ -17,7 +17,7 @@ class TsdfVisualizer {
   virtual ~TsdfVisualizer() = default;
 
   // init
-  bool setupConfigFromRos(const ros::NodeHandle &nh);
+  bool setupFromRos(const ros::NodeHandle &nh);
 
   // meshing
   void setMeshColoringMode(const std::string &coloring_mode) { mesh_coloring_method_ = coloring_mode; }

@@ -12,7 +12,6 @@
 
 namespace panoptic_mapping {
 
-
 /**
  * Multi-layer TSDF-Integrator. Based on the voxblox projective tsdf integrator and hacked together for testing.
  */
