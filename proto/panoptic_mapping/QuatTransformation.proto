@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package panoptic_mapping;
+
+message QuatTransformationProto {
+
+  optional float tx = 1;
+  optional float ty = 2;
+  optional float tz = 3;
+
+  optional float qw = 4;
+  optional float qx = 5;
+  optional float qy = 6;
+  optional float qz = 7;
+}

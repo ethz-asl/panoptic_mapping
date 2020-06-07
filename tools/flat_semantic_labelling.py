@@ -164,4 +164,4 @@ if __name__ == "__main__":
     labels, classes, mesh_ids, panoptic_count = create_label_ids()
     #get_available_meshes(labels)
     apply_labels(mesh_ids)
-    export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/catkin_ws/src/panoptic_mapping/data/flat_labels.csv")
+    #export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/catkin_ws/src/panoptic_mapping/data/flat_labels.csv")
