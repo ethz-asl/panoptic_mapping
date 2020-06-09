@@ -4,6 +4,7 @@
 #include <iostream>
 #include <list>
 #include <vector>
+#include <thread>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <voxblox/integrator/integrator_utils.h>
@@ -12,7 +13,7 @@ namespace panoptic_mapping {
 
 constexpr float kFloatEpsilon = 1e-6;    // Used for weights
 
-void ProjectiveMutliTSDFIntegrator::setupFromConfig(PointcloudIntegratorBase::Config* config){
+void ProjectiveMutliTSDFIntegrator::setupFromConfig(PointcloudIntegratorBase::Config *config) {
   CHECK_NOTNULL(config);
   auto cfg = dynamic_cast<Config *>(config);
   if (cfg) {
@@ -23,29 +24,40 @@ void ProjectiveMutliTSDFIntegrator::setupFromConfig(PointcloudIntegratorBase::Co
   }
   // check the config for validity
   CHECK_GT(config_.horizontal_resolution, 0)
-    << "The horizontal sensor resolution must be a positive integer";
+    << "The horizontal sensor resolution must be a positive integer.";
   CHECK_GT(config_.vertical_resolution, 0)
-    << "The vertical sensor resolution must be a positive integer";
+    << "The vertical sensor resolution must be a positive integer.";
   CHECK_GT(config_.vertical_fov_deg, 0.0)
-    << "The vertical field of view of the sensor must be a positive float";
+    << "The vertical field of view of the sensor must be a positive float.";
 
   // set members
-  vertical_fov_rad_ = config_.vertical_fov_deg  * M_PI /    180.0;
+  vertical_fov_rad_ = config_.vertical_fov_deg * M_PI / 180.0;
   range_image_ = Eigen::MatrixXf(config_.vertical_resolution, config_.horizontal_resolution);
   id_image_ = Eigen::MatrixXi(config_.vertical_resolution, config_.horizontal_resolution);
 }
 
 void ProjectiveMutliTSDFIntegrator::processPointcloud(SubmapCollection *submaps,
-                               const Transformation &T_M_C,
-                               const Pointcloud &pointcloud,
-                               const Colors &colors,
-                               const std::vector<int> &ids){
-
-}
-
-/*void ProjectiveMutliTSDFIntegrator::readPointcloud(const Transformation &T_W_C, const Pointcloud &pointcloud, const Colors &colors, const std::vector<int> &ids){
+                                                      const Transformation &T_M_C,
+                                                      const Pointcloud &pointcloud,
+                                                      const Colors &colors,
+                                                      const std::vector<int> &ids) {
+  CHECK_NOTNULL(submaps);
   CHECK_EQ(pointcloud.size(), colors.size());
   CHECK_EQ(pointcloud.size(), ids.size());
+
+  // convert and read the pointcloud
+  readPointcloud(T_M_C, pointcloud, colors, ids);
+
+  // integrate all submaps
+  for (auto &submap : *submaps) {
+    integratePointcloudToSubmaps(&submap);
+  }
+}
+
+void ProjectiveMutliTSDFIntegrator::readPointcloud(const Transformation &T_M_C,
+                                                   const Pointcloud &pointcloud,
+                                                   const Colors &colors,
+                                                   const std::vector<int> &ids) {
   range_image_.setZero();
   id_image_.setZero();
   bearing_points_.clear();
@@ -84,28 +96,28 @@ void ProjectiveMutliTSDFIntegrator::processPointcloud(SubmapCollection *submaps,
   }
 }
 
-void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap* subamp){
-  CHECK_NOTNULL(subamp);
+void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap *submap) {
+  CHECK_NOTNULL(submap);
   // transformation of submap to camera
-  Transformation T_S_C =T_W_C_; //submap->T_M_S.inv() *T_M_C_
+  Transformation T_S_C = T_W_C_; //submap->T_M_S.inv() *T_M_C_
 
   // set the integration layer
-  setTsdfIntegrationLayer(subamp->getTsdfLayerPtr());
+  setTsdfIntegrationLayer(submap->getTsdfLayerPtr());
 
   // find touched blocks
-  voxblox::IndexSet touched_block_indices;
-  findTouchedBlocks(&touched_block_indices);
+  voxblox::IndexSet touched_block_indices, containing_block_indices;
+  findTouchedBlocks(&touched_block_indices, &containing_block_indices);
 
   // Allocate all the blocks
   // NOTE: The layer's BlockHashMap is not thread safe, so doing it here before
   //       we start the multi-threading makes life easier
-  for (const auto &block_index : touched_block_indices) {
+  for (const auto &block_index : containing_block_indices) {
     layer_->allocateBlockPtrByIndex(block_index);
   }
 
   // Process all blocks
   if (config_.integrator_threads == 1) {
-    updateTsdfBlocks(T_G_C, range_image_, touched_block_indices, deintegrate);
+    updateTsdfBlocks(T_S_C, range_image_, touched_block_indices);
   } else {
     std::vector<voxblox::IndexSet> block_index_subsets(
         config_.integrator_threads);
@@ -118,8 +130,8 @@ void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap* subamp)
     std::list<std::thread> integration_threads;
     for (size_t i = 0; i < config_.integrator_threads; ++i) {
       integration_threads.emplace_back(
-          &ProjectiveTsdfIntegrator::updateTsdfBlocks, this, T_G_C,
-          range_image_, block_index_subsets[i], deintegrate);
+          &ProjectiveMutliTSDFIntegrator::updateTsdfBlocks, this, T_S_C,
+          range_image_, block_index_subsets[i]);
     }
     for (std::thread &integration_thread : integration_threads) {
       integration_thread.join();
@@ -128,15 +140,17 @@ void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap* subamp)
 
 }
 
-void ProjectiveMutliTSDFIntegrator::setTsdfIntegrationLayer(voxblox::Layer<voxblox::TsdfVoxel> *tsdf_layer){
+void ProjectiveMutliTSDFIntegrator::setTsdfIntegrationLayer(voxblox::Layer<voxblox::TsdfVoxel> *tsdf_layer) {
   CHECK_NOTNULL(tsdf_layer);
   layer_ = tsdf_layer;
-  truncation_distance_ = 2.0 * layer_->voxel_size();  // heuristic for the moment
-
+  voxel_size_ = layer_->voxel_size();
+  truncation_distance_ = 2.0 * voxel_size_;  // heuristic for the moment
 }
 
-void ProjectiveMutliTSDFIntegrator::findTouchedBlocks(voxblox::IndexSet *touched_block_indices){
+void ProjectiveMutliTSDFIntegrator::findTouchedBlocks(voxblox::IndexSet *touched_block_indices,
+                                                      voxblox::IndexSet *containing_blocks_indices) {
   CHECK_NOTNULL(touched_block_indices);
+  CHECK_NOTNULL(containing_blocks_indices);
 
   // This is the implementation taken from projective_tsdf_integrator.
   voxblox::Point t_G_C_scaled = T_W_C_.getPosition() * layer_->block_size_inv();
@@ -145,25 +159,28 @@ void ProjectiveMutliTSDFIntegrator::findTouchedBlocks(voxblox::IndexSet *touched
     if (config_.min_ray_length_m <= distances_[i] &&
         distances_[i] <= config_.max_ray_length_m) {
       Point point_G_scaled = T_W_C_ *
-              (bearing_points_[i] * (distances_[i] + truncation_distance_)) *  layer_->block_size_inv();
+          (bearing_points_[i] * (distances_[i] + truncation_distance_)) * layer_->block_size_inv();
       Point t_G_C_truncated_scaled;
       if (config_.voxel_carving_enabled) {
         t_G_C_truncated_scaled = t_G_C_scaled;
       } else {
-        t_G_C_truncated_scaled = point_G_scaled - T_W_C_ * bearing_points_[i] *  truncation_distance_ * layer_->block_size_inv();
+        t_G_C_truncated_scaled =
+            point_G_scaled - T_W_C_ * bearing_points_[i] * truncation_distance_ * layer_->block_size_inv();
       }
       voxblox::GlobalIndex block_index;
       voxblox::RayCaster ray_caster(point_G_scaled, t_G_C_truncated_scaled);
       while (ray_caster.nextRayIndex(&block_index)) {
         touched_block_indices->insert(block_index.cast<voxblox::IndexElement>());
       }
+      // This lists all blocks which contain a point (last step of the ray ends in this block)
+      containing_blocks_indices->insert(block_index.cast<voxblox::IndexElement>());
     }
   }
 }
 
 void ProjectiveMutliTSDFIntegrator::updateTsdfBlocks(
     const Transformation &T_G_C, const Eigen::MatrixXf &range_image,
-    const voxblox::IndexSet &touched_block_indices, const bool deintegrate) {
+    const voxblox::IndexSet &touched_block_indices) {
   for (const voxblox::BlockIndex &block_index : touched_block_indices) {
     voxblox::Block<TsdfVoxel>::Ptr block_ptr =
         layer_->getBlockPtrByIndex(block_index);
@@ -175,14 +192,14 @@ void ProjectiveMutliTSDFIntegrator::updateTsdfBlocks(
       const Point t_C_voxel =
           T_G_C.inverse() *
               block_ptr->computeCoordinatesFromLinearIndex(linear_index);
-      updateTsdfVoxel(T_G_C, range_image, t_C_voxel, tsdf_voxel, deintegrate);
+      updateTsdfVoxel(T_G_C, range_image, t_C_voxel, tsdf_voxel);
     }
   }
 }
 
 void ProjectiveMutliTSDFIntegrator::updateTsdfVoxel(
     const Transformation &T_G_C, const Eigen::MatrixXf &range_image,
-    const Point &t_C_voxel, TsdfVoxel *tsdf_voxel, const bool deintegrate) {
+    const Point &t_C_voxel, TsdfVoxel *tsdf_voxel) {
   // Skip voxels that are too far or too close
   const float distance_to_voxel = t_C_voxel.norm();
   if (distance_to_voxel < config_.min_ray_length_m ||
@@ -197,22 +214,19 @@ void ProjectiveMutliTSDFIntegrator::updateTsdfVoxel(
   }
 
   // Compute the signed distance
-  const float distance_to_surface = interpolate(range_image, h, w);
+  const float distance_to_surface = interpolate(h, w);
   const float sdf = distance_to_surface - distance_to_voxel;
 
   // Approximate how many rays would have updated the voxel
   // NOTE: We do this to reflect that we are more certain about
   //       the updates applied to nearer voxels
-  const float num_rays_intersecting_voxel =
-      ray_intersections_per_distance_squared_ /
-          (distance_to_voxel * distance_to_voxel);
+  const float num_rays_intersecting_voxel = ray_intersections_per_distance_squared_ /   (distance_to_voxel * distance_to_voxel);
 
   // Skip voxels that fall outside the TSDF truncation distance
-  if (sdf < -config_.default_truncation_distance) {
+  if (sdf < -truncation_distance_) {
     return;
   }
-  if (!config_.voxel_carving_enabled &&
-      sdf > config_.default_truncation_distance) {
+  if (!config_.voxel_carving_enabled && sdf > truncation_distance_) {
     return;
   }
 
@@ -220,52 +234,37 @@ void ProjectiveMutliTSDFIntegrator::updateTsdfVoxel(
   float observation_weight;
   {
     // Set the sign of the measurement weight
-    if (deintegrate) {
-      observation_weight = -num_rays_intersecting_voxel;
-    } else {
-      observation_weight = num_rays_intersecting_voxel;
-    }
+    observation_weight = num_rays_intersecting_voxel;
 
     // NOTE: Scaling the weight by the inverse square depth is not yet
     //       supported, since this problem is ill-defined for LiDAR
 
     // Apply weight drop-off if appropriate
-    const FloatingPoint dropoff_epsilon = voxel_size_;
+    const voxblox::FloatingPoint dropoff_epsilon = voxel_size_;
     if (config_.use_weight_dropoff && sdf < -dropoff_epsilon) {
-      observation_weight =
-          observation_weight * (config_.default_truncation_distance + sdf) /
-              (config_.default_truncation_distance - dropoff_epsilon);
+      observation_weight = observation_weight * (truncation_distance_ + sdf) / (truncation_distance_ - dropoff_epsilon);
       observation_weight = std::max(observation_weight, 0.0f);
     }
 
     // Apply sparsity compensation if appropriate
-    if (config_.use_sparsity_compensation_factor) {
-      if (std::abs(sdf) < config_.default_truncation_distance) {
-        observation_weight *= config_.sparsity_compensation_factor;
-      }
-    }
+//    if (config_.use_sparsity_compensation_factor) {
+//      if (std::abs(sdf) < config_.default_truncation_distance) {
+//        observation_weight *= config_.sparsity_compensation_factor;
+//      }
+//    }
   }
 
   // Truncate the new total voxel weight according to the max weight
-  const float new_voxel_weight =
-      std::min(tsdf_voxel->weight + observation_weight, config_.max_weight);
-
-  // Make sure voxels go back to zero when deintegrating
-  if (deintegrate && new_voxel_weight < 1.0) {
-    tsdf_voxel->distance = 0.0f;
-    tsdf_voxel->weight = 0.0f;
-    return;
-  }
+  const float new_voxel_weight = std::min(tsdf_voxel->weight + observation_weight, config_.max_weight);
 
   // Store the updated voxel weight and distance
-  tsdf_voxel->distance = (tsdf_voxel->distance * tsdf_voxel->weight +
-      std::min(config_.default_truncation_distance, sdf) *
-          observation_weight) /
-      new_voxel_weight;
+  tsdf_voxel->distance =
+      (tsdf_voxel->distance * tsdf_voxel->weight + std::min(truncation_distance_, sdf) * observation_weight)
+          / new_voxel_weight;
   tsdf_voxel->weight = new_voxel_weight;
 }
 
-template <typename T>
+template<typename T>
 Point ProjectiveMutliTSDFIntegrator::imageToBearing(const T h, const T w) {
   double altitude_angle =
       vertical_fov_rad_ * (1.0 / 2.0 - h / (config_.vertical_resolution - 1.0));
@@ -280,7 +279,7 @@ Point ProjectiveMutliTSDFIntegrator::imageToBearing(const T h, const T w) {
   return bearing;
 }
 
-template <typename T>
+template<typename T>
 bool ProjectiveMutliTSDFIntegrator::bearingToImage(const Point &b_C_normalized, T *h, T *w) {
   CHECK_NOTNULL(h);
   CHECK_NOTNULL(w);
@@ -309,7 +308,11 @@ bool ProjectiveMutliTSDFIntegrator::bearingToImage(const Point &b_C_normalized, 
   }
 
   return (0 < *w && *w < config_.horizontal_resolution - 1);
-}*/
+}
 
+float ProjectiveMutliTSDFIntegrator::interpolate(const float h, const float w){
+  // nearest neighbor lookup
+  return range_image_(std::round(h), std::round(w));
+}
 
 }  // namespace panoptic_mapping
