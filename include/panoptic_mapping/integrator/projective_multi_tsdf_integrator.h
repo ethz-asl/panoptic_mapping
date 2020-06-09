@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_POINTCLOUD_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_POINTCLOUD_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_MULTI_TSDF_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_MULTI_TSDF_INTEGRATOR_H_
 
 #include <memory>
 #include <map>
@@ -9,13 +9,15 @@
 
 #include "panoptic_mapping/core/submap.h"
 #include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/integrator/pointcloud_integrator_base.h"
+
 
 namespace panoptic_mapping {
 
 /**
  * Multi-layer TSDF-Integrator. Based on the voxblox projective tsdf integrator and hacked together for testing.
  */
-class PointcloudIntegrator {
+class ProjectiveMutliTSDFIntegrator {
  public:
   struct Config{
     // sensor model
@@ -28,8 +30,8 @@ class PointcloudIntegrator {
     int integrator_threads = 8;
   };
 
-  PointcloudIntegrator(const Config& config);
-  virtual ~PointcloudIntegrator() = default;
+  ProjectiveMutliTSDFIntegrator() = default;
+  virtual ~ProjectiveMutliTSDFIntegrator() = default;
 
   // initialization utility
   static Config getConfigFromRos(const ros::NodeHandle &node_handle);

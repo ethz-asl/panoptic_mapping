@@ -1,4 +1,4 @@
-#include "panoptic_mapping/input/label_handler.h"
+#include "panoptic_mapping/preprocessing/label_handler.h"
 
 #include <3rd_party/csv.h>
 

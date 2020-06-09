@@ -1,4 +1,4 @@
-#include "panoptic_mapping/input/naive_integrator.h"
+#include "panoptic_mapping/integrator/naive_integrator.h"
 
 #include <voxblox_ros/ros_params.h>
 

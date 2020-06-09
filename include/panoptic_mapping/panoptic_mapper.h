@@ -11,8 +11,8 @@
 
 #include "panoptic_mapping/core/submap.h"
 #include "panoptic_mapping/core/submap_collection.h"
-#include "panoptic_mapping/input/label_handler.h"
-#include "panoptic_mapping/input/pointcloud_integrator_base.h"
+#include "panoptic_mapping/preprocessing/label_handler.h"
+#include "panoptic_mapping/integrator/pointcloud_integrator_base.h"
 #include "panoptic_mapping/visualization/tsdf_visualizer.h"
 
 

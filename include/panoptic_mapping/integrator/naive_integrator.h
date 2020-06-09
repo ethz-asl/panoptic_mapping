@@ -1,11 +1,11 @@
-#ifndef PANOPTIC_MAPPING_INPUT_NAIVE_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_INPUT_NAIVE_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_
 
 #include <memory>
 
 #include <voxblox/integrator/tsdf_integrator.h>
 
-#include "panoptic_mapping/input/pointcloud_integrator_base.h"
+#include "panoptic_mapping/integrator/pointcloud_integrator_base.h"
 
 namespace panoptic_mapping {
 
@@ -33,4 +33,4 @@ class NaivePointcloudIntegrator : public PointcloudIntegratorBase {
 
 }  // namespace panoptic_mapping
 
-#endif //PANOPTIC_MAPPING_INPUT_NAIVE_INTEGRATOR_H_
+#endif // PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_

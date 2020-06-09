@@ -1,4 +1,4 @@
-#include "panoptic_mapping/input/pointcloud_integrator.h"
+#include "panoptic_mapping/integrator/projective_multi_tsdf_integrator.h"
 
 #include <algorithm>
 #include <iostream>
@@ -12,7 +12,7 @@ namespace panoptic_mapping {
 
 constexpr float kFloatEpsilon = 1e-6;    // Used for weights
 
-PointcloudIntegrator::PointcloudIntegrator(const Config& config) : config_(config) {
+ProjectiveMutliTSDFIntegrator::ProjectiveMutliTSDFIntegrator(const Config& config) : config_(config) {
   // check the config for validity
   CHECK_GT(config_.horizontal_resolution, 0)
     << "The horizontal sensor resolution must be a positive integer";
@@ -27,7 +27,7 @@ PointcloudIntegrator::PointcloudIntegrator(const Config& config) : config_(confi
   id_image_ = Eigen::MatrixXi(config_.vertical_resolution, config_.horizontal_resolution);
 }
 
-PointcloudIntegrator::Config PointcloudIntegrator::getConfigFromRos(const ros::NodeHandle &node_handle){
+ProjectiveMutliTSDFIntegrator::Config ProjectiveMutliTSDFIntegrator::getConfigFromRos(const ros::NodeHandle &node_handle){
   Config config;
   node_handle.param("horizontal_resolution", config.horizontal_resolution, config.horizontal_resolution);
   node_handle.param("vertical_resolution", config.vertical_resolution, config.vertical_resolution);
@@ -38,7 +38,7 @@ PointcloudIntegrator::Config PointcloudIntegrator::getConfigFromRos(const ros::N
   return config;
 }
 
-void PointcloudIntegrator::readPointcloud(const Transformation &T_W_C, const Pointcloud &pointcloud, const Colors &colors, const std::vector<int> &ids){
+void ProjectiveMutliTSDFIntegrator::readPointcloud(const Transformation &T_W_C, const Pointcloud &pointcloud, const Colors &colors, const std::vector<int> &ids){
   CHECK_EQ(pointcloud.size(), colors.size());
   CHECK_EQ(pointcloud.size(), ids.size());
   range_image_.setZero();
@@ -79,7 +79,7 @@ void PointcloudIntegrator::readPointcloud(const Transformation &T_W_C, const Poi
   }
 }
 
-void PointcloudIntegrator::integratePointcloudToSubmaps(Submap* subamp){
+void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap* subamp){
   CHECK_NOTNULL(subamp);
   // transformation of submap to camera
   Transformation T_S_C =T_W_C_; //submap->T_M_S.inv() *T_M_C_
@@ -123,14 +123,14 @@ void PointcloudIntegrator::integratePointcloudToSubmaps(Submap* subamp){
 
 }
 
-void PointcloudIntegrator::setTsdfIntegrationLayer(voxblox::Layer<voxblox::TsdfVoxel> *tsdf_layer){
+void ProjectiveMutliTSDFIntegrator::setTsdfIntegrationLayer(voxblox::Layer<voxblox::TsdfVoxel> *tsdf_layer){
   CHECK_NOTNULL(tsdf_layer);
   layer_ = tsdf_layer;
   truncation_distance_ = 2.0 * layer_->voxel_size();  // heuristic for the moment
 
 }
 
-void PointcloudIntegrator::findTouchedBlocks(voxblox::IndexSet *touched_block_indices){
+void ProjectiveMutliTSDFIntegrator::findTouchedBlocks(voxblox::IndexSet *touched_block_indices){
   CHECK_NOTNULL(touched_block_indices);
 
   // This is the implementation taken from projective_tsdf_integrator.
@@ -156,7 +156,7 @@ void PointcloudIntegrator::findTouchedBlocks(voxblox::IndexSet *touched_block_in
   }
 }
 
-void PointcloudIntegrator::updateTsdfBlocks(
+void ProjectiveMutliTSDFIntegrator::updateTsdfBlocks(
     const Transformation &T_G_C, const Eigen::MatrixXf &range_image,
     const voxblox::IndexSet &touched_block_indices, const bool deintegrate) {
   for (const voxblox::BlockIndex &block_index : touched_block_indices) {
@@ -175,7 +175,7 @@ void PointcloudIntegrator::updateTsdfBlocks(
   }
 }
 
-void PointcloudIntegrator::updateTsdfVoxel(
+void ProjectiveMutliTSDFIntegrator::updateTsdfVoxel(
     const Transformation &T_G_C, const Eigen::MatrixXf &range_image,
     const Point &t_C_voxel, TsdfVoxel *tsdf_voxel, const bool deintegrate) {
   // Skip voxels that are too far or too close
@@ -261,7 +261,7 @@ void PointcloudIntegrator::updateTsdfVoxel(
 }
 
 template <typename T>
-Point PointcloudIntegrator::imageToBearing(const T h, const T w) {
+Point ProjectiveMutliTSDFIntegrator::imageToBearing(const T h, const T w) {
   double altitude_angle =
       vertical_fov_rad_ * (1.0 / 2.0 - h / (config_.vertical_resolution - 1.0));
   double azimuth_angle =
@@ -276,7 +276,7 @@ Point PointcloudIntegrator::imageToBearing(const T h, const T w) {
 }
 
 template <typename T>
-bool PointcloudIntegrator::bearingToImage(const Point &b_C_normalized, T *h, T *w) {
+bool ProjectiveMutliTSDFIntegrator::bearingToImage(const Point &b_C_normalized, T *h, T *w) {
   CHECK_NOTNULL(h);
   CHECK_NOTNULL(w);
 

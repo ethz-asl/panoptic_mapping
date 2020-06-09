@@ -33,10 +33,10 @@ cs_add_library(${PROJECT_NAME}
         src/panoptic_mapper.cpp
         src/core/submap.cpp
         src/core/submap_collection.cpp
-        src/input/label_handler.cpp
-        src/input/pointcloud_integrator_factory.cpp
-        src/input/naive_integrator.cpp
-        #src/input/pointcloud_integrator.cpp
+        src/preprocessing/label_handler.cpp
+        src/integrator/pointcloud_integrator_factory.cpp
+        src/integrator/naive_integrator.cpp
+        #src/integrator/projective_multi_tsdf_integrator.cpp
         src/visualization/tsdf_visualizer.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)

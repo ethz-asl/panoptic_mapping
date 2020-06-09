@@ -9,7 +9,7 @@
 #include <voxblox/integrator/merge_integration.h>
 #include <voxblox/core/color.h>
 
-#include "panoptic_mapping/input/pointcloud_integrator_factory.h"
+#include "panoptic_mapping/integrator/pointcloud_integrator_factory.h"
 #include "panoptic_mapping/SubmapCollection.pb.h"
 
 namespace panoptic_mapping {
@@ -69,6 +69,7 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
   // look up the transform
   voxblox::Transformation T_S_C;
   tf_transformer_.lookupTransform("world", "airsim_drone/Depth_cam", pointcloud_msg->header.stamp, &T_S_C);
+  ros::WallTime t2 = ros::WallTime::now();
 
   // Convert the pointcloud msg into a voxblox::Pointcloud, color, and ID
   voxblox::Pointcloud pointcloud;
@@ -91,13 +92,13 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
     ++iter_x;
     ++iter_rgb;
   }
-  ros::WallTime t2 = ros::WallTime::now();
+  ros::WallTime t3 = ros::WallTime::now();
 
   std::vector<int> unique_ids(ids);
   std::sort(unique_ids.begin(), unique_ids.end());
   unique_ids.erase(std::unique(unique_ids.begin(), unique_ids.end()), unique_ids.end());
 
-  ros::WallTime t3 = ros::WallTime::now();
+  ros::WallTime t4 = ros::WallTime::now();
 
   // allocate submaps and
   int voxels_per_side = 16;
@@ -115,14 +116,14 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
     }
   }
 
-  ros::WallTime t4 = ros::WallTime::now();
+  ros::WallTime t5 = ros::WallTime::now();
 
   // integrate pointcloud
   pointcloud_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, ids);
-  ros::WallTime t5 = ros::WallTime::now();
+  ros::WallTime t6 = ros::WallTime::now();
   VLOG(3) << "Integrated pointloud (" << int((t2 - t1).toSec() * 1000) << "+" << int((t3 - t2).toSec() * 1000)
-          << "+" << int((t4 - t3).toSec() * 1000) << "+" << int((t5 - t4).toSec() * 1000) << "="
-          << int((t5 - t1).toSec() * 1000) << "ms)";
+          << "+" << int((t4 - t3).toSec() * 1000) << "+" << int((t5 - t4).toSec() * 1000) << "+" << int((t6 - t5).toSec() * 1000)
+          << "=" << int((t6 - t1).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::publishMeshCallback(const ros::TimerEvent &) {
