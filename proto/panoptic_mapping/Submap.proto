@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package panoptic_mapping;
+
+import public "panoptic_mapping/QuatTransformation.proto";
+
+message SubmapProto {
+  optional int32 id = 1;
+
+  optional uint32 num_blocks = 2;
+
+  optional QuatTransformationProto transform = 3;
+
+  optional float voxel_size = 4;
+
+  optional uint32 voxels_per_side = 5;
+
+}
