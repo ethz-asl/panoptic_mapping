@@ -23,17 +23,17 @@ void ProjectiveMutliTSDFIntegrator::setupFromConfig(PointcloudIntegratorBase::Co
     return;
   }
   // check the config for validity
-  CHECK_GT(config_.horizontal_resolution, 0)
+  CHECK_GT(config_.sensor_horizontal_resolution, 0)
     << "The horizontal sensor resolution must be a positive integer.";
-  CHECK_GT(config_.vertical_resolution, 0)
+  CHECK_GT(config_.sensor_vertical_resolution, 0)
     << "The vertical sensor resolution must be a positive integer.";
-  CHECK_GT(config_.vertical_fov_deg, 0.0)
+  CHECK_GT(config_.sensor_vertical_fov_deg, 0.0)
     << "The vertical field of view of the sensor must be a positive float.";
 
   // set members
-  vertical_fov_rad_ = config_.vertical_fov_deg * M_PI / 180.0;
-  range_image_ = Eigen::MatrixXf(config_.vertical_resolution, config_.horizontal_resolution);
-  id_image_ = Eigen::MatrixXi(config_.vertical_resolution, config_.horizontal_resolution);
+  vertical_fov_rad_ = config_.sensor_vertical_fov_deg * M_PI / 180.0;
+  range_image_ = Eigen::MatrixXf(config_.sensor_vertical_resolution, config_.sensor_horizontal_resolution);
+  id_image_ = Eigen::MatrixXi(config_.sensor_vertical_resolution, config_.sensor_horizontal_resolution);
 }
 
 void ProjectiveMutliTSDFIntegrator::processPointcloud(SubmapCollection *submaps,
@@ -111,7 +111,7 @@ void ProjectiveMutliTSDFIntegrator::integratePointcloudToSubmaps(Submap *submap)
   // Allocate all the blocks
   // NOTE: The layer's BlockHashMap is not thread safe, so doing it here before
   //       we start the multi-threading makes life easier
-  for (const auto &block_index : containing_block_indices) {
+  for (const auto &block_index : touched_block_indices) {
     layer_->allocateBlockPtrByIndex(block_index);
   }
 
@@ -267,9 +267,9 @@ void ProjectiveMutliTSDFIntegrator::updateTsdfVoxel(
 template<typename T>
 Point ProjectiveMutliTSDFIntegrator::imageToBearing(const T h, const T w) {
   double altitude_angle =
-      vertical_fov_rad_ * (1.0 / 2.0 - h / (config_.vertical_resolution - 1.0));
+      vertical_fov_rad_ * (1.0 / 2.0 - h / (config_.sensor_vertical_resolution - 1.0));
   double azimuth_angle =
-      2.0 * M_PI * static_cast<double>(w) / config_.horizontal_resolution;
+      2.0 * M_PI * static_cast<double>(w) / config_.sensor_horizontal_resolution;
 
   Point bearing;
   bearing.x() = std::cos(altitude_angle) * std::cos(azimuth_angle);
@@ -285,9 +285,9 @@ bool ProjectiveMutliTSDFIntegrator::bearingToImage(const Point &b_C_normalized, 
   CHECK_NOTNULL(w);
 
   double altitude_angle = std::asin(b_C_normalized.z());
-  *h = static_cast<T>((config_.vertical_resolution - 1.0) *
+  *h = static_cast<T>((config_.sensor_vertical_resolution - 1.0) *
       (1.0 / 2.0 - altitude_angle / vertical_fov_rad_));
-  if (*h < 0 || config_.vertical_resolution - 1 < *h) {
+  if (*h < 0 || config_.sensor_vertical_resolution - 1 < *h) {
     return false;
   }
 
@@ -302,12 +302,12 @@ bool ProjectiveMutliTSDFIntegrator::bearingToImage(const Point &b_C_normalized, 
   } else {
     azimuth_angle = M_PI + std::atan(-b_C_normalized.y() / b_C_normalized.x());
   }
-  *w = static_cast<T>(config_.horizontal_resolution * azimuth_angle / (2.0 * M_PI));
+  *w = static_cast<T>(config_.sensor_horizontal_resolution * azimuth_angle / (2.0 * M_PI));
   if (*w < 0) {
-    *w += config_.horizontal_resolution;
+    *w += config_.sensor_horizontal_resolution;
   }
 
-  return (0 < *w && *w < config_.horizontal_resolution - 1);
+  return (0 < *w && *w < config_.sensor_horizontal_resolution - 1);
 }
 
 float ProjectiveMutliTSDFIntegrator::interpolate(const float h, const float w){

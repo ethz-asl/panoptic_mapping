@@ -20,9 +20,9 @@ class ProjectiveMutliTSDFIntegrator : public PointcloudIntegratorBase {
  public:
   struct Config : PointcloudIntegratorBase::Config {
     // sensor model
-    int horizontal_resolution = 0.0;
-    int vertical_resolution = 0.0;
-    float vertical_fov_deg = 0.0;
+    int sensor_horizontal_resolution = 0.0;
+    int sensor_vertical_resolution = 0.0;
+    float sensor_vertical_fov_deg = 0.0;
     float min_ray_length_m = 0.1;
     float max_ray_length_m = 5.0;
     bool voxel_carving_enabled = false;

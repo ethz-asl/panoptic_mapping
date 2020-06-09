@@ -7,14 +7,15 @@ namespace panoptic_mapping {
 NaivePointcloudIntegrator::Config getNaivePointcloudIntegratorConfigFromRos(const ros::NodeHandle &nh) {
   NaivePointcloudIntegrator::Config config;
   config.voxblox_integrator_config = voxblox::getTsdfIntegratorConfigFromRosParam(nh);
+  nh.param("voxblox_integrator_type", config.voxblox_integrator_type, config.voxblox_integrator_type);
   return config;
 }
 
 ProjectiveMutliTSDFIntegrator::Config getProjectiveMutliTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh) {
   ProjectiveMutliTSDFIntegrator::Config config;
-  nh.param("horizontal_resolution", config.horizontal_resolution, config.horizontal_resolution);
-  nh.param("vertical_resolution", config.vertical_resolution, config.vertical_resolution);
-  nh.param("vertical_fov_deg", config.vertical_fov_deg, config.vertical_fov_deg);
+  nh.param("horizontal_resolution", config.sensor_horizontal_resolution, config.sensor_horizontal_resolution);
+  nh.param("vertical_resolution", config.sensor_vertical_resolution, config.sensor_vertical_resolution);
+  nh.param("vertical_fov_deg", config.sensor_vertical_fov_deg, config.sensor_vertical_fov_deg);
   nh.param("min_ray_length_m", config.min_ray_length_m, config.min_ray_length_m);
   nh.param("max_ray_length_m", config.max_ray_length_m, config.max_ray_length_m);
   nh.param("voxel_carving_enabled", config.voxel_carving_enabled, config.voxel_carving_enabled);

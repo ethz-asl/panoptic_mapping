@@ -17,6 +17,7 @@ class NaivePointcloudIntegrator : public PointcloudIntegratorBase {
   struct Config : PointcloudIntegratorBase::Config {
     // Does not need more than the voxblox cfg
     voxblox::TsdfIntegratorBase::Config voxblox_integrator_config;
+    std::string voxblox_integrator_type = "fast"; // simple, merged, fast, projective
   };
 
   NaivePointcloudIntegrator() = default;
@@ -32,7 +33,7 @@ class NaivePointcloudIntegrator : public PointcloudIntegratorBase {
                          const std::vector<int> &ids) override;
  protected:
   Config config_;
-  std::unique_ptr<voxblox::TsdfIntegratorBase> tsdf_integrator_;
+  std::shared_ptr<voxblox::TsdfIntegratorBase> tsdf_integrator_;
 };
 
 }  // namespace panoptic_mapping

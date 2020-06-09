@@ -48,8 +48,10 @@ void NaivePointcloudIntegrator::processPointcloud(SubmapCollection *submaps,
     }
     if (!tsdf_integrator_) {
       // We just use the fast integrator here, could also add others
-      tsdf_integrator_.reset(new voxblox::FastTsdfIntegrator(config_.voxblox_integrator_config,
-                                                             submaps->getSubmap(id_v[i]).getTsdfLayerPtr()));
+      tsdf_integrator_ =
+          voxblox::TsdfIntegratorFactory::create(config_.voxblox_integrator_type,
+                                                 config_.voxblox_integrator_config,
+                                                 submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
     } else {
       tsdf_integrator_->setLayer(submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
     }

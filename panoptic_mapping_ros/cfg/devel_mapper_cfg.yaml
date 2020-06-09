@@ -10,15 +10,23 @@ label_path: /home/lukas/catkin_ws/src/panoptic_mapping/panoptic_mapping_ros/data
 
 tsdf_voxel_size: 0.1
 
-tsdf_integrator:
-  integrator_type: projective_multi_tsdf # naive
-  horizontal_resolution: 640
-  vertical_resolution: 480
-  vertical_fov_deg: 73.7397952
+tsdf_integrator:  
+  integrator_type: naive # naive, projective_multi_tsdf
+  
+  # naive args
+  voxblox_integrator_type: projective # projective, fast
+  sensor_vertical_field_of_view_degrees: 73.7397952
+  use_const_weight: true
+  
+  # common args  
+  sensor_horizontal_resolution: 640
+  sensor_vertical_resolution: 480
+  sensor_vertical_fov_deg: 73.7397952
   min_ray_length_m: 0.1
   max_ray_length_m: 5
   voxel_carving_enabled: false
   use_weight_dropoff: true
+
 
 
 #  truncation_distance: 0.2
