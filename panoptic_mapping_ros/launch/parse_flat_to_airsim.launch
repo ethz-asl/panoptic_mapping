@@ -1,0 +1,14 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="target" default=""/> <!-- Defaults to ~/Documents/AirSim/settings.json -->
+  <arg name="source" default="$(find panoptic_mapping_ros)/cfg/flat_dataset/airsim.yaml"/>
+
+  
+
+  <!-- Parse -->
+  <node name="config_parser" pkg="unreal_airsim" type="parse_config_to_airsim.py" required="true" output="screen">
+     <param name="target_file_path" value="$(arg target)"/>
+     <param name="config_file_path" value="$(arg source)"/>
+  </node>
+  
+</launch>
