@@ -14,7 +14,7 @@ tsdf_integrator:
   integrator_type: naive # naive, projective_multi_tsdf
   
   # naive args
-  voxblox_integrator_type: projective # projective, fast
+  voxblox_integrator_type: fast # projective, fast
   sensor_vertical_field_of_view_degrees: 73.7397952
   use_const_weight: true
   
@@ -22,10 +22,12 @@ tsdf_integrator:
   sensor_horizontal_resolution: 640
   sensor_vertical_resolution: 480
   sensor_vertical_fov_deg: 73.7397952
+  sensor_is_lidar: false
   min_ray_length_m: 0.1
   max_ray_length_m: 5
   voxel_carving_enabled: false
   use_weight_dropoff: true
+  sparsity_compensation_factor: 1.0
 
 
 
@@ -37,5 +39,5 @@ tsdf_integrator:
 #  integration_order_mode: "sorted"
   
 visualization:
-  coloring_mode: color # submaps instances, color, normals
+  coloring_mode: submaps # submaps, instances, color, normals
 

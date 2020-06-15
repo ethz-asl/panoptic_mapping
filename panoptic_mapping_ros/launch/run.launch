@@ -1,6 +1,6 @@
 <launch>
   <!-- Arguments -->
-  <arg name="bag_name" default="run2_3hz"/>
+  <arg name="bag_name" default="run1_imgs.bag"/>
   <arg name="config" default="devel_mapper_cfg"/>
   <arg name="verbosity" default="3"/>
 
@@ -9,7 +9,7 @@
   <!-- Run -->
   <param name="/use_sim_time" value="true" />
   <!-- Play data -->
-  <node pkg="rosbag" type="play" name="rosbag" args="$(find panoptic_mapping_ros)/data/flat_dataset/$(arg bag_name).bag --clock" output="screen"/>
+  <node pkg="rosbag" type="play" name="rosbag" args="$(find panoptic_mapping_ros)/data/flat_dataset/$(arg bag_name) --clock" output="screen"/>
 
 
   <!-- RVIZ Visualization -->
@@ -21,7 +21,10 @@
   <!-- Mapper -->
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" args="-logtostderr --v=$(arg verbosity)">
     <rosparam file="$(find panoptic_mapping_ros)/cfg/$(arg config).yaml" />
-    <remap from="pointcloud_in" to="/airsim_drone/Pointcloud"/>
+<!--    <remap from="pointcloud_in" to="/airsim_drone/Pointcloud"/>-->
+    <remap from="color_image_in" to="/airsim_drone/Scene_cam"/>
+    <remap from="depth_image_in" to="/airsim_drone/Depth_cam"/>
+    <remap from="segmentation_image_in" to="/airsim_drone/Id_corrected"/>
   </node>  
 
 </launch>

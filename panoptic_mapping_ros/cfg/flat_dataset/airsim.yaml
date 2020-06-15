@@ -113,10 +113,15 @@ processors:
 #    processor_type: DepthToPointcloud
 #    depth_camera_name: Depth_cam
 #    color_camera_name: Seg_cam
-  Pointcloud:
-    processor_type: DepthToPointcloud
-    depth_camera_name: Depth_cam
-    color_camera_name: Scene_cam
-    segmentation_camera_name: Id_cam
-    max_ray_length: 5
-    use_infrared_compensation: true
+  IdCompensation:
+    processor_type: InfraredIdCompensation
+    input_topic: /airsim_drone/Id_cam
+    output_topic: /airsim_drone/Id_corrected
+
+#  Pointcloud:
+#    processor_type: DepthToPointcloud
+#    depth_camera_name: Depth_cam
+#    color_camera_name: Scene_cam
+#    segmentation_camera_name: Id_cam
+#    max_ray_length: 5
+#    use_infrared_compensation: true
