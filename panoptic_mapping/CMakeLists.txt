@@ -28,8 +28,10 @@ cs_add_library(${PROJECT_NAME}
         src/core/submap.cpp
         src/core/submap_collection.cpp
         src/preprocessing/label_handler.cpp
-        src/integrator/pointcloud_integrator_factory.cpp
+        src/integrator/integrator_base.cpp
+        src/integrator/integrator_factory.cpp
         src/integrator/naive_integrator.cpp
+        src/integrator/projective_integrator.cpp
         src/integrator/projective_multi_tsdf_integrator.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)

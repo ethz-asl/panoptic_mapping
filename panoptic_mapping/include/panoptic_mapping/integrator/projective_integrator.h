@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
 
 #include <memory>
 
@@ -12,7 +12,7 @@ namespace panoptic_mapping {
 /**
  * Split the pointcloud by segmentation and use a voxblox tsdf_integrator to integrate each to its corresponding submap.
  */
-class NaiveIntegrator : public IntegratorBase {
+class ProjectiveIntegrator : public IntegratorBase {
  public:
   struct Config : IntegratorBase::Config {
     // Does not need more than the voxblox cfg
@@ -20,8 +20,8 @@ class NaiveIntegrator : public IntegratorBase {
     std::string voxblox_integrator_type = "fast"; // simple, merged, fast, projective
   };
 
-  NaiveIntegrator() = default;
-  virtual ~NaiveIntegrator() = default;
+  ProjectiveIntegrator() = default;
+  virtual ~ProjectiveIntegrator() = default;
 
   void setupFromConfig(IntegratorBase::Config *config);
 
@@ -33,9 +33,8 @@ class NaiveIntegrator : public IntegratorBase {
                          const std::vector<int> &ids) override;
  protected:
   Config config_;
-  std::shared_ptr<voxblox::TsdfIntegratorBase> tsdf_integrator_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif // PANOPTIC_MAPPING_INTEGRATOR_NAIVE_INTEGRATOR_H_
+#endif // PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_

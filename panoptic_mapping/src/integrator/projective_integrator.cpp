@@ -1,8 +1,8 @@
-#include "panoptic_mapping/integrator/naive_integrator.h"
+#include "panoptic_mapping/integrator/projective_integrator.h"
 
 namespace panoptic_mapping {
 
-void NaiveIntegrator::setupFromConfig(IntegratorBase::Config *config) {
+void ProjectiveIntegrator::setupFromConfig(IntegratorBase::Config *config) {
   CHECK_NOTNULL(config);
   auto cfg = dynamic_cast<Config *>(config);
   if (cfg) {
@@ -12,11 +12,11 @@ void NaiveIntegrator::setupFromConfig(IntegratorBase::Config *config) {
   }
 }
 
-void NaiveIntegrator::processPointcloud(SubmapCollection *submaps,
-                                        const Transformation &T_M_C,
-                                        const Pointcloud &pointcloud,
-                                        const Colors &colors,
-                                        const std::vector<int> &ids) {
+void ProjectiveIntegrator::processPointcloud(SubmapCollection *submaps,
+                                             const Transformation &T_M_C,
+                                             const Pointcloud &pointcloud,
+                                             const Colors &colors,
+                                             const std::vector<int> &ids) {
   CHECK_NOTNULL(submaps);
   CHECK_EQ(ids.size(), pointcloud.size());
   CHECK_EQ(ids.size(), colors.size());
@@ -46,16 +46,7 @@ void NaiveIntegrator::processPointcloud(SubmapCollection *submaps,
       LOG(WARNING) << "Failed to integrate pointcloud to submap with ID '" << id_v[i] << "': submap does not exist.";
       continue;
     }
-    if (!tsdf_integrator_) {
-      // We just use the fast integrator here, could also add others
-      tsdf_integrator_ =
-          voxblox::TsdfIntegratorFactory::create(config_.voxblox_integrator_type,
-                                                 config_.voxblox_integrator_config,
-                                                 submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
-    } else {
-      tsdf_integrator_->setLayer(submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
-    }
-    tsdf_integrator_->integratePointCloud(T_M_C, cloud_v[i], color_v[i]);
+
   }
 }
 
