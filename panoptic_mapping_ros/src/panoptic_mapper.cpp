@@ -9,7 +9,7 @@
 #include <voxblox/integrator/merge_integration.h>
 #include <voxblox/core/color.h>
 
-#include "panoptic_mapping/integrator/pointcloud_integrator_factory.h"
+#include "panoptic_mapping/integrator/integrator_factory.h"
 #include "panoptic_mapping/SubmapCollection.pb.h"
 #include "panoptic_mapping_ros/conversions/ros_params.h"
 
@@ -19,6 +19,7 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle &nh, const ::ros::NodeHan
     : nh_(nh),
       nh_private_(nh_private) {
   //params
+  nh_private_.param("max_image_queue_length", max_image_queue_length_, 10);
 
   // remaining setup
   setupMembers();
@@ -28,11 +29,16 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle &nh, const ::ros::NodeHan
 void PanopticMapper::setupROS() {
   // Subscribers
   pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10, &PanopticMapper::pointcloudCallback, this);
+  depth_image_sub_ =
+      nh_.subscribe("depth_image_in", max_image_queue_length_, &PanopticMapper::depthImageCallback, this);
+  color_image_sub_ =
+      nh_.subscribe("color_image_in", max_image_queue_length_, &PanopticMapper::colorImageCallback, this);
+  segmentation_image_sub_ =
+      nh_.subscribe("segmentation_image_in", max_image_queue_length_, &PanopticMapper::segmentationImageCallback, this);
 
   // Publishers
-  constexpr int pub_queue_size = 100;
-  mesh_pub_ = nh_private_.advertise<voxblox_msgs::MultiMesh>("mesh", pub_queue_size, true);
-  tsdf_blocks_pub_ = nh_private_.advertise<visualization_msgs::MarkerArray>("tsdf_blocks", pub_queue_size, true);
+  mesh_pub_ = nh_private_.advertise<voxblox_msgs::MultiMesh>("mesh", 100, true);
+  tsdf_blocks_pub_ = nh_private_.advertise<visualization_msgs::MarkerArray>("tsdf_blocks", 100, true);
 
   // Services
   save_map_srv_ = nh_private_.advertiseService("save_map", &PanopticMapper::saveMapCallback, this);
@@ -49,10 +55,10 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
   std::string integrator_type;
   integrator_nh.param("integrator_type", integrator_type, std::string("unspecified"));
-  pointcloud_integrator_ = PointcloudIntegratorFactory::create(&integrator_type);
-  std::unique_ptr<PointcloudIntegratorBase::Config> integrator_cfg = getPointcloudIntegratorConfigFromRos(integrator_nh, integrator_type);
-  std::cout << "Config: " << (bool)integrator_cfg << std::endl;
-  pointcloud_integrator_->setupFromConfig(integrator_cfg.get());
+  tsdf_integrator_ = IntegratorFactory::create(&integrator_type);
+  std::unique_ptr<IntegratorBase::Config>
+      integrator_cfg = getTSDFIntegratorConfigFromRos(integrator_nh, integrator_type);
+  tsdf_integrator_->setupFromConfig(integrator_cfg.get());
 
   // visualization
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
@@ -65,6 +71,16 @@ void PanopticMapper::setupMembers() {
   std::string label_path;
   nh_private_.param("label_path", label_path, std::string(""));
   label_handler_.readLabelsFromFile(label_path);
+}
+
+void PanopticMapper::processImages(const sensor_msgs::ImagePtr &depth_img,
+                                   const sensor_msgs::ImagePtr &color_img,
+                                   const sensor_msgs::ImagePtr &segmentation_img) {
+  std::cout << "Found matching images." << std::endl;
+
+  // look up transform
+  voxblox::Transformation T_S_C;
+  tf_transformer_.lookupTransform("world", "airsim_drone/Depth_cam", depth_img->header.stamp, &T_S_C);
 }
 
 void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &pointcloud_msg) {
@@ -103,7 +119,7 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
 
   ros::WallTime t4 = ros::WallTime::now();
 
-  // allocate submaps and
+  // allocate submaps
   int voxels_per_side = 16;
   double voxel_size;
   for (auto &id : unique_ids) {
@@ -122,11 +138,11 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
   ros::WallTime t5 = ros::WallTime::now();
 
   // integrate pointcloud
-  pointcloud_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, ids);
+  tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, ids);
   ros::WallTime t6 = ros::WallTime::now();
   VLOG(3) << "Integrated pointloud (" << int((t2 - t1).toSec() * 1000) << "+" << int((t3 - t2).toSec() * 1000)
-          << "+" << int((t4 - t3).toSec() * 1000) << "+" << int((t5 - t4).toSec() * 1000) << "+" << int((t6 - t5).toSec() * 1000)
-          << "=" << int((t6 - t1).toSec() * 1000) << "ms)";
+          << "+" << int((t4 - t3).toSec() * 1000) << "+" << int((t5 - t4).toSec() * 1000) << "+"
+          << int((t6 - t5).toSec() * 1000) << "=" << int((t6 - t1).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::publishMeshCallback(const ros::TimerEvent &) {
@@ -149,6 +165,70 @@ void PanopticMapper::publishMeshes(bool force_update_all, bool force_mesh_all) {
     tsdf_visualizer_.generateMeshMsg(&submap, &msg, force_mesh_all);
     mesh_pub_.publish(msg);
   }
+}
+
+void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr &msg) {
+  // store depth img in queue
+  depth_queue_.push_back(msg);
+  if (depth_queue_.size() > max_image_queue_length_) {
+    depth_queue_.pop_front();
+  }
+  findMatchingMessagesToPublish(msg);
+}
+
+void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr &msg) {
+  // store color img in queue
+  color_queue_.push_back(msg);
+  if (color_queue_.size() > max_image_queue_length_) {
+    color_queue_.pop_front();
+  }
+  findMatchingMessagesToPublish(msg);
+}
+
+void PanopticMapper::segmentationImageCallback(const sensor_msgs::ImagePtr &msg) {
+  // store segmentation img in queue
+  segmentation_queue_.push_back(msg);
+  if (segmentation_queue_.size() > max_image_queue_length_) {
+    segmentation_queue_.pop_front();
+  }
+  findMatchingMessagesToPublish(msg);
+}
+
+void PanopticMapper::findMatchingMessagesToPublish(const sensor_msgs::ImagePtr &reference_msg) {
+  // check whether there exist 3 images with matching timestamp
+  std::deque<sensor_msgs::ImagePtr>::iterator depth_it, color_it, segmentation_it;
+
+  depth_it = std::find_if(depth_queue_.begin(),
+                          depth_queue_.end(),
+                          [reference_msg](const sensor_msgs::ImagePtr &s) {
+                            return s->header.stamp == reference_msg->header.stamp;
+                          });
+  if (depth_it == depth_queue_.end()) {
+    return;
+  }
+  color_it = std::find_if(color_queue_.begin(),
+                          color_queue_.end(),
+                          [reference_msg](const sensor_msgs::ImagePtr &s) {
+                            return s->header.stamp == reference_msg->header.stamp;
+                          });
+  if (color_it == color_queue_.end()) {
+    return;
+  }
+
+  segmentation_it = std::find_if(segmentation_queue_.begin(),
+                                 segmentation_queue_.end(),
+                                 [reference_msg](const sensor_msgs::ImagePtr &s) {
+                                   return s->header.stamp == reference_msg->header.stamp;
+                                 });
+  if (segmentation_it == segmentation_queue_.end()) {
+    return;
+  }
+
+  // a matching set was found
+  processImages(*depth_it, *color_it, *segmentation_it);
+  depth_queue_.erase(depth_it);
+  color_queue_.erase(color_it);
+  segmentation_queue_.erase(segmentation_it);
 }
 
 void PanopticMapper::setColoringMode(const std::string &coloring_mode) {
@@ -196,6 +276,7 @@ bool PanopticMapper::saveMapCallback(voxblox_msgs::FilePath::Request &request,
                                      voxblox_msgs::FilePath::Response &response) {
   return saveMap(request.file_path);
 }
+
 bool PanopticMapper::loadMapCallback(voxblox_msgs::FilePath::Request &request,
                                      voxblox_msgs::FilePath::Response &response) {
   return loadMap(request.file_path);

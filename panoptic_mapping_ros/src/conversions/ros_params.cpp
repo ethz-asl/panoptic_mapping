@@ -4,8 +4,8 @@
 
 namespace panoptic_mapping {
 
-NaivePointcloudIntegrator::Config getNaivePointcloudIntegratorConfigFromRos(const ros::NodeHandle &nh) {
-  NaivePointcloudIntegrator::Config config;
+NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(const ros::NodeHandle &nh) {
+  NaiveIntegrator::Config config;
   config.voxblox_integrator_config = voxblox::getTsdfIntegratorConfigFromRosParam(nh);
   nh.param("voxblox_integrator_type", config.voxblox_integrator_type, config.voxblox_integrator_type);
   return config;
@@ -13,22 +13,30 @@ NaivePointcloudIntegrator::Config getNaivePointcloudIntegratorConfigFromRos(cons
 
 ProjectiveMutliTSDFIntegrator::Config getProjectiveMutliTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh) {
   ProjectiveMutliTSDFIntegrator::Config config;
-  nh.param("horizontal_resolution", config.sensor_horizontal_resolution, config.sensor_horizontal_resolution);
-  nh.param("vertical_resolution", config.sensor_vertical_resolution, config.sensor_vertical_resolution);
-  nh.param("vertical_fov_deg", config.sensor_vertical_fov_deg, config.sensor_vertical_fov_deg);
+  nh.param("sensor_horizontal_resolution", config.sensor_horizontal_resolution, config.sensor_horizontal_resolution);
+  nh.param("sensor_vertical_resolution", config.sensor_vertical_resolution, config.sensor_vertical_resolution);
+  nh.param("sensor_vertical_fov_deg", config.sensor_vertical_fov_deg, config.sensor_vertical_fov_deg);
+  nh.param("sensor_is_lidar", config.sensor_is_lidar, config.sensor_is_lidar);
   nh.param("min_ray_length_m", config.min_ray_length_m, config.min_ray_length_m);
   nh.param("max_ray_length_m", config.max_ray_length_m, config.max_ray_length_m);
   nh.param("voxel_carving_enabled", config.voxel_carving_enabled, config.voxel_carving_enabled);
-  nh.param("voxel_carving_enabled", config.voxel_carving_enabled, config.voxel_carving_enabled);
+  nh.param("sparsity_compensation_factor", config.sparsity_compensation_factor, config.sparsity_compensation_factor);
   nh.param("use_weight_dropoff", config.use_weight_dropoff, config.use_weight_dropoff);
   nh.param("max_weight", config.max_weight, config.max_weight);
   return config;
 }
 
-std::unique_ptr<PointcloudIntegratorBase::Config> getPointcloudIntegratorConfigFromRos(const ros::NodeHandle &nh,
-                                                                                       const std::string &type) {
+ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(const ros::NodeHandle &nh) {
+  ProjectiveIntegrator::Config config;
+  return config;
+}
+
+std::unique_ptr<IntegratorBase::Config> getTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh,
+                                                                       const std::string &type) {
   if (type == "naive") {
-    return std::make_unique<NaivePointcloudIntegrator::Config>(getNaivePointcloudIntegratorConfigFromRos(nh));
+    return std::make_unique<NaiveIntegrator::Config>(getNaiveIntegratorConfigFromRos(nh));
+  } else if (type == "projective") {
+    return std::make_unique<ProjectiveIntegrator::Config>(getProjectiveIntegratorConfigFromRos(nh));
   } else if (type == "projective_multi_tsdf") {
     return std::make_unique<ProjectiveMutliTSDFIntegrator::Config>(getProjectiveMutliTSDFIntegratorConfigFromRos(nh));
   } else {

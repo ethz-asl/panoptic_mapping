@@ -3,7 +3,8 @@
   <name>panoptic_mapping_ros</name>
   <version>0.0.0</version>
   <description>Prototyping a panoptic metric map. </description>
-
+  
+  <author email="schmluk@mavt.ethz.ch">Lukas Schmid</author>
   <maintainer email="schmluk@mavt.ethz.ch">Lukas Schmid</maintainer>
 
   <license>BSD</license>
