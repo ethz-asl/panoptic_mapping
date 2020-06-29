@@ -24,6 +24,8 @@ class SubmapCollection {
 
   // modify the collection
   bool addSubmap(const Submap &submap);
+  bool removeSubmap(int id);      // removes all submaps of this id
+  bool changeSubmapID(int id_old, int id_new);
   bool submapIdExists(int id);    // check whether id exists
   Submap& getSubmap(int id);      // this assumes that the id exists
   void clear();

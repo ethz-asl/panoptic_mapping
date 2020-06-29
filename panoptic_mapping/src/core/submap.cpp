@@ -6,7 +6,9 @@
 namespace panoptic_mapping {
 
 Submap::Submap(int id, double voxel_size, int voxels_per_side) : id_(id),
-                                                                 frame_name_("world") {
+                                                                 frame_name_("world"),
+                                                                 remesh_fully_(false),
+                                                                 is_observed_(true) {
   // setup layers
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(voxel_size, voxels_per_side);
   double block_size = voxel_size * (double) voxels_per_side;
@@ -51,9 +53,8 @@ bool Submap::saveToStream(std::fstream *outfile_ptr) const {
   // Saving the blocks
   constexpr bool kIncludeAllBlocks = true;
   const Layer<TsdfVoxel> &tsdf_layer = *tsdf_layer_;
-  if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
-                                     voxblox::BlockIndexList(), outfile_ptr)) {
-    LOG(ERROR) << "Could not write sub map blocks to stream.";
+  if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
+    LOG(ERROR) << "Could not write submap blocks to stream.";
     outfile_ptr->close();
     return false;
   }
@@ -68,7 +69,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream *proto_file_ptr, uin
   SubmapProto submap_proto;
   if (!voxblox::utils::readProtoMsgFromStream(proto_file_ptr, &submap_proto,
                                               tmp_byte_offset_ptr)) {
-    LOG(ERROR) << "Could not read tsdf sub map protobuf message.";
+    LOG(ERROR) << "Could not read tsdf submap protobuf message.";
     return nullptr;
   }
 
@@ -84,11 +85,17 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream *proto_file_ptr, uin
 //            << ", " << q.x() << ", " << q.y() << ", " << q.z() << " ]";
 
   // Creating a new submap to hold the data
-  auto submap =
-      std::unique_ptr<Submap>(new Submap(submap_proto.id(), submap_proto.voxel_size(), submap_proto.voxels_per_side()));
+//  auto submap =
+//      std::unique_ptr<Submap>(new Submap(submap_proto.id(),
+//                                         submap_proto.voxel_size(),
+//                                         submap_proto.voxels_per_side()));
+// testing change detection TODO: cleanup
+  auto submap = std::make_unique<Submap>(submap_proto.id() + 256,
+                                         submap_proto.voxel_size(),
+                                         submap_proto.voxels_per_side());
+  submap->is_observed_ = false;
 
   // Getting the tsdf blocks for this submap (the tsdf layer)
-  LOG(INFO) << "Tsdf number of allocated blocks: " << submap_proto.num_blocks();
   if (!voxblox::io::LoadBlocksFromStream(submap_proto.num_blocks(),
                                          Layer<TsdfVoxel>::BlockMergingStrategy::kReplace,
                                          proto_file_ptr,

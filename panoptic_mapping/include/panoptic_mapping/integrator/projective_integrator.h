@@ -69,12 +69,34 @@ class ProjectiveIntegrator : public IntegratorBase {
                          const Transformation &T_M_C,
                          voxblox::BlockIndexList *block_list);
 
+  void updateSubmap(const voxblox::BlockIndexList &block_indices,
+                    SubmapCollection *submap_collection,
+                    Submap *submap,
+                    const Transformation &T_M_C,
+                    const cv::Mat &color_image,
+                    const cv::Mat &id_image);
+
   void updateTsdfBlock(const voxblox::BlockIndex &index,
                        Submap *submap,
                        const Transformation &T_M_C,
                        const cv::Mat &color_image,
                        const cv::Mat &id_image);
 
+  bool computeVoxelDistanceAndWeight(float *sdf,
+                                     float *weight,
+                                     bool *point_belongs_to_this_submap,
+                                     const Point &p_C,
+                                     const cv::Mat &color_image,
+                                     const cv::Mat &id_image,
+                                     int submap_id,
+                                     float truncation_distance,
+                                     float voxel_size);
+
+  bool submapHasChanged(const voxblox::BlockIndexList &block_indices,
+                        Submap *submap_old,
+                        const Transformation &T_M_C,
+                        const cv::Mat &color_image,
+                        const cv::Mat &id_image);
 };
 
 }  // namespace panoptic_mapping

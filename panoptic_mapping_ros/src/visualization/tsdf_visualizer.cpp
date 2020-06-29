@@ -42,7 +42,11 @@ void TsdfVisualizer::generateMeshMsg(Submap *submap, voxblox_msgs::MultiMesh *ou
   output->header.frame_id = submap->getFrameName();
   output->header.stamp = ros::Time::now();
   output->id = submap->getID();
-  output->alpha = 255;
+  if (submap->getID() > 255) {
+    output->alpha = 30;
+  } else {
+    output->alpha = 255;
+  }
 
   // otherwise recolor according to submap
   if (mesh_coloring_method_ == "submap_color") {

@@ -387,7 +387,7 @@ bool PanopticMapper::loadMap(const std::string &file_path) {
 
     // recompute session variables
     setSubmapColor(submap_ptr.get());
-    submap_ptr->setIsObserved(false);
+    submap_ptr->is_observed_ = false;
 
     // add to the collection
     submaps_.addSubmap(*submap_ptr);

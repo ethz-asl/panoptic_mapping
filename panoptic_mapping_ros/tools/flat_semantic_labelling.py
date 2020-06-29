@@ -188,7 +188,7 @@ def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
 
 if __name__ == "__main__":
     get_infrared_correction("/home/lukas/Documents/PanopticMapping/Data/infrared_corrections.csv");
-    labels, classes, mesh_ids, panoptic_count = create_label_ids("/home/lukas/Documents/PanopticMapping/Data/infrared_corrections.csv")
+    #labels, classes, mesh_ids, panoptic_count = create_label_ids("/home/lukas/Documents/PanopticMapping/Data/infrared_corrections.csv")
     # get_available_meshes(labels)
-    apply_labels(mesh_ids)
-    export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/Documents/PanopticMapping/Data/labels.csv")
+    #apply_labels(mesh_ids)
+    #export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/Documents/PanopticMapping/Data/labels.csv")
