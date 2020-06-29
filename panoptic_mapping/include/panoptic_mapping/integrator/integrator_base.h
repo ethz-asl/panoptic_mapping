@@ -33,7 +33,7 @@ class IntegratorBase {
                                  const Colors &colors,
                                  const std::vector<int> &ids);
 
-  // process a and integrate a pointcloud
+  // process a and integrate a set of images
   virtual void processImages(SubmapCollection *submaps,
                              const Transformation &T_M_C,
                              const cv::Mat &depth_image,

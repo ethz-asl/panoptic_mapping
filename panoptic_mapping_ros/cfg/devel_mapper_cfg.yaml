@@ -6,29 +6,36 @@ T_base_sensor:
  - [ 0,  0, 1, 0]
  - [ 0.0, 0.0, 0.0, 1.0]
  
-label_path: /home/lukas/catkin_ws/src/panoptic_mapping/panoptic_mapping_ros/data/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
 
 tsdf_voxel_size: 0.1
 
 tsdf_integrator:  
-  integrator_type: naive # naive, projective_multi_tsdf
+  integrator_type: projective # naive, projective, projective_multi_tsdf
+  
+  # projective args
+  width: 640
+  height: 480
+  vx: 320
+  vy: 240
+  focal_length: 320
+  
+  max_range: 5  # m
+  min_range: 0.1
+  use_weight_dropoff: true
+  sparsity_compensation_factor: 1.0
+  max_weight: 10000
+  interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
+  foreign_rays_clear: true
   
   # naive args
   voxblox_integrator_type: fast # projective, fast
   sensor_vertical_field_of_view_degrees: 73.7397952
-  use_const_weight: true
-  
-  # common args  
-  sensor_horizontal_resolution: 640
-  sensor_vertical_resolution: 480
-  sensor_vertical_fov_deg: 73.7397952
-  sensor_is_lidar: false
-  min_ray_length_m: 0.1
+  use_const_weight: true  
   max_ray_length_m: 5
-  voxel_carving_enabled: false
+  voxel_carving_enabled: true
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
-
 
 
 #  truncation_distance: 0.2
@@ -39,5 +46,7 @@ tsdf_integrator:
 #  integration_order_mode: "sorted"
   
 visualization:
-  coloring_mode: submaps # submaps, instances, color, normals
+  coloring_mode: color # submaps, instances, color, normals
+  visualize_mesh: true
+  visualize_tsdf_blocks: true
 

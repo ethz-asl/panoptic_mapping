@@ -5,9 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Status1
+        - /MarkerArray2/Namespaces1
       Splitter Ratio: 0.520588219165802
-    Tree Height: 549
+    Tree Height: 604
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -85,6 +85,7 @@ Visualization Manager:
     - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
       Enabled: true
       Name: VoxbloxMultiMesh
+      Reset Mesh: false
       Topic: /panoptic_mapper/mesh
       Unreliable: false
       Value: true
@@ -119,58 +120,43 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /panoptic_mapper/tsdf_blocks
       Name: MarkerArray
       Namespaces:
-        tsdf_blocks_0: true
-        tsdf_blocks_10: true
-        tsdf_blocks_12: true
-        tsdf_blocks_13: true
-        tsdf_blocks_14: true
-        tsdf_blocks_15: true
-        tsdf_blocks_16: true
-        tsdf_blocks_17: true
-        tsdf_blocks_18: true
-        tsdf_blocks_19: true
-        tsdf_blocks_20: true
-        tsdf_blocks_21: true
-        tsdf_blocks_22: true
-        tsdf_blocks_23: true
-        tsdf_blocks_25: true
-        tsdf_blocks_26: true
-        tsdf_blocks_28: true
-        tsdf_blocks_3: true
-        tsdf_blocks_31: true
-        tsdf_blocks_35: true
-        tsdf_blocks_36: true
-        tsdf_blocks_37: true
-        tsdf_blocks_38: true
-        tsdf_blocks_39: true
-        tsdf_blocks_41: true
-        tsdf_blocks_42: true
-        tsdf_blocks_43: true
-        tsdf_blocks_44: true
-        tsdf_blocks_45: true
-        tsdf_blocks_47: true
-        tsdf_blocks_48: true
-        tsdf_blocks_49: true
-        tsdf_blocks_51: true
-        tsdf_blocks_53: true
-        tsdf_blocks_55: true
-        tsdf_blocks_61: true
-        tsdf_blocks_62: true
-        tsdf_blocks_63: true
-        tsdf_blocks_64: true
-        tsdf_blocks_65: true
-        tsdf_blocks_66: true
-        tsdf_blocks_68: true
-        tsdf_blocks_69: true
-        tsdf_blocks_7: true
-        tsdf_blocks_70: true
-        tsdf_blocks_8: true
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/Axes
+      Enabled: false
+      Length: 0.5
+      Name: Drone
+      Radius: 0.15000000596046448
+      Reference Frame: airsim_drone
+      Value: false
+    - Class: rviz/Axes
+      Enabled: false
+      Length: 1
+      Name: Origin
+      Radius: 0.05000000074505806
+      Reference Frame: <Fixed Frame>
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /integrator_debug
+      Name: MarkerArray
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /path_visualizer/path
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -199,33 +185,33 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.6471662521362305
+      Distance: 11.754446029663086
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.0027471780776978
-        Y: -0.9074111580848694
-        Z: 0.5368402600288391
+        X: -1.1078132390975952
+        Y: -1.8669582605361938
+        Z: 1.007482647895813
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.35479769110679626
+      Pitch: 0.6947966814041138
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.180419921875
+      Yaw: 5.5122809410095215
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 846
+  Height: 901
   Hide Left Dock: false
-  Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000002b0fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002b0000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002b0fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000002b0000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650100000000000004b0000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000023f000002b000000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Hide Right Dock: true
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000002e7fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002e7000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002b0fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000002b0000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004bf0000003efc0100000002fb0000000800540069006d00650100000000000004bf000002eb00fffffffb0000000800540069006d0065010000000000000450000000000000000000000363000002e700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -233,7 +219,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
-  Width: 1200
+    collapsed: true
+  Width: 1215
   X: 106
   Y: 27

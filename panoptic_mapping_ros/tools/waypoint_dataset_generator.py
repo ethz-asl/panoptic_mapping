@@ -14,6 +14,7 @@ class WayPointPublisher:
     def __init__(self):
         """  Initialize ros node and read params """
         # Params
+        self.auto_start_time = rospy.get_param('~auto_start_time', 5)  # s
         waypoint_path = rospy.get_param('~waypoint_path', "")  # Where to read the points
         if not os.path.isfile(waypoint_path):
             rospy.logerr("'%s' is not a file!")
@@ -35,9 +36,13 @@ class WayPointPublisher:
         self.current_index = 0
         self.goal_pose = None
         self.running = False
+        self.init_time = rospy.Time.now()
 
     def pose_cb(self, pose_stamped):
         if not self.running:
+            if self.auto_start_time > 0:
+                if (rospy.Time.now()-self.init_time).to_sec() > self.auto_start_time:
+                    self.start_cb(None)
             return
         pose = pose_stamped.pose
         dist = np.linalg.norm(np.array(self.goal_pose[:3]) - np.array([pose.position.x, pose.position.y, pose.position.z]))
@@ -59,6 +64,7 @@ class WayPointPublisher:
             text = "* Finished Executing all waypoints. *"
             rospy.loginfo("\n" + "*"*len(text) + "\n" + text + "\n" + "*"*len(text))
             self.running = False
+            self.auto_start_time = -1
 
     def start_cb(self, _):
         rospy.sleep(1.0)
@@ -67,6 +73,7 @@ class WayPointPublisher:
         self.publish_goal()
 
     def publish_goal(self):
+        rospy.loginfo("Published a waypoint.")
         pose = Pose()
         pose.position.x = self.goal_pose[0]
         pose.position.y = self.goal_pose[1]

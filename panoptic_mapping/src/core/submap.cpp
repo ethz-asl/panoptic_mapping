@@ -7,9 +7,21 @@ namespace panoptic_mapping {
 
 Submap::Submap(int id, double voxel_size, int voxels_per_side) : id_(id),
                                                                  frame_name_("world") {
+  // setup layers
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(voxel_size, voxels_per_side);
   double block_size = voxel_size * (double) voxels_per_side;
   mesh_layer_ = std::make_shared<voxblox::MeshLayer>(block_size);
+
+  // initialize with identity transformation
+  Eigen::Quaterniond q(1, 0, 0, 0);
+  Eigen::Vector3d t(0, 0, 0);
+  T_M_S_ = Transformation(q.cast<voxblox::FloatingPoint>(), t.cast<voxblox::FloatingPoint>());
+  T_M_S_inv_ = T_M_S_;
+}
+
+void Submap::setT_M_S(const Transformation &T_M_S) {
+  T_M_S_ = T_M_S;
+  T_M_S_inv_ = T_M_S_.inverse();
 }
 
 void Submap::getProto(SubmapProto *proto) const {

@@ -8,17 +8,12 @@
 
 #include "panoptic_mapping/integrator/naive_integrator.h"
 #include "panoptic_mapping/integrator/projective_integrator.h"
-#include "panoptic_mapping/integrator/projective_multi_tsdf_integrator.h"
 
 namespace panoptic_mapping {
 
 // integrator configs
 NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(const ros::NodeHandle &nh);
-
 ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(const ros::NodeHandle &nh);
-
-ProjectiveMutliTSDFIntegrator::Config getProjectiveMutliTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh);
-
 std::unique_ptr<IntegratorBase::Config> getTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh,
                                                                        const std::string &type);
 

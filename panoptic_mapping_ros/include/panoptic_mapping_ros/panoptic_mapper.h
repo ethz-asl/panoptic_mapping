@@ -65,6 +65,8 @@ class PanopticMapper {
   // params
   std::string coloring_mode_;   // 'color', 'normals', 'submaps', 'instances', set via setColoringMode()
   int max_image_queue_length_;  // after this many images are queued for integration start discarding old ones.
+  bool visualize_mesh_;
+  bool visualize_tsdf_blocks_;
 
   // input processing
   std::deque<sensor_msgs::ImagePtr> depth_queue_;
@@ -81,6 +83,7 @@ class PanopticMapper {
   void processImages(const sensor_msgs::ImagePtr &depth_img,
                      const sensor_msgs::ImagePtr &color_img,
                      const sensor_msgs::ImagePtr &segmentation_img);
+  void allocateSubmaps(const std::vector<int> &ids);
 
   // visualization
   void setColoringMode(const std::string &coloring_mode);

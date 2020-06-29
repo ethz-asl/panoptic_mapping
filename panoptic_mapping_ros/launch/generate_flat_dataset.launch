@@ -1,8 +1,8 @@
 <launch>
   <!-- Arguments -->
-  <arg name="waypoints" default="$(find panoptic_mapping_ros)/cfg/flat_dataset/waypoints.yaml"/>
-  <arg name="airsim_cfg" default="$(find panoptic_mapping_ros)/cfg/flat_dataset/airsim.yaml"/>
-  <arg name="data_dir" default="$(find panoptic_mapping_ros)/data"/>
+  <arg name="waypoints" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/waypoints2.yaml"/>
+  <arg name="airsim_cfg" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/airsim.yaml"/>
+  <arg name="data_dir" default="/home/lukas/Documents/PanopticMapping/Data/"/>
   <arg name="use_sim_time" default="false"/>
   <arg name="record_data" default="true"/>
 
@@ -30,12 +30,18 @@
     <remap from="~waypoints_out" to="/airsim_drone/command/pose" />
   </node>
   
+    <!-- Path visualization -->
+  <node name="path_visualizer" pkg="panoptic_mapping_ros" type="path_visualizer.py" output="screen">
+    <remap from="~pose_in" to="/airsim_drone/ground_truth/pose" />
+    <param name="use_arrow" value="false" /> 
+    <param name="length" value="0.5" />
+  </node>
+  
    <!-- Record a rosbag of the visualization-->
   <node pkg="rosbag" type="record" name="rosbag" if="$(arg record_data)"
-       args="record -o $(arg data_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected"/>
-<!--  /airsim_drone/Depth_cam /airsim_drone/RGB_pcl /airsim_drone/Scene_cam /airsim_drone/Seg_cam /airsim_drone/Seg_pcl /airsim_drone/Pointcloud    -->
+       args="record -o $(arg data_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected /airsim_drone/Pointcloud"/>
 
   <!-- RVIZ Visualization -->
-  <node type="rviz" name="rviz_voxblox" pkg="rviz" args="-d $(find panoptic_mapping_ros)/cfg/flat_dataset/visualization.rviz"/>
+  <node type="rviz" name="rviz_voxblox" pkg="rviz" args="-d /home/lukas/Documents/PanopticMapping/Data/flat_dataset/visualization.rviz"/>
   
 </launch>

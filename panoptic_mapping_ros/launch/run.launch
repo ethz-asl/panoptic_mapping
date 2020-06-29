@@ -1,30 +1,36 @@
 <launch>
   <!-- Arguments -->
-  <arg name="bag_name" default="run1_imgs.bag"/>
+  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run1.bag"/> 
   <arg name="config" default="devel_mapper_cfg"/>
-  <arg name="verbosity" default="3"/>
+  <arg name="verbosity" default="4"/>
+  <arg name="bag_play_rate" default="1.5"/>
+  <arg name="use_image_input" default = "true"/>
 
 
 
   <!-- Run -->
   <param name="/use_sim_time" value="true" />
   <!-- Play data -->
-  <node pkg="rosbag" type="play" name="rosbag" args="$(find panoptic_mapping_ros)/data/flat_dataset/$(arg bag_name) --clock" output="screen"/>
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate)"/>
 
 
   <!-- RVIZ Visualization -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/cfg/devel_vis.rviz" output="screen"/>
-  
-  <!-- transforms -->
-<!--  <node pkg="tf" type="static_transform_publisher" name="static_imu_tf" args="0 0 0 0 0 0 1 /airsim_drone/Depth_cam /imu 100"/>-->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/cfg/devel_vis.rviz"/>
+
+  <!-- Path visualization -->
+  <node name="path_visualizer" pkg="panoptic_mapping_ros" type="path_visualizer.py" output="screen">
+    <remap from="~pose_in" to="/airsim_drone/ground_truth/pose" />
+        <param name="use_arrow" value="false" /> 
+        <param name="length" value="0.5" />
+  </node>
   
   <!-- Mapper -->
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" args="-logtostderr --v=$(arg verbosity)">
     <rosparam file="$(find panoptic_mapping_ros)/cfg/$(arg config).yaml" />
-<!--    <remap from="pointcloud_in" to="/airsim_drone/Pointcloud"/>-->
-    <remap from="color_image_in" to="/airsim_drone/Scene_cam"/>
-    <remap from="depth_image_in" to="/airsim_drone/Depth_cam"/>
-    <remap from="segmentation_image_in" to="/airsim_drone/Id_corrected"/>
+    <remap from="pointcloud_in" to="/airsim_drone/Pointcloud" unless="$(arg use_image_input)"/>
+    <remap from="color_image_in" to="/airsim_drone/Scene_cam" if="$(arg use_image_input)"/>
+    <remap from="depth_image_in" to="/airsim_drone/Depth_cam" if="$(arg use_image_input)"/>
+    <remap from="segmentation_image_in" to="/airsim_drone/Id_corrected" if="$(arg use_image_input)"/>
   </node>  
 
 </launch>

@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <cv_bridge/cv_bridge.h>
 #include <voxblox_msgs/MultiMesh.h>
 #include <voxblox/integrator/merge_integration.h>
 #include <voxblox/core/color.h>
@@ -64,6 +65,8 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
   std::string coloring_mode;
   visualization_nh.param("coloring_mode", coloring_mode, std::string("color"));
+  visualization_nh.param("visualize_mesh", visualize_mesh_, true);
+  visualization_nh.param("visualize_tsdf_blocks", visualize_tsdf_blocks_, false);
   tsdf_visualizer_.setupFromRos(visualization_nh);
   setColoringMode(coloring_mode);
 
@@ -76,21 +79,42 @@ void PanopticMapper::setupMembers() {
 void PanopticMapper::processImages(const sensor_msgs::ImagePtr &depth_img,
                                    const sensor_msgs::ImagePtr &color_img,
                                    const sensor_msgs::ImagePtr &segmentation_img) {
-  std::cout << "Found matching images." << std::endl;
-
   // look up transform
-  voxblox::Transformation T_S_C;
-  tf_transformer_.lookupTransform("world", "airsim_drone/Depth_cam", depth_img->header.stamp, &T_S_C);
+  voxblox::Transformation T_M_C;
+  tf_transformer_.lookupTransform("world", depth_img->header.frame_id, depth_img->header.stamp, &T_M_C);
+  cv_bridge::CvImageConstPtr depth = cv_bridge::toCvShare(depth_img, depth_img->encoding);
+  cv_bridge::CvImageConstPtr color = cv_bridge::toCvShare(color_img, color_img->encoding);
+  cv_bridge::CvImageConstPtr segmentation = cv_bridge::toCvShare(segmentation_img, segmentation_img->encoding);
+
+  // allocate new submaps
+  ros::WallTime t1 = ros::WallTime::now();
+  std::vector<int> ids;   // IDs reflect the submap ID a point is associated with
+  ids.reserve(depth->image.rows * depth->image.cols);
+  for (int v = 0; v < segmentation->image.rows; v++) {
+    for (int u = 0; u < segmentation->image.cols; u++) {
+      ids.emplace_back(segmentation->image.at<cv::Vec3b>(v, u)[0]);
+    }
+  }
+  ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+  allocateSubmaps(ids);
+  ros::WallTime t2 = ros::WallTime::now();
+
+  // integrate pointcloud
+  tsdf_integrator_->processImages(&submaps_, T_M_C, depth->image, color->image, segmentation->image);
+  ros::WallTime t3 = ros::WallTime::now();
+  VLOG(3) << "Integrated images (allocate submaps:" << int((t2 - t1).toSec() * 1000) << " + integration: "
+          << int((t3 - t2).toSec() * 1000) << " = " << int((t3 - t1).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &pointcloud_msg) {
   ros::WallTime t1 = ros::WallTime::now();
+
   // look up the transform
   voxblox::Transformation T_S_C;
-  tf_transformer_.lookupTransform("world", "airsim_drone/Depth_cam", pointcloud_msg->header.stamp, &T_S_C);
-  ros::WallTime t2 = ros::WallTime::now();
+  tf_transformer_.lookupTransform("world", pointcloud_msg->header.frame_id, pointcloud_msg->header.stamp, &T_S_C);
 
   // Convert the pointcloud msg into a voxblox::Pointcloud, color, and ID
+  // currently just assume prepared pointcloud message with matching fields
   voxblox::Pointcloud pointcloud;
   voxblox::Colors colors;
   std::vector<int> ids;   // IDs reflect the submap ID a point is associated with
@@ -99,7 +123,6 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
   colors.reserve(n_points);
   ids.reserve(n_points);
 
-  // currently just assume prepared pointcloud message with matching fields
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_id(*pointcloud_msg, "id");
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_msg, "x");
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_rgb(*pointcloud_msg, "rgb");
@@ -111,46 +134,65 @@ void PanopticMapper::pointcloudCallback(const sensor_msgs::PointCloud2::Ptr &poi
     ++iter_x;
     ++iter_rgb;
   }
-  ros::WallTime t3 = ros::WallTime::now();
+  ros::WallTime t2 = ros::WallTime::now();
 
+  // allocate new submaps
   std::vector<int> unique_ids(ids);
   std::sort(unique_ids.begin(), unique_ids.end());
   unique_ids.erase(std::unique(unique_ids.begin(), unique_ids.end()), unique_ids.end());
+  allocateSubmaps(unique_ids);
+  ros::WallTime t3 = ros::WallTime::now();
 
+  // integrate pointcloud
+  tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, ids);
   ros::WallTime t4 = ros::WallTime::now();
+  VLOG(3) << "Integrated point cloud (conversion: " << int((t2 - t1).toSec() * 1000) << " + allocate submaps:"
+          << int((t3 - t2).toSec() * 1000) << " + integration: " << int((t4 - t3).toSec() * 1000) << " = "
+          << int((t4 - t1).toSec() * 1000) << "ms)";
+}
 
-  // allocate submaps
+void PanopticMapper::allocateSubmaps(const std::vector<int> &ids) {
+  // allocate submaps with variabe resolution
   int voxels_per_side = 16;
   double voxel_size;
-  for (auto &id : unique_ids) {
-    if (label_handler_.isInstanceClass(id)) {
-      voxel_size = 0.03;
-    } else {
-      voxel_size = 0.08;
-    }
+  std::unordered_map<int, int> unknown_ids;   // for error handling
+  for (auto &id : ids) {
     if (!submaps_.submapIdExists(id)) {
       // first encounter, allocate a new Submap
+      if (!label_handler_.segmentationIdExists(id)) {
+        auto it = unknown_ids.find(id);
+        if (it == unknown_ids.end()) {
+          unknown_ids[id] = 1;
+        } else {
+          unknown_ids[id] += 1;
+        }
+        continue;
+      }
+      if (label_handler_.isInstanceClass(id)) {
+        voxel_size = 0.03;
+      } else {
+        voxel_size = 0.08;
+      }
       submaps_.addSubmap(Submap(id, voxel_size, voxels_per_side));
       setSubmapColor(&submaps_.getSubmap(id));
     }
   }
-
-  ros::WallTime t5 = ros::WallTime::now();
-
-  // integrate pointcloud
-  tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, ids);
-  ros::WallTime t6 = ros::WallTime::now();
-  VLOG(3) << "Integrated pointloud (" << int((t2 - t1).toSec() * 1000) << "+" << int((t3 - t2).toSec() * 1000)
-          << "+" << int((t4 - t3).toSec() * 1000) << "+" << int((t5 - t4).toSec() * 1000) << "+"
-          << int((t6 - t5).toSec() * 1000) << "=" << int((t6 - t1).toSec() * 1000) << "ms)";
+  for (auto it : unknown_ids) {
+    LOG(WARNING) << "Encountered " << it.second << " occurences of unknown segmentation ID '" << it.first << "'.";
+  }
 }
 
 void PanopticMapper::publishMeshCallback(const ros::TimerEvent &) {
-  publishMeshes();
+  // update meshes
+  if (visualize_mesh_) {
+    publishMeshes();
+  }
 
-  // tsdf blocks
-  for (auto &submap : submaps_) {
-    if (submap.getID() == 62) {
+  // visualize tsdf blocks
+  if (visualize_tsdf_blocks_) {
+    for (auto &submap : submaps_) {
+      //if (label_handler_.isBackgroundClass(submap.getID())) { continue; }
+      if (submap.getID() < 62) { continue; }
       visualization_msgs::MarkerArray markers;
       tsdf_visualizer_.generateBlockMsg(submap, &markers);
       tsdf_blocks_pub_.publish(markers);
@@ -345,6 +387,7 @@ bool PanopticMapper::loadMap(const std::string &file_path) {
 
     // recompute session variables
     setSubmapColor(submap_ptr.get());
+    submap_ptr->setIsObserved(false);
 
     // add to the collection
     submaps_.addSubmap(*submap_ptr);

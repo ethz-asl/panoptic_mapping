@@ -32,7 +32,7 @@ cs_add_library(${PROJECT_NAME}
         src/integrator/integrator_factory.cpp
         src/integrator/naive_integrator.cpp
         src/integrator/projective_integrator.cpp
-        src/integrator/projective_multi_tsdf_integrator.cpp
+        src/integrator/projection_interpolators.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
 

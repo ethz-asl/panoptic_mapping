@@ -7,11 +7,13 @@ from scipy import misc
 import rospkg
 
 
-def create_label_ids():
+def create_label_ids(ir_correction_file):
+    """
+    Create the class and instance labels for the objects in the flat dataset.
+    """
     # Read infrared label mapping (because airsims infrared values are screwed up)
-    instance_to_mesh_id = []    # instance_to_mesh_id[inst_id] = [mesh_id, ir_color]
-    path = rospkg.RosPack().get_path("panoptic_mapping") + "/cfg/flat_dataset/segmentation_id_list.csv"
-    with open(path) as csvfile:
+    instance_to_mesh_id = []  # instance_to_mesh_id[inst_id] = [mesh_id, ir_color]
+    with open(ir_correction_file) as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         last_id = -1
         instance_id = 0
@@ -43,14 +45,14 @@ def create_label_ids():
         class_ids[name] = class_counter[0]
 
     # Background classes
-    letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"]
+    letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u"]
     set_label("SM_Ceiling_a")
     set_label("SM_Curtains_a")
     set_label("SM_Floor_a")
-    set_label("SM_Kitchen_a")
     set_label("SM_Walls_a")
     set_label("SM_Windows_glass_a")
     set_label("SM_Windows_Windows_a")
+    set_label("SM_TV_Wall_a")
 
     panoptic_count = counter[0] - 1
     # Instances
@@ -66,8 +68,7 @@ def create_label_ids():
     set_label("SM_Chair_b", increment_class=False)
     set_label("SM_Kitchen_Chair_a", increment_class=False)
     set_label("SM_Coffee_table_a")
-    set_label("SM_Cup_a")
-    [set_label("SM_Cup_%s" % letters[x-1], increment_class=False) for x in range(1, 3)]
+    [set_label("SM_Cup_%s" % letters[x], increment_class=False) for x in range(3)]
     set_label("SM_Decor_a")
     set_label("SM_Decor_b", increment_class=False)
     set_label("SM_Digital_Clock_a")
@@ -78,6 +79,7 @@ def create_label_ids():
     set_label("SM_Floor_Lamp_a")
     set_label("SM_Journal_a")
     [set_label("SM_Journal_%s" % letters[x], increment_class=False) for x in range(1, 3)]
+    set_label("SM_Kitchen_a")
     set_label("SM_Picture_a")
     [set_label("SM_Picture_%s" % letters[x], increment_class=False) for x in range(1, 7)]
     set_label("SM_Plant_a")
@@ -92,7 +94,6 @@ def create_label_ids():
     set_label("SM_Tumblr_a")
     set_label("SM_Tumblr_b", increment_class=False)
     set_label("SM_TV_a")
-    set_label("SM_TV_Wall_a")
     set_label("SM_Wall_Clock_a")
     set_label("SM_Coffee_Machine_a")
     set_label("SM_Nightstand_a")
@@ -102,6 +103,9 @@ def create_label_ids():
 
 
 def apply_labels(mesh_labels):
+    """
+    Set the segmentation id for all object in unreal based on the info in 'mesh_labels'
+    """
     client = airsim.MultirotorClient()
     success = 0
     client.confirmConnection()
@@ -110,13 +114,17 @@ def apply_labels(mesh_labels):
     for key in mesh_labels:
         if client.simSetSegmentationObjectID(key, mesh_labels[key][0], False):
             success = success + 1
-            print("Successfully set label '%s'." % key)
+            print("Successfully set label for '%s'." % key)
         else:
-            print("Failed to set label '%s'." % key)
+            print("Failed to set label for '%s'." % key)
     print("Applied %i labels." % success)
 
 
 def get_available_meshes(comparison_labels=None):
+    """
+    Print the names of all meshes in the unreal world. If comparison_labels is set print how many of these are uniquely
+    matched with the existing names.
+    """
     client = airsim.MultirotorClient()
     client.confirmConnection()
     names = client.simListSceneObjects("[\w]*")
@@ -134,34 +142,53 @@ def get_available_meshes(comparison_labels=None):
         print("Unique labels matched: %.1f percent" % (np.mean(np.array(counts) == 1) * 100))
 
 
+def get_infrared_correction(target_file):
+    """
+    Compute the transfer dynamics from segmentation id in unreal and the value in the infrared image and save it to file.
+    """
+    client = airsim.MultirotorClient()
+    client.confirmConnection()
+    counter = 0
+    print("Computing infrared corrections ...")
+    with open(target_file, 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["MeshID", "InfraRedID"])
+        for i in range(256):
+            client.simSetSegmentationObjectID("[\w]*", i, True)
+            responses = client.simGetImages([airsim.ImageRequest("Id_cam", airsim.ImageType.Infrared, False, False)])
+            response = responses[0]
+            img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8)
+            writer.writerow([i, img1d[0]])
+            if i * 100 / 256 > counter:
+                counter = counter + 5
+                print("%i percent done ..." % counter)
+    print("Saved infrared corrections in '%s'." % target_file)
+
+
 def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
-    color_palette = misc.imread("/home/lukas/programs/AirSim/Unreal//Plugins/AirSim/Content/HUDAssets/seg_color_pallet.png")
+    """
+    Save label data to file.
+    """
+    color_palette = misc.imread(
+        "/home/lukas/programs/AirSim/Unreal/Plugins/AirSim/Content/HUDAssets/seg_color_pallet.png")
     with open(out_file_name, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["InstanceID", "ClassID", "PanopticID", "MeshID", "InfraredID", "R", "G", "B", "Name", ])
-        for key in labels:
+        keys = [key for key in labels]
+        keys = sorted(keys, key=lambda x: labels(x))
+        for key in keys:
             id = labels[key]
             mesh_id = mesh_ids[key]
             writer.writerow([id, classes[key], int(id <= panoptic_count), mesh_id[0], mesh_id[1],
-                             color_palette[0, mesh_id[0]*4, 0], color_palette[0, mesh_id[0], 1],
+                             color_palette[0, mesh_id[0] * 4, 0], color_palette[0, mesh_id[0], 1],
                              color_palette[0, mesh_id[0], 2], key])
+        writer.writerow([255, 255, 1, 255, 255, 80, 80, 80, "Unknown"])
     print("Saved labels in '%s'." % out_file_name)
 
 
-def list_infrared_label_transfer():
-    client = airsim.MultirotorClient()
-    client.confirmConnection()
-    print("mesh id, infrared value")
-    for i in range(256):
-        client.simSetSegmentationObjectID("[\w]*", i, True)
-        responses = client.simGetImages([airsim.ImageRequest("Id_cam", airsim.ImageType.Infrared, False, False)])
-        response = responses[0]
-        img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8)
-        print("%i, %i" % (i, img1d[0]))
-
-
 if __name__ == "__main__":
-    labels, classes, mesh_ids, panoptic_count = create_label_ids()
-    #get_available_meshes(labels)
+    get_infrared_correction("/home/lukas/Documents/PanopticMapping/Data/infrared_corrections.csv");
+    labels, classes, mesh_ids, panoptic_count = create_label_ids("/home/lukas/Documents/PanopticMapping/Data/infrared_corrections.csv")
+    # get_available_meshes(labels)
     apply_labels(mesh_ids)
-    #export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/catkin_ws/src/panoptic_mapping/data/flat_labels.csv")
+    export_labels(labels, classes, mesh_ids, panoptic_count, "/home/lukas/Documents/PanopticMapping/Data/labels.csv")
