@@ -14,6 +14,7 @@ cs_add_library(${PROJECT_NAME}
         src/panoptic_mapper.cpp
         src/visualization/tsdf_visualizer.cpp
         src/conversions/ros_params.cpp
+        src/conversions/ros_component_factory.cpp
         )
 
 ###############
@@ -21,7 +22,7 @@ cs_add_library(${PROJECT_NAME}
 ###############
 
 cs_add_executable(panoptic_mapper_node
-        src/ros_nodes/panoptic_mapper_node.cpp
+        app/panoptic_mapper_node.cpp
         )
 target_link_libraries(panoptic_mapper_node ${PROJECT_NAME})
 

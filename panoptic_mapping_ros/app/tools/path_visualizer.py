@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
-import rospy
-import math
 import numpy as np
-from geometry_msgs.msg import Pose, PoseStamped, Point
+
+import rospy
+from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 
 
-class PathVisualizer:
+class PathVisualizer(object):
     def __init__(self):
         """  Initialize ros node and read params """
         # Params
-        self.r = rospy.get_param('~r', 1)  # color 0-1
-        self.g = rospy.get_param('~g', 0)
-        self.b = rospy.get_param('~b', 0)
+        self.red = rospy.get_param('~r', 1)  # color 0-1
+        self.green = rospy.get_param('~g', 0)
+        self.blue = rospy.get_param('~b', 0)
         self.length = rospy.get_param('~length', 0.3)  # m
         self.width = rospy.get_param('~width', 0.03)  # m
         self.distance = rospy.get_param('~distance', 0.05)  # m
@@ -35,9 +35,11 @@ class PathVisualizer:
 
         # Only plot every 'distance' meters
         pose = pose_stamped.pose
-        dist = np.linalg.norm(np.array(
-            [self.previous_pose.position.x, self.previous_pose.position.y, self.previous_pose.position.z]) - np.array(
-            [pose.position.x, pose.position.y, pose.position.z]))
+        dist = np.linalg.norm(
+            np.array([
+                self.previous_pose.position.x, self.previous_pose.position.y,
+                self.previous_pose.position.z
+            ]) - np.array([pose.position.x, pose.position.y, pose.position.z]))
         if dist < self.distance:
             return
         self.previous_pose = pose_stamped.pose
@@ -46,9 +48,9 @@ class PathVisualizer:
         msg = Marker()
         msg.header = pose_stamped.header
         msg.pose = pose
-        msg.color.r = self.r
-        msg.color.g = self.g
-        msg.color.b = self.b
+        msg.color.r = self.red
+        msg.color.g = self.green
+        msg.color.b = self.blue
         msg.color.a = 1
         msg.ns = "path"
         if self.use_arrow:
