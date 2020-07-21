@@ -2,9 +2,10 @@
 
 namespace panoptic_mapping {
 
-bool SubmapCollection::addSubmap(const Submap &submap) {
+bool SubmapCollection::addSubmap(const Submap& submap) {
   if (submapIdExists(submap.getID())) {
-    LOG(ERROR) << "Can not add submap, ID '" << submap.getID() << "' already exists.";
+    LOG(ERROR) << "Can not add submap, ID '" << submap.getID()
+               << "' already exists.";
     return false;
   }
   id_to_index_[submap.getID()] = submaps_.size();
@@ -15,17 +16,18 @@ bool SubmapCollection::addSubmap(const Submap &submap) {
 bool SubmapCollection::removeSubmap(int id) {
   auto it = id_to_index_.find(id);
   if (it == id_to_index_.end()) {
-    //submap does not exist
+    // submap does not exist
     return false;
   }
+  size_t previous_index = it->second;
   submaps_.erase(submaps_.begin() + it->second);
-  return true;
-}
-
-bool SubmapCollection::changeSubmapID(int id_old, int id_new) {
-  if (submapIdExists(id_new)) { return false; }
-  if (!submapIdExists(id_old)) { return false; }
-  submaps_[id_to_index_[id_old]].id_ = id_new;
+  id_to_index_.erase(it);
+  // correct the index table
+  for (auto& id_index_pair : id_to_index_) {
+    if (id_index_pair.second > previous_index) {
+      id_index_pair.second -= 1;
+    }
+  }
   return true;
 }
 
@@ -33,14 +35,14 @@ bool SubmapCollection::submapIdExists(int id) {
   return id_to_index_.find(id) != id_to_index_.end();
 }
 
-Submap &SubmapCollection::getSubmap(int id) {
+Submap& SubmapCollection::getSubmap(int id) {
   // This assumes we checked that the id exists
   return submaps_[id_to_index_[id]];
 }
 
-void SubmapCollection::clear(){
+void SubmapCollection::clear() {
   submaps_.clear();
   id_to_index_.clear();
 }
 
-} // namespace panoptic_mapping
+}  // namespace panoptic_mapping

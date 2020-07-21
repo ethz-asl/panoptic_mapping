@@ -2,8 +2,8 @@
 #define PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
-#include <map>
 
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap.h"
@@ -19,13 +19,12 @@ class SubmapCollection {
   virtual ~SubmapCollection() = default;
 
   // iterator over submaps
-  std::vector<Submap>::iterator begin() {return submaps_.begin();}
-  std::vector<Submap>::iterator end() {return submaps_.end();}
+  std::vector<Submap>::iterator begin() { return submaps_.begin(); }
+  std::vector<Submap>::iterator end() { return submaps_.end(); }
 
   // modify the collection
-  bool addSubmap(const Submap &submap);
-  bool removeSubmap(int id);      // removes all submaps of this id
-  bool changeSubmapID(int id_old, int id_new);
+  bool addSubmap(const Submap& submap);
+  bool removeSubmap(int id);
   bool submapIdExists(int id);    // check whether id exists
   Submap& getSubmap(int id);      // this assumes that the id exists
   void clear();
@@ -38,6 +37,6 @@ class SubmapCollection {
   std::unordered_map<int, size_t> id_to_index_;
 };
 
-} // namespace panoptic_mapping
+}  // namespace panoptic_mapping
 
-#endif //PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_
+#endif  // PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_
