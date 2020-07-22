@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_ROS_ROS_PARAMS_H_
-#define PANOPTIC_MAPPING_ROS_ROS_PARAMS_H_
+#ifndef PANOPTIC_MAPPING_ROS_CONVERSIONS_ROS_PARAMS_H_
+#define PANOPTIC_MAPPING_ROS_CONVERSIONS_ROS_PARAMS_H_
 
 #include <memory>
 #include <string>
@@ -12,11 +12,12 @@
 namespace panoptic_mapping {
 
 // integrator configs
-NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(const ros::NodeHandle &nh);
-ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(const ros::NodeHandle &nh);
-std::unique_ptr<IntegratorBase::Config> getTSDFIntegratorConfigFromRos(const ros::NodeHandle &nh,
-                                                                       const std::string &type);
+NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(
+    const ros::NodeHandle& nh);
 
-} //panoptic_mapping
+ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(
+    const ros::NodeHandle& nh);
 
-#endif //PANOPTIC_MAPPING_ROS_ROS_PARAMS_H_
+}  // namespace panoptic_mapping
+
+#endif  // PANOPTIC_MAPPING_ROS_CONVERSIONS_ROS_PARAMS_H_

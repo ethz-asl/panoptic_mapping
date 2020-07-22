@@ -11,7 +11,7 @@ label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
 tsdf_voxel_size: 0.1
 
 tsdf_integrator:  
-  integrator_type: projective # naive, projective, projective_multi_tsdf
+  type: projective # naive, projective, projective_multi_tsdf
   
   # projective args
   width: 640
@@ -36,7 +36,6 @@ tsdf_integrator:
   voxel_carving_enabled: true
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
-
 
 #  truncation_distance: 0.2
 #  max_ray_length_m: 5.0

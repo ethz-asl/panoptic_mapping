@@ -1,9 +1,9 @@
 <launch>
   <!-- Arguments -->
-  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run1.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run2.bag"/> 
   <arg name="config" default="devel_mapper_cfg"/>
   <arg name="verbosity" default="4"/>
-  <arg name="bag_play_rate" default="1.5"/>
+  <arg name="bag_play_rate" default="1"/>
   <arg name="use_image_input" default = "true"/>
 
 
@@ -11,7 +11,7 @@
   <!-- Run -->
   <param name="/use_sim_time" value="true" />
   <!-- Play data -->
-  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate)"/>
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate) -d 7"/>
 
 
   <!-- RVIZ Visualization -->

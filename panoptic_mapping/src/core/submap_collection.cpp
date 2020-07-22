@@ -1,12 +1,13 @@
 #include "panoptic_mapping/core/submap_collection.h"
 
 #include <memory>
+#include <utility>
 
 namespace panoptic_mapping {
 
-void SubmapCollection::addSubmap(Submap* submap) {
+void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
   id_to_index_[submap->getID()] = submaps_.size();
-  submaps_.emplace_back(std::unique_ptr<Submap>(submap));
+  submaps_.emplace_back(std::move(submap));
 }
 
 Submap* SubmapCollection::createSubmap(double voxel_size, int voxels_per_side) {
