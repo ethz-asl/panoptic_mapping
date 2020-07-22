@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import csv
+import operator
 
 import airsim
-
 import numpy as np
 from scipy import misc
 
@@ -192,9 +192,8 @@ def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
             "B",
             "Name",
         ])
-        keys = [key for key in labels]
-        keys = sorted(keys, key=lambda x: labels(x))  # pylint: disable=W0196
-        for key in keys:
+        sorted_labels = sorted(labels.items(), key=operator.itemgetter(1))
+        for key in sorted_labels:
             instance_id = labels[key]
             mesh_id = mesh_ids[key]
             writer.writerow([
