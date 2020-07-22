@@ -88,11 +88,9 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
 
   // Getting the tsdf blocks for this submap (the tsdf layer)
   if (!voxblox::io::LoadBlocksFromStream(
-      submap_proto.num_blocks(),
-      Layer<TsdfVoxel>::BlockMergingStrategy::kReplace,
-      proto_file_ptr,
-      submap->tsdf_layer_.get(),
-      tmp_byte_offset_ptr)) {
+          submap_proto.num_blocks(),
+          Layer<TsdfVoxel>::BlockMergingStrategy::kReplace, proto_file_ptr,
+          submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
     LOG(ERROR) << "Could not load the tsdf blocks from stream.";
     return nullptr;
   }

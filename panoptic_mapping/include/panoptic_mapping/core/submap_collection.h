@@ -19,11 +19,16 @@ class SubmapCollection {
   virtual ~SubmapCollection() = default;
 
   // iterator over submaps
-  std::vector<Submap>::iterator begin() { return submaps_.begin(); }
-  std::vector<Submap>::iterator end() { return submaps_.end(); }
+  std::vector<std::unique_ptr<Submap>>::iterator begin() {
+    return submaps_.begin();
+  }
+  std::vector<std::unique_ptr<Submap>>::iterator end() {
+    return submaps_.end();
+  }
 
   // modify the collection
-  bool addSubmap(const Submap& submap);
+  void addSubmap(Submap* submap);
+  Submap* createSubmap(double voxel_size, int voxels_per_side);
   bool removeSubmap(int id);
   bool submapIdExists(int id);    // check whether id exists
   Submap& getSubmap(int id);      // this assumes that the id exists
@@ -33,7 +38,7 @@ class SubmapCollection {
   size_t size() { return submaps_.size(); }
 
  private:
-  std::vector<Submap> submaps_;
+  std::vector<std::unique_ptr<Submap>> submaps_;
   std::unordered_map<int, size_t> id_to_index_;
 };
 
