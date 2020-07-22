@@ -1,22 +1,28 @@
 #include "panoptic_mapping/integrator/naive_integrator.h"
 
+#include <vector>
+
 namespace panoptic_mapping {
 
-void NaiveIntegrator::setupFromConfig(IntegratorBase::Config *config) {
-  CHECK_NOTNULL(config);
-  auto cfg = dynamic_cast<Config *>(config);
-  if (cfg) {
-    config_ = *cfg;
-  } else {
-    LOG(ERROR) << "Failed to setup: config is not of type 'NaivePointcloudIntegrator::Config'.";
+NaiveIntegrator::Config NaiveIntegrator::Config::isValid() const {
+  if (voxblox_integrator_type != "simple" &&
+      voxblox_integrator_type != "merged" &&
+      voxblox_integrator_type != "fast" &&
+      voxblox_integrator_type != "projective") {
+    LOG(FATAL) << "Unknown voxblox_integrator_type '" << voxblox_integrator_type
+               << "'.";
   }
+  return Config(*this);
 }
 
-void NaiveIntegrator::processPointcloud(SubmapCollection *submaps,
-                                        const Transformation &T_M_C,
-                                        const Pointcloud &pointcloud,
-                                        const Colors &colors,
-                                        const std::vector<int> &ids) {
+NaiveIntegrator::NaiveIntegrator(const Config& config)
+    : config_(config.isValid()) {}
+
+void NaiveIntegrator::processPointcloud(SubmapCollection* submaps,
+                                        const Transformation& T_M_C,
+                                        const Pointcloud& pointcloud,
+                                        const Colors& colors,
+                                        const std::vector<int>& ids) {
   CHECK_NOTNULL(submaps);
   CHECK_EQ(ids.size(), pointcloud.size());
   CHECK_EQ(ids.size(), colors.size());
@@ -43,17 +49,17 @@ void NaiveIntegrator::processPointcloud(SubmapCollection *submaps,
   for (size_t i = 0; i < id_v.size(); ++i) {
     if (!submaps->submapIdExists(id_v[i])) {
       // all submaps should already be allocated
-      LOG(WARNING) << "Failed to integrate pointcloud to submap with ID '" << id_v[i] << "': submap does not exist.";
+      LOG(WARNING) << "Failed to integrate pointcloud to submap with ID '"
+                   << id_v[i] << "': submap does not exist.";
       continue;
     }
     if (!tsdf_integrator_) {
-      // We just use the fast integrator here, could also add others
-      tsdf_integrator_ =
-          voxblox::TsdfIntegratorFactory::create(config_.voxblox_integrator_type,
-                                                 config_.voxblox_integrator_config,
-                                                 submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
+      tsdf_integrator_ = voxblox::TsdfIntegratorFactory::create(
+          config_.voxblox_integrator_type, config_.voxblox_integrator_config,
+          submaps->getSubmap(id_v[i]).getTsdfLayerPtr().get());
     } else {
-      tsdf_integrator_->setLayer(submaps->getSubmap(id_v[i]).getTsdfLayerPtr());
+      tsdf_integrator_->setLayer(
+          submaps->getSubmap(id_v[i]).getTsdfLayerPtr().get());
     }
     tsdf_integrator_->integratePointCloud(T_M_C, cloud_v[i], color_v[i]);
   }

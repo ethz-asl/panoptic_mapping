@@ -15,16 +15,8 @@ namespace panoptic_mapping {
  */
 class IntegratorBase {
  public:
-  // Each integrator is allowed to derive from Config and add params there
-  struct Config {
-    virtual ~Config() = default;
-  };
-
   IntegratorBase() = default;
   virtual ~IntegratorBase() = default;
-
-  // initialization function, these are allowed to pass PointcloudIntegratorBase::Config-ptrs to derived configs
-  virtual void setupFromConfig(Config *config) = 0;
 
   // process a and integrate a pointcloud
   virtual void processPointcloud(SubmapCollection *submaps,
@@ -43,4 +35,4 @@ class IntegratorBase {
 
 }  // namespace panoptic_mapping
 
-#endif //PANOPTIC_MAPPING_INTEGRATOR_INTEGRATOR_BASE_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATOR_INTEGRATOR_BASE_H_
