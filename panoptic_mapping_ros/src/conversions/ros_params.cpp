@@ -37,4 +37,15 @@ ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(
   return config;
 }
 
+GroundTruthIDTracker::Config getGroundTruthIDTrackerConfigFromRos(
+    const ros::NodeHandle& nh) {
+  GroundTruthIDTracker::Config config;
+  nh.param("voxels_per_side", config.voxels_per_side, config.voxels_per_side);
+  nh.param("instance_voxel_size", config.instance_voxel_size,
+           config.instance_voxel_size);
+  nh.param("background_voxel_size", config.background_voxel_size,
+           config.background_voxel_size);
+  return config;
+}
+
 }  // namespace panoptic_mapping

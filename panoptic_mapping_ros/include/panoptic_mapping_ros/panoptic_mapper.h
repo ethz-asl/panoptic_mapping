@@ -12,10 +12,11 @@
 #include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
-#include "panoptic_mapping/core/submap.h"
-#include "panoptic_mapping/core/submap_collection.h"
-#include "panoptic_mapping/preprocessing/label_handler.h"
-#include "panoptic_mapping/integrator/integrator_base.h"
+#include <panoptic_mapping/core/submap.h>
+#include <panoptic_mapping/core/submap_collection.h>
+#include <panoptic_mapping/integrator/integrator_base.h>
+#include <panoptic_mapping/preprocessing/id_tracker_base.h>
+#include <panoptic_mapping/preprocessing/label_handler.h>
 
 #include "panoptic_mapping_ros/visualization/tsdf_visualizer.h"
 
@@ -25,12 +26,11 @@ class PanopticMapper {
  public:
   struct Config {
     int max_image_queue_length = 10;  // after this many images are queued for
-    // integration start discarding old ones.
+                                      // integration start discarding old ones.
 
     // visualization
-    std::string coloring_mode =
-        "color";  // 'color', 'normals', 'submaps', 'instances', set via
-    // setColoringMode()
+    std::string coloring_mode = "color";  // 'color', 'normals', 'submaps',
+    // 'instances', set via setColoringMode()
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = false;
   };
@@ -77,8 +77,9 @@ class PanopticMapper {
   // members
   Config config_;
   SubmapCollection submaps_;
-  LabelHandler label_handler_;
+  std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
+  std::unique_ptr<IDTrackerBase> id_tracker_;
   voxgraph::TfTransformer tf_transformer_;
   TsdfVisualizer tsdf_visualizer_;
 
@@ -100,8 +101,6 @@ class PanopticMapper {
   void processImages(const sensor_msgs::ImagePtr& depth_img,
                      const sensor_msgs::ImagePtr& color_img,
                      const sensor_msgs::ImagePtr& segmentation_img);
-
-  void allocateSubmaps(const std::vector<int>& ids);
 
   // visualization
   void setColoringMode(const std::string& coloring_mode);

@@ -87,13 +87,21 @@ void PanopticMapper::setupMembers() {
   // labels
   std::string label_path;
   nh_private_.param("label_path", label_path, std::string(""));
-  label_handler_.readLabelsFromFile(label_path);
+  label_handler_ = std::make_shared<LabelHandler>();
+  label_handler_->readLabelsFromFile(label_path);
+
+  // id tracking
+  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
+  id_tracker_ =
+      ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
 }
 
 void PanopticMapper::processImages(
     const sensor_msgs::ImagePtr& depth_img,
     const sensor_msgs::ImagePtr& color_img,
     const sensor_msgs::ImagePtr& segmentation_img) {
+  ros::WallTime t0 = ros::WallTime::now();
+
   // look up transform
   voxblox::Transformation T_M_C;
   if (!tf_transformer_.lookupTransform("world", depth_img->header.frame_id,
@@ -104,39 +112,33 @@ void PanopticMapper::processImages(
                  << "', ignoring images.";
     return;
   }
+
+  // read images, segmentation is mutable (copied) for the id tracker
   cv_bridge::CvImageConstPtr depth =
       cv_bridge::toCvShare(depth_img, depth_img->encoding);
   cv_bridge::CvImageConstPtr color =
       cv_bridge::toCvShare(color_img, color_img->encoding);
-  cv_bridge::CvImageConstPtr segmentation =
-      cv_bridge::toCvShare(segmentation_img, segmentation_img->encoding);
+  cv_bridge::CvImagePtr segmentation =
+      cv_bridge::toCvCopy(segmentation_img, segmentation_img->encoding);
+  ros::WallTime t1 = ros::WallTime::now();
 
   // allocate new submaps
-  ros::WallTime t1 = ros::WallTime::now();
-  std::vector<int> ids;  // IDs reflect the submap ID a point is associated with
-  ids.reserve(depth->image.rows * depth->image.cols);
-  for (int v = 0; v < segmentation->image.rows; v++) {
-    for (int u = 0; u < segmentation->image.cols; u++) {
-      ids.emplace_back(segmentation->image.at<cv::Vec3b>(v, u)[0]);
-    }
-  }
-  ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
-  allocateSubmaps(ids);
+  id_tracker_->processImages(&submaps_, T_M_C, depth->image, color->image,
+                             &segmentation->image);
   ros::WallTime t2 = ros::WallTime::now();
 
-  // integrate pointcloud
+  // integrate the images
   tsdf_integrator_->processImages(&submaps_, T_M_C, depth->image, color->image,
                                   segmentation->image);
   ros::WallTime t3 = ros::WallTime::now();
-  VLOG(3) << "Integrated images (allocate submaps:"
-          << int((t2 - t1).toSec() * 1000)
+  VLOG(3) << "Integrated images (id tracking:" << int((t2 - t1).toSec() * 1000)
           << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
-          << int((t3 - t1).toSec() * 1000) << "ms)";
+          << int((t3 - t0).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::pointcloudCallback(
     const sensor_msgs::PointCloud2::Ptr& pointcloud_msg) {
-  ros::WallTime t1 = ros::WallTime::now();
+  ros::WallTime t0 = ros::WallTime::now();
 
   // look up the transform
   voxblox::Transformation T_S_C;
@@ -172,58 +174,21 @@ void PanopticMapper::pointcloudCallback(
     ++iter_x;
     ++iter_rgb;
   }
-  ros::WallTime t2 = ros::WallTime::now();
+  ros::WallTime t1 = ros::WallTime::now();
 
   // allocate new submaps
-  std::vector<int> unique_ids(ids);
-  std::sort(unique_ids.begin(), unique_ids.end());
-  unique_ids.erase(std::unique(unique_ids.begin(), unique_ids.end()),
-                   unique_ids.end());
-  allocateSubmaps(unique_ids);
-  ros::WallTime t3 = ros::WallTime::now();
+  id_tracker_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, &ids);
+  ros::WallTime t2 = ros::WallTime::now();
 
   // integrate pointcloud
   tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors,
                                       ids);
-  ros::WallTime t4 = ros::WallTime::now();
+  ros::WallTime t3 = ros::WallTime::now();
   VLOG(3) << "Integrated point cloud (conversion: "
-          << int((t2 - t1).toSec() * 1000)
-          << " + allocate submaps:" << int((t3 - t2).toSec() * 1000)
-          << " + integration: " << int((t4 - t3).toSec() * 1000) << " = "
-          << int((t4 - t1).toSec() * 1000) << "ms)";
-}
-
-void PanopticMapper::allocateSubmaps(const std::vector<int>& ids) {
-  // allocate submaps with variabe resolution
-  Submap::Config cfg;
-  cfg.voxels_per_side = 16;
-  std::unordered_map<int, int> unknown_ids;   // for error handling
-  for (auto& id : ids) {
-    if (!submaps_.submapIdExists(id)) {
-      // first encounter, allocate a new Submap
-      if (!label_handler_.segmentationIdExists(id)) {
-        auto it = unknown_ids.find(id);
-        if (it == unknown_ids.end()) {
-          unknown_ids[id] = 1;
-        } else {
-          unknown_ids[id] += 1;
-        }
-        continue;
-      }
-      if (label_handler_.isInstanceClass(id)) {
-        cfg.voxel_size = 0.03;
-      } else {
-        cfg.voxel_size = 0.08;
-      }
-      submaps_.createSubmap(cfg);
-      setSubmapColor(&submaps_.getSubmap(id));
-    }
-  }
-  for (auto it : unknown_ids) {
-    LOG(WARNING) << "Encountered " << it.second
-                 << " occurences of unknown segmentation ID '" << it.first
-                 << "'.";
-  }
+          << int((t1 - t0).toSec() * 1000)
+          << " + id tracking:" << int((t2 - t1).toSec() * 1000)
+          << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
+          << int((t3 - t0).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::publishMeshCallback(const ros::TimerEvent&) {
@@ -345,8 +310,8 @@ void PanopticMapper::setColoringMode(const std::string& coloring_mode) {
 void PanopticMapper::setSubmapColor(Submap* submap) {
   // modes 'color' and 'normals' are handled by the mesher, so no need to set
   if (config_.coloring_mode == "instances") {
-    if (label_handler_.segmentationIdExists(submap->getID())) {
-      submap->setColor(label_handler_.getColor(submap->getID()));
+    if (label_handler_->segmentationIdExists(submap->getID())) {
+      submap->setColor(label_handler_->getColor(submap->getID()));
     } else {
       submap->setColor(Color());    // unknown IDs are black
     }
