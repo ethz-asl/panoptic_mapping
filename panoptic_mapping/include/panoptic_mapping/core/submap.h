@@ -16,7 +16,15 @@ namespace panoptic_mapping {
 
 class Submap {
  public:
-  Submap(double voxel_size, int voxels_per_side);
+  struct Config {
+    double voxel_size = 0.1;
+    double voxels_per_side = 16;
+
+    Config isValid() const;
+  };
+
+  explicit Submap(const Config& config);
+  virtual ~Submap() = default;
 
   // io
   void getProto(SubmapProto* proto) const;
@@ -51,6 +59,9 @@ class Submap {
 
  private:
   friend class SubmapCollection;
+
+  const Config config_;
+
   // state
   const SubmapID id_;
   int instance_id_;

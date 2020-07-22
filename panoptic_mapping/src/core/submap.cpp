@@ -8,12 +8,22 @@
 
 namespace panoptic_mapping {
 
-Submap::Submap(double voxel_size, int voxels_per_side)
-    : frame_name_("world"), instance_id_(-1), is_active_(true) {
+Submap::Config Submap::Config::isValid() const {
+  CHECK_GT(voxel_size, 0.0) << "The voxel size is expected > 0.0.";
+  CHECK_GT(voxels_per_side, 0.0) << "The voxels per side are expected > 0.";
+  return Config(*this);
+}
+
+Submap::Submap(const Config& config)
+    : config_(config.isValid()),
+      frame_name_("world"),
+      instance_id_(-1),
+      is_active_(true) {
   // setup layers
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
-      voxel_size, voxels_per_side);
-  double block_size = voxel_size * static_cast<double>(voxels_per_side);
+      config_.voxel_size, config_.voxels_per_side);
+  double block_size =
+      config_.voxel_size * static_cast<double>(config_.voxels_per_side);
   mesh_layer_ = std::make_shared<voxblox::MeshLayer>(block_size);
 
   // initialize with identity transformation
@@ -83,8 +93,10 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
   }
 
   // Creating a new submap to hold the data
-  auto submap = std::make_unique<Submap>(submap_proto.voxel_size(),
-                                         submap_proto.voxels_per_side());
+  Config cfg;
+  cfg.voxel_size = submap_proto.voxel_size();
+  cfg.voxels_per_side = submap_proto.voxels_per_side();
+  auto submap = std::make_unique<Submap>(cfg);
 
   // Getting the tsdf blocks for this submap (the tsdf layer)
   if (!voxblox::io::LoadBlocksFromStream(

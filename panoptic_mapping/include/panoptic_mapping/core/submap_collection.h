@@ -28,7 +28,7 @@ class SubmapCollection {
 
   // modify the collection
   void addSubmap(std::unique_ptr<Submap> submap);
-  Submap* createSubmap(double voxel_size, int voxels_per_side);
+  Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
   bool submapIdExists(int id);    // check whether id exists
   Submap& getSubmap(int id);      // this assumes that the id exists

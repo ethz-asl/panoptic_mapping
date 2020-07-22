@@ -10,8 +10,8 @@ void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
   submaps_.emplace_back(std::move(submap));
 }
 
-Submap* SubmapCollection::createSubmap(double voxel_size, int voxels_per_side) {
-  submaps_.emplace_back(std::make_unique<Submap>(voxel_size, voxels_per_side));
+Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
+  submaps_.emplace_back(std::make_unique<Submap>(config));
   Submap* new_submap = submaps_.back().get();
   id_to_index_[new_submap->getID()] = submaps_.size() - 1;
   return new_submap;

@@ -195,8 +195,8 @@ void PanopticMapper::pointcloudCallback(
 
 void PanopticMapper::allocateSubmaps(const std::vector<int>& ids) {
   // allocate submaps with variabe resolution
-  int voxels_per_side = 16;
-  double voxel_size;
+  Submap::Config cfg;
+  cfg.voxels_per_side = 16;
   std::unordered_map<int, int> unknown_ids;   // for error handling
   for (auto& id : ids) {
     if (!submaps_.submapIdExists(id)) {
@@ -211,11 +211,11 @@ void PanopticMapper::allocateSubmaps(const std::vector<int>& ids) {
         continue;
       }
       if (label_handler_.isInstanceClass(id)) {
-        voxel_size = 0.03;
+        cfg.voxel_size = 0.03;
       } else {
-        voxel_size = 0.08;
+        cfg.voxel_size = 0.08;
       }
-      submaps_.createSubmap(voxel_size, voxels_per_side);
+      submaps_.createSubmap(cfg);
       setSubmapColor(&submaps_.getSubmap(id));
     }
   }
