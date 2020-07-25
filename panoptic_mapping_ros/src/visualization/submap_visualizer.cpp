@@ -1,8 +1,8 @@
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
-#include <utility>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <ros/time.h>

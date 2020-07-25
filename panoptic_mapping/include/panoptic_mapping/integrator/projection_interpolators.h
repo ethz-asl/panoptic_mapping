@@ -18,11 +18,14 @@ class InterpolatorBase;
 class InterpolatorBase {
  public:
   // set up the interpolator
-  virtual void computeWeights(float u, float v, int id, bool *belongs_to_this_submap, const Eigen::MatrixXf &range_image, const cv::Mat &id_image) = 0;
+  virtual void computeWeights(float u, float v, int id,
+                              bool* belongs_to_this_submap,
+                              const Eigen::MatrixXf& range_image,
+                              const cv::Mat& id_image) = 0;
 
   // use these to read out the values
-  virtual float interpolateDepth(const Eigen::MatrixXf &range_image) = 0;
-  virtual Color interpolateColor(const cv::Mat &color_image) = 0;
+  virtual float interpolateDepth(const Eigen::MatrixXf& range_image) = 0;
+  virtual Color interpolateColor(const cv::Mat& color_image) = 0;
 };
 
 /**
@@ -30,7 +33,8 @@ class InterpolatorBase {
  */
 class InterpolatorFactory {
  public:
-  static std::unique_ptr<InterpolatorBase> create(const std::string &type);
+  static std::unique_ptr<InterpolatorBase> create(const std::string& type);
+
  private:
   InterpolatorFactory() = default;
 };
@@ -40,9 +44,11 @@ class InterpolatorFactory {
  */
 class InterpolatorNearest : public InterpolatorBase {
  public:
-  void computeWeights(float u, float v, int id, bool *belongs_to_this_submap, const Eigen::MatrixXf &range_image, const cv::Mat &id_image) override;
-  float interpolateDepth(const Eigen::MatrixXf &range_image) override;
-  Color interpolateColor(const cv::Mat &color_image) override;
+  void computeWeights(float u, float v, int id, bool* belongs_to_this_submap,
+                      const Eigen::MatrixXf& range_image,
+                      const cv::Mat& id_image) override;
+  float interpolateDepth(const Eigen::MatrixXf& range_image) override;
+  Color interpolateColor(const cv::Mat& color_image) override;
 
  protected:
   int u_;
@@ -54,9 +60,11 @@ class InterpolatorNearest : public InterpolatorBase {
  */
 class InterpolatorBilinear : public InterpolatorBase {
  public:
-  void computeWeights(float u, float v, int id, bool *belongs_to_this_submap, const Eigen::MatrixXf &range_image, const cv::Mat &id_image) override;
-  float interpolateDepth(const Eigen::MatrixXf &range_image) override;
-  Color interpolateColor(const cv::Mat &color_image) override;
+  void computeWeights(float u, float v, int id, bool* belongs_to_this_submap,
+                      const Eigen::MatrixXf& range_image,
+                      const cv::Mat& id_image) override;
+  float interpolateDepth(const Eigen::MatrixXf& range_image) override;
+  Color interpolateColor(const cv::Mat& color_image) override;
 
  protected:
   int u_;
@@ -65,13 +73,16 @@ class InterpolatorBilinear : public InterpolatorBase {
 };
 
 /**
- * Use Bilinear interpolation if depth and semantics are all close, otherwise nearest
+ * Use Bilinear interpolation if depth and semantics are all close, otherwise
+ * nearest
  */
 class InterpolatorAdaptive : public InterpolatorBilinear {
  public:
-  void computeWeights(float u, float v, int id, bool *belongs_to_this_submap, const Eigen::MatrixXf &range_image, const cv::Mat &id_image) override;
-  float interpolateDepth(const Eigen::MatrixXf &range_image) override;
-  Color interpolateColor(const cv::Mat &color_image) override;
+  void computeWeights(float u, float v, int id, bool* belongs_to_this_submap,
+                      const Eigen::MatrixXf& range_image,
+                      const cv::Mat& id_image) override;
+  float interpolateDepth(const Eigen::MatrixXf& range_image) override;
+  Color interpolateColor(const cv::Mat& color_image) override;
 
  protected:
   int u_;
@@ -87,9 +98,11 @@ class InterpolatorAdaptive : public InterpolatorBilinear {
  */
 class InterpolatorSemantic : public InterpolatorBase {
  public:
-  void computeWeights(float u, float v, int id, bool *belongs_to_this_submap, const Eigen::MatrixXf &range_image, const cv::Mat &id_image) override;
-  float interpolateDepth(const Eigen::MatrixXf &range_image) override;
-  Color interpolateColor(const cv::Mat &color_image) override;
+  void computeWeights(float u, float v, int id, bool* belongs_to_this_submap,
+                      const Eigen::MatrixXf& range_image,
+                      const cv::Mat& id_image) override;
+  float interpolateDepth(const Eigen::MatrixXf& range_image) override;
+  Color interpolateColor(const cv::Mat& color_image) override;
 
  protected:
   int u_;
@@ -102,4 +115,4 @@ class InterpolatorSemantic : public InterpolatorBase {
 
 }  // namespace panoptic_mapping
 
-#endif // PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATOR_PROJECTION_INTERPOLATORS_H_"

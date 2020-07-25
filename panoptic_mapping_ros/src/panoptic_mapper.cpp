@@ -357,7 +357,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   uint64_t tmp_byte_offset = 0u;
   SubmapCollectionProto submap_collection_proto;
   if (!voxblox::utils::readProtoMsgFromStream(
-      &proto_file, &submap_collection_proto, &tmp_byte_offset)) {
+          &proto_file, &submap_collection_proto, &tmp_byte_offset)) {
     LOG(ERROR) << "Could not read the protobuf message.";
     return false;
   }

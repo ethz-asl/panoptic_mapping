@@ -2,11 +2,11 @@
 
 #include <voxblox/integrator/merge_integration.h>
 
-#include <chrono>
-#include <vector>
-#include <thread>
 #include <algorithm>
+#include <chrono>
 #include <numeric>
+#include <thread>
+#include <vector>
 
 namespace panoptic_mapping {
 
@@ -149,15 +149,9 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
     bool point_belongs_to_this_submap;
     float sdf;
     float weight;
-    if (!computeVoxelDistanceAndWeight(&sdf,
-                                       &weight,
-                                       &point_belongs_to_this_submap,
-                                       p_C,
-                                       color_image,
-                                       id_image,
-                                       id,
-                                       truncation_distance,
-                                       voxel_size)) {
+    if (!computeVoxelDistanceAndWeight(
+            &sdf, &weight, &point_belongs_to_this_submap, p_C, color_image,
+            id_image, id, truncation_distance, voxel_size)) {
       continue;
     }
 
@@ -199,9 +193,13 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
   float u = p_C.x() * config_.focal_length / p_C.z() + config_.vx;
-  if (std::ceil(u) > config_.width || std::floor(u) < 0) { return false; }
+  if (std::ceil(u) > config_.width || std::floor(u) < 0) {
+    return false;
+  }
   float v = p_C.y() * config_.focal_length / p_C.z() + config_.vy;
-  if (std::ceil(v) > config_.height || std::floor(v) < 0) { return false; }
+  if (std::ceil(v) > config_.height || std::floor(v) < 0) {
+    return false;
+  }
 
   // Set up the interpolator and check whether this is a clearing or an updating
   // measurement.
@@ -215,7 +213,9 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   const float distance_to_surface =
       interpolator_->interpolateDepth(range_image_);
   const float new_sdf = distance_to_surface - distance_to_voxel;
-  if (new_sdf < -truncation_distance) { return false; }
+  if (new_sdf < -truncation_distance) {
+    return false;
+  }
 
   // Compute the weight of the measurement
   // Approximates the number of rays that would hit this voxel
@@ -272,12 +272,24 @@ void ProjectiveIntegrator::findVisibleBlocks(
 
     // sort out points that don't meet the criteria of
     // 1: in front, 2: close, 3: in view frustum.
-    if (p_C.z() < block_size / 2.0) { continue; }
-    if (p_C.norm() > max_range_in_image_ + block_diag) { continue; }
-    if (p_C.dot(view_frustum_[0]) < -block_diag) { continue; }
-    if (p_C.dot(view_frustum_[1]) < -block_diag) { continue; }
-    if (p_C.dot(view_frustum_[2]) < -block_diag) { continue; }
-    if (p_C.dot(view_frustum_[3]) < -block_diag) { continue; }
+    if (p_C.z() < block_size / 2.0) {
+      continue;
+    }
+    if (p_C.norm() > max_range_in_image_ + block_diag) {
+      continue;
+    }
+    if (p_C.dot(view_frustum_[0]) < -block_diag) {
+      continue;
+    }
+    if (p_C.dot(view_frustum_[1]) < -block_diag) {
+      continue;
+    }
+    if (p_C.dot(view_frustum_[2]) < -block_diag) {
+      continue;
+    }
+    if (p_C.dot(view_frustum_[3]) < -block_diag) {
+      continue;
+    }
     block_list->push_back(index);
   }
 }

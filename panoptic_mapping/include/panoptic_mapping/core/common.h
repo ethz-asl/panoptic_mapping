@@ -16,8 +16,8 @@ using voxblox::EsdfVoxel;
 using voxblox::Layer;
 using voxblox::Point;
 using voxblox::Pointcloud;
-using voxblox::TsdfVoxel;
 using voxblox::Transformation;
+using voxblox::TsdfVoxel;
 
 }  // namespace panoptic_mapping
 

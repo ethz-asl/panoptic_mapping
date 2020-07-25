@@ -1,9 +1,9 @@
-#include "panoptic_mapping_ros/panoptic_mapper.h"
-#include <ros/ros.h>
 #include <glog/logging.h>
+#include <ros/ros.h>
 
+#include "panoptic_mapping_ros/panoptic_mapper.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   ros::init(argc, argv, "panoptic_mapper", ros::init_options::NoSigintHandler);
 
   // Setup logging

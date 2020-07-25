@@ -31,11 +31,10 @@ class NaiveIntegrator : public IntegratorBase {
   virtual ~NaiveIntegrator() = default;
 
   // process a and integrate a pointcloud
-  void processPointcloud(SubmapCollection *submaps,
-                         const Transformation &T_M_C,
-                         const Pointcloud &pointcloud,
-                         const Colors &colors,
-                         const std::vector<int> &ids) override;
+  void processPointcloud(SubmapCollection* submaps, const Transformation& T_M_C,
+                         const Pointcloud& pointcloud, const Colors& colors,
+                         const std::vector<int>& ids) override;
+
  protected:
   const Config config_;
   std::shared_ptr<voxblox::TsdfIntegratorBase> tsdf_integrator_;

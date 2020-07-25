@@ -7,8 +7,8 @@ T_base_sensor:
  - [ 0.0, 0.0, 0.0, 1.0]
  
 label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
+global_frame_name: world
 
-tsdf_voxel_size: 0.1
 
 tsdf_integrator:  
   type: projective # naive, projective, projective_multi_tsdf
@@ -43,9 +43,17 @@ tsdf_integrator:
 #  use_sparsity_compensation_factor: true
 #  sparsity_compensation_factor: 20.0
 #  integration_order_mode: "sorted"
+
+id_tracker:
+  type: ground_truth
+  instance_voxel_size: 0.03
+  background_voxel_size: 0.08
+  voxels_per_side: 16
   
 visualization:
+  visualization_interval: 1.0
   coloring_mode: color # submaps, instances, color, normals
   visualize_mesh: true
-  visualize_tsdf_blocks: true
+  visualize_tsdf_blocks: false
+  
 

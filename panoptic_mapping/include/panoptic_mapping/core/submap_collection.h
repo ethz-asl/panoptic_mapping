@@ -30,7 +30,7 @@ class SubmapCollection {
   void addSubmap(std::unique_ptr<Submap> submap);
   Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
-  Submap& getSubmap(int id);    // this assumes that the id exists
+  Submap& getSubmap(int id);  // this assumes that the id exists
   void clear();
 
   // accessors

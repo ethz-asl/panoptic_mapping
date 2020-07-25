@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "panoptic_mapping/integrator/projection_interpolators.h"
-#include "panoptic_mapping/integrator/integrator_base.h"
 #include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/integrator/integrator_base.h"
+#include "panoptic_mapping/integrator/projection_interpolators.h"
 
 namespace panoptic_mapping {
 
@@ -26,7 +26,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     float focal_length = 320;
 
     // integration params
-    float max_range = 5;   // m
+    float max_range = 5;    // m
     float min_range = 0.1;  // m
     bool use_weight_dropoff = true;
     bool use_constant_weight = false;
@@ -34,7 +34,7 @@ class ProjectiveIntegrator : public IntegratorBase {
                                      // spcae in object A
     float sparsity_compensation_factor = 1.0;
     float max_weight = 1e5;
-    std::string interpolation_method;   // nearest, bilinear, adaptive, semantic
+    std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
 
     // system params
     int integration_threads = 0;
@@ -45,11 +45,9 @@ class ProjectiveIntegrator : public IntegratorBase {
   explicit ProjectiveIntegrator(const Config& config);
   virtual ~ProjectiveIntegrator() = default;
 
-  void processImages(SubmapCollection *submaps,
-                     const Transformation &T_M_C,
-                     const cv::Mat &depth_image,
-                     const cv::Mat &color_image,
-                     const cv::Mat &id_image) override;
+  void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
+                     const cv::Mat& depth_image, const cv::Mat& color_image,
+                     const cv::Mat& id_image) override;
 
  protected:
   // components
@@ -64,36 +62,24 @@ class ProjectiveIntegrator : public IntegratorBase {
   std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals
 
   // methods
-  void allocateNewBlocks(SubmapCollection *submaps,
-                         const Transformation &T_M_C,
-                         const cv::Mat &depth_image,
-                         const cv::Mat &id_image);
+  void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
+                         const cv::Mat& depth_image, const cv::Mat& id_image);
 
-  void findVisibleBlocks(const Submap &submap,
-                         const Transformation &T_M_C,
-                         voxblox::BlockIndexList *block_list);
+  void findVisibleBlocks(const Submap& submap, const Transformation& T_M_C,
+                         voxblox::BlockIndexList* block_list);
 
-  void updateSubmap(const voxblox::BlockIndexList &block_indices,
-                    Submap *submap,
-                    const Transformation &T_M_C,
-                    const cv::Mat &color_image,
-                    const cv::Mat &id_image);
+  void updateSubmap(const voxblox::BlockIndexList& block_indices,
+                    Submap* submap, const Transformation& T_M_C,
+                    const cv::Mat& color_image, const cv::Mat& id_image);
 
-  void updateTsdfBlock(const voxblox::BlockIndex &index,
-                       Submap *submap,
-                       const Transformation &T_M_C,
-                       const cv::Mat &color_image,
-                       const cv::Mat &id_image);
+  void updateTsdfBlock(const voxblox::BlockIndex& index, Submap* submap,
+                       const Transformation& T_M_C, const cv::Mat& color_image,
+                       const cv::Mat& id_image);
 
-  bool computeVoxelDistanceAndWeight(float *sdf,
-                                     float *weight,
-                                     bool *point_belongs_to_this_submap,
-                                     const Point &p_C,
-                                     const cv::Mat &color_image,
-                                     const cv::Mat &id_image,
-                                     int submap_id,
-                                     float truncation_distance,
-                                     float voxel_size);
+  bool computeVoxelDistanceAndWeight(
+      float* sdf, float* weight, bool* point_belongs_to_this_submap,
+      const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
+      int submap_id, float truncation_distance, float voxel_size);
 };
 
 }  // namespace panoptic_mapping

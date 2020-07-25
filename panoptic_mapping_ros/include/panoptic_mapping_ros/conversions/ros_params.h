@@ -10,6 +10,8 @@
 #include <panoptic_mapping/integrator/projective_integrator.h>
 #include <panoptic_mapping/preprocessing/ground_truth_id_tracker.h>
 
+#include "panoptic_mapping_ros/visualization/submap_visualizer.h"
+
 namespace panoptic_mapping {
 
 // integrator configs
@@ -21,6 +23,10 @@ ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(
 
 // id tracker configs
 GroundTruthIDTracker::Config getGroundTruthIDTrackerConfigFromRos(
+    const ros::NodeHandle& nh);
+
+// visualizer configs
+SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
     const ros::NodeHandle& nh);
 
 }  // namespace panoptic_mapping

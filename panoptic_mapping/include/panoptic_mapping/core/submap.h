@@ -20,7 +20,7 @@ class Submap {
     double voxel_size = 0.1;
     double voxels_per_side = 16;
 
-    Config isValid() const;
+    [[nodiscard]] Config isValid() const;
   };
 
   explicit Submap(const Config& config);
@@ -33,15 +33,26 @@ class Submap {
                                                 uint64_t* tmp_byte_offset_ptr);
 
   // const accessors
-  int getID() const { return id_; }
-  int getInstanceID() const { return instance_id_; }
-  const std::string& getFrameName() const { return frame_name_; }
-  const Color& getColor() const { return color_; }
-  const voxblox::Layer<TsdfVoxel>& getTsdfLayer() const { return *tsdf_layer_; }
-  const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
-  const Transformation& getT_M_S() const { return T_M_S_; }
-  const Transformation& getT_S_M() const { return T_M_S_inv_; }
-  bool isActive() const { return is_active_; }
+  [[nodiscard]] int getID() const {
+    return id_;
+  }[[nodiscard]] int getInstanceID() const {
+    return instance_id_;
+  }
+  [[nodiscard]] const std::string& getFrameName() const {
+    return frame_name_;
+  }[[nodiscard]] const voxblox::Layer<TsdfVoxel>& getTsdfLayer() const {
+    return *tsdf_layer_;
+  }
+  [[nodiscard]] const voxblox::MeshLayer& getMeshLayer() const {
+    return *mesh_layer_;
+  }[[nodiscard]] const Transformation& getT_M_S() const {
+    return T_M_S_;
+  }
+  [[nodiscard]] const Transformation& getT_S_M() const {
+    return T_M_S_inv_;
+  }[[nodiscard]] bool isActive() const {
+    return is_active_;
+  }
 
   // modifying accessors
   std::shared_ptr<voxblox::Layer<TsdfVoxel>>& getTsdfLayerPtr() {
@@ -50,7 +61,6 @@ class Submap {
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
 
   // setters
-  void setColor(const Color& color) { color_ = color; }
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
 
@@ -75,9 +85,6 @@ class Submap {
   // map
   std::shared_ptr<voxblox::Layer<TsdfVoxel>> tsdf_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
-
-  // visualization
-  voxblox::Color color_;    // color to use for visualizers
 };
 
 }  // namespace panoptic_mapping

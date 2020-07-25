@@ -3,17 +3,18 @@
 
 #include <map>
 #include <string>
+#include <unordered_map>
 
 #include <voxblox/core/color.h>
 
-#include "panoptic_mapping/core/submap.h"
 #include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/core/submap.h"
 
 namespace panoptic_mapping {
 
 class LabelHandler {
  public:
-  struct Label{
+  struct Label {
     int segmentation_id = 0;
     int class_label = 0;
     bool is_background_class = true;
@@ -41,6 +42,6 @@ class LabelHandler {
   std::unordered_map<int, Label> labels_;
 };
 
-} // namespace panoptic_mapping
+}  // namespace panoptic_mapping
 
-#endif //PANOPTIC_MAPPING_PREPROCESSING_LABEL_HANDLER_H_
+#endif  // PANOPTIC_MAPPING_PREPROCESSING_LABEL_HANDLER_H_

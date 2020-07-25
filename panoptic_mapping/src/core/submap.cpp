@@ -1,6 +1,7 @@
 #include "panoptic_mapping/core/submap.h"
 
 #include <memory>
+#include <sstream>
 
 #include <cblox/QuatTransformation.pb.h>
 #include <cblox/utils/quat_transformation_protobuf_utils.h>
@@ -15,10 +16,12 @@ Submap::Config Submap::Config::isValid() const {
 }
 
 Submap::Submap(const Config& config)
-    : config_(config.isValid()),
-      frame_name_("world"),
-      instance_id_(-1),
-      is_active_(true) {
+    : config_(config.isValid()), instance_id_(-1), is_active_(true) {
+  // default values
+  std::stringstream ss;
+  ss << "submap_" << id_;
+  frame_name_ = ss.str();
+
   // setup layers
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
       config_.voxel_size, config_.voxels_per_side);
