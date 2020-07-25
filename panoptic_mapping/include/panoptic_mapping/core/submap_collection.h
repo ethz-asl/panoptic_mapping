@@ -30,12 +30,12 @@ class SubmapCollection {
   void addSubmap(std::unique_ptr<Submap> submap);
   Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
-  bool submapIdExists(int id);  // check whether id exists
   Submap& getSubmap(int id);    // this assumes that the id exists
   void clear();
 
   // accessors
-  size_t size() { return submaps_.size(); }
+  size_t size() const { return submaps_.size(); }
+  bool submapIdExists(int id) const;  // check whether id exists
 
  private:
   std::vector<std::unique_ptr<Submap>> submaps_;

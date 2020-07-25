@@ -35,7 +35,7 @@ bool SubmapCollection::removeSubmap(int id) {
   return true;
 }
 
-bool SubmapCollection::submapIdExists(int id) {
+bool SubmapCollection::submapIdExists(int id) const {
   return id_to_index_.find(id) != id_to_index_.end();
 }
 
