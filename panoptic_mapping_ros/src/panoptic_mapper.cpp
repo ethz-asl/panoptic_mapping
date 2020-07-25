@@ -5,15 +5,14 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <sensor_msgs/point_cloud2_iterator.h>
 #include <cv_bridge/cv_bridge.h>
-#include <voxblox_msgs/MultiMesh.h>
-#include <voxblox/integrator/merge_integration.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
 #include <voxblox/core/color.h>
+#include <voxblox/integrator/merge_integration.h>
+#include <voxblox_msgs/MultiMesh.h>
 
 #include <panoptic_mapping/SubmapCollection.pb.h>
 #include <panoptic_mapping_ros/conversions/ros_params.h>
@@ -33,13 +32,11 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
 void PanopticMapper::setupConfigFromRos() {
   nh_private_.param("max_image_queue_length", config_.max_image_queue_length,
                     config_.max_image_queue_length);
-  nh_private_.param("visualization/coloring_mode", config_.coloring_mode,
-                    config_.coloring_mode);
-  nh_private_.param("visualization/visualize_mesh", config_.visualize_mesh,
-                    config_.visualize_mesh);
-  nh_private_.param("visualization/visualize_tsdf_blocks",
-                    config_.visualize_tsdf_blocks,
-                    config_.visualize_tsdf_blocks);
+  nh_private_.param("global_frame_name", config_.global_frame_name,
+                    config_.global_frame_name);
+  nh_private_.param("visualization/visualization_interval",
+                    config_.visualization_interval,
+                    config_.visualization_interval);
 }
 
 void PanopticMapper::setupRos() {
@@ -70,25 +67,28 @@ void PanopticMapper::setupRos() {
       "set_coloring_mode", &PanopticMapper::setColoringModeCallback, this);
 
   // Timers
-  mesh_timer_ = nh_private_.createTimer(
-      ros::Duration(1.0), &PanopticMapper::publishMeshCallback, this);
+  if (config_.visualization_interval > 0.0) {
+    visualization_timer_ = nh_private_.createTimer(
+        ros::Duration(1.0), &PanopticMapper::publishVisualizationCallback,
+        this);
+  }
 }
 
 void PanopticMapper::setupMembers() {
+  // labels
+  std::string label_path;
+  nh_private_.param("label_path", label_path, std::string(""));
+  label_handler_ = std::make_shared<LabelHandler>();
+  label_handler_->readLabelsFromFile(label_path);
+
   // tsdf_integrator
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
   tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
 
   // visualization
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
-  tsdf_visualizer_.setupFromRos(visualization_nh);
-  setColoringMode(config_.coloring_mode);
-
-  // labels
-  std::string label_path;
-  nh_private_.param("label_path", label_path, std::string(""));
-  label_handler_ = std::make_shared<LabelHandler>();
-  label_handler_->readLabelsFromFile(label_path);
+  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
+      getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
 
   // id tracking
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
@@ -104,12 +104,12 @@ void PanopticMapper::processImages(
 
   // look up transform
   voxblox::Transformation T_M_C;
-  if (!tf_transformer_.lookupTransform("world", depth_img->header.frame_id,
+  if (!tf_transformer_.lookupTransform(config_.global_frame_name,
+                                       depth_img->header.frame_id,
                                        depth_img->header.stamp, &T_M_C)) {
     LOG(WARNING) << "Unable to look up transform from '"
                  << depth_img->header.frame_id << " ' to '"
-                 << "world"
-                 << "', ignoring images.";
+                 << config_.global_frame_name << "', ignoring images.";
     return;
   }
 
@@ -142,12 +142,12 @@ void PanopticMapper::pointcloudCallback(
 
   // look up the transform
   voxblox::Transformation T_S_C;
-  if (!tf_transformer_.lookupTransform("world", pointcloud_msg->header.frame_id,
+  if (!tf_transformer_.lookupTransform(config_.global_frame_name,
+                                       pointcloud_msg->header.frame_id,
                                        pointcloud_msg->header.stamp, &T_S_C)) {
     LOG(WARNING) << "Unable to look up transform from '"
                  << pointcloud_msg->header.frame_id << " ' to '"
-                 << "world"
-                 << "', ignoring pointcloud.";
+                 << config_.global_frame_name << "', ignoring pointcloud.";
     return;
   }
 
@@ -191,37 +191,28 @@ void PanopticMapper::pointcloudCallback(
           << int((t3 - t0).toSec() * 1000) << "ms)";
 }
 
-void PanopticMapper::publishMeshCallback(const ros::TimerEvent&) {
+void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
   // update meshes
-  if (config_.visualize_mesh) {
-    publishMeshes();
-  }
+  publishMeshes();
 
   // visualize tsdf blocks
-  if (config_.visualize_tsdf_blocks) {
-    for (auto& submap : submaps_) {
-      // if (label_handler_.isBackgroundClass(submap.getID())) { continue; }
-      // if (submap.getID() < 62) { continue; }
-      visualization_msgs::MarkerArray markers;
-      tsdf_visualizer_.generateBlockMsg(*submap, &markers);
-      tsdf_blocks_pub_.publish(markers);
-    }
+  publishTsdfBlocks();
+}
+
+void PanopticMapper::publishMeshes() {
+  // let the visualizer do all the work
+  std::vector<voxblox_msgs::MultiMesh> msgs;
+  submap_visualizer_->generateMeshMsgs(&submaps_, &msgs);
+  for (auto& msg : msgs) {
+    mesh_pub_.publish(msg);
   }
 }
 
-void PanopticMapper::publishMeshes(bool force_update_all, bool force_mesh_all) {
-  std::vector<int> ids;
-  for (auto& submap : submaps_) {
-    voxblox_msgs::MultiMesh msg;
-    tsdf_visualizer_.updatehMesh(submap.get(), force_update_all);
-    tsdf_visualizer_.generateMeshMsg(submap.get(), &msg, force_mesh_all);
-    mesh_pub_.publish(msg);
-  }
-
-  // test
-  for (const auto& id : ids) {
-    submaps_.removeSubmap(id);
-  }
+void PanopticMapper::publishTsdfBlocks() {
+  // let the visualizer do all the work
+  visualization_msgs::MarkerArray markers;
+  submap_visualizer_->generateBlockMsgs(submaps_, &markers);
+  tsdf_blocks_pub_.publish(markers);
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
@@ -291,48 +282,15 @@ void PanopticMapper::findMatchingMessagesToPublish(
   segmentation_queue_.erase(segmentation_it);
 }
 
-void PanopticMapper::setColoringMode(const std::string& coloring_mode) {
-  std::vector<std::string> modes = {"color", "normals", "submaps", "instances"};
-  if (std::find(modes.begin(), modes.end(), coloring_mode) == modes.end()) {
-    LOG(WARNING) << "Unknown coloring_mode '" << coloring_mode
-                 << "', using 'color' instead.";
-    config_.coloring_mode = "color";
-  } else {
-    config_.coloring_mode = coloring_mode;
-  }
-  if (config_.coloring_mode == "color" || config_.coloring_mode == "normals") {
-    tsdf_visualizer_.setMeshColoringMode(config_.coloring_mode);
-  } else {
-    tsdf_visualizer_.setMeshColoringMode("submap_color");
-  }
-}
-
-void PanopticMapper::setSubmapColor(Submap* submap) {
-  // modes 'color' and 'normals' are handled by the mesher, so no need to set
-  if (config_.coloring_mode == "instances") {
-    if (label_handler_->segmentationIdExists(submap->getID())) {
-      submap->setColor(label_handler_->getColor(submap->getID()));
-    } else {
-      submap->setColor(Color());    // unknown IDs are black
-    }
-  } else if (config_.coloring_mode == "submaps") {
-    constexpr int color_discetization =
-        30;  // use this many different colors (rainbow)
-    float h = static_cast<float>(submap->getID() % color_discetization) /
-              static_cast<float>(color_discetization - 1);
-    submap->setColor(voxblox::rainbowColorMap(h));
-  }
-}
-
 bool PanopticMapper::setColoringModeCallback(
     voxblox_msgs::FilePath::Request& request,
     voxblox_msgs::FilePath::Response& response) {
-  setColoringMode(request.file_path);
-  for (auto& submap : submaps_) {
-    setSubmapColor(submap.get());
-  }
-  publishMeshes(false, true);
-  LOG(INFO) << "Set coloring mode to '" << config_.coloring_mode << "'.";
+  SubmapVisualizer::MeshColoringMode coloring_mode =
+      SubmapVisualizer::coloringModeFromString(request.file_path);
+  submap_visualizer_->setMeshColoringMode(coloring_mode);
+  publishMeshes();
+  LOG(INFO) << "Set coloring mode to '"
+            << SubmapVisualizer::coloringModeToString(coloring_mode) << "'.";
   return true;
 }
 
@@ -386,6 +344,7 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
 bool PanopticMapper::loadMap(const std::string& file_path) {
   // Clear the current maps
   submaps_.clear();
+  submap_visualizer_->reset();
 
   // Open and check the file
   std::fstream proto_file;
@@ -414,16 +373,13 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
       return false;
     }
 
-    // recompute session variables
-    setSubmapColor(submap_ptr.get());
-
     // add to the collection
     submaps_.addSubmap(std::move(submap_ptr));
   }
   proto_file.close();
 
   // reproduce the mesh and visualization
-  publishMeshes(true, true);
+  publishMeshes();
 
   LOG(INFO) << "Successfully loaded " << submaps_.size() << "/"
             << submap_collection_proto.num_submaps() << " submaps.";

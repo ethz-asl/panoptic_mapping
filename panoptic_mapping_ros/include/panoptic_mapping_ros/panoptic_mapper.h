@@ -18,7 +18,7 @@
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 
-#include "panoptic_mapping_ros/visualization/tsdf_visualizer.h"
+#include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
 namespace panoptic_mapping {
 
@@ -26,13 +26,9 @@ class PanopticMapper {
  public:
   struct Config {
     int max_image_queue_length = 10;  // after this many images are queued for
-                                      // integration start discarding old ones.
-
-    // visualization
-    std::string coloring_mode = "color";  // 'color', 'normals', 'submaps',
-    // 'instances', set via setColoringMode()
-    bool visualize_mesh = true;
-    bool visualize_tsdf_blocks = false;
+    // integration start discarding old ones.
+    std::string global_frame_name = "mission";
+    double visualization_interval = 1.0;  // s
   };
 
   PanopticMapper(const ::ros::NodeHandle& nh,
@@ -44,7 +40,7 @@ class PanopticMapper {
   void depthImageCallback(const sensor_msgs::ImagePtr& msg);
   void colorImageCallback(const sensor_msgs::ImagePtr& msg);
   void segmentationImageCallback(const sensor_msgs::ImagePtr& msg);
-  void publishMeshCallback(const ros::TimerEvent&);
+  void publishVisualizationCallback(const ros::TimerEvent&);
   bool saveMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
                        voxblox_msgs::FilePath::Response& response);  // NOLINT
   bool loadMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
@@ -56,6 +52,23 @@ class PanopticMapper {
   // io
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
+
+  // visualization
+  void publishMeshes();
+  void publishTsdfBlocks();
+
+ private:
+  // setup
+  void setupConfigFromRos();
+  void setupRos();
+  void setupMembers();
+
+  // input processing
+  void findMatchingMessagesToPublish(
+      const sensor_msgs::ImagePtr& reference_msg);
+  void processImages(const sensor_msgs::ImagePtr& depth_img,
+                     const sensor_msgs::ImagePtr& color_img,
+                     const sensor_msgs::ImagePtr& segmentation_img);
 
  private:
   // Node handles
@@ -72,43 +85,21 @@ class PanopticMapper {
   ros::ServiceServer load_map_srv_;
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_coloring_mode_srv_;
-  ros::Timer mesh_timer_;
+  ros::Timer visualization_timer_;
 
   // members
   Config config_;
   SubmapCollection submaps_;
+  voxgraph::TfTransformer tf_transformer_;
   std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
-  voxgraph::TfTransformer tf_transformer_;
-  TsdfVisualizer tsdf_visualizer_;
+  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
 
   // input processing
   std::deque<sensor_msgs::ImagePtr> depth_queue_;
   std::deque<sensor_msgs::ImagePtr> color_queue_;
   std::deque<sensor_msgs::ImagePtr> segmentation_queue_;
-
-  // methods
-  // setup
-  void setupConfigFromRos();
-  void setupRos();
-  void setupMembers();
-
-  // process input images and pointcloud
-  void findMatchingMessagesToPublish(
-      const sensor_msgs::ImagePtr& reference_msg);
-
-  void processImages(const sensor_msgs::ImagePtr& depth_img,
-                     const sensor_msgs::ImagePtr& color_img,
-                     const sensor_msgs::ImagePtr& segmentation_img);
-
-  // visualization
-  void setColoringMode(const std::string& coloring_mode);
-
-  void setSubmapColor(Submap* submap);
-
-  void publishMeshes(bool force_update_all = false,
-                     bool force_mesh_all = false);
 };
 
 }  // namespace panoptic_mapping
