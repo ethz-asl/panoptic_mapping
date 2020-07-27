@@ -15,9 +15,9 @@
 #include <voxblox_msgs/MultiMesh.h>
 
 #include <panoptic_mapping/SubmapCollection.pb.h>
-#include <panoptic_mapping_ros/conversions/ros_params.h>
 
 #include "panoptic_mapping_ros/conversions/ros_component_factory.h"
+#include "panoptic_mapping_ros/conversions/ros_params.h"
 
 namespace panoptic_mapping {
 
@@ -94,6 +94,11 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ =
       ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
+
+  // tsdf registrator
+  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
+  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
+      getTsdfRegistatorConfigFromRos(registrator_nh));
 }
 
 void PanopticMapper::processImages(

@@ -63,4 +63,10 @@ SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
   return config;
 }
 
+TsdfRegistrator::Config getTsdfRegistatorConfigFromRos(
+    const ros::NodeHandle& nh) {
+  TsdfRegistrator::Config config;
+  return config;
+}
+
 }  // namespace panoptic_mapping

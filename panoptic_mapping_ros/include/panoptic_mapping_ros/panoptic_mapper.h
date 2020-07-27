@@ -17,6 +17,7 @@
 #include <panoptic_mapping/integrator/integrator_base.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
+#include <panoptic_mapping/registration/tsdf_registrator.h>
 
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
@@ -95,6 +96,7 @@ class PanopticMapper {
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
+  std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
 
   // input processing
   std::deque<sensor_msgs::ImagePtr> depth_queue_;

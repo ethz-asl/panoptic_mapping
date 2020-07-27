@@ -9,6 +9,7 @@
 #include <panoptic_mapping/integrator/naive_integrator.h>
 #include <panoptic_mapping/integrator/projective_integrator.h>
 #include <panoptic_mapping/preprocessing/ground_truth_id_tracker.h>
+#include <panoptic_mapping/registration/tsdf_registrator.h>
 
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
@@ -27,6 +28,10 @@ GroundTruthIDTracker::Config getGroundTruthIDTrackerConfigFromRos(
 
 // visualizer configs
 SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
+    const ros::NodeHandle& nh);
+
+// registrator configs
+TsdfRegistrator::Config getTsdfRegistatorConfigFromRos(
     const ros::NodeHandle& nh);
 
 }  // namespace panoptic_mapping
