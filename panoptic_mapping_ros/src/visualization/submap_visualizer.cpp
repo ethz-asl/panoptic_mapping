@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <minkindr_conversions/kindr_msg.h>
 #include <ros/time.h>
 #include <voxblox_ros/mesh_vis.h>
 
@@ -20,7 +21,9 @@ SubmapVisualizer::Config SubmapVisualizer::Config::isValid() const {
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
                                    std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.isValid()), label_handler_(std::move(label_handler)) {
+    : config_(config.isValid()),
+      label_handler_(std::move(label_handler)),
+      global_frame_name_("mission") {
   coloring_mode_ =
       SubmapVisualizer::coloringModeFromString(config_.mesh_coloring_mode);
 }
@@ -34,6 +37,12 @@ void SubmapVisualizer::generateMeshMsgs(
   }
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(output);
+
+  std::cout << "Submaps: ";
+  for (auto& s : *submaps) {
+    std::cout << s->getID() << "-" << s->getInstanceID() << ", ";
+  }
+  std::cout << std::endl;
 
   // update the visualization infos
   updateVisInfos(*submaps);
@@ -62,6 +71,7 @@ void SubmapVisualizer::generateMeshMsgs(
     // If the submap was deleted we send an empty message to delete the visual.
     if (info.was_deleted) {
       output->push_back(msg);
+      vis_infos_.erase(it);
       continue;
     }
 
@@ -107,6 +117,15 @@ void SubmapVisualizer::generateMeshMsgs(
     // set alpha values
     msg.alpha = 255;
     output->emplace_back(std::move(msg));
+
+    // publish submap transforms
+    publishTfTransform(submap->getT_M_S(), global_frame_name_,
+                       submap->getFrameName());
+
+    // wrap up
+    info.republish_everything = false;
+    info.remesh_everything = false;
+    info.change_color = false;
   }
 }
 
@@ -215,15 +234,18 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
       } else {
         info->color = kUnknownColor;
       }
+      break;
     }
     case MeshColoringMode::kSubmaps: {
       float h = static_cast<float>(submap.getID() %
                                    config_.submap_color_discretization) /
                 static_cast<float>(config_.submap_color_discretization - 1);
       info->color = voxblox::rainbowColorMap(h);
+      break;
     }
     case MeshColoringMode::kClasses: {
       LOG(WARNING) << "Class coloring is not yet implemented.";
+      break;
     }
   }
 }
@@ -236,6 +258,17 @@ void SubmapVisualizer::updateSubmapMesh(Submap* submap,
       config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
       submap->getMeshLayerPtr().get());
   mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
+}
+
+void SubmapVisualizer::publishTfTransform(const Transformation& transform,
+                                          const std::string& parent_frame,
+                                          const std::string& child_frame) {
+  geometry_msgs::TransformStamped msg;
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = parent_frame;
+  msg.child_frame_id = child_frame;
+  tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
+  tf_broadcaster_.sendTransform(msg);
 }
 
 SubmapVisualizer::MeshColoringMode SubmapVisualizer::coloringModeFromString(

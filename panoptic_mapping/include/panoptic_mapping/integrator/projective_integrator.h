@@ -18,6 +18,8 @@ namespace panoptic_mapping {
 class ProjectiveIntegrator : public IntegratorBase {
  public:
   struct Config {
+    int verbosity = 2;
+
     // camera settings  [px]
     int width = 640;
     int height = 320;
@@ -39,11 +41,11 @@ class ProjectiveIntegrator : public IntegratorBase {
     // system params
     int integration_threads = 0;
 
-    Config isValid() const;
+    [[nodiscard]] Config isValid() const;
   };
 
   explicit ProjectiveIntegrator(const Config& config);
-  virtual ~ProjectiveIntegrator() = default;
+  ~ProjectiveIntegrator() override = default;
 
   void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
                      const cv::Mat& depth_image, const cv::Mat& color_image,

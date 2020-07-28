@@ -1,6 +1,7 @@
 #include "panoptic_mapping/preprocessing/ground_truth_id_tracker.h"
 
 #include <memory>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -24,14 +25,26 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          const cv::Mat& depth_image,
                                          const cv::Mat& color_image,
                                          cv::Mat* id_image) {
-  // iterate over image and replace lables
-  for (int v = 0; v < id_image->rows; v++) {
-    for (int u = 0; u < id_image->cols; u++) {
-      id_image->at<cv::Vec3b>(v, u)[0] =
-          readLabelAndAllocateSubmap(id_image->at<cv::Vec3b>(v, u)[0], submaps);
-    }
+  // look for new instances's
+  std::unordered_set<int> instances;
+
+  CV_Assert(id_image->depth() == CV_8U);
+  cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
+  cv::MatIterator_<uchar> end = id_image->end<uchar>();
+  for (auto it = begin; it != end; ++it) {
+    instances.insert(static_cast<int>(*it));
+  }
+
+  // allocate new submaps if necessary
+  for (const auto& instance : instances) {
+    allocateSubmap(instance, submaps);
   }
   printAndResetWarnings();
+
+  // set segmentation image to submap ids
+  for (auto it = begin; it != end; ++it) {
+    *it = instance_to_id_[*it];
+  }
 }
 
 void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
@@ -41,18 +54,17 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
                                              std::vector<int>* ids) {
   // iterate through point cloud and replace labels
   for (auto& id : *ids) {
-    id = readLabelAndAllocateSubmap(id, submaps);
+    allocateSubmap(id, submaps);
+    id = instance_to_id_[id];
   }
   printAndResetWarnings();
 }
 
-int GroundTruthIDTracker::readLabelAndAllocateSubmap(
-    int instance, SubmapCollection* submaps) {
-  auto it = instance_to_id_.find(instance);
-
+void GroundTruthIDTracker::allocateSubmap(int instance,
+                                          SubmapCollection* submaps) {
   // known existing submap
-  if (it != instance_to_id_.end()) {
-    return it->second;
+  if (instance_to_id_.find(instance) != instance_to_id_.end()) {
+    return;
   }
 
   // allocate new submap
@@ -60,9 +72,9 @@ int GroundTruthIDTracker::readLabelAndAllocateSubmap(
   cfg.voxels_per_side = config_.voxels_per_side;
 
   // check whether the instance code is known
-  int id = instance;
+  int new_instance = instance;
   if (!label_handler_->segmentationIdExists(instance)) {
-    id = 255;  // code for unknown objects
+    new_instance = 255;  // code for unknown objects
     auto error_it = unknown_ids.find(instance);
     if (error_it == unknown_ids.end()) {
       unknown_ids[instance] = 1;
@@ -70,12 +82,16 @@ int GroundTruthIDTracker::readLabelAndAllocateSubmap(
       unknown_ids[instance] += 1;
     }
   }
-  if (label_handler_->isInstanceClass(id)) {
+
+  // submap settings
+  if (label_handler_->isInstanceClass(new_instance)) {
     cfg.voxel_size = config_.instance_voxel_size;
   } else {
     cfg.voxel_size = config_.background_voxel_size;
   }
-  submaps->createSubmap(cfg);
+  Submap* new_submap = submaps->createSubmap(cfg);
+  instance_to_id_[new_instance] = new_submap->getID();
+  new_submap->setInstanceID(new_instance);
 }
 
 void GroundTruthIDTracker::printAndResetWarnings() {

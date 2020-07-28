@@ -1,5 +1,5 @@
 
-
+verbosity: 3
 T_base_sensor:
  - [1, 0, 0, 0.3]
  - [ 0, 1, 0, 0]
@@ -12,6 +12,7 @@ global_frame_name: world
 
 tsdf_integrator:  
   type: projective # naive, projective, projective_multi_tsdf
+  verbosity: 1
   
   # projective args
   width: 640
@@ -46,13 +47,14 @@ tsdf_integrator:
 
 id_tracker:
   type: ground_truth
-  instance_voxel_size: 0.03
-  background_voxel_size: 0.08
+  instance_voxel_size: 0.05
+  background_voxel_size: 0.1
   voxels_per_side: 16
   
 visualization:
   visualization_interval: 1.0
-  coloring_mode: color # submaps, instances, color, normals
+  mesh_coloring_mode: submaps # submaps, instances, color, normals, classes
+  submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: false
   

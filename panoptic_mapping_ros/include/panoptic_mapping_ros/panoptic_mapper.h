@@ -26,6 +26,7 @@ namespace panoptic_mapping {
 class PanopticMapper {
  public:
   struct Config {
+    int verbosity = 2;
     int max_image_queue_length = 10;  // after this many images are queued for
     // integration start discarding old ones.
     std::string global_frame_name = "mission";

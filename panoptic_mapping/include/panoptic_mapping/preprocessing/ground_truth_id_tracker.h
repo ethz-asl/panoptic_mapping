@@ -36,7 +36,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
                          std::vector<int>* ids) override;
 
  private:
-  int readLabelAndAllocateSubmap(int instance, SubmapCollection* submaps);
+  void allocateSubmap(int instance, SubmapCollection* submaps);
   void printAndResetWarnings();
 
  private:

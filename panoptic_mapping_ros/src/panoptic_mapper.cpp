@@ -30,6 +30,7 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
 }
 
 void PanopticMapper::setupConfigFromRos() {
+  nh_private_.param("verbosity", config_.verbosity, config_.verbosity);
   nh_private_.param("max_image_queue_length", config_.max_image_queue_length,
                     config_.max_image_queue_length);
   nh_private_.param("global_frame_name", config_.global_frame_name,
@@ -69,8 +70,8 @@ void PanopticMapper::setupRos() {
   // Timers
   if (config_.visualization_interval > 0.0) {
     visualization_timer_ = nh_private_.createTimer(
-        ros::Duration(1.0), &PanopticMapper::publishVisualizationCallback,
-        this);
+        ros::Duration(config_.visualization_interval),
+        &PanopticMapper::publishVisualizationCallback, this);
   }
 }
 
@@ -89,6 +90,7 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
+  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // id tracking
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
@@ -136,9 +138,11 @@ void PanopticMapper::processImages(
   tsdf_integrator_->processImages(&submaps_, T_M_C, depth->image, color->image,
                                   segmentation->image);
   ros::WallTime t3 = ros::WallTime::now();
-  VLOG(3) << "Integrated images (id tracking:" << int((t2 - t1).toSec() * 1000)
-          << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
-          << int((t3 - t0).toSec() * 1000) << "ms)";
+  LOG_IF(INFO, config_.verbosity >= 2) << "Integrated images.";
+  LOG_IF(INFO, config_.verbosity >= 3)
+      << "(id tracking:" << int((t2 - t1).toSec() * 1000)
+      << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
+      << int((t3 - t0).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::pointcloudCallback(
@@ -189,11 +193,12 @@ void PanopticMapper::pointcloudCallback(
   tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors,
                                       ids);
   ros::WallTime t3 = ros::WallTime::now();
-  VLOG(3) << "Integrated point cloud (conversion: "
-          << int((t1 - t0).toSec() * 1000)
-          << " + id tracking:" << int((t2 - t1).toSec() * 1000)
-          << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
-          << int((t3 - t0).toSec() * 1000) << "ms)";
+  LOG_IF(INFO, config_.verbosity >= 2) << "Integrated point cloud.";
+  LOG_IF(INFO, config_.verbosity >= 3)
+      << "(conversion: " << int((t1 - t0).toSec() * 1000)
+      << " + id tracking:" << int((t2 - t1).toSec() * 1000)
+      << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
+      << int((t3 - t0).toSec() * 1000) << "ms)";
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <ros/node_handle.h>
+#include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <voxblox/mesh/mesh_integrator.h>
 #include <voxblox_msgs/MultiMesh.h>
@@ -58,6 +59,9 @@ class SubmapVisualizer {
   // interaction
   void reset();
   void setMeshColoringMode(MeshColoringMode coloring_mode);
+  void setGlobalFrameName(const std::string& frame_name) {
+    global_frame_name_ = frame_name;
+  }
 
  private:
   const Color kUnknownColor = Color(50, 50, 50);
@@ -74,14 +78,19 @@ class SubmapVisualizer {
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);
   void updateVisInfos(const SubmapCollection& submaps);
   void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
+  void publishTfTransform(const Transformation& transform,
+                          const std::string& parent_frame,
+                          const std::string& child_frame);
 
  private:
   const Config config_;
   MeshColoringMode coloring_mode_;
+  std::string global_frame_name_;
 
   std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<voxblox::MeshIntegrator<TsdfVoxel>> mesh_integrator_;
   std::unordered_map<int, SubmapVisInfo> vis_infos_;
+  tf2_ros::TransformBroadcaster tf_broadcaster_;
 };
 
 }  // namespace panoptic_mapping

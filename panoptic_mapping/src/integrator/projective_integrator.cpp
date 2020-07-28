@@ -97,7 +97,7 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
   }
   auto t4 = std::chrono::high_resolution_clock::now();
 
-  VLOG(4)
+  LOG_IF(INFO, config_.verbosity >= 3)
       << "Allocate: "
       << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
       << "ms, Find: "
@@ -127,7 +127,7 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
   // set up preliminaries
   if (!submap->getTsdfLayer().hasBlock(index)) {
     LOG(WARNING) << "Tried to access inexistent block '" << index.transpose()
-                 << "' in submap " << submap->getID() << "." << std::endl;
+                 << "' in submap " << submap->getID() << ".";
     return;
   }
   voxblox::Block<TsdfVoxel>& block =
@@ -145,7 +145,7 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
     voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // voxel center in camera frame
-    // Compute distance and weight
+    // Compute distance and weight.
     bool point_belongs_to_this_submap;
     float sdf;
     float weight;
@@ -155,12 +155,12 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
       continue;
     }
 
-    // Apply distance, color, and weight
+    // Apply distance, color, and weight.
     if (point_belongs_to_this_submap) {
       voxel.distance = (voxel.distance * voxel.weight +
                         std::min(truncation_distance, sdf) * weight) /
                        (voxel.weight + weight);
-      // only merge color near the surface and if point belongs to the submap
+      // only merge color near the surface and if point belongs to the submap.
       if (std::abs(sdf) < truncation_distance) {
         voxel.color = Color::blendTwoColors(
             voxel.color, voxel.weight,
@@ -193,11 +193,11 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
   float u = p_C.x() * config_.focal_length / p_C.z() + config_.vx;
-  if (std::ceil(u) > config_.width || std::floor(u) < 0) {
+  if (std::ceil(u) >= config_.width || std::floor(u) < 0) {
     return false;
   }
   float v = p_C.y() * config_.focal_length / p_C.z() + config_.vy;
-  if (std::ceil(v) > config_.height || std::floor(v) < 0) {
+  if (std::ceil(v) >= config_.height || std::floor(v) < 0) {
     return false;
   }
 
@@ -314,7 +314,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      Submap& submap = submaps->getSubmap(id_image.at<cv::Vec3b>(v, u)[0]);
+      Submap& submap = submaps->getSubmap(id_image.at<uchar>(v, u));
       const Point p_S = submap.getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
       submap.getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);

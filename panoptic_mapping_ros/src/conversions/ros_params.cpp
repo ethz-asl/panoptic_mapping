@@ -17,6 +17,7 @@ NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(
 ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(
     const ros::NodeHandle& nh) {
   ProjectiveIntegrator::Config config;
+  nh.param("verbosity", config.verbosity, config.verbosity);
   nh.param("width", config.width, config.width);
   nh.param("height", config.height, config.height);
   nh.param("vx", config.vx, config.vx);

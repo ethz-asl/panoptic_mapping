@@ -63,6 +63,7 @@ class Submap {
   // setters
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
+  void setFrameName(const std::string& name) { frame_name_ = name; }
 
   // processing
   void finishActivePeriod();
