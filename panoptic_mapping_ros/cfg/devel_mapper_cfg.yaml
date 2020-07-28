@@ -26,7 +26,7 @@ tsdf_integrator:
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
   max_weight: 10000
-  interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
+  interpolation_method: semantic  # nearest, bilinear, adaptive, semantic
   foreign_rays_clear: true
   
   # naive args
@@ -47,13 +47,13 @@ tsdf_integrator:
 
 id_tracker:
   type: ground_truth
-  instance_voxel_size: 0.05
-  background_voxel_size: 0.1
+  instance_voxel_size: 0.03
+  background_voxel_size: 0.08
   voxels_per_side: 16
   
 visualization:
   visualization_interval: 1.0
-  mesh_coloring_mode: submaps # submaps, instances, color, normals, classes
+  mesh_coloring_mode: color # submaps, instances, color, normals, classes
   submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: false

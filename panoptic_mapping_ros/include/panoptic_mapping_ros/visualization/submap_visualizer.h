@@ -89,8 +89,9 @@ class SubmapVisualizer {
 
   std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<voxblox::MeshIntegrator<TsdfVoxel>> mesh_integrator_;
-  std::unordered_map<int, SubmapVisInfo> vis_infos_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
+
+  std::unordered_map<int, SubmapVisInfo> vis_infos_;
 };
 
 }  // namespace panoptic_mapping

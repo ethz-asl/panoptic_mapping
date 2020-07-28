@@ -38,12 +38,6 @@ void SubmapVisualizer::generateMeshMsgs(
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(output);
 
-  std::cout << "Submaps: ";
-  for (auto& s : *submaps) {
-    std::cout << s->getID() << "-" << s->getInstanceID() << ", ";
-  }
-  std::cout << std::endl;
-
   // update the visualization infos
   updateVisInfos(*submaps);
 
@@ -61,6 +55,7 @@ void SubmapVisualizer::generateMeshMsgs(
     // recompute colors if requested
     if (info.change_color) {
       setSubmapVisColor(*submap, &info);
+      info.change_color = false;
     }
 
     // setup message
@@ -78,6 +73,7 @@ void SubmapVisualizer::generateMeshMsgs(
     // update the mesh
     msg.header.frame_id = submap->getFrameName();
     updateSubmapMesh(submap.get(), info.remesh_everything);
+    info.remesh_everything = false;
 
     // mark the whole mesh for re-publishing if requested
     if (info.republish_everything) {
@@ -87,6 +83,7 @@ void SubmapVisualizer::generateMeshMsgs(
         submap->getMeshLayerPtr()->getMeshPtrByIndex(block_index)->updated =
             true;
       }
+      info.republish_everything = false;
     }
 
     // Set the voxblox internal color mode. Gray will be used for overwriting.
@@ -98,6 +95,11 @@ void SubmapVisualizer::generateMeshMsgs(
     }
     voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
                                     color_mode_voxblox, &msg.mesh);
+
+    if (msg.mesh.mesh_blocks.empty()) {
+      // Nothing changed, don't sent an empty msg which would reset the mesh.
+      continue;
+    }
 
     // Apply the submap color if necessary
     if (color_mode_voxblox == voxblox::ColorMode::kGray) {
@@ -121,11 +123,6 @@ void SubmapVisualizer::generateMeshMsgs(
     // publish submap transforms
     publishTfTransform(submap->getT_M_S(), global_frame_name_,
                        submap->getFrameName());
-
-    // wrap up
-    info.republish_everything = false;
-    info.remesh_everything = false;
-    info.change_color = false;
   }
 }
 
