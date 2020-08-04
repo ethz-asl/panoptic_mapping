@@ -23,6 +23,12 @@ class Submap {
     [[nodiscard]] Config isValid() const;
   };
 
+  struct IsoSurfacePoint {
+    Point position;
+    FloatingPoint distance;
+    FloatingPoint weight;
+  };
+
   explicit Submap(const Config& config);
   virtual ~Submap() = default;
 
@@ -40,7 +46,7 @@ class Submap {
   }
   [[nodiscard]] const std::string& getFrameName() const {
     return frame_name_;
-  }[[nodiscard]] const voxblox::Layer<TsdfVoxel>& getTsdfLayer() const {
+  }[[nodiscard]] const TsdfLayer& getTsdfLayer() const {
     return *tsdf_layer_;
   }
   [[nodiscard]] const voxblox::MeshLayer& getMeshLayer() const {
@@ -55,9 +61,7 @@ class Submap {
   }
 
   // modifying accessors
-  std::shared_ptr<voxblox::Layer<TsdfVoxel>>& getTsdfLayerPtr() {
-    return tsdf_layer_;
-  }
+  std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
 
   // setters
@@ -80,11 +84,11 @@ class Submap {
 
   // transformation
   std::string frame_name_;
-  voxblox::Transformation T_M_S_;  // transform mission to submap
-  voxblox::Transformation T_M_S_inv_;
+  Transformation T_M_S_;  // transform mission to submap
+  Transformation T_M_S_inv_;
 
   // map
-  std::shared_ptr<voxblox::Layer<TsdfVoxel>> tsdf_layer_;
+  std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
 };
 

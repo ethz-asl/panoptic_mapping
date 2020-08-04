@@ -28,7 +28,7 @@ class NaiveIntegrator : public IntegratorBase {
   };
 
   explicit NaiveIntegrator(const Config& config);
-  virtual ~NaiveIntegrator() = default;
+  ~NaiveIntegrator() override = default;
 
   // process a and integrate a pointcloud
   void processPointcloud(SubmapCollection* submaps, const Transformation& T_M_C,

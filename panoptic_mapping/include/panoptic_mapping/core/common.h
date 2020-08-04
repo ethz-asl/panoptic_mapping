@@ -8,16 +8,20 @@
 #include <voxblox/utils/timing.h>
 
 namespace panoptic_mapping {
-// Taking some voxblox datatypes
-using voxblox::Block;
-using voxblox::Color;
-using voxblox::Colors;
-using voxblox::EsdfVoxel;
-using voxblox::Layer;
-using voxblox::Point;
-using voxblox::Pointcloud;
-using voxblox::Transformation;
-using voxblox::TsdfVoxel;
+// Type definitions.
+using FloatingPoint = float;
+
+using Point = Eigen::Matrix<FloatingPoint, 3, 1>;
+using Transformation =
+    kindr::minimal::QuatTransformationTemplate<FloatingPoint>;
+using Pointcloud = voxblox::Pointcloud;
+
+using TsdfVoxel = voxblox::TsdfVoxel;
+using TsdfBlock = voxblox::Block<voxblox::TsdfVoxel>;
+using TsdfLayer = voxblox::Layer<voxblox::TsdfVoxel>;
+
+using Color = voxblox::Color;
+using Colors = voxblox::Colors;
 
 }  // namespace panoptic_mapping
 

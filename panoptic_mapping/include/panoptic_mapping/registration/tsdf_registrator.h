@@ -20,6 +20,7 @@ class TsdfRegistrator {
 
   // check whether there is significant difference between the two submaps
   bool checkSubmapAlignment(Submap* reference, Submap* other);
+  bool computeIsoSurfacePoints(Submap* submap, bool update_full_mesh = false) {}
 
  private:
   const Config config_;

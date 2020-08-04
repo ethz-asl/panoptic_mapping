@@ -72,7 +72,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
 
   // Saving the blocks
   constexpr bool kIncludeAllBlocks = true;
-  const Layer<TsdfVoxel>& tsdf_layer = *tsdf_layer_;
+  const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
                                      voxblox::BlockIndexList(), outfile_ptr)) {
     LOG(ERROR) << "Could not write submap blocks to stream.";
@@ -103,9 +103,8 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
 
   // Getting the tsdf blocks for this submap (the tsdf layer)
   if (!voxblox::io::LoadBlocksFromStream(
-          submap_proto.num_blocks(),
-          Layer<TsdfVoxel>::BlockMergingStrategy::kReplace, proto_file_ptr,
-          submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
+          submap_proto.num_blocks(), TsdfLayer::BlockMergingStrategy::kReplace,
+          proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
     LOG(ERROR) << "Could not load the tsdf blocks from stream.";
     return nullptr;
   }
