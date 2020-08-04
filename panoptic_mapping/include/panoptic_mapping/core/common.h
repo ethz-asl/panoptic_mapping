@@ -8,12 +8,11 @@
 #include <voxblox/utils/timing.h>
 
 namespace panoptic_mapping {
-// Type definitions.
-using FloatingPoint = float;
+// Type definitions to work with a voxblox map.
+using FloatingPoint = voxblox::FloatingPoint;
 
-using Point = Eigen::Matrix<FloatingPoint, 3, 1>;
-using Transformation =
-    kindr::minimal::QuatTransformationTemplate<FloatingPoint>;
+using Point = voxblox::Point;
+using Transformation = voxblox::Transformation;
 using Pointcloud = voxblox::Pointcloud;
 
 using TsdfVoxel = voxblox::TsdfVoxel;

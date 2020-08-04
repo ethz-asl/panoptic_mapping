@@ -22,11 +22,12 @@ class SubmapVisualizer {
  public:
   // config
   struct Config {
-    std::string mesh_coloring_mode = "color";  // initial mesh coloring mode
+    std::string visualization_mode = "color";  // initial visualization mode
     int submap_color_discretization = 20;
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
-    voxblox::MeshIntegratorConfig mesh_integrator_config;
+    voxblox::MeshIntegratorConfig mesh_integrator_config;  // If use_color is
+    // false the visualization mode 'color' won't work.
 
     [[nodiscard]] Config isValid() const;
   };
@@ -36,19 +37,21 @@ class SubmapVisualizer {
                             std::shared_ptr<LabelHandler> label_handler);
   virtual ~SubmapVisualizer() = default;
 
-  // coloring modes
-  enum class MeshColoringMode {
+  // visualization modes
+  enum class VisualizationMode {
     kColor = 0,
     kNormals,
     kSubmaps,
     kInstances,
-    kClasses
+    kClasses,
+    kChange
   };
 
-  // coloring mode conversion
-  static MeshColoringMode coloringModeFromString(
-      const std::string& coloring_mode);
-  static std::string coloringModeToString(MeshColoringMode coloring_mode);
+  // Visualization mode conversion.
+  static VisualizationMode visualizationModeFromString(
+      const std::string& visualization_mode);
+  static std::string visualizationModeToString(
+      VisualizationMode visualization_mode);
 
   // visualization
   void generateMeshMsgs(SubmapCollection* submaps,
@@ -58,7 +61,7 @@ class SubmapVisualizer {
 
   // interaction
   void reset();
-  void setMeshColoringMode(MeshColoringMode coloring_mode);
+  void setVisualizationMode(VisualizationMode visualization_mode);
   void setGlobalFrameName(const std::string& frame_name) {
     global_frame_name_ = frame_name;
   }
@@ -73,6 +76,7 @@ class SubmapVisualizer {
     bool was_deleted = false;
     bool change_color = false;
     Color color;
+    uint8_t alpha = 255;
   };
 
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);
@@ -84,7 +88,7 @@ class SubmapVisualizer {
 
  private:
   const Config config_;
-  MeshColoringMode coloring_mode_;
+  VisualizationMode visualization_mode_;
   std::string global_frame_name_;
 
   std::shared_ptr<LabelHandler> label_handler_;

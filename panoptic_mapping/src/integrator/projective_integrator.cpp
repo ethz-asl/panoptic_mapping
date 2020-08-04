@@ -92,7 +92,7 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
 
   // integrate
   for (size_t i = 0; i < block_lists.size(); ++i) {
-    updateSubmap(block_lists[i], &(submaps->getSubmap(id_list[i])), T_M_C,
+    updateSubmap(block_lists[i], submaps->getSubmapPtr(id_list[i]), T_M_C,
                  color_image, id_image);
   }
   auto t4 = std::chrono::high_resolution_clock::now();
@@ -261,7 +261,7 @@ void ProjectiveIntegrator::findVisibleBlocks(
   Transformation T_C_S =
       T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   float block_size = submap.getTsdfLayer().block_size();
-  float block_diag = std::sqrt(3) * block_size / 2.0;
+  float block_diag = std::sqrt(3.0f) * block_size / 2.0f;
 
   // iterate through all blocks
   for (auto& index : all_blocks) {
@@ -314,10 +314,11 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      Submap& submap = submaps->getSubmap(id_image.at<uchar>(v, u));
-      const Point p_S = submap.getT_S_M() * T_M_C *
+      Submap* submap =
+          submaps->getSubmapPtr(static_cast<int>(id_image.at<uchar>(v, u)));
+      const Point p_S = submap->getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
-      submap.getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+      submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
     }
   }
 }

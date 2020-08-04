@@ -29,8 +29,8 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
   std::unordered_set<int> instances;
 
   CV_Assert(id_image->depth() == CV_8U);
-  cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
-  cv::MatIterator_<uchar> end = id_image->end<uchar>();
+  const cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
+  const cv::MatIterator_<uchar> end = id_image->end<uchar>();
   for (auto it = begin; it != end; ++it) {
     instances.insert(static_cast<int>(*it));
   }
@@ -43,7 +43,7 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
 
   // set segmentation image to submap ids
   for (auto it = begin; it != end; ++it) {
-    *it = instance_to_id_[*it];
+    *it = static_cast<uchar>(instance_to_id_[static_cast<int>(*it)]);
   }
 }
 
@@ -53,7 +53,7 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
                                              const Colors& colors,
                                              std::vector<int>* ids) {
   // iterate through point cloud and replace labels
-  for (auto& id : *ids) {
+  for (int& id : *ids) {
     allocateSubmap(id, submaps);
     id = instance_to_id_[id];
   }
@@ -92,6 +92,7 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   Submap* new_submap = submaps->createSubmap(cfg);
   instance_to_id_[new_instance] = new_submap->getID();
   new_submap->setInstanceID(new_instance);
+  new_submap->setClassID(label_handler_->getClassLabel(new_instance));
 }
 
 void GroundTruthIDTracker::printAndResetWarnings() {

@@ -14,8 +14,8 @@ namespace panoptic_mapping {
 SubmapVisualizer::Config SubmapVisualizer::Config::isValid() const {
   CHECK_GT(submap_color_discretization, 0)
       << "The submap color discretization is expected > 0.";
-  // NOTE(schmluk): if the coloring mode is not valid it will be defaulted to
-  // 'color' and a warning will be raised.
+  // NOTE(schmluk): if the visualization mode is not valid it will be defaulted
+  // to 'color' and a warning will be raised.
   return Config(*this);
 }
 
@@ -24,8 +24,8 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
     : config_(config.isValid()),
       label_handler_(std::move(label_handler)),
       global_frame_name_("mission") {
-  coloring_mode_ =
-      SubmapVisualizer::coloringModeFromString(config_.mesh_coloring_mode);
+  visualization_mode_ =
+      SubmapVisualizer::visualizationModeFromString(config_.visualization_mode);
 }
 
 void SubmapVisualizer::reset() { vis_infos_.clear(); }
@@ -55,7 +55,7 @@ void SubmapVisualizer::generateMeshMsgs(
     // recompute colors if requested
     if (info.change_color) {
       setSubmapVisColor(*submap, &info);
-      info.change_color = false;
+      info.change_color = visualization_mode_ == VisualizationMode::kChange;
     }
 
     // setup message
@@ -88,9 +88,9 @@ void SubmapVisualizer::generateMeshMsgs(
 
     // Set the voxblox internal color mode. Gray will be used for overwriting.
     voxblox::ColorMode color_mode_voxblox = voxblox::ColorMode::kGray;
-    if (coloring_mode_ == MeshColoringMode::kColor) {
+    if (visualization_mode_ == VisualizationMode::kColor) {
       color_mode_voxblox = voxblox::ColorMode::kColor;
-    } else if (coloring_mode_ == MeshColoringMode::kNormals) {
+    } else if (visualization_mode_ == VisualizationMode::kNormals) {
       color_mode_voxblox = voxblox::ColorMode::kNormals;
     }
     voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
@@ -117,7 +117,7 @@ void SubmapVisualizer::generateMeshMsgs(
     }
 
     // set alpha values
-    msg.alpha = 255;
+    msg.alpha = info.alpha;
     output->emplace_back(std::move(msg));
 
     // publish submap transforms
@@ -127,24 +127,119 @@ void SubmapVisualizer::generateMeshMsgs(
 }
 
 void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
-  for (const auto& submap : submaps) {
-    auto it = vis_infos_.find(submap->getID());
-    if (it == vis_infos_.end()) {
-      // New submap
-      it = vis_infos_.emplace(std::make_pair(submap->getID(), SubmapVisInfo()))
-               .first;
+  // Update submap ids.
+  std::vector<int> ids;
+  std::vector<int> new_ids;
+  std::vector<int> deleted_ids;
+  ids.reserve(vis_infos_.size());
+  for (const auto& id_info_pair : vis_infos_) {
+    ids.emplace_back(id_info_pair.first);
+  }
+  submaps.updateIDList(ids, &new_ids, &deleted_ids);
+
+  // New submaps.
+  for (const int& id : new_ids) {
+    {
+      auto it = vis_infos_.emplace(std::make_pair(id, SubmapVisInfo())).first;
       SubmapVisInfo& info = it->second;
-      info.id = submap->getID();
+      info.id = id;
       info.change_color = true;
-      info.remesh_everything = true;  // could be a loaded submap
+      info.remesh_everything = true;  // Could be a loaded submap.
     }
   }
-  for (auto& info_pair : vis_infos_) {
-    if (!submaps.submapIdExists(info_pair.second.id)) {
-      // Deleted submap
-      info_pair.second.was_deleted = true;
+
+  // Deleted Submaps.
+  for (const int& id : deleted_ids) {
+    vis_infos_[id].was_deleted = true;
+  }
+}
+
+void SubmapVisualizer::setVisualizationMode(
+    VisualizationMode visualization_mode) {
+  // If there is a new visualization mode recompute the colors.
+  // NOTE(schmluk): the modes 'color' and 'normals' are handled by the mesher,
+  // so no need to recompute.
+  if (visualization_mode != visualization_mode_ &&
+      visualization_mode != VisualizationMode::kColor &&
+      visualization_mode != VisualizationMode::kNormals) {
+    for (auto& info : vis_infos_) {
+      info.second.change_color = true;
     }
   }
+  visualization_mode_ = visualization_mode;
+}
+
+void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
+                                         SubmapVisInfo* info) {
+  if (submap.getID() != info->id) {
+    LOG(WARNING) << "Set color of SubmapVisInfo " << info->id
+                 << " based on Submap " << submap.getID() << ".";
+  }
+
+  // NOTE(schmluk): Modes 'color' and 'normals' are handled by the mesher,
+  // so no need to set here.
+  switch (visualization_mode_) {
+    case VisualizationMode::kInstances: {
+      info->alpha = 255;
+      if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
+        info->color = label_handler_->getColor(submap.getInstanceID());
+      } else {
+        info->color = kUnknownColor;
+      }
+      break;
+    }
+    case VisualizationMode::kSubmaps: {
+      info->alpha = 255;
+      float h = static_cast<float>(submap.getID() %
+                                   config_.submap_color_discretization) /
+                static_cast<float>(config_.submap_color_discretization - 1);
+      info->color = voxblox::rainbowColorMap(h);
+      break;
+    }
+    case VisualizationMode::kClasses: {
+      LOG(WARNING) << "Class coloring is not yet implemented.";
+      break;
+    }
+    case VisualizationMode::kChange: {
+      info->alpha = 255;
+      if (submap.isActive()) {
+        if (submap.getChangeDetectionData().is_matched) {
+          info->color = Color(0, 255, 125);
+        } else {
+          info->color = Color(0, 200, 0);
+        }
+      } else {
+        info->color = Color(50, 50, 255);
+        if (submap.getChangeDetectionData().is_matched) {
+          info->alpha = 255;
+        } else {
+          info->alpha = 50;
+        }
+      }
+      break;
+    }
+  }
+}
+
+void SubmapVisualizer::updateSubmapMesh(Submap* submap,
+                                        bool update_all_blocks) {
+  CHECK_NOTNULL(submap);
+  constexpr bool clear_updated_flag = true;
+  mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
+      config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
+      submap->getMeshLayerPtr().get());
+  mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
+}
+
+void SubmapVisualizer::publishTfTransform(const Transformation& transform,
+                                          const std::string& parent_frame,
+                                          const std::string& child_frame) {
+  geometry_msgs::TransformStamped msg;
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = parent_frame;
+  msg.child_frame_id = child_frame;
+  tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
+  tf_broadcaster_.sendTransform(msg);
 }
 
 void SubmapVisualizer::generateBlockMsgs(
@@ -162,7 +257,7 @@ void SubmapVisualizer::generateBlockMsgs(
     float block_size =
         submap->getTsdfLayer().voxel_size() *
         static_cast<float>(submap->getTsdfLayer().voxels_per_side());
-    int counter = 0;
+    unsigned int counter = 0;
 
     // get color
     Color color = kUnknownColor;
@@ -200,106 +295,44 @@ void SubmapVisualizer::generateBlockMsgs(
   }
 }
 
-void SubmapVisualizer::setMeshColoringMode(MeshColoringMode coloring_mode) {
-  // if there is a new coloring mode recompute the colors.
-  // NOTE(schmluk): the modes 'color' and 'normals' are handled by the mesher,
-  // so no need to recompute.
-  if (coloring_mode != coloring_mode_ &&
-      coloring_mode != MeshColoringMode::kColor &&
-      coloring_mode != MeshColoringMode::kNormals) {
-    for (auto& info : vis_infos_) {
-      info.second.change_color = true;
-    }
+SubmapVisualizer::VisualizationMode
+SubmapVisualizer::visualizationModeFromString(
+    const std::string& visualization_mode) {
+  if (visualization_mode == "color") {
+    return VisualizationMode::kColor;
+  } else if (visualization_mode == "normals") {
+    return VisualizationMode::kNormals;
+  } else if (visualization_mode == "submaps") {
+    return VisualizationMode::kSubmaps;
+  } else if (visualization_mode == "instances") {
+    return VisualizationMode::kInstances;
+  } else if (visualization_mode == "classes") {
+    return VisualizationMode::kClasses;
   }
-
-  coloring_mode_ = coloring_mode;
-}
-
-void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
-                                         SubmapVisInfo* info) {
-  if (submap.getID() != info->id) {
-    LOG(WARNING) << "Set color of SubmapVisInfo " << info->id
-                 << " based on Submap " << submap.getID() << ".";
-  }
-
-  // NOTE(schmluk): modes 'color' and 'normals' are handled by the mesher,
-  // so no need to set here.
-  switch (coloring_mode_) {
-    case MeshColoringMode::kInstances: {
-      if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
-        info->color = label_handler_->getColor(submap.getInstanceID());
-      } else {
-        info->color = kUnknownColor;
-      }
-      break;
-    }
-    case MeshColoringMode::kSubmaps: {
-      float h = static_cast<float>(submap.getID() %
-                                   config_.submap_color_discretization) /
-                static_cast<float>(config_.submap_color_discretization - 1);
-      info->color = voxblox::rainbowColorMap(h);
-      break;
-    }
-    case MeshColoringMode::kClasses: {
-      LOG(WARNING) << "Class coloring is not yet implemented.";
-      break;
-    }
-  }
-}
-
-void SubmapVisualizer::updateSubmapMesh(Submap* submap,
-                                        bool update_all_blocks) {
-  CHECK_NOTNULL(submap);
-  constexpr bool clear_updated_flag = true;
-  mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
-      config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
-      submap->getMeshLayerPtr().get());
-  mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
-}
-
-void SubmapVisualizer::publishTfTransform(const Transformation& transform,
-                                          const std::string& parent_frame,
-                                          const std::string& child_frame) {
-  geometry_msgs::TransformStamped msg;
-  msg.header.stamp = ros::Time::now();
-  msg.header.frame_id = parent_frame;
-  msg.child_frame_id = child_frame;
-  tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
-  tf_broadcaster_.sendTransform(msg);
-}
-
-SubmapVisualizer::MeshColoringMode SubmapVisualizer::coloringModeFromString(
-    const std::string& coloring_mode) {
-  if (coloring_mode == "color") {
-    return MeshColoringMode::kColor;
-  } else if (coloring_mode == "normals") {
-    return MeshColoringMode::kNormals;
-  } else if (coloring_mode == "submaps") {
-    return MeshColoringMode::kSubmaps;
-  } else if (coloring_mode == "instances") {
-    return MeshColoringMode::kInstances;
-  } else if (coloring_mode == "classes") {
-    return MeshColoringMode::kClasses;
+  if (visualization_mode == "change") {
+    return VisualizationMode::kChange;
   } else {
-    LOG(WARNING) << "Unknown MeshColoringMode '" << coloring_mode
+    LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
                  << "', using color instead.";
-    return MeshColoringMode::kColor;
+    return VisualizationMode::kColor;
   }
 }
 
-std::string SubmapVisualizer::coloringModeToString(
-    MeshColoringMode coloring_mode) {
-  switch (coloring_mode) {
-    case MeshColoringMode::kColor:
+std::string SubmapVisualizer::visualizationModeToString(
+    VisualizationMode visualization_mode) {
+  switch (visualization_mode) {
+    case VisualizationMode::kColor:
       return "color";
-    case MeshColoringMode::kNormals:
+    case VisualizationMode::kNormals:
       return "normals";
-    case MeshColoringMode::kSubmaps:
+    case VisualizationMode::kSubmaps:
       return "submaps";
-    case MeshColoringMode::kInstances:
+    case VisualizationMode::kInstances:
       return "instances";
-    case MeshColoringMode::kClasses:
+    case VisualizationMode::kClasses:
       return "classes";
+    case VisualizationMode::kChange:
+      return "change";
   }
   return "unknown coloring mode";
 }

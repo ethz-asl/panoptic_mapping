@@ -38,6 +38,9 @@ void PanopticMapper::setupConfigFromRos() {
   nh_private_.param("visualization/visualization_interval",
                     config_.visualization_interval,
                     config_.visualization_interval);
+  nh_private_.param("change_detection_interval",
+                    config_.change_detection_interval,
+                    config_.change_detection_interval);
 }
 
 void PanopticMapper::setupRos() {
@@ -64,14 +67,20 @@ void PanopticMapper::setupRos() {
       "save_map", &PanopticMapper::saveMapCallback, this);
   load_map_srv_ = nh_private_.advertiseService(
       "load_map", &PanopticMapper::loadMapCallback, this);
-  set_coloring_mode_srv_ = nh_private_.advertiseService(
-      "set_coloring_mode", &PanopticMapper::setColoringModeCallback, this);
+  set_visualization_mode_srv_ = nh_private_.advertiseService(
+      "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
+      this);
 
   // Timers
   if (config_.visualization_interval > 0.0) {
     visualization_timer_ = nh_private_.createTimer(
         ros::Duration(config_.visualization_interval),
         &PanopticMapper::publishVisualizationCallback, this);
+  }
+  if (config_.change_detection_interval > 0.0) {
+    change_detection_timer_ = nh_private_.createTimer(
+        ros::Duration(config_.change_detection_interval),
+        &PanopticMapper::changeDetectionCallback, this);
   }
 }
 
@@ -140,7 +149,7 @@ void PanopticMapper::processImages(
   ros::WallTime t3 = ros::WallTime::now();
   LOG_IF(INFO, config_.verbosity >= 2) << "Integrated images.";
   LOG_IF(INFO, config_.verbosity >= 3)
-      << "(id tracking:" << int((t2 - t1).toSec() * 1000)
+      << "(id tracking: " << int((t2 - t1).toSec() * 1000)
       << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
       << int((t3 - t0).toSec() * 1000) << "ms)";
 }
@@ -196,9 +205,13 @@ void PanopticMapper::pointcloudCallback(
   LOG_IF(INFO, config_.verbosity >= 2) << "Integrated point cloud.";
   LOG_IF(INFO, config_.verbosity >= 3)
       << "(conversion: " << int((t1 - t0).toSec() * 1000)
-      << " + id tracking:" << int((t2 - t1).toSec() * 1000)
+      << " + id tracking: " << int((t2 - t1).toSec() * 1000)
       << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
       << int((t3 - t0).toSec() * 1000) << "ms)";
+}
+
+void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
+  tsdf_registrator_->checkSubmapCollectionForChange(submaps_);
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
@@ -292,15 +305,16 @@ void PanopticMapper::findMatchingMessagesToPublish(
   segmentation_queue_.erase(segmentation_it);
 }
 
-bool PanopticMapper::setColoringModeCallback(
+bool PanopticMapper::setVisualizationModeCallback(
     voxblox_msgs::FilePath::Request& request,
     voxblox_msgs::FilePath::Response& response) {
-  SubmapVisualizer::MeshColoringMode coloring_mode =
-      SubmapVisualizer::coloringModeFromString(request.file_path);
-  submap_visualizer_->setMeshColoringMode(coloring_mode);
+  SubmapVisualizer::VisualizationMode coloring_mode =
+      SubmapVisualizer::visualizationModeFromString(request.file_path);
+  submap_visualizer_->setVisualizationMode(coloring_mode);
   publishMeshes();
   LOG(INFO) << "Set coloring mode to '"
-            << SubmapVisualizer::coloringModeToString(coloring_mode) << "'.";
+            << SubmapVisualizer::visualizationModeToString(coloring_mode)
+            << "'.";
   return true;
 }
 
@@ -352,11 +366,11 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
 }
 
 bool PanopticMapper::loadMap(const std::string& file_path) {
-  // Clear the current maps
+  // Clear the current maps.
   submaps_.clear();
   submap_visualizer_->reset();
 
-  // Open and check the file
+  // Open and check the file.
   std::fstream proto_file;
   proto_file.open(file_path, std::fstream::in);
   if (!proto_file.is_open()) {
@@ -372,7 +386,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     return false;
   }
 
-  // Loading each of the submaps
+  // Loading each of the submaps.
   for (size_t sub_map_index = 0u;
        sub_map_index < submap_collection_proto.num_submaps(); ++sub_map_index) {
     std::unique_ptr<Submap> submap_ptr =
@@ -382,6 +396,10 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
                  << "' from stream.";
       return false;
     }
+
+    // Re-compute cached data and set the relevant flags.
+    submap_ptr->finishActivePeriod();
+    tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
 
     // add to the collection
     submaps_.addSubmap(std::move(submap_ptr));

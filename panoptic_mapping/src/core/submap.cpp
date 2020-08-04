@@ -16,25 +16,25 @@ Submap::Config Submap::Config::isValid() const {
 }
 
 Submap::Submap(const Config& config)
-    : config_(config.isValid()), instance_id_(-1), is_active_(true) {
-  // default values
+    : config_(config.isValid()),
+      instance_id_(-1),
+      class_id_(-1),
+      is_active_(true) {
+  // Default values.
   std::stringstream ss;
-  ss << "submap_" << id_;
+  ss << "submap_" << id_.toInt();
   frame_name_ = ss.str();
 
-  // setup layers
+  // Setup layers.
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
       config_.voxel_size, config_.voxels_per_side);
   double block_size =
       config_.voxel_size * static_cast<double>(config_.voxels_per_side);
   mesh_layer_ = std::make_shared<voxblox::MeshLayer>(block_size);
 
-  // initialize with identity transformation
-  Eigen::Quaterniond q(1, 0, 0, 0);
-  Eigen::Vector3d t(0, 0, 0);
-  T_M_S_ = Transformation(q.cast<voxblox::FloatingPoint>(),
-                          t.cast<voxblox::FloatingPoint>());
-  T_M_S_inv_ = T_M_S_;
+  // Initialize with identity transformation.
+  T_M_S_.setIdentity();
+  T_M_S_inv_.setIdentity();
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {

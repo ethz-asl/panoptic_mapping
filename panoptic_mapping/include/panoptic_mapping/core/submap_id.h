@@ -13,13 +13,14 @@ class SubmapID {
   // controlled con- and destruction
   SubmapID();
   ~SubmapID();
-  SubmapID(SubmapID const&) = delete;
-  void operator=(SubmapID const&) = delete;
 
-  operator int() const { return id_; }
+  SubmapID(const SubmapID&) = delete;
+  void operator=(const SubmapID&) = delete;
 
- private:
-  const int id_;
+  explicit operator int() const { return id_; }
+  [[nodiscard]] int toInt() const { return id_; }
+
+  private : const int id_;
 };
 
 /**

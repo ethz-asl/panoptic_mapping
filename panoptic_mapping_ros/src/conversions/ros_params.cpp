@@ -52,8 +52,8 @@ GroundTruthIDTracker::Config getGroundTruthIDTrackerConfigFromRos(
 SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
     const ros::NodeHandle& nh) {
   SubmapVisualizer::Config config;
-  nh.param("mesh_coloring_mode", config.mesh_coloring_mode,
-           config.mesh_coloring_mode);
+  nh.param("visualization_mode", config.visualization_mode,
+           config.visualization_mode);
   nh.param("visualize_mesh", config.visualize_mesh, config.visualize_mesh);
   nh.param("visualize_tsdf_blocks", config.visualize_tsdf_blocks,
            config.visualize_tsdf_blocks);

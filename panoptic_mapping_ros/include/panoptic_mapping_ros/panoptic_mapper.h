@@ -31,6 +31,7 @@ class PanopticMapper {
     // integration start discarding old ones.
     std::string global_frame_name = "mission";
     double visualization_interval = 1.0;  // s
+    double change_detection_interval = 1.0;  // s
   };
 
   PanopticMapper(const ::ros::NodeHandle& nh,
@@ -43,11 +44,12 @@ class PanopticMapper {
   void colorImageCallback(const sensor_msgs::ImagePtr& msg);
   void segmentationImageCallback(const sensor_msgs::ImagePtr& msg);
   void publishVisualizationCallback(const ros::TimerEvent&);
+  void changeDetectionCallback(const ros::TimerEvent&);
   bool saveMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
                        voxblox_msgs::FilePath::Response& response);  // NOLINT
   bool loadMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
                        voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool setColoringModeCallback(
+  bool setVisualizationModeCallback(
       voxblox_msgs::FilePath::Request& request,     // NOLINT
       voxblox_msgs::FilePath::Response& response);  // NOLINT
 
@@ -86,8 +88,9 @@ class PanopticMapper {
   ros::Publisher tsdf_blocks_pub_;
   ros::ServiceServer load_map_srv_;
   ros::ServiceServer save_map_srv_;
-  ros::ServiceServer set_coloring_mode_srv_;
+  ros::ServiceServer set_visualization_mode_srv_;
   ros::Timer visualization_timer_;
+  ros::Timer change_detection_timer_;
 
   // members
   Config config_;

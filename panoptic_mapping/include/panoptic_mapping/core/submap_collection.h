@@ -18,7 +18,7 @@ class SubmapCollection {
   SubmapCollection() = default;
   virtual ~SubmapCollection() = default;
 
-  // iterator over submaps
+  // Iterators over submaps.
   std::vector<std::unique_ptr<Submap>>::const_iterator begin() const {
     return submaps_.begin();
   }
@@ -26,16 +26,21 @@ class SubmapCollection {
     return submaps_.end();
   }
 
-  // modify the collection
+  // Modify the collection.
   void addSubmap(std::unique_ptr<Submap> submap);
   Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
-  Submap& getSubmap(int id);  // this assumes that the id exists
+  const Submap& getSubmap(int id) const;  // This assumes that the id exists.
+  Submap* getSubmapPtr(int id) const;     // This assumes that the id exists.
   void clear();
 
-  // accessors
+  // Accessors.
   size_t size() const { return submaps_.size(); }
-  bool submapIdExists(int id) const;  // check whether id exists
+  bool submapIdExists(int id) const;  // Check whether id exists.
+
+  // Tools.
+  void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
+                    std::vector<int>* deleted_ids) const;
 
  private:
   std::vector<std::unique_ptr<Submap>> submaps_;
