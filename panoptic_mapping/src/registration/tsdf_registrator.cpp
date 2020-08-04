@@ -117,6 +117,13 @@ TsdfRegistrator::computeSurfaceDifference(Submap* reference,
 
 void TsdfRegistrator::checkSubmapCollectionForChange(
     const SubmapCollection& submaps) {
+  std::cout << " ===== Checking for change ===== " << std::endl;
+  for (const auto& s : submaps) {
+    std::cout << s->getID() << ": active " << s->isActive() << ", matched "
+              << s->getChangeDetectionData().is_matched << ", "
+              << s->getChangeDetectionData().matching_submap_id << std::endl;
+  }
+
   // TODO(schmluk): Extend to track for deleted/deactivated submaps later.
   for (const auto& submap : submaps) {
     // Only match all active submaps vs inactive ones.
@@ -155,6 +162,13 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
       }
     }
   }
+  std::cout << " ========== Done ========== " << std::endl;
+  for (const auto& s : submaps) {
+    std::cout << s->getID() << ": active " << s->isActive() << ", matched "
+              << s->getChangeDetectionData().is_matched << ", "
+              << s->getChangeDetectionData().matching_submap_id << std::endl;
+  }
+  std::cout << " ========================== " << std::endl;
 }
 
 bool TsdfRegistrator::isMatch(const ChangeDetectionResult& change_data) const {

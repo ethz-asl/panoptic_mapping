@@ -2,13 +2,15 @@
 
 #include <memory>
 #include <utility>
-#include <vector> for vector<>
+#include <vector>
 
 namespace panoptic_mapping {
 
 void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
+  std::cout << submap->getID();
   id_to_index_[submap->getID()] = submaps_.size();
   submaps_.emplace_back(std::move(submap));
+  std::cout << "->" << submaps_.back()->getID() << std::endl;
 }
 
 Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
@@ -21,7 +23,7 @@ Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
 bool SubmapCollection::removeSubmap(int id) {
   auto it = id_to_index_.find(id);
   if (it == id_to_index_.end()) {
-    // submap does not exist
+    // Submap does not exist.
     return false;
   }
   size_t previous_index = it->second;
