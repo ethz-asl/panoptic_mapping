@@ -6,6 +6,7 @@ import public "cblox/QuatTransformation.proto";
 
 message SubmapProto {
   optional int32 instance_id = 1;
+  optional int32 class_id = 6;
 
   optional uint32 num_blocks = 2;
   optional float voxel_size = 3;

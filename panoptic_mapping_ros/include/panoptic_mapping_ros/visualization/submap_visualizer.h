@@ -70,6 +70,7 @@ class SubmapVisualizer {
   const Color kUnknownColor = Color(50, 50, 50);
 
   struct SubmapVisInfo {
+    // General.
     int id = 0;
     bool remesh_everything = false;
     bool republish_everything = false;
@@ -77,6 +78,9 @@ class SubmapVisualizer {
     bool change_color = false;
     Color color;
     uint8_t alpha = 255;
+
+    // Tracking: kChange
+    int was_matched = 0;  // 0-init, 1-no, 2-yes
   };
 
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);

@@ -8,7 +8,7 @@
 verbosity: 3
 label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
 global_frame_name: world
-change_detection_interval: 3.0
+change_detection_interval: 2.0
 
 tsdf_integrator:  
   type: projective # naive, projective, projective_multi_tsdf

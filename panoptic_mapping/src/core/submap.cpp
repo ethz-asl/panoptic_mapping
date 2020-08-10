@@ -53,6 +53,7 @@ void Submap::getProto(SubmapProto* proto) const {
 
   // Filling out the description of the submap
   proto->set_instance_id(instance_id_);
+  proto->set_class_id(class_id_);
   proto->set_num_blocks(num_tsdf_blocks);
   proto->set_voxel_size(tsdf_layer_->voxel_size());
   proto->set_voxels_per_side(tsdf_layer_->voxels_per_side());
@@ -118,6 +119,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
 
   // other data
   submap->setInstanceID(submap_proto.instance_id());
+  submap->setClassID(submap_proto.class_id());
 
   // recompute required data
   submap->finishActivePeriod();

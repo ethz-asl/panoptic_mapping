@@ -10,7 +10,6 @@ void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
   std::cout << submap->getID();
   id_to_index_[submap->getID()] = submaps_.size();
   submaps_.emplace_back(std::move(submap));
-  std::cout << "->" << submaps_.back()->getID() << std::endl;
 }
 
 Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
