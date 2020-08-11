@@ -70,12 +70,12 @@ void SubmapVisualizer::generateMeshMsgs(
       continue;
     }
 
-    // update the mesh
+    // Update the mesh.
     msg.header.frame_id = submap->getFrameName();
     updateSubmapMesh(submap.get(), info.remesh_everything);
     info.remesh_everything = false;
 
-    // mark the whole mesh for re-publishing if requested
+    // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
       voxblox::BlockIndexList mesh_indices;
       submap->getMeshLayer().getAllAllocatedMeshes(&mesh_indices);
@@ -229,123 +229,123 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
       info->was_matched = match_status;
       break;
     }
-    }
+  }
+}
+
+void SubmapVisualizer::updateSubmapMesh(Submap* submap,
+                                        bool update_all_blocks) {
+  CHECK_NOTNULL(submap);
+  constexpr bool clear_updated_flag = true;
+  mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
+      config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
+      submap->getMeshLayerPtr().get());
+  mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
+}
+
+void SubmapVisualizer::publishTfTransform(const Transformation& transform,
+                                          const std::string& parent_frame,
+                                          const std::string& child_frame) {
+  geometry_msgs::TransformStamped msg;
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = parent_frame;
+  msg.child_frame_id = child_frame;
+  tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
+  tf_broadcaster_.sendTransform(msg);
+}
+
+void SubmapVisualizer::generateBlockMsgs(
+    const SubmapCollection& submaps,
+    visualization_msgs::MarkerArray* output) const {
+  if (!config_.visualize_tsdf_blocks) {
+    return;
   }
 
-  void SubmapVisualizer::updateSubmapMesh(Submap* submap,
-                                          bool update_all_blocks) {
-    CHECK_NOTNULL(submap);
-    constexpr bool clear_updated_flag = true;
-    mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
-        config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
-        submap->getMeshLayerPtr().get());
-    mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
-  }
+  CHECK_NOTNULL(output);
+  for (const auto& submap : submaps) {
+    // setup submap
+    voxblox::BlockIndexList blocks;
+    submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
+    float block_size =
+        submap->getTsdfLayer().voxel_size() *
+        static_cast<float>(submap->getTsdfLayer().voxels_per_side());
+    unsigned int counter = 0;
 
-  void SubmapVisualizer::publishTfTransform(const Transformation& transform,
-                                            const std::string& parent_frame,
-                                            const std::string& child_frame) {
-    geometry_msgs::TransformStamped msg;
-    msg.header.stamp = ros::Time::now();
-    msg.header.frame_id = parent_frame;
-    msg.child_frame_id = child_frame;
-    tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
-    tf_broadcaster_.sendTransform(msg);
-  }
-
-  void SubmapVisualizer::generateBlockMsgs(
-      const SubmapCollection& submaps,
-      visualization_msgs::MarkerArray* output) const {
-    if (!config_.visualize_tsdf_blocks) {
-      return;
+    // get color
+    Color color = kUnknownColor;
+    auto vis_it = vis_infos_.find(submap->getID());
+    if (vis_it != vis_infos_.end()) {
+      color = vis_it->second.color;
     }
 
-    CHECK_NOTNULL(output);
-    for (const auto& submap : submaps) {
-      // setup submap
-      voxblox::BlockIndexList blocks;
-      submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
-      float block_size =
-          submap->getTsdfLayer().voxel_size() *
-          static_cast<float>(submap->getTsdfLayer().voxels_per_side());
-      unsigned int counter = 0;
-
-      // get color
-      Color color = kUnknownColor;
-      auto vis_it = vis_infos_.find(submap->getID());
-      if (vis_it != vis_infos_.end()) {
-        color = vis_it->second.color;
-      }
-
-      for (auto& block_index : blocks) {
-        visualization_msgs::Marker marker;
-        marker.header.frame_id = submap->getFrameName();
-        marker.header.stamp = ros::Time::now();
-        marker.color.r = color.r;
-        marker.color.g = color.g;
-        marker.color.b = color.b;
-        marker.color.a = 0.5;
-        marker.action = visualization_msgs::Marker::ADD;
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.id = counter++;
-        marker.ns = "tsdf_blocks_" + std::to_string(submap->getID());
-        marker.scale.x = block_size;
-        marker.scale.y = block_size;
-        marker.scale.z = block_size;
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 1.0;
-        Point origin =
-            submap->getTsdfLayer().getBlockByIndex(block_index).origin();
-        marker.pose.position.x = origin.x() + block_size / 2.0;
-        marker.pose.position.y = origin.y() + block_size / 2.0;
-        marker.pose.position.z = origin.z() + block_size / 2.0;
-        output->markers.push_back(marker);
-      }
+    for (auto& block_index : blocks) {
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = submap->getFrameName();
+      marker.header.stamp = ros::Time::now();
+      marker.color.r = color.r;
+      marker.color.g = color.g;
+      marker.color.b = color.b;
+      marker.color.a = 0.5;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.type = visualization_msgs::Marker::CUBE;
+      marker.id = counter++;
+      marker.ns = "tsdf_blocks_" + std::to_string(submap->getID());
+      marker.scale.x = block_size;
+      marker.scale.y = block_size;
+      marker.scale.z = block_size;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.0;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 1.0;
+      Point origin =
+          submap->getTsdfLayer().getBlockByIndex(block_index).origin();
+      marker.pose.position.x = origin.x() + block_size / 2.0;
+      marker.pose.position.y = origin.y() + block_size / 2.0;
+      marker.pose.position.z = origin.z() + block_size / 2.0;
+      output->markers.push_back(marker);
     }
   }
+}
 
-  SubmapVisualizer::VisualizationMode
-  SubmapVisualizer::visualizationModeFromString(
-      const std::string& visualization_mode) {
-    if (visualization_mode == "color") {
-      return VisualizationMode::kColor;
-    } else if (visualization_mode == "normals") {
-      return VisualizationMode::kNormals;
-    } else if (visualization_mode == "submaps") {
-      return VisualizationMode::kSubmaps;
-    } else if (visualization_mode == "instances") {
-      return VisualizationMode::kInstances;
-    } else if (visualization_mode == "classes") {
-      return VisualizationMode::kClasses;
-    }
-    if (visualization_mode == "change") {
-      return VisualizationMode::kChange;
-    } else {
-      LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
-                   << "', using color instead.";
-      return VisualizationMode::kColor;
-    }
+SubmapVisualizer::VisualizationMode
+SubmapVisualizer::visualizationModeFromString(
+    const std::string& visualization_mode) {
+  if (visualization_mode == "color") {
+    return VisualizationMode::kColor;
+  } else if (visualization_mode == "normals") {
+    return VisualizationMode::kNormals;
+  } else if (visualization_mode == "submaps") {
+    return VisualizationMode::kSubmaps;
+  } else if (visualization_mode == "instances") {
+    return VisualizationMode::kInstances;
+  } else if (visualization_mode == "classes") {
+    return VisualizationMode::kClasses;
   }
+  if (visualization_mode == "change") {
+    return VisualizationMode::kChange;
+  } else {
+    LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
+                 << "', using color instead.";
+    return VisualizationMode::kColor;
+  }
+}
 
-  std::string SubmapVisualizer::visualizationModeToString(
-      VisualizationMode visualization_mode) {
-    switch (visualization_mode) {
-      case VisualizationMode::kColor:
-        return "color";
-      case VisualizationMode::kNormals:
-        return "normals";
-      case VisualizationMode::kSubmaps:
-        return "submaps";
-      case VisualizationMode::kInstances:
-        return "instances";
-      case VisualizationMode::kClasses:
-        return "classes";
-      case VisualizationMode::kChange:
-        return "change";
-    }
-    return "unknown coloring mode";
+std::string SubmapVisualizer::visualizationModeToString(
+    VisualizationMode visualization_mode) {
+  switch (visualization_mode) {
+    case VisualizationMode::kColor:
+      return "color";
+    case VisualizationMode::kNormals:
+      return "normals";
+    case VisualizationMode::kSubmaps:
+      return "submaps";
+    case VisualizationMode::kInstances:
+      return "instances";
+    case VisualizationMode::kClasses:
+      return "classes";
+    case VisualizationMode::kChange:
+      return "change";
   }
+  return "unknown coloring mode";
+}
 
 }  // namespace panoptic_mapping

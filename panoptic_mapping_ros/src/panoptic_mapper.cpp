@@ -44,7 +44,7 @@ void PanopticMapper::setupConfigFromRos() {
 }
 
 void PanopticMapper::setupRos() {
-  // Subscribers
+  // Subscribers.
   pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10,
                                   &PanopticMapper::pointcloudCallback, this);
   depth_image_sub_ =
@@ -57,12 +57,12 @@ void PanopticMapper::setupRos() {
       nh_.subscribe("segmentation_image_in", config_.max_image_queue_length,
                     &PanopticMapper::segmentationImageCallback, this);
 
-  // Publishers
+  // Publishers.
   mesh_pub_ = nh_private_.advertise<voxblox_msgs::MultiMesh>("mesh", 100, true);
   tsdf_blocks_pub_ = nh_private_.advertise<visualization_msgs::MarkerArray>(
       "tsdf_blocks", 100, true);
 
-  // Services
+  // Services.
   save_map_srv_ = nh_private_.advertiseService(
       "save_map", &PanopticMapper::saveMapCallback, this);
   load_map_srv_ = nh_private_.advertiseService(
@@ -71,7 +71,7 @@ void PanopticMapper::setupRos() {
       "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
       this);
 
-  // Timers
+  // Timers.
   if (config_.visualization_interval > 0.0) {
     visualization_timer_ = nh_private_.createTimer(
         ros::Duration(config_.visualization_interval),

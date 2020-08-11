@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /VoxbloxMultiMesh1/Status1
         - /MarkerArray2/Namespaces1
       Splitter Ratio: 0.520588219165802
     Tree Height: 726
@@ -186,25 +185,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 13.479256629943848
+      Distance: 14.453932762145996
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.062146835029125214
-        Y: -0.7254844307899475
-        Z: 0.8344374299049377
+        X: -1.3168801069259644
+        Y: -1.9679628610610962
+        Z: -0.0037339990958571434
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5347973108291626
+      Pitch: 1.0297976732254028
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.297308921813965
+      Yaw: 5.399144649505615
     Saved: ~
 Window Geometry:
   Displays:
