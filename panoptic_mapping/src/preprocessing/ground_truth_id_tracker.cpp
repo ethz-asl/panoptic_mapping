@@ -7,18 +7,21 @@
 
 namespace panoptic_mapping {
 
-GroundTruthIDTracker::Config GroundTruthIDTracker::Config::isValid() const {
-  CHECK_GT(voxels_per_side, 0) << "The voxels per side are expected > 0.";
-  CHECK_GT(instance_voxel_size, 0.0)
-      << "The instance voxel size is expected > 0.0.";
-  CHECK_GT(background_voxel_size, 0.0)
-      << "The background voxel size is expected > 0.0.";
-  return Config(*this);
+void GroundTruthIDTracker::Config::checkParams() const {
+  checkParamGT(voxels_per_side, 0, "voxels_per_side");
+  checkParamGT(instance_voxel_size, 0.0, "instance_voxel_size");
+  checkParamGT(background_voxel_size, 0.0, "background_voxel_size");
+}
+
+void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
+  setupParam("instance_voxel_size", &instance_voxel_size);
+  setupParam("background_voxel_size", &background_voxel_size);
+  setupParam("voxels_per_side", &voxels_per_side);
 }
 
 GroundTruthIDTracker::GroundTruthIDTracker(
     const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.isValid()), IDTrackerBase(std::move(label_handler)) {}
+    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {}
 
 void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          const Transformation& T_M_C,

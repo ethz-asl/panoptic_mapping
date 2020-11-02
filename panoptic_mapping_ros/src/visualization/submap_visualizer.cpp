@@ -61,7 +61,7 @@ void SubmapVisualizer::generateMeshMsgs(
     // setup message
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
-    msg.id = info.id;
+    msg.name_space = info.id;
 
     // If the submap was deleted we send an empty message to delete the visual.
     if (info.was_deleted) {

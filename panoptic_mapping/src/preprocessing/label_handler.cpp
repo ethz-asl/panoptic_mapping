@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 
-#include <3rd_party/csv.h>
+#include "panoptic_mapping/3rd_party/csv.h"
 
 namespace panoptic_mapping {
 

@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
+
 #include "panoptic_mapping_ros/conversions/ros_params.h"
 
 namespace panoptic_mapping {
@@ -22,7 +24,7 @@ std::unique_ptr<IntegratorBase> ComponentFactoryROS::createIntegrator(
         getNaiveIntegratorConfigFromRos(nh));
   } else if (type == "projective") {
     return std::make_unique<ProjectiveIntegrator>(
-        getProjectiveIntegratorConfigFromRos(nh));
+        config_utilities::getConfigFromRos<ProjectiveIntegrator::Config>(nh));
   } else {
     LOG(ERROR) << "Unknown integrator type '" << type << "'.";
     return nullptr;
@@ -34,7 +36,8 @@ std::unique_ptr<IDTrackerBase> ComponentFactoryROS::createIDTracker(
   std::string type = getType(nh);
   if (type == "ground_truth") {
     return std::make_unique<GroundTruthIDTracker>(
-        getGroundTruthIDTrackerConfigFromRos(nh), std::move(label_handler));
+        config_utilities::getConfigFromRos<GroundTruthIDTracker::Config>(nh),
+        std::move(label_handler));
   } else {
     LOG(ERROR) << "Unknown id tracker type '" << type << "'.";
     return nullptr;

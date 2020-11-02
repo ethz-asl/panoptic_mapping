@@ -18,6 +18,7 @@
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
@@ -25,13 +26,17 @@ namespace panoptic_mapping {
 
 class PanopticMapper {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     int max_image_queue_length = 10;  // after this many images are queued for
     // integration start discarding old ones.
     std::string global_frame_name = "mission";
     double visualization_interval = 1.0;  // s
     double change_detection_interval = 1.0;  // s
+
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   PanopticMapper(const ::ros::NodeHandle& nh,
@@ -93,7 +98,7 @@ class PanopticMapper {
   ros::Timer change_detection_timer_;
 
   // members
-  Config config_;
+  const Config config_;
   SubmapCollection submaps_;
   voxgraph::TfTransformer tf_transformer_;
   std::shared_ptr<LabelHandler> label_handler_;

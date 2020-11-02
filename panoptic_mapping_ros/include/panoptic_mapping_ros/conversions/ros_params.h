@@ -19,19 +19,8 @@ namespace panoptic_mapping {
 NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(
     const ros::NodeHandle& nh);
 
-ProjectiveIntegrator::Config getProjectiveIntegratorConfigFromRos(
-    const ros::NodeHandle& nh);
-
-// id tracker configs
-GroundTruthIDTracker::Config getGroundTruthIDTrackerConfigFromRos(
-    const ros::NodeHandle& nh);
-
 // visualizer configs
 SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
-    const ros::NodeHandle& nh);
-
-// registrator configs
-TsdfRegistrator::Config getTsdfRegistatorConfigFromRos(
     const ros::NodeHandle& nh);
 
 }  // namespace panoptic_mapping

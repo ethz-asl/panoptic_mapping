@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/integrator/integrator_base.h"
 #include "panoptic_mapping/integrator/projection_interpolators.h"
@@ -17,13 +18,13 @@ namespace panoptic_mapping {
  */
 class ProjectiveIntegrator : public IntegratorBase {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
 
     // camera settings  [px]
     int width = 640;
-    int height = 320;
-    float vx = -1;  // defaults to the center
+    int height = 480;
+    float vx = -1;  // Defaults to center.
     float vy = -1;
     float focal_length = 320;
 
@@ -33,7 +34,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     bool use_weight_dropoff = true;
     bool use_constant_weight = false;
     bool foreign_rays_clear = true;  // observations of object B can clear
-                                     // spcae in object A
+    // spcae in object A
     float sparsity_compensation_factor = 1.0;
     float max_weight = 1e5;
     std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
@@ -41,7 +42,10 @@ class ProjectiveIntegrator : public IntegratorBase {
     // system params
     int integration_threads = 0;
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void initializeDependentVariableDefaults() override;
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   explicit ProjectiveIntegrator(const Config& config);

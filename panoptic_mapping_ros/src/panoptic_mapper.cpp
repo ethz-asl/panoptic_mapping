@@ -21,26 +21,27 @@
 
 namespace panoptic_mapping {
 
-PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
-                               const ::ros::NodeHandle& nh_private)
-    : nh_(nh), nh_private_(nh_private) {
-  setupConfigFromRos();
-  setupMembers();
-  setupRos();
+void PanopticMapper::Config::checkParams() const {
+  checkParamGT(max_image_queue_length, 0, "max_image_queue_length");
 }
 
-void PanopticMapper::setupConfigFromRos() {
-  nh_private_.param("verbosity", config_.verbosity, config_.verbosity);
-  nh_private_.param("max_image_queue_length", config_.max_image_queue_length,
-                    config_.max_image_queue_length);
-  nh_private_.param("global_frame_name", config_.global_frame_name,
-                    config_.global_frame_name);
-  nh_private_.param("visualization/visualization_interval",
-                    config_.visualization_interval,
-                    config_.visualization_interval);
-  nh_private_.param("change_detection_interval",
-                    config_.change_detection_interval,
-                    config_.change_detection_interval);
+void PanopticMapper::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
+  setupParam("max_image_queue_length", &max_image_queue_length);
+  setupParam("global_frame_name", &global_frame_name);
+  setupParam("visualization_interval", &visualization_interval);
+  setupParam("change_detection_interval", &change_detection_interval);
+}
+
+PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
+                               const ::ros::NodeHandle& nh_private)
+    : nh_(nh),
+      nh_private_(nh_private),
+      config_(
+          config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
+              .checkValid()) {
+  setupMembers();
+  setupRos();
 }
 
 void PanopticMapper::setupRos() {
@@ -109,7 +110,8 @@ void PanopticMapper::setupMembers() {
   // tsdf registrator
   ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
   tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
-      getTsdfRegistatorConfigFromRos(registrator_nh));
+      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
+          registrator_nh));
 }
 
 void PanopticMapper::processImages(

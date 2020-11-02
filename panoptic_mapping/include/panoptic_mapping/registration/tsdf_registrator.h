@@ -13,16 +13,18 @@ namespace panoptic_mapping {
  */
 class TsdfRegistrator {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     double min_voxel_weight = 1e-6;
     double error_threshold = -1;  // m, negative values are multiples of
     // the average voxel_size.
     bool weight_error_by_tsdf_weight = true;
-    unsigned int min_number_of_matching_points = 50;
+    int min_number_of_matching_points = 50;
     double match_rejection_percentage = 0.9;  // Percentage of points required
     // within the error threshold.
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   struct ChangeDetectionResult {

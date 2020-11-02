@@ -2,6 +2,7 @@
 
 import csv
 import operator
+import collections
 
 import airsim
 import numpy as np
@@ -193,6 +194,7 @@ def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
             "Name",
         ])
         sorted_labels = sorted(labels.items(), key=operator.itemgetter(1))
+        sorted_labels = collections.OrderedDict(sorted_labels)
         for key in sorted_labels:
             instance_id = labels[key]
             mesh_id = mesh_ids[key]
@@ -210,7 +212,7 @@ def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
 if __name__ == "__main__":
     get_ir_corrections = False
     apply_mesh_labels = True
-    export_mesh_labels = False
+    export_mesh_labels = True
 
     ir_file = "/home/lukas/Documents/PanopticMapping/Data/" \
               "infrared_corrections.csv"

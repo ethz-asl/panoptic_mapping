@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/preprocessing/id_tracker_base.h"
 #include "panoptic_mapping/preprocessing/label_handler.h"
 
@@ -15,12 +16,14 @@ namespace panoptic_mapping {
  */
 class GroundTruthIDTracker : public IDTrackerBase {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     double instance_voxel_size = 0.03;
     double background_voxel_size = 0.07;
     int voxels_per_side = 16;
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   GroundTruthIDTracker(const Config& config,

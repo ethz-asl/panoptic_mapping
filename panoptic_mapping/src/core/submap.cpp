@@ -9,14 +9,18 @@
 
 namespace panoptic_mapping {
 
-Submap::Config Submap::Config::isValid() const {
-  CHECK_GT(voxel_size, 0.0) << "The voxel size is expected > 0.0.";
-  CHECK_GT(voxels_per_side, 0.0) << "The voxels per side are expected > 0.";
-  return Config(*this);
+void Submap::Config::checkParams() const {
+  checkParamGT(voxel_size, 0.0, "voxel_size");
+  checkParamGT(voxels_per_side, 0.0, "voxels_per_side");
+}
+
+void Submap::Config::setupParamsAndPrinting() {
+  setupParam("voxel_size", &voxel_size);
+  setupParam("voxels_per_side", &voxels_per_side);
 }
 
 Submap::Submap(const Config& config)
-    : config_(config.isValid()),
+    : config_(config.checkValid()),
       instance_id_(-1),
       class_id_(-1),
       is_active_(true) {

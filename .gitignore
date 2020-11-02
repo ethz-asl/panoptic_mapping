@@ -50,5 +50,5 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 
-# Temporary files
-Notes.txt
+# Local utilities
+panoptic_mapping_ros/tools/

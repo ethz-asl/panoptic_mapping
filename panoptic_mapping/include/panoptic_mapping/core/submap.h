@@ -8,6 +8,7 @@
 #include <voxblox/core/layer.h>
 #include <voxblox/mesh/mesh_layer.h>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap_id.h"
@@ -16,11 +17,13 @@ namespace panoptic_mapping {
 
 class Submap {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     double voxel_size = 0.1;
     double voxels_per_side = 16;
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   // Iso-surface-points are used to check alignment and represent the surface

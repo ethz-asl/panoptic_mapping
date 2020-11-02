@@ -4,17 +4,26 @@
 
 namespace panoptic_mapping {
 
-TsdfRegistrator::Config TsdfRegistrator::Config::isValid() const {
-  CHECK_NE(error_threshold, 0.0);
-  return Config(*this);
+void TsdfRegistrator::Config::checkParams() const {
+  checkParamNE(error_threshold, 0.0, "error_threshold");
+  checkParamGT(min_number_of_matching_points, 0,
+               "min_number_of_matching_points");
+}
+
+void TsdfRegistrator::Config::setupParamsAndPrinting() {
+  setupParam("min_voxel_weight", &min_voxel_weight);
+  setupParam("error_threshold", &error_threshold);
+  setupParam("weight_error_by_tsdf_weight", &weight_error_by_tsdf_weight);
+  setupParam("min_number_of_matching_points", &min_number_of_matching_points);
+  setupParam("match_rejection_percentage", &match_rejection_percentage);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
-    : config_(config.isValid()) {}
+    : config_(config.checkValid()) {}
 
 void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
   // NOTE(schmluk): Currently all surface points are computed from scratch every
-  // time, but since they are currently only computed when a submpa is finished
+  // time, but since they are currently only computed when a submap is finished
   // it should be fine.
   CHECK_NOTNULL(submap);
   submap->getIsoSurfacePointsPtr()->clear();

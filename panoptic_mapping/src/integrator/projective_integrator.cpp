@@ -10,35 +10,49 @@
 
 namespace panoptic_mapping {
 
-ProjectiveIntegrator::Config ProjectiveIntegrator::Config::isValid() const {
-  Config config(*this);
-  // setup default values
+void ProjectiveIntegrator::Config::initializeDependentVariableDefaults() {
   if (vx <= 0) {
-    config.vx = width / 2.0;
+    vx = width / 2.f;
   }
   if (vy <= 0) {
-    config.vy = config.height / 2.0;
+    vy = height / 2.f;
   }
   if (integration_threads <= 0) {
-    config.integration_threads = std::thread::hardware_concurrency();
+    integration_threads = std::thread::hardware_concurrency();
   }
+}
 
-  // check params are valid
-  CHECK_GT(height, 0) << "'height' must be a positive integer.";
-  CHECK_GT(width, 0) << "'width' must be a positive integer.";
-  CHECK_GT(config.vx, 0) << "'vx' must be a positive float.";
-  CHECK_GT(config.vy, 0) << "'vy' must be a positive float.";
-  CHECK_GT(focal_length, 0) << "'focal_length' must be a positive integer.";
-  CHECK_GT(config.integration_threads, 0)
-      << "'integration_threads' must be a positive integer.";
-  CHECK_LT(config.vx, width) << "'vx' must be smaller than 'width'.";
-  CHECK_LT(config.vy, height) << "'vy' must be smaller than 'height'.";
+void ProjectiveIntegrator::Config::checkParams() const {
+  checkParamGT(height, 0, "height");
+  checkParamGT(width, 0, "width");
+  checkParamGT(vx, 0.f, "vx");
+  checkParamGT(vy, 0.f, "vy");
+  checkParamGT(focal_length, 0.f, "focal_length");
+  checkParamGT(integration_threads, 0, "integration_threads");
+  checkParamCond(vx < width, "'vx' is required < 'width'");
+  checkParamCond(vy < height, "'vy' is required < 'height'");
+}
 
-  return config;
+void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
+  setupParam("width", &width);
+  setupParam("height", &height);
+  setupParam("vx", &vx);
+  setupParam("vy", &vy);
+  setupParam("focal_length", &focal_length);
+  setupParam("max_range", &max_range);
+  setupParam("min_range", &min_range);
+  setupParam("use_weight_dropoff", &use_weight_dropoff);
+  setupParam("use_constant_weight", &use_constant_weight);
+  setupParam("foreign_rays_clear", &foreign_rays_clear);
+  setupParam("sparsity_compensation_factor", &sparsity_compensation_factor);
+  setupParam("max_weight", &max_weight);
+  setupParam("interpolation_method", &interpolation_method);
+  setupParam("integration_threads", &integration_threads);
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
-    : config_(config.isValid()) {
+    : config_(config.checkValid()) {
   // setup the interpolator
   interpolator_ = InterpolatorFactory::create(config_.interpolation_method);
 
