@@ -4,23 +4,9 @@
 
 #include <algorithm>
 #include <chrono>
-#include <numeric>
-#include <thread>
 #include <vector>
 
 namespace panoptic_mapping {
-
-void ProjectiveIntegrator::Config::initializeDependentVariableDefaults() {
-  if (vx <= 0) {
-    vx = width / 2.f;
-  }
-  if (vy <= 0) {
-    vy = height / 2.f;
-  }
-  if (integration_threads <= 0) {
-    integration_threads = std::thread::hardware_concurrency();
-  }
-}
 
 void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(height, 0, "height");

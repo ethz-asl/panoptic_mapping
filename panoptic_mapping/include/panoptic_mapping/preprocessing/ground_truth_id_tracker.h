@@ -17,8 +17,11 @@ namespace panoptic_mapping {
 class GroundTruthIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
-    double instance_voxel_size = 0.03;
-    double background_voxel_size = 0.07;
+    int verbosity = 2;
+    float instance_voxel_size = 0.05;
+    float background_voxel_size = 0.1;
+    float unknown_voxel_size = 0.1;
+    float freespace_voxel_size = 0.3;
     int voxels_per_side = 16;
 
    protected:

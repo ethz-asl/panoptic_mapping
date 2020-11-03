@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
@@ -24,8 +25,8 @@ class ProjectiveIntegrator : public IntegratorBase {
     // camera settings  [px]
     int width = 640;
     int height = 480;
-    float vx = -1;  // Defaults to center.
-    float vy = -1;
+    float vx = 320;
+    float vy = 240;
     float focal_length = 320;
 
     // integration params
@@ -40,10 +41,9 @@ class ProjectiveIntegrator : public IntegratorBase {
     std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
 
     // system params
-    int integration_threads = 0;
+    int integration_threads = std::thread::hardware_concurrency();
 
    protected:
-    void initializeDependentVariableDefaults() override;
     void setupParamsAndPrinting() override;
     void checkParams() const override;
   };

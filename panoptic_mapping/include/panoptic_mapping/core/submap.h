@@ -49,33 +49,22 @@ class Submap {
                                                 uint64_t* tmp_byte_offset_ptr);
 
   // const accessors
-  [[nodiscard]] int getID() const {
-    return id_.toInt();
-  }[[nodiscard]] int getInstanceID() const {
-    return instance_id_;
-  }
-  [[nodiscard]] int getClassID() const {
-    return class_id_;
-  }[[nodiscard]] const std::string& getFrameName() const {
-    return frame_name_;
-  }
-  [[nodiscard]] const TsdfLayer& getTsdfLayer() const {
-    return *tsdf_layer_;
-  }[[nodiscard]] const voxblox::MeshLayer& getMeshLayer() const {
-    return *mesh_layer_;
-  }
-  [[nodiscard]] const Transformation& getT_M_S() const {
-    return T_M_S_;
-  }[[nodiscard]] const Transformation& getT_S_M() const {
-    return T_M_S_inv_;
-  }
-  [[nodiscard]] bool isActive() const { return is_active_; }[[nodiscard]] const
-      std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
+  int getID() const { return id_.toInt(); }
+  int getInstanceID() const { return instance_id_; }
+  int getClassID() const { return class_id_; }
+  const std::string& getFrameName() const { return frame_name_; }
+  const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
+  const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
+  const Transformation& getT_M_S() const { return T_M_S_; }
+  const Transformation& getT_S_M() const { return T_M_S_inv_; }
+  bool isActive() const { return is_active_; }
+  const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
-  [[nodiscard]] const ChangeDetectionData& getChangeDetectionData() const {
+  const ChangeDetectionData& getChangeDetectionData() const {
     return change_detection_data_;
   }
+  PanopticLabel getLabel() const { return label_; }
 
   // modifying accessors
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() {
@@ -94,6 +83,7 @@ class Submap {
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
   void setFrameName(const std::string& name) { frame_name_ = name; }
+  void setLabel(const PanopticLabel& label);
 
   // processing
   void finishActivePeriod();
@@ -108,6 +98,7 @@ class Submap {
   int instance_id_;
   int class_id_;
   bool is_active_;
+  PanopticLabel label_;
 
   // transformation
   std::string frame_name_;

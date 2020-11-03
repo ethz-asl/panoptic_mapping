@@ -340,7 +340,7 @@ class ConfigChecker {
       : name_(std::move(module_name)),
         print_width_(GlobalSettings().default_print_width){}
 
-            [[nodiscard]] bool isValid(bool print_warnings = false) const {
+  bool isValid(bool print_warnings = false) const {
     if (warnings_.empty()) {
       return true;
     }
@@ -462,7 +462,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
     return *this;
   }
 
-  [[nodiscard]] bool isValid(bool print_warnings = false) const {
+  bool isValid(bool print_warnings = false) const {
     meta_data_->checker = std::make_unique<ConfigChecker>(name_);
     meta_data_->checker->setPrintWidth(meta_data_->print_width);
     meta_data_->print_warnings = print_warnings;
@@ -472,7 +472,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
     return result;
   }
 
-      [[nodiscard]] std::string toString() const {
+  std::string toString() const {
     meta_data_->messages = std::make_unique<std::vector<std::string>>();
     meta_data_->merged_setup_already_used = true;
     meta_data_->merged_setup_set_params = false;
@@ -740,8 +740,8 @@ struct ConfigInternal : public ConfigInternalVerificator {
         meta_data_->print_width, meta_data_->print_indent));
   }
 
-  [[nodiscard]] std::string toStringInternal(int indent, int print_width,
-                                             int print_indent) const {
+  std::string toStringInternal(int indent, int print_width,
+                               int print_indent) const {
     int print_width_prev = meta_data_->print_width;
     int print_indent_prev = meta_data_->print_indent;
     int indent_prev = meta_data_->indent;
@@ -772,6 +772,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
       fromRosParam();
     }
     meta_data_->params = nullptr;
+    initializeDependentVariableDefaults();
   }
 
   template <typename T>

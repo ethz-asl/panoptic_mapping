@@ -23,7 +23,8 @@ Submap::Submap(const Config& config)
     : config_(config.checkValid()),
       instance_id_(-1),
       class_id_(-1),
-      is_active_(true) {
+      is_active_(true),
+      label_(PanopticLabel::kUNKNOWN) {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << id_.toInt();
@@ -45,6 +46,8 @@ void Submap::setT_M_S(const Transformation& T_M_S) {
   T_M_S_ = T_M_S;
   T_M_S_inv_ = T_M_S_.inverse();
 }
+
+void Submap::setLabel(const PanopticLabel& label) { label_ = label; }
 
 void Submap::finishActivePeriod() { is_active_ = false; }
 

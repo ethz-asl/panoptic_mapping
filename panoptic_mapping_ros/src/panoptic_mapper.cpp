@@ -44,6 +44,35 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
   setupRos();
 }
 
+void PanopticMapper::setupMembers() {
+  // labels
+  std::string label_path;
+  nh_private_.param("label_path", label_path, std::string(""));
+  label_handler_ = std::make_shared<LabelHandler>();
+  label_handler_->readLabelsFromFile(label_path);
+
+  // tsdf_integrator
+  ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
+  tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
+
+  // visualization
+  ros::NodeHandle visualization_nh(nh_private_, "visualization");
+  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
+      getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
+  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
+
+  // id tracking
+  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
+  id_tracker_ =
+      ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
+
+  // tsdf registrator
+  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
+  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
+      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
+          registrator_nh));
+}
+
 void PanopticMapper::setupRos() {
   // Subscribers.
   pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10,
@@ -83,35 +112,6 @@ void PanopticMapper::setupRos() {
         ros::Duration(config_.change_detection_interval),
         &PanopticMapper::changeDetectionCallback, this);
   }
-}
-
-void PanopticMapper::setupMembers() {
-  // labels
-  std::string label_path;
-  nh_private_.param("label_path", label_path, std::string(""));
-  label_handler_ = std::make_shared<LabelHandler>();
-  label_handler_->readLabelsFromFile(label_path);
-
-  // tsdf_integrator
-  ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
-  tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
-
-  // visualization
-  ros::NodeHandle visualization_nh(nh_private_, "visualization");
-  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-      getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
-  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
-
-  // id tracking
-  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
-  id_tracker_ =
-      ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
-
-  // tsdf registrator
-  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
-  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
-      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
-          registrator_nh));
 }
 
 void PanopticMapper::processImages(

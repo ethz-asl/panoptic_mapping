@@ -18,9 +18,10 @@ class SubmapID {
   void operator=(const SubmapID&) = delete;
 
   explicit operator int() const { return id_; }
-  [[nodiscard]] int toInt() const { return id_; }
+  int toInt() const { return id_; }
 
-  private : const int id_;
+ private:
+  const int id_;
 };
 
 /**
