@@ -33,7 +33,7 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          const cv::Mat& depth_image,
                                          const cv::Mat& color_image,
                                          cv::Mat* id_image) {
-  // look for new instances's
+  // Look for new instances.
   std::unordered_set<int> instances;
 
   CV_Assert(id_image->depth() == CV_8U);
@@ -43,16 +43,19 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
     instances.insert(static_cast<int>(*it));
   }
 
-  // allocate new submaps if necessary
+  // Allocate new submaps if necessary.
   for (const auto& instance : instances) {
     allocateSubmap(instance, submaps);
   }
   printAndResetWarnings();
 
-  // set segmentation image to submap ids
+  // Set segmentation image to submap ids.
   for (auto it = begin; it != end; ++it) {
     *it = static_cast<uchar>(instance_to_id_[static_cast<int>(*it)]);
   }
+
+  // Allocate free space map if required.
+  allocateFreeSpaceSubmap(submaps);
 }
 
 void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
@@ -60,12 +63,15 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
                                              const Pointcloud& pointcloud,
                                              const Colors& colors,
                                              std::vector<int>* ids) {
-  // iterate through point cloud and replace labels
+  // Iterate through point cloud and replace labels.
   for (int& id : *ids) {
     allocateSubmap(id, submaps);
     id = instance_to_id_[id];
   }
   printAndResetWarnings();
+
+  // Allocate free space map if required.
+  allocateFreeSpaceSubmap(submaps);
 }
 
 void GroundTruthIDTracker::allocateSubmap(int instance,
@@ -114,6 +120,22 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   new_submap->setInstanceID(new_instance);
   new_submap->setClassID(label_handler_->getClassID(new_instance));
   new_submap->setLabel(label);
+}
+
+void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
+  if (submaps->getActiveFreeSpaceSubmapID() >= 0) {
+    // Currently only allocate one free space submap in the beginning.
+    return;
+  }
+
+  // Create a new freespace submap.
+  Submap::Config config;
+  config.voxels_per_side = config_.voxels_per_side;
+  config.voxel_size = config_.freespace_voxel_size;
+  Submap* space_submap = submaps->createSubmap(config);
+  space_submap->setLabel(PanopticLabel::kSPACE);
+  space_submap->setInstanceID(-1);  // Will never appear in a seg image.
+  submaps->setActiveFreeSpaceSubmapID(space_submap->getID());
 }
 
 void GroundTruthIDTracker::printAndResetWarnings() {

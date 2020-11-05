@@ -58,7 +58,9 @@ void PanopticMapper::setupMembers() {
   // visualization
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-      getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
+      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
+          visualization_nh),
+      label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // id tracking
@@ -86,11 +88,6 @@ void PanopticMapper::setupRos() {
   segmentation_image_sub_ =
       nh_.subscribe("segmentation_image_in", config_.max_image_queue_length,
                     &PanopticMapper::segmentationImageCallback, this);
-
-  // Publishers.
-  mesh_pub_ = nh_private_.advertise<voxblox_msgs::MultiMesh>("mesh", 100, true);
-  tsdf_blocks_pub_ = nh_private_.advertise<visualization_msgs::MarkerArray>(
-      "tsdf_blocks", 100, true);
 
   // Services.
   save_map_srv_ = nh_private_.advertiseService(
@@ -217,27 +214,18 @@ void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
-  // update meshes
-  publishMeshes();
-
-  // visualize tsdf blocks
-  publishTsdfBlocks();
+  publishVisualization();
 }
 
-void PanopticMapper::publishMeshes() {
-  // let the visualizer do all the work
-  std::vector<voxblox_msgs::MultiMesh> msgs;
-  submap_visualizer_->generateMeshMsgs(&submaps_, &msgs);
-  for (auto& msg : msgs) {
-    mesh_pub_.publish(msg);
-  }
-}
+void PanopticMapper::publishVisualization() {
+  // Update meshes.
+  submap_visualizer_->visualizeMeshes(&submaps_);
 
-void PanopticMapper::publishTsdfBlocks() {
-  // let the visualizer do all the work
-  visualization_msgs::MarkerArray markers;
-  submap_visualizer_->generateBlockMsgs(submaps_, &markers);
-  tsdf_blocks_pub_.publish(markers);
+  // Visualize tsdf blocks.
+  submap_visualizer_->visualizeTsdfBlocks(submaps_);
+
+  // Visualize free space tsdf.
+  submap_visualizer_->visualizeFreeSpace(submaps_);
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
@@ -313,7 +301,7 @@ bool PanopticMapper::setVisualizationModeCallback(
   SubmapVisualizer::VisualizationMode coloring_mode =
       SubmapVisualizer::visualizationModeFromString(request.file_path);
   submap_visualizer_->setVisualizationMode(coloring_mode);
-  publishMeshes();
+  submap_visualizer_->visualizeMeshes(&submaps_);
   LOG(INFO) << "Set coloring mode to '"
             << SubmapVisualizer::visualizationModeToString(coloring_mode)
             << "'.";
@@ -409,7 +397,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   proto_file.close();
 
   // reproduce the mesh and visualization
-  publishMeshes();
+  submap_visualizer_->visualizeMeshes(&submaps_);
 
   LOG(INFO) << "Successfully loaded " << submaps_.size() << "/"
             << submap_collection_proto.num_submaps() << " submaps.";

@@ -43,6 +43,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
 
  private:
   void allocateSubmap(int instance, SubmapCollection* submaps);
+  void allocateFreeSpaceSubmap(SubmapCollection* submaps);
   void printAndResetWarnings();
 
  private:

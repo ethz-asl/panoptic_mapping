@@ -63,12 +63,10 @@ class PanopticMapper {
   bool loadMap(const std::string& file_path);
 
   // visualization
-  void publishMeshes();
-  void publishTsdfBlocks();
+  void publishVisualization();
 
  private:
   // setup
-  void setupConfigFromRos();
   void setupRos();
   void setupMembers();
 
@@ -89,8 +87,6 @@ class PanopticMapper {
   ros::Subscriber depth_image_sub_;
   ros::Subscriber color_image_sub_;
   ros::Subscriber segmentation_image_sub_;
-  ros::Publisher mesh_pub_;
-  ros::Publisher tsdf_blocks_pub_;
   ros::ServiceServer load_map_srv_;
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_visualization_mode_srv_;

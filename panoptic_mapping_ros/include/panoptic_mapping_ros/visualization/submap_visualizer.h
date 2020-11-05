@@ -11,6 +11,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <voxblox/mesh/mesh_integrator.h>
 #include <voxblox_msgs/MultiMesh.h>
+#include <voxblox_ros/mesh_vis.h>
 
 #include <panoptic_mapping/core/common.h>
 #include <panoptic_mapping/core/submap_collection.h>
@@ -21,15 +22,22 @@ namespace panoptic_mapping {
 class SubmapVisualizer {
  public:
   // config
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     std::string visualization_mode = "color";  // initial visualization mode
     int submap_color_discretization = 20;
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
+    bool visualize_free_space = true;
+    bool include_free_space_in_meshes = false;
     voxblox::MeshIntegratorConfig mesh_integrator_config;  // If use_color is
-    // false the visualization mode 'color' won't work.
+    // false the visualization mode 'color' won't work. Currently just sets to
+    // defaults, which work well here.
+    std::string ros_namespace;
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void fromRosParam() override;
+    void checkParams() const override;
   };
 
   // constructors
@@ -53,11 +61,18 @@ class SubmapVisualizer {
   static std::string visualizationModeToString(
       VisualizationMode visualization_mode);
 
-  // visualization
+  // visualization message creation
   void generateMeshMsgs(SubmapCollection* submaps,
                         std::vector<voxblox_msgs::MultiMesh>* output);
   void generateBlockMsgs(const SubmapCollection& submaps,
                          visualization_msgs::MarkerArray* output) const;
+  void generateFreeSpaceMsg(const SubmapCollection& submaps,
+                            pcl::PointCloud<pcl::PointXYZI>* output) const;
+
+  // publish visualization requests
+  void visualizeMeshes(SubmapCollection* submaps);
+  void visualizeTsdfBlocks(const SubmapCollection& submaps);
+  void visualizeFreeSpace(const SubmapCollection& submaps);
 
   // interaction
   void reset();
@@ -100,6 +115,12 @@ class SubmapVisualizer {
   tf2_ros::TransformBroadcaster tf_broadcaster_;
 
   std::unordered_map<int, SubmapVisInfo> vis_infos_;
+
+  // publishers
+  ros::NodeHandle nh_;
+  ros::Publisher freespace_pub_;
+  ros::Publisher mesh_pub_;
+  ros::Publisher tsdf_blocks_pub_;
 };
 
 }  // namespace panoptic_mapping

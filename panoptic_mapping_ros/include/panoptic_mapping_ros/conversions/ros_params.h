@@ -19,10 +19,6 @@ namespace panoptic_mapping {
 NaiveIntegrator::Config getNaiveIntegratorConfigFromRos(
     const ros::NodeHandle& nh);
 
-// visualizer configs
-SubmapVisualizer::Config getSubmapVisualizerConfigFromRos(
-    const ros::NodeHandle& nh);
-
 }  // namespace panoptic_mapping
 
 #endif  // PANOPTIC_MAPPING_ROS_CONVERSIONS_ROS_PARAMS_H_

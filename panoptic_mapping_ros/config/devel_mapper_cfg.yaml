@@ -56,9 +56,11 @@ id_tracker:
   
 visualization:
   visualization_interval: 1.0
-  visualization_mode: change # submaps, instances, color, normals, classes, change
+  visualization_mode: submaps # submaps, instances, color, normals, classes, change
   submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: false
+  visualize_free_space: true
+  include_free_space_in_meshes: false
   
 

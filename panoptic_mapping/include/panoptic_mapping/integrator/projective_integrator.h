@@ -66,10 +66,14 @@ class ProjectiveIntegrator : public IntegratorBase {
 
   // cached data
   std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals
+  std::vector<Point> free_space_block_centers_;  // sample points for alloc.
 
   // methods
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
+
+  bool blockIsInViewFrustum(const Point& center_point_C, float block_size,
+                            float block_diag = -1.f) const;
 
   void findVisibleBlocks(const Submap& submap, const Transformation& T_M_C,
                          voxblox::BlockIndexList* block_list);
@@ -85,7 +89,8 @@ class ProjectiveIntegrator : public IntegratorBase {
   bool computeVoxelDistanceAndWeight(
       float* sdf, float* weight, bool* point_belongs_to_this_submap,
       const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-      int submap_id, float truncation_distance, float voxel_size);
+      int submap_id, float truncation_distance, float voxel_size,
+      bool is_free_space_submap);
 };
 
 }  // namespace panoptic_mapping

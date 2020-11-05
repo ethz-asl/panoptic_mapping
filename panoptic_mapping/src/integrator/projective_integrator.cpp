@@ -137,7 +137,7 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
       T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const float voxel_size = block.voxel_size();
   const float truncation_distance =
-      voxel_size * 2.f;  // 2vs is used as an adaptive heuristic
+      voxel_size * 2.f;  // 2vs is used as an adaptive heuristic.
   const int id = submap->getID();
 
   // update all voxels
@@ -149,19 +149,24 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
     bool point_belongs_to_this_submap;
     float sdf;
     float weight;
+    const bool is_free_space_submap =
+        submap->getLabel() == PanopticLabel::kSPACE;
     if (!computeVoxelDistanceAndWeight(
             &sdf, &weight, &point_belongs_to_this_submap, p_C, color_image,
-            id_image, id, truncation_distance, voxel_size)) {
+            id_image, id, truncation_distance, voxel_size,
+            is_free_space_submap)) {
       continue;
     }
 
     // Apply distance, color, and weight.
-    if (point_belongs_to_this_submap) {
+    if (point_belongs_to_this_submap || is_free_space_submap) {
       voxel.distance = (voxel.distance * voxel.weight +
-                        std::min(truncation_distance, sdf) * weight) /
+                        std::max(std::min(truncation_distance, sdf),
+                                 -1.f * truncation_distance) *
+                            weight) /
                        (voxel.weight + weight);
       // only merge color near the surface and if point belongs to the submap.
-      if (std::abs(sdf) < truncation_distance) {
+      if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
         voxel.color = Color::blendTwoColors(
             voxel.color, voxel.weight,
             interpolator_->interpolateColor(color_image), weight);
@@ -182,8 +187,9 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
 bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     float* sdf, float* weight, bool* point_belongs_to_this_submap,
     const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-    int submap_id, float truncation_distance, float voxel_size) {
-  // skip voxels that are too far or too close
+    int submap_id, float truncation_distance, float voxel_size,
+    bool is_free_space_submap) {
+  // Skip voxels that are too far or too close.
   const float distance_to_voxel = p_C.norm();
   if (distance_to_voxel < config_.min_range ||
       distance_to_voxel > config_.max_range) {
@@ -205,15 +211,16 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   // measurement.
   interpolator_->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
                                 range_image_, id_image);
-  if (!config_.foreign_rays_clear && !point_belongs_to_this_submap) {
+  if (!(*point_belongs_to_this_submap) &&
+      !(config_.foreign_rays_clear || is_free_space_submap)) {
     return false;
   }
 
-  //  compute the signed distance
+  //  Compute the signed distance.
   const float distance_to_surface =
       interpolator_->interpolateDepth(range_image_);
   const float new_sdf = distance_to_surface - distance_to_voxel;
-  if (new_sdf < -truncation_distance) {
+  if (new_sdf < -truncation_distance && !is_free_space_submap) {
     return false;
   }
 
@@ -228,7 +235,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   }
 
   // Apply weight drop-off if appropriate
-  if (config_.use_weight_dropoff && point_belongs_to_this_submap) {
+  if (config_.use_weight_dropoff && *point_belongs_to_this_submap) {
     const voxblox::FloatingPoint dropoff_epsilon = voxel_size;
     if (new_sdf < -dropoff_epsilon) {
       observation_weight = observation_weight *
@@ -240,7 +247,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Apply sparsity compensation if appropriate
   if (config_.sparsity_compensation_factor != 1.f &&
-      point_belongs_to_this_submap) {
+      *point_belongs_to_this_submap) {
     if (std::abs(new_sdf) < truncation_distance) {
       observation_weight *= config_.sparsity_compensation_factor;
     }
@@ -270,39 +277,52 @@ void ProjectiveIntegrator::findVisibleBlocks(
         T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
                                       2.0);  // center point of the block
 
-    // sort out points that don't meet the criteria of
-    // 1: in front, 2: close, 3: in view frustum.
-    if (p_C.z() < block_size / 2.0) {
-      continue;
+    if (blockIsInViewFrustum(p_C, block_size, block_diag)) {
+      block_list->push_back(index);
     }
-    if (p_C.norm() > max_range_in_image_ + block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[0]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[1]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[2]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[3]) < -block_diag) {
-      continue;
-    }
-    block_list->push_back(index);
   }
+}
+
+bool ProjectiveIntegrator::blockIsInViewFrustum(const Point& center_point_C,
+                                                float block_size,
+                                                float block_diag) const {
+  // Assumes the range image is read to use the cached max_range_in_image_.
+  // If not given compute the block diagonal from center to one corner.
+  if (block_diag <= 0.f) {
+    block_diag = std::sqrt(3.f) * block_size / 2.f;
+  }
+  // Sort out points that don't meet the criteria of
+  // 1: in front, 2: close, 3: in view frustum.
+  if (center_point_C.z() < block_size / 2.f) {
+    return false;
+  }
+  if (center_point_C.norm() > max_range_in_image_ + block_diag) {
+    return false;
+  }
+  if (center_point_C.dot(view_frustum_[0]) < -block_diag) {
+    return false;
+  }
+  if (center_point_C.dot(view_frustum_[1]) < -block_diag) {
+    return false;
+  }
+  if (center_point_C.dot(view_frustum_[2]) < -block_diag) {
+    return false;
+  }
+  if (center_point_C.dot(view_frustum_[3]) < -block_diag) {
+    return false;
+  }
+  return true;
 }
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const Transformation& T_M_C,
                                              const cv::Mat& depth_image,
                                              const cv::Mat& id_image) {
-  // This method also resets the depth image
+  // This method also resets the depth image.
   range_image_.setZero();
   max_range_in_image_ = 0.f;
 
-  // parse through each point
+  // Parse through each point to allocate instance + background blocks.
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float z = depth_image.at<float>(v, u);
@@ -319,6 +339,40 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const Point p_S = submap->getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
       submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+    }
+  }
+
+  // Allocate all potential free space blocks via sampling.
+  Submap* space = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+  float block_size = space->getTsdfLayer().block_size();
+  float block_diag = std::sqrt(3.f) * block_size / 2.f;
+
+  // Precompute sampling points for free space submaps. This assumes that a
+  // free space submap is already allocated and that the voxel size remains
+  // constant.
+  if (free_space_block_centers_.empty()) {
+    int steps = std::ceil(config_.max_range / block_size);
+    for (int x = -steps; x < steps; ++x) {
+      for (int y = -steps; y < steps; ++y) {
+        for (int z = -steps; z < steps; ++z) {
+          Point center{static_cast<float>(x) + 0.5f,
+                       static_cast<float>(y) + 0.5f,
+                       static_cast<float>(x) + 0.5f};
+          center *= block_size;
+          if (center.norm() <= config_.max_range) {
+            free_space_block_centers_.emplace_back(center);
+          }
+        }
+      }
+    }
+  }
+
+  // Allocate blocks.
+  for (const Point& p_S : free_space_block_centers_) {
+    const Point p_C =
+        T_M_C.inverse() * space->getT_M_S() * p_S;  // p_C = T_C_M * T_M_S * p_S
+    if (blockIsInViewFrustum(p_C, block_size, block_diag)) {
+      space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
     }
   }
 }

@@ -7,42 +7,68 @@
 
 #include <minkindr_conversions/kindr_msg.h>
 #include <ros/time.h>
-#include <voxblox_ros/mesh_vis.h>
+#include <voxblox_ros/ptcloud_vis.h>
 
 namespace panoptic_mapping {
 
-SubmapVisualizer::Config SubmapVisualizer::Config::isValid() const {
-  CHECK_GT(submap_color_discretization, 0)
-      << "The submap color discretization is expected > 0.";
+void SubmapVisualizer::Config::checkParams() const {
+  checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
   // NOTE(schmluk): if the visualization mode is not valid it will be defaulted
   // to 'color' and a warning will be raised.
-  return Config(*this);
+}
+
+void SubmapVisualizer::Config::setupParamsAndPrinting() {
+  setupParam("visualization_mode", &visualization_mode);
+  setupParam("submap_color_discretization", &submap_color_discretization);
+  setupParam("visualize_mesh", &visualize_mesh);
+  setupParam("visualize_tsdf_blocks", &visualize_tsdf_blocks);
+  setupParam("visualize_free_space", &visualize_free_space);
+  setupParam("include_free_space_in_meshes", &include_free_space_in_meshes);
+}
+
+void SubmapVisualizer::Config::fromRosParam() {
+  ros_namespace = rosParamNameSpace();
 }
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
                                    std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.isValid()),
+    : config_(config.checkValid()),
       label_handler_(std::move(label_handler)),
       global_frame_name_("mission") {
   visualization_mode_ =
       SubmapVisualizer::visualizationModeFromString(config_.visualization_mode);
+
+  // setup publishers
+  nh_ = ros::NodeHandle(config_.ros_namespace);
+  if (config_.visualize_free_space) {
+    freespace_pub_ =
+        nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("free_space_tsdf", 100);
+  }
+  if (config_.visualize_mesh) {
+    mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000, true);
+  }
+  if (config_.visualize_tsdf_blocks) {
+    tsdf_blocks_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
+        "tsdf_blocks", 100, true);
+  }
 }
 
 void SubmapVisualizer::reset() { vis_infos_.clear(); }
 
 void SubmapVisualizer::generateMeshMsgs(
     SubmapCollection* submaps, std::vector<voxblox_msgs::MultiMesh>* output) {
-  if (!config_.visualize_mesh) {
-    return;
-  }
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(output);
 
-  // update the visualization infos
+  // Update the visualization infos.
   updateVisInfos(*submaps);
 
-  // process all submaps based on their visualization info
+  // Process all submaps based on their visualization info.
   for (const auto& submap : *submaps) {
+    if (submap->getLabel() == PanopticLabel::kSPACE &&
+        !config_.include_free_space_in_meshes) {
+      continue;
+    }
     // find the corresponding info.
     auto it = vis_infos_.find(submap->getID());
     if (it == vis_infos_.end()) {
@@ -123,6 +149,48 @@ void SubmapVisualizer::generateMeshMsgs(
     // publish submap transforms
     publishTfTransform(submap->getT_M_S(), global_frame_name_,
                        submap->getFrameName());
+  }
+}
+
+void SubmapVisualizer::generateFreeSpaceMsg(
+    const SubmapCollection& submaps,
+    pcl::PointCloud<pcl::PointXYZI>* output) const {
+  CHECK_NOTNULL(output);
+  // Create a pointcloud with distance = intensity. Taken from voxblox.
+  pcl::PointCloud<pcl::PointXYZI> pointcloud;
+  int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+  if (submaps.submapIdExists(free_space_id)) {
+    createDistancePointcloudFromTsdfLayer(
+        submaps.getSubmap(free_space_id).getTsdfLayer(), &pointcloud);
+    *output = pointcloud;
+  }
+}
+
+void SubmapVisualizer::visualizeMeshes(SubmapCollection* submaps) {
+  if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
+    std::vector<voxblox_msgs::MultiMesh> msgs;
+    generateMeshMsgs(submaps, &msgs);
+    for (auto& msg : msgs) {
+      mesh_pub_.publish(msg);
+    }
+  }
+}
+
+void SubmapVisualizer::visualizeTsdfBlocks(const SubmapCollection& submaps) {
+  if (config_.visualize_tsdf_blocks &&
+      tsdf_blocks_pub_.getNumSubscribers() > 0) {
+    visualization_msgs::MarkerArray markers;
+    generateBlockMsgs(submaps, &markers);
+    tsdf_blocks_pub_.publish(markers);
+  }
+}
+
+void SubmapVisualizer::visualizeFreeSpace(const SubmapCollection& submaps) {
+  if (config_.visualize_free_space && freespace_pub_.getNumSubscribers() > 0) {
+    pcl::PointCloud<pcl::PointXYZI> msg;
+    generateFreeSpaceMsg(submaps, &msg);
+    msg.header.frame_id = global_frame_name_;
+    freespace_pub_.publish(msg);
   }
 }
 
@@ -262,6 +330,10 @@ void SubmapVisualizer::generateBlockMsgs(
 
   CHECK_NOTNULL(output);
   for (const auto& submap : submaps) {
+    if (submap->getLabel() == PanopticLabel::kSPACE &&
+        !config_.include_free_space_in_meshes) {
+      continue;
+    }
     // setup submap
     voxblox::BlockIndexList blocks;
     submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
