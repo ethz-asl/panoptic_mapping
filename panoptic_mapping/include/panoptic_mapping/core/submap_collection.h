@@ -2,8 +2,8 @@
 #define PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
-#include <map>
 
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap.h"
@@ -18,24 +18,35 @@ class SubmapCollection {
   SubmapCollection() = default;
   virtual ~SubmapCollection() = default;
 
-  // iterator over submaps
-  std::vector<Submap>::iterator begin() {return submaps_.begin();}
-  std::vector<Submap>::iterator end() {return submaps_.end();}
+  // Iterators over submaps.
+  std::vector<std::unique_ptr<Submap>>::const_iterator begin() const {
+    return submaps_.begin();
+  }
+  std::vector<std::unique_ptr<Submap>>::const_iterator end() const {
+    return submaps_.end();
+  }
 
-  // modify the collection
-  bool addSubmap(const Submap &submap);
-  bool submapIdExists(int id);    // check whether id exists
-  Submap& getSubmap(int id);      // this assumes that the id exists
+  // Modify the collection.
+  void addSubmap(std::unique_ptr<Submap> submap);
+  Submap* createSubmap(const Submap::Config& config);
+  bool removeSubmap(int id);
+  const Submap& getSubmap(int id) const;  // This assumes that the id exists.
+  Submap* getSubmapPtr(int id) const;     // This assumes that the id exists.
   void clear();
 
-  // accessors
-  size_t size() { return submaps_.size(); }
+  // Accessors.
+  size_t size() const { return submaps_.size(); }
+  bool submapIdExists(int id) const;  // Check whether id exists.
+
+  // Tools.
+  void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
+                    std::vector<int>* deleted_ids) const;
 
  private:
-  std::vector<Submap> submaps_;
+  std::vector<std::unique_ptr<Submap>> submaps_;
   std::unordered_map<int, size_t> id_to_index_;
 };
 
-} // namespace panoptic_mapping
+}  // namespace panoptic_mapping
 
-#endif //PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_
+#endif  // PANOPTIC_MAPPING_CORE_SUBMAP_COLLECTION_H_

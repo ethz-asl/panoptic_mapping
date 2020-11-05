@@ -11,7 +11,6 @@ catkin_package()
 ############
 # Taken from voxblox
 set(PROTO_DEFNS
-        proto/panoptic_mapping/QuatTransformation.proto
         proto/panoptic_mapping/Submap.proto
         proto/panoptic_mapping/SubmapCollection.proto)
 set(BASE_PATH "proto")
@@ -26,13 +25,15 @@ target_link_libraries(${PROJECT_NAME}_proto ${PROTOBUF_LIBRARIES})
 
 cs_add_library(${PROJECT_NAME}
         src/core/submap.cpp
+        src/core/submap_id.cpp
         src/core/submap_collection.cpp
         src/preprocessing/label_handler.cpp
+        src/preprocessing/ground_truth_id_tracker.cpp
         src/integrator/integrator_base.cpp
-        src/integrator/integrator_factory.cpp
         src/integrator/naive_integrator.cpp
         src/integrator/projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
+        src/registration/tsdf_registrator.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
 

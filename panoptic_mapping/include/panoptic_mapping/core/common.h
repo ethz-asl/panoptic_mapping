@@ -1,29 +1,27 @@
 #ifndef PANOPTIC_MAPPING_CORE_COMMON_H_
 #define PANOPTIC_MAPPING_CORE_COMMON_H_
 
-#include <voxblox/core/common.h>
-#include "voxblox/core/layer.h"
-#include "voxblox/core/voxel.h"
-#include <voxblox/utils/timing.h>
 #include <glog/logging.h>
+#include <voxblox/core/common.h>
+#include <voxblox/core/layer.h>
+#include <voxblox/core/voxel.h>
+#include <voxblox/utils/timing.h>
 
 namespace panoptic_mapping {
-// Taking some voxblox datatypes
-using voxblox::Block;
-using voxblox::Color;
-using voxblox::Colors;
-using voxblox::EsdfVoxel;
-using voxblox::Layer;
-using voxblox::Point;
-using voxblox::Pointcloud;
-using voxblox::TsdfVoxel;
-using voxblox::Transformation;
+// Type definitions to work with a voxblox map.
+using FloatingPoint = voxblox::FloatingPoint;
 
-// Taking timing from voxblox
-namespace timing {
-using namespace voxblox::timing;
-}  // namespace timing
+using Point = voxblox::Point;
+using Transformation = voxblox::Transformation;
+using Pointcloud = voxblox::Pointcloud;
 
-} // namespace panoptic_mapping
+using TsdfVoxel = voxblox::TsdfVoxel;
+using TsdfBlock = voxblox::Block<voxblox::TsdfVoxel>;
+using TsdfLayer = voxblox::Layer<voxblox::TsdfVoxel>;
 
-#endif //PANOPTIC_MAPPING_CORE_COMMON_H_
+using Color = voxblox::Color;
+using Colors = voxblox::Colors;
+
+}  // namespace panoptic_mapping
+
+#endif  // PANOPTIC_MAPPING_CORE_COMMON_H_
