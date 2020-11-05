@@ -66,14 +66,13 @@ class ProjectiveIntegrator : public IntegratorBase {
 
   // cached data
   std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals
-  std::vector<Point> free_space_block_centers_;  // sample points for alloc.
 
   // methods
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
 
-  bool blockIsInViewFrustum(const Point& center_point_C, float block_size,
-                            float block_diag = -1.f) const;
+  bool blockIsInViewFrustum(const Point& center_point_C,
+                            float block_diag_half) const;
 
   void findVisibleBlocks(const Submap& submap, const Transformation& T_M_C,
                          voxblox::BlockIndexList* block_list);

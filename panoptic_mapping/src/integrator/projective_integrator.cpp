@@ -40,7 +40,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
     : config_(config.checkValid()) {
   // setup the interpolator
-  interpolator_ = InterpolatorFactory::create(config_.interpolation_method);
+  interpolator_ = config_utilities::Factory::create<InterpolatorBase>(
+      config_.interpolation_method);
 
   // pre-compute the view frustum (top, right, bottom, left, plane normals)
   Eigen::Vector3f p1(-config_.vx, -config_.vy, config_.focal_length);
@@ -190,6 +191,9 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     int submap_id, float truncation_distance, float voxel_size,
     bool is_free_space_submap) {
   // Skip voxels that are too far or too close.
+  if (p_C.z() < 0.0) {
+    return false;
+  }
   const float distance_to_voxel = p_C.norm();
   if (distance_to_voxel < config_.min_range ||
       distance_to_voxel > config_.max_range) {
@@ -220,7 +224,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   const float distance_to_surface =
       interpolator_->interpolateDepth(range_image_);
   const float new_sdf = distance_to_surface - distance_to_voxel;
-  if (new_sdf < -truncation_distance && !is_free_space_submap) {
+  if (new_sdf < -truncation_distance) {
     return false;
   }
 
@@ -277,38 +281,33 @@ void ProjectiveIntegrator::findVisibleBlocks(
         T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
                                       2.0);  // center point of the block
 
-    if (blockIsInViewFrustum(p_C, block_size, block_diag)) {
+    if (blockIsInViewFrustum(p_C, block_diag)) {
       block_list->push_back(index);
     }
   }
 }
 
 bool ProjectiveIntegrator::blockIsInViewFrustum(const Point& center_point_C,
-                                                float block_size,
-                                                float block_diag) const {
+                                                float block_diag_half) const {
   // Assumes the range image is read to use the cached max_range_in_image_.
-  // If not given compute the block diagonal from center to one corner.
-  if (block_diag <= 0.f) {
-    block_diag = std::sqrt(3.f) * block_size / 2.f;
-  }
   // Sort out points that don't meet the criteria of
   // 1: in front, 2: close, 3: in view frustum.
-  if (center_point_C.z() < block_size / 2.f) {
+  if (center_point_C.z() < -block_diag_half) {
     return false;
   }
-  if (center_point_C.norm() > max_range_in_image_ + block_diag) {
+  if (center_point_C.norm() > max_range_in_image_ + block_diag_half) {
     return false;
   }
-  if (center_point_C.dot(view_frustum_[0]) < -block_diag) {
+  if (center_point_C.dot(view_frustum_[0]) < -block_diag_half) {
     return false;
   }
-  if (center_point_C.dot(view_frustum_[1]) < -block_diag) {
+  if (center_point_C.dot(view_frustum_[1]) < -block_diag_half) {
     return false;
   }
-  if (center_point_C.dot(view_frustum_[2]) < -block_diag) {
+  if (center_point_C.dot(view_frustum_[2]) < -block_diag_half) {
     return false;
   }
-  if (center_point_C.dot(view_frustum_[3]) < -block_diag) {
+  if (center_point_C.dot(view_frustum_[3]) < -block_diag_half) {
     return false;
   }
   return true;
@@ -342,37 +341,23 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
     }
   }
 
-  // Allocate all potential free space blocks via sampling.
+  // Allocate all potential free space blocks.
   Submap* space = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
-  float block_size = space->getTsdfLayer().block_size();
-  float block_diag = std::sqrt(3.f) * block_size / 2.f;
-
-  // Precompute sampling points for free space submaps. This assumes that a
-  // free space submap is already allocated and that the voxel size remains
-  // constant.
-  if (free_space_block_centers_.empty()) {
-    int steps = std::ceil(config_.max_range / block_size);
-    for (int x = -steps; x < steps; ++x) {
-      for (int y = -steps; y < steps; ++y) {
-        for (int z = -steps; z < steps; ++z) {
-          Point center{static_cast<float>(x) + 0.5f,
-                       static_cast<float>(y) + 0.5f,
-                       static_cast<float>(x) + 0.5f};
-          center *= block_size;
-          if (center.norm() <= config_.max_range) {
-            free_space_block_centers_.emplace_back(center);
-          }
+  const float block_size = space->getTsdfLayer().block_size();
+  const float block_diag = std::sqrt(3.f) * block_size / 2.f;
+  const Transformation T_C_S = T_M_C.inverse() * space->getT_M_S();
+  const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
+  const int max_steps = std::floor((max_range_in_image_ + block_diag) /
+                                   space->getTsdfLayer().block_size());
+  for (int x = -max_steps; x <= max_steps; ++x) {
+    for (int y = -max_steps; y <= max_steps; ++y) {
+      for (int z = -max_steps; z <= max_steps; ++z) {
+        const Point offset(x, y, z);
+        const Point candidate_S = camera_S + offset * block_size;
+        if (blockIsInViewFrustum(T_C_S * candidate_S, block_diag)) {
+          space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
         }
       }
-    }
-  }
-
-  // Allocate blocks.
-  for (const Point& p_S : free_space_block_centers_) {
-    const Point p_C =
-        T_M_C.inverse() * space->getT_M_S() * p_S;  // p_C = T_C_M * T_M_S * p_S
-    if (blockIsInViewFrustum(p_C, block_size, block_diag)) {
-      space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
     }
   }
 }

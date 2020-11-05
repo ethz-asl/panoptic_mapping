@@ -226,6 +226,9 @@ void PanopticMapper::publishVisualization() {
 
   // Visualize free space tsdf.
   submap_visualizer_->visualizeFreeSpace(submaps_);
+
+  // Publish all TFs.
+  submap_visualizer_->publishTfTransforms(submaps_);
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {

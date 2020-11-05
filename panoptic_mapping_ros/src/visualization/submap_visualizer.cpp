@@ -23,7 +23,6 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_mesh", &visualize_mesh);
   setupParam("visualize_tsdf_blocks", &visualize_tsdf_blocks);
   setupParam("visualize_free_space", &visualize_free_space);
-  setupParam("include_free_space_in_meshes", &include_free_space_in_meshes);
 }
 
 void SubmapVisualizer::Config::fromRosParam() {
@@ -65,8 +64,7 @@ void SubmapVisualizer::generateMeshMsgs(
 
   // Process all submaps based on their visualization info.
   for (const auto& submap : *submaps) {
-    if (submap->getLabel() == PanopticLabel::kSPACE &&
-        !config_.include_free_space_in_meshes) {
+    if (submap->getLabel() == PanopticLabel::kSPACE) {
       continue;
     }
     // find the corresponding info.
@@ -142,13 +140,9 @@ void SubmapVisualizer::generateMeshMsgs(
       }
     }
 
-    // set alpha values
+    // Set alpha values.
     msg.alpha = info.alpha;
     output->emplace_back(std::move(msg));
-
-    // publish submap transforms
-    publishTfTransform(submap->getT_M_S(), global_frame_name_,
-                       submap->getFrameName());
   }
 }
 
@@ -254,7 +248,7 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
       if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
         info->color = label_handler_->getColor(submap.getInstanceID());
       } else {
-        info->color = kUnknownColor;
+        info->color = kUNKNOWNCOLOR;
       }
       break;
     }
@@ -310,30 +304,31 @@ void SubmapVisualizer::updateSubmapMesh(Submap* submap,
   mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
 }
 
-void SubmapVisualizer::publishTfTransform(const Transformation& transform,
-                                          const std::string& parent_frame,
-                                          const std::string& child_frame) {
-  geometry_msgs::TransformStamped msg;
-  msg.header.stamp = ros::Time::now();
-  msg.header.frame_id = parent_frame;
-  msg.child_frame_id = child_frame;
-  tf::transformKindrToMsg(transform.cast<double>(), &msg.transform);
-  tf_broadcaster_.sendTransform(msg);
+void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {
+  for (const auto& submap : submaps) {
+    geometry_msgs::TransformStamped msg;
+    msg.header.stamp = ros::Time::now();
+    msg.header.frame_id = global_frame_name_;
+    msg.child_frame_id = submap->getFrameName();
+    tf::transformKindrToMsg(submap->getT_S_M().cast<double>(), &msg.transform);
+    tf_broadcaster_.sendTransform(msg);
+  }
 }
 
 void SubmapVisualizer::generateBlockMsgs(
     const SubmapCollection& submaps,
     visualization_msgs::MarkerArray* output) const {
-  if (!config_.visualize_tsdf_blocks) {
-    return;
-  }
-
   CHECK_NOTNULL(output);
+
   for (const auto& submap : submaps) {
-    if (submap->getLabel() == PanopticLabel::kSPACE &&
-        !config_.include_free_space_in_meshes) {
+    if (submap->getLabel() != PanopticLabel::kSPACE) {
       continue;
     }
+    //    if (submap->getLabel() == PanopticLabel::kSPACE &&
+    //        !config_.include_free_space_in_meshes) {
+    //      continue;
+    //    }
+
     // setup submap
     voxblox::BlockIndexList blocks;
     submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
@@ -343,7 +338,7 @@ void SubmapVisualizer::generateBlockMsgs(
     unsigned int counter = 0;
 
     // get color
-    Color color = kUnknownColor;
+    Color color = kUNKNOWNCOLOR;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;

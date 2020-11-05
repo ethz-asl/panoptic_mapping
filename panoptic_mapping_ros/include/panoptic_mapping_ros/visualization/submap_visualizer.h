@@ -28,7 +28,6 @@ class SubmapVisualizer {
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
     bool visualize_free_space = true;
-    bool include_free_space_in_meshes = false;
     voxblox::MeshIntegratorConfig mesh_integrator_config;  // If use_color is
     // false the visualization mode 'color' won't work. Currently just sets to
     // defaults, which work well here.
@@ -73,6 +72,7 @@ class SubmapVisualizer {
   void visualizeMeshes(SubmapCollection* submaps);
   void visualizeTsdfBlocks(const SubmapCollection& submaps);
   void visualizeFreeSpace(const SubmapCollection& submaps);
+  void publishTfTransforms(const SubmapCollection& submaps);
 
   // interaction
   void reset();
@@ -82,7 +82,7 @@ class SubmapVisualizer {
   }
 
  private:
-  const Color kUnknownColor = Color(50, 50, 50);
+  const Color kUNKNOWNCOLOR = Color(50, 50, 50);
 
   struct SubmapVisInfo {
     // General.
@@ -101,9 +101,6 @@ class SubmapVisualizer {
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);
   void updateVisInfos(const SubmapCollection& submaps);
   void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
-  void publishTfTransform(const Transformation& transform,
-                          const std::string& parent_frame,
-                          const std::string& child_frame);
 
  private:
   const Config config_;
