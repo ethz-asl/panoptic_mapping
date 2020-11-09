@@ -13,7 +13,10 @@ SubmapBoundingVolume::SubmapBoundingVolume(const Submap& submap)
 
 void SubmapBoundingVolume::update() {
   // A conservative approximation that computes the centroid from the
-  // grid-aligned bounding box and then shrinks a sphere on it.
+  // grid-aligned bounding box and then shrinks a sphere on it. This is
+  // generally a significant over-estimation of the sphere, could use an exact
+  // algorithm here if required (e.g. https://github.com/hbf/miniball or
+  // https://people.inf.ethz.ch/gaertner/subdir/software/miniball.html).
 
   // Prevent redundant updates.
   if (submap_->getTsdfLayer().getNumberOfAllocatedBlocks() ==
@@ -28,16 +31,15 @@ void SubmapBoundingVolume::update() {
   submap_->getTsdfLayer().getAllAllocatedBlocks(&block_indices);
   std::vector<Point> block_centers;
   block_centers.reserve(block_indices.size());
-  Point min_dimension =
-      Point(1, 1, 1) * std::numeric_limits<FloatingPoint>::max();
-  Point max_dimension =
-      Point(1, 1, 1) * std::numeric_limits<FloatingPoint>::min();
   const FloatingPoint grid_size = submap_->getTsdfLayer().block_size();
+  Point min_dimension =
+      voxblox::getCenterPointFromGridIndex(block_indices.front(), grid_size);
+  Point max_dimension = min_dimension;
 
   // Get centers and grid aligned bounding box.
-  for (const voxblox::BlockIndex& index : block_indices) {
+  for (size_t i = 1; i < block_indices.size(); ++i) {
     block_centers.emplace_back(
-        voxblox::getCenterPointFromGridIndex(index, grid_size));
+        voxblox::getCenterPointFromGridIndex(block_indices[i], grid_size));
     min_dimension = min_dimension.cwiseMin(block_centers.back());
     max_dimension = max_dimension.cwiseMax(block_centers.back());
   }

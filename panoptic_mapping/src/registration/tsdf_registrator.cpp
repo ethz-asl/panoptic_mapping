@@ -134,11 +134,13 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
   // TODO(schmluk): Extend to track for deleted/deactivated submaps later.
   for (const auto& submap : submaps) {
-    std::cout << submap->getID() << ": active " << submap->isActive()
-              << ", matched " << submap->getChangeDetectionData().is_matched
-              << "-" << submap->getChangeDetectionData().matching_submap_id
-              << " n_iso_p: " << submap->getIsoSurfacePoints().size()
-              << std::endl;
+    //    std::cout << submap->getID() << ": active " << submap->isActive()
+    //              << ", matched " <<
+    //              submap->getChangeDetectionData().is_matched
+    //              << "-" <<
+    //              submap->getChangeDetectionData().matching_submap_id
+    //              << " n_iso_p: " << submap->getIsoSurfacePoints().size()
+    //              << std::endl;
 
     // Only match all active submaps vs inactive ones.
     if (submap->isActive()) {

@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /MarkerArray1/Namespaces1
+        - /VoxbloxMultiMesh1/Status1
       Splitter Ratio: 0.520588219165802
     Tree Height: 726
   - Class: rviz/Selection
@@ -26,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ColorPcl
+    SyncSource: FreeSpaceTsdf
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -89,26 +89,15 @@ Visualization Manager:
       Unreliable: false
       Value: true
       Visible:
-        "": true
-        "\x01": true
-        "\x02": true
+        "":
+          "": true
+          Value: true
         "\x03": true
         "\x04": true
         "\x05": true
         "\x07": true
-        "\b": true
-        "\t": true
-        "\n": true
         "\x0b": true
         "\x0c": true
-        : true
-        "\x0e": true
-        "\x0f": true
-        "\x10": true
-        "\x11": true
-        "\x12": true
-        "\x13": true
-        "\x14": true
         "\x15": true
         "\x16": true
         "\x17": true
@@ -116,6 +105,37 @@ Visualization Manager:
         "\x19": true
         "\x1a": true
         "\x1b": true
+        "\x1c": true
+        "\x1d": true
+        "\x1e": true
+        "\x1f": true
+        " ": true
+        "!": true
+        "\"": true
+        "#": true
+        $: true
+        "&": true
+        "'": true
+        (: true
+        ): true
+        "*": true
+        +: true
+        ",": true
+        "-": true
+        .: true
+        0: true
+        1: true
+        2: true
+        3: true
+        4: true
+        5: true
+        6: true
+        7: true
+        8: true
+        9: true
+        ":": true
+        ;: true
+        <: true
         Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
@@ -169,14 +189,6 @@ Visualization Manager:
       Radius: 0.05000000074505806
       Reference Frame: <Fixed Frame>
       Value: false
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /integrator_debug
-      Name: MarkerArray
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /path_visualizer/path
@@ -202,7 +214,7 @@ Visualization Manager:
       Max Color: 255; 255; 255
       Max Intensity: 0.6000002026557922
       Min Color: 0; 0; 0
-      Min Intensity: -0.5998613834381104
+      Min Intensity: -0.5999693870544434
       Name: FreeSpaceTsdf
       Position Transformer: XYZ
       Queue Size: 10
@@ -214,6 +226,72 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /panoptic_mapper/visualization/bounding_volumes
+      Name: BoundingVolumes
+      Namespaces:
+        bounding_volume_0: true
+        bounding_volume_1: true
+        bounding_volume_10: true
+        bounding_volume_11: true
+        bounding_volume_12: true
+        bounding_volume_13: true
+        bounding_volume_14: true
+        bounding_volume_15: true
+        bounding_volume_16: true
+        bounding_volume_17: true
+        bounding_volume_18: true
+        bounding_volume_19: true
+        bounding_volume_2: true
+        bounding_volume_20: true
+        bounding_volume_21: true
+        bounding_volume_22: true
+        bounding_volume_23: true
+        bounding_volume_24: true
+        bounding_volume_25: true
+        bounding_volume_26: true
+        bounding_volume_27: true
+        bounding_volume_28: true
+        bounding_volume_29: true
+        bounding_volume_3: true
+        bounding_volume_30: true
+        bounding_volume_31: true
+        bounding_volume_32: true
+        bounding_volume_33: true
+        bounding_volume_34: true
+        bounding_volume_35: true
+        bounding_volume_36: true
+        bounding_volume_38: true
+        bounding_volume_39: true
+        bounding_volume_4: true
+        bounding_volume_40: true
+        bounding_volume_41: true
+        bounding_volume_42: true
+        bounding_volume_43: true
+        bounding_volume_44: true
+        bounding_volume_45: true
+        bounding_volume_46: true
+        bounding_volume_47: true
+        bounding_volume_48: true
+        bounding_volume_49: true
+        bounding_volume_5: true
+        bounding_volume_50: true
+        bounding_volume_51: true
+        bounding_volume_52: true
+        bounding_volume_53: true
+        bounding_volume_54: true
+        bounding_volume_55: true
+        bounding_volume_56: true
+        bounding_volume_57: true
+        bounding_volume_58: true
+        bounding_volume_59: true
+        bounding_volume_60: true
+        bounding_volume_7: true
+        bounding_volume_8: true
+        bounding_volume_9: true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:

@@ -28,6 +28,8 @@ class SubmapVisualizer {
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
     bool visualize_free_space = true;
+    bool visualize_bounding_volumes = true;
+    bool include_free_space = false;
     voxblox::MeshIntegratorConfig mesh_integrator_config;  // If use_color is
     // false the visualization mode 'color' won't work. Currently just sets to
     // defaults, which work well here.
@@ -67,11 +69,16 @@ class SubmapVisualizer {
                          visualization_msgs::MarkerArray* output) const;
   void generateFreeSpaceMsg(const SubmapCollection& submaps,
                             pcl::PointCloud<pcl::PointXYZI>* output) const;
+  void generateBoundingVolumeMsgs(
+      const SubmapCollection& submaps,
+      visualization_msgs::MarkerArray* output) const;
 
   // publish visualization requests
+  void visualizeAll(SubmapCollection* submaps);
   void visualizeMeshes(SubmapCollection* submaps);
   void visualizeTsdfBlocks(const SubmapCollection& submaps);
   void visualizeFreeSpace(const SubmapCollection& submaps);
+  void visualizeBoundingVolume(const SubmapCollection& submaps);
   void publishTfTransforms(const SubmapCollection& submaps);
 
   // interaction
@@ -118,6 +125,7 @@ class SubmapVisualizer {
   ros::Publisher freespace_pub_;
   ros::Publisher mesh_pub_;
   ros::Publisher tsdf_blocks_pub_;
+  ros::Publisher bounding_volume_pub_;
 };
 
 }  // namespace panoptic_mapping

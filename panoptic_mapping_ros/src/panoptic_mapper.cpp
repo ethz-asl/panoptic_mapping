@@ -65,8 +65,8 @@ void PanopticMapper::setupMembers() {
 
   // id tracking
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
-  id_tracker_ =
-      ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
+  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
+      id_tracker_nh, label_handler_);
 
   // tsdf registrator
   ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
@@ -218,17 +218,7 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualization() {
-  // Update meshes.
-  submap_visualizer_->visualizeMeshes(&submaps_);
-
-  // Visualize tsdf blocks.
-  submap_visualizer_->visualizeTsdfBlocks(submaps_);
-
-  // Visualize free space tsdf.
-  submap_visualizer_->visualizeFreeSpace(submaps_);
-
-  // Publish all TFs.
-  submap_visualizer_->publishTfTransforms(submaps_);
+  submap_visualizer_->visualizeAll(&submaps_);
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {

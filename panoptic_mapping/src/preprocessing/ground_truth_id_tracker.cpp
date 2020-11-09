@@ -7,6 +7,10 @@
 
 namespace panoptic_mapping {
 
+config_utilities::Factory::RegistrationRos<IDTrackerBase, GroundTruthIDTracker,
+                                           std::shared_ptr<LabelHandler>>
+    GroundTruthIDTracker::registration_("ground_truth");
+
 void GroundTruthIDTracker::Config::checkParams() const {
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
   checkParamGT(instance_voxel_size, 0.f, "instance_voxel_size");

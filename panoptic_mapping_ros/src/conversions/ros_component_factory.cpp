@@ -31,17 +31,4 @@ std::unique_ptr<IntegratorBase> ComponentFactoryROS::createIntegrator(
   }
 }
 
-std::unique_ptr<IDTrackerBase> ComponentFactoryROS::createIDTracker(
-    const ros::NodeHandle& nh, std::shared_ptr<LabelHandler> label_handler) {
-  std::string type = getType(nh);
-  if (type == "ground_truth") {
-    return std::make_unique<GroundTruthIDTracker>(
-        config_utilities::getConfigFromRos<GroundTruthIDTracker::Config>(nh),
-        std::move(label_handler));
-  } else {
-    LOG(ERROR) << "Unknown id tracker type '" << type << "'.";
-    return nullptr;
-  }
-}
-
 }  // namespace panoptic_mapping
