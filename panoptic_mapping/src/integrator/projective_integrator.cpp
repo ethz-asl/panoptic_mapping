@@ -1,10 +1,11 @@
 #include "panoptic_mapping/integrator/projective_integrator.h"
 
-#include <voxblox/integrator/merge_integration.h>
-
 #include <algorithm>
 #include <chrono>
+#include <unordered_set>
 #include <vector>
+
+#include <voxblox/integrator/merge_integration.h>
 
 namespace panoptic_mapping {
 
@@ -75,11 +76,14 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
   allocateNewBlocks(submaps, T_M_C, depth_image, id_image);
   auto t2 = std::chrono::high_resolution_clock::now();
 
-  // find all active blocks that are in the field of view
+  // Find all active blocks that are in the field of view.
   std::vector<voxblox::BlockIndexList> block_lists;
   std::vector<int> id_list;
   for (auto& submap_ptr : *submaps) {
     if (!submap_ptr->isActive()) {
+      continue;
+    }
+    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
       continue;
     }
     voxblox::BlockIndexList block_list;
@@ -269,10 +273,10 @@ void ProjectiveIntegrator::findVisibleBlocks(
   // setup
   voxblox::BlockIndexList all_blocks;
   submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
-  Transformation T_C_S =
+  const Transformation T_C_S =
       T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
-  float block_size = submap.getTsdfLayer().block_size();
-  float block_diag = std::sqrt(3.0f) * block_size / 2.0f;
+  const FloatingPoint block_size = submap.getTsdfLayer().block_size();
+  const FloatingPoint block_diag = std::sqrt(3.0f) * block_size / 2.0f;
 
   // iterate through all blocks
   for (auto& index : all_blocks) {
@@ -287,6 +291,28 @@ void ProjectiveIntegrator::findVisibleBlocks(
   }
 }
 
+bool ProjectiveIntegrator::submapIsInViewFrustum(
+    const Submap& submap, const Transformation& T_M_C) const {
+  // Assumes the range image is read to use the cached max_range_in_image_.
+  // Sort out points that don't meet the criteria of
+  // 1: in front, 2: close, 3: in view frustum.
+  const FloatingPoint radius = submap.getBoundingVolume().getRadius();
+  const Point center_C = T_M_C.inverse() * submap.getT_M_S() *
+                         submap.getBoundingVolume().getCenter();
+  if (center_C.z() < -radius) {
+    return false;
+  }
+  if (center_C.norm() > max_range_in_image_ + radius) {
+    return false;
+  }
+  for (const Point& view_frustum_plane : view_frustum_) {
+    if (center_C.dot(view_frustum_plane) < -radius) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ProjectiveIntegrator::blockIsInViewFrustum(const Point& center_point_C,
                                                 float block_diag_half) const {
   // Assumes the range image is read to use the cached max_range_in_image_.
@@ -298,17 +324,10 @@ bool ProjectiveIntegrator::blockIsInViewFrustum(const Point& center_point_C,
   if (center_point_C.norm() > max_range_in_image_ + block_diag_half) {
     return false;
   }
-  if (center_point_C.dot(view_frustum_[0]) < -block_diag_half) {
-    return false;
-  }
-  if (center_point_C.dot(view_frustum_[1]) < -block_diag_half) {
-    return false;
-  }
-  if (center_point_C.dot(view_frustum_[2]) < -block_diag_half) {
-    return false;
-  }
-  if (center_point_C.dot(view_frustum_[3]) < -block_diag_half) {
-    return false;
+  for (const Point& view_frustum_plane : view_frustum_) {
+    if (center_point_C.dot(view_frustum_plane) < -block_diag_half) {
+      return false;
+    }
   }
   return true;
 }
@@ -322,6 +341,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   max_range_in_image_ = 0.f;
 
   // Parse through each point to allocate instance + background blocks.
+  std::unordered_set<Submap*> touched_submaps;
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float z = depth_image.at<float>(v, u);
@@ -338,6 +358,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const Point p_S = submap->getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
       submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+      touched_submaps.insert(submap);
     }
   }
 
@@ -360,6 +381,14 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       }
     }
   }
+
+  // Update all bounding volumes. This is currently done in every integration
+  // step since it's not too expensive and won't do anything if no new block
+  // was allocated.
+  for (auto& submap : touched_submaps) {
+    submap->getBoundingVolumePtr()->update();
+  }
+  space->getBoundingVolumePtr()->update();
 }
 
 }  // namespace panoptic_mapping

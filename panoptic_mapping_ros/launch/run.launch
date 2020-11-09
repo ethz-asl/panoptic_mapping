@@ -1,7 +1,7 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- Dataset -->
-  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run1.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run2.bag"/> 
   <arg name="bag_play_rate" default="1"/>
   <arg name="use_sim_time" default="false"/>
     
@@ -11,7 +11,7 @@
   
   <!-- Load maps -->
   <arg name="load_map" default = "true"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run2.panmap"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run1.panmap"/>
 
 
 

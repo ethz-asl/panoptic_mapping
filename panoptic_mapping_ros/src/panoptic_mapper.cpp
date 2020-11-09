@@ -393,6 +393,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     // Re-compute cached data and set the relevant flags.
     submap_ptr->finishActivePeriod();
     tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
+    submap_ptr->getBoundingVolumePtr()->update();
 
     // add to the collection
     submaps_.addSubmap(std::move(submap_ptr));

@@ -54,13 +54,21 @@ id_tracker:
   freespace_voxel_size: 0.3
   voxels_per_side: 16
   
+tsdf_registrator:
+  verbosity: 1
+  min_voxel_weight: 1e-6
+  error_threshold: -1 # m, negative = #voxel_sizes
+  weight_error_by_tsdf_weight: true
+  min_number_of_matching_points: 50
+  match_rejection_percentage: 0.9
+  
 visualization:
   visualization_interval: 1.0
-  visualization_mode: color # submaps, instances, color, normals, classes, change
+  visualization_mode: change # submaps, instances, color, normals, classes, change
   submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true
-  include_free_space_in_meshes: false
+
   
 

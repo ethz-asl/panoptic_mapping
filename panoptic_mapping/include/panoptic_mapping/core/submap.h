@@ -11,7 +11,9 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/core/submap_bounding_volume.h"
 #include "panoptic_mapping/core/submap_id.h"
+#include "panoptic_mapping/registration/tsdf_registrator.h"
 
 namespace panoptic_mapping {
 
@@ -32,11 +34,6 @@ class Submap {
     Point position;
     FloatingPoint distance;
     FloatingPoint weight;
-  };
-
-  struct ChangeDetectionData {
-    bool is_matched = false;
-    int matching_submap_id = 0;
   };
 
   explicit Submap(const Config& config);
@@ -61,10 +58,13 @@ class Submap {
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
-  const ChangeDetectionData& getChangeDetectionData() const {
+  const TsdfRegistrator::ChangeDetectionData& getChangeDetectionData() const {
     return change_detection_data_;
   }
   PanopticLabel getLabel() const { return label_; }
+  const SubmapBoundingVolume& getBoundingVolume() const {
+    return bounding_volume_;
+  }
 
   // modifying accessors
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() {
@@ -74,9 +74,10 @@ class Submap {
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
     return &iso_surface_points_;
   }
-  ChangeDetectionData* getChangeDetectionDataPtr() {
+  TsdfRegistrator::ChangeDetectionData* getChangeDetectionDataPtr() {
     return &change_detection_data_;
   }
+  SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
 
   // setters
   void setT_M_S(const Transformation& T_M_S);
@@ -90,26 +91,30 @@ class Submap {
 
  private:
   friend class SubmapCollection;
-
   const Config config_;
 
-  // state
+  // Labels.
   const SubmapID id_;
   int instance_id_;
   int class_id_;
-  bool is_active_;
   PanopticLabel label_;
+
+  // State.
+  bool is_active_;
 
   // transformation
   std::string frame_name_;
   Transformation T_M_S_;  // Transformation mission to submap.
   Transformation T_M_S_inv_;
 
-  // map
+  // Map.
   std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
+
+  // Data.
   std::vector<IsoSurfacePoint> iso_surface_points_;
-  ChangeDetectionData change_detection_data_;
+  TsdfRegistrator::ChangeDetectionData change_detection_data_;
+  SubmapBoundingVolume bounding_volume_;
 };
 
 }  // namespace panoptic_mapping

@@ -125,7 +125,7 @@ void SubmapVisualizer::generateMeshMsgs(
       continue;
     }
 
-    // Apply the submap color if necessary
+    // Apply the submap color if necessary.
     if (color_mode_voxblox == voxblox::ColorMode::kGray) {
       for (auto& mesh_block : msg.mesh.mesh_blocks) {
         for (auto& r : mesh_block.r) {

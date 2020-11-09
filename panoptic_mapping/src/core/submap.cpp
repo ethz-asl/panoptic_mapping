@@ -24,7 +24,8 @@ Submap::Submap(const Config& config)
       instance_id_(-1),
       class_id_(-1),
       is_active_(true),
-      label_(PanopticLabel::kUNKNOWN) {
+      label_(PanopticLabel::kUNKNOWN),
+      bounding_volume_(*this) {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << id_.toInt();
@@ -118,14 +119,14 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
     return nullptr;
   }
 
-  // Getting the transformation
+  // Getting the transformation.
   Transformation T_M_S;
   cblox::QuatTransformationProto transformation_proto =
       submap_proto.transform();
   cblox::conversions::transformProtoToKindr(transformation_proto, &T_M_S);
   submap->setT_M_S(T_M_S);
 
-  // other data
+  // Other data.
   submap->setInstanceID(submap_proto.instance_id());
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));

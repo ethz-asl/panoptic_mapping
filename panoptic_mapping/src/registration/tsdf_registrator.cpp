@@ -2,6 +2,9 @@
 
 #include <voxblox/mesh/mesh_integrator.h>
 
+#include "panoptic_mapping/core/submap.h"
+#include "panoptic_mapping/core/submap_collection.h"
+
 namespace panoptic_mapping {
 
 void TsdfRegistrator::Config::checkParams() const {
@@ -11,6 +14,7 @@ void TsdfRegistrator::Config::checkParams() const {
 }
 
 void TsdfRegistrator::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
   setupParam("min_voxel_weight", &min_voxel_weight);
   setupParam("error_threshold", &error_threshold);
   setupParam("weight_error_by_tsdf_weight", &weight_error_by_tsdf_weight);
@@ -138,8 +142,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
     // Only match all active submaps vs inactive ones.
     if (submap->isActive()) {
-      Submap::ChangeDetectionData* change_data =
-          submap->getChangeDetectionDataPtr();
+      ChangeDetectionData* change_data = submap->getChangeDetectionDataPtr();
       if (change_data->is_matched) {
         // Check if the match still holds.
         Submap* matched_submap =

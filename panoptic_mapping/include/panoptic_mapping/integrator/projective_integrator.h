@@ -20,7 +20,7 @@ namespace panoptic_mapping {
 class ProjectiveIntegrator : public IntegratorBase {
  public:
   struct Config : public config_utilities::Config<Config> {
-    int verbosity = 2;
+    int verbosity = 4;
 
     // camera settings  [px]
     int width = 640;
@@ -70,6 +70,9 @@ class ProjectiveIntegrator : public IntegratorBase {
   // methods
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
+
+  bool submapIsInViewFrustum(const Submap& submap,
+                             const Transformation& T_M_C) const;
 
   bool blockIsInViewFrustum(const Point& center_point_C,
                             float block_diag_half) const;

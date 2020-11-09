@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap.h"
 
