@@ -13,18 +13,21 @@ namespace panoptic_mapping {
 
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
-  // NOTE(schmluk): if the visualization mode is not valid it will be defaulted
-  // to 'color' and a warning will be raised.
+  checkParamGT(mesh_min_weight, 0.f, "mesh_min_weight");
+  // NOTE(schmluk): if the visualization or color mode is not valid it will be
+  // defaulted to 'all' or 'color' and a warning will be raised.
 }
 
 void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualization_mode", &visualization_mode);
+  setupParam("color_mode", &color_mode);
   setupParam("submap_color_discretization", &submap_color_discretization);
   setupParam("visualize_mesh", &visualize_mesh);
   setupParam("visualize_tsdf_blocks", &visualize_tsdf_blocks);
   setupParam("visualize_free_space", &visualize_free_space);
   setupParam("visualize_bounding_volumes", &visualize_bounding_volumes);
   setupParam("include_free_space", &include_free_space);
+  setupParam("mesh_min_weight", &mesh_min_weight);
 }
 
 void SubmapVisualizer::Config::fromRosParam() {
@@ -36,10 +39,11 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
     : config_(config.checkValid()),
       label_handler_(std::move(label_handler)),
       global_frame_name_("mission") {
-  visualization_mode_ =
-      SubmapVisualizer::visualizationModeFromString(config_.visualization_mode);
+  visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
+  color_mode_ = colorModeFromString(config_.color_mode);
+  id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
 
-  // setup publishers
+  // Setup publishers.
   nh_ = ros::NodeHandle(config_.ros_namespace);
   if (config_.visualize_free_space) {
     freespace_pub_ =
@@ -58,14 +62,29 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
   }
 }
 
-void SubmapVisualizer::reset() { vis_infos_.clear(); }
+void SubmapVisualizer::reset() {
+  // Reset all visuals.
+  if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
+    for (auto& info : vis_infos_) {
+      voxblox_msgs::MultiMesh msg;
+      msg.header.stamp = ros::Time::now();
+      msg.name_space = std::to_string(info.second.id);
+      mesh_pub_.publish(msg);
+    }
+  }
+  // TODO(Schmluk): Reset other visualizations too?
+  vis_infos_.clear();
+}
 
 void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
   publishTfTransforms(*submaps);
+  updateVisInfos(*submaps);
+  vis_infos_are_updated_ = true;  // Prevent repeated updates.
   visualizeMeshes(submaps);
   visualizeTsdfBlocks(*submaps);
   visualizeFreeSpace(*submaps);
   visualizeBoundingVolume(*submaps);
+  vis_infos_are_updated_ = false;
 }
 
 void SubmapVisualizer::visualizeMeshes(SubmapCollection* submaps) {
@@ -112,7 +131,9 @@ void SubmapVisualizer::generateMeshMsgs(
   CHECK_NOTNULL(output);
 
   // Update the visualization infos.
-  updateVisInfos(*submaps);
+  if (!vis_infos_are_updated_) {
+    updateVisInfos(*submaps);
+  }
 
   // Process all submaps based on their visualization info.
   for (const auto& submap : *submaps) {
@@ -128,16 +149,20 @@ void SubmapVisualizer::generateMeshMsgs(
     }
     SubmapVisInfo& info = it->second;
 
-    // recompute colors if requested
+    // Recompute colors if requested.
     if (info.change_color) {
       setSubmapVisColor(*submap, &info);
-      info.change_color = visualization_mode_ == VisualizationMode::kChange;
+      if (visualization_mode_ != VisualizationMode::kChange &&
+          visualization_mode_ != VisualizationMode::kActive &&
+          color_mode_ != ColorMode::kChange) {
+        info.change_color = false;
+      }
     }
 
-    // setup message
+    // Setup message.
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
-    msg.name_space = info.id;
+    msg.name_space = std::to_string(info.id);
 
     // If the submap was deleted we send an empty message to delete the visual.
     if (info.was_deleted) {
@@ -164,9 +189,9 @@ void SubmapVisualizer::generateMeshMsgs(
 
     // Set the voxblox internal color mode. Gray will be used for overwriting.
     voxblox::ColorMode color_mode_voxblox = voxblox::ColorMode::kGray;
-    if (visualization_mode_ == VisualizationMode::kColor) {
+    if (color_mode_ == ColorMode::kColor) {
       color_mode_voxblox = voxblox::ColorMode::kColor;
-    } else if (visualization_mode_ == VisualizationMode::kNormals) {
+    } else if (color_mode_ == ColorMode::kNormals) {
       color_mode_voxblox = voxblox::ColorMode::kNormals;
     }
     voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
@@ -193,15 +218,19 @@ void SubmapVisualizer::generateMeshMsgs(
     }
 
     // Set alpha values.
-    msg.alpha = info.alpha;
+    msg.alpha = info.alpha * 255.f;
     output->emplace_back(std::move(msg));
   }
 }
 
 void SubmapVisualizer::generateBlockMsgs(
-    const SubmapCollection& submaps,
-    visualization_msgs::MarkerArray* output) const {
+    const SubmapCollection& submaps, visualization_msgs::MarkerArray* output) {
   CHECK_NOTNULL(output);
+
+  // Update the visualization infos.
+  if (!vis_infos_are_updated_) {
+    updateVisInfos(submaps);
+  }
 
   for (const auto& submap : submaps) {
     if (submap->getLabel() == PanopticLabel::kSPACE &&
@@ -209,7 +238,7 @@ void SubmapVisualizer::generateBlockMsgs(
       continue;
     }
 
-    // setup submap
+    // Setup submap.
     voxblox::BlockIndexList blocks;
     submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
     float block_size =
@@ -217,11 +246,13 @@ void SubmapVisualizer::generateBlockMsgs(
         static_cast<float>(submap->getTsdfLayer().voxels_per_side());
     unsigned int counter = 0;
 
-    // get color
+    // Get color.
     Color color = kUNKNOWNCOLOR;
+    float alpha = 1.f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
+      alpha = vis_it->second.alpha / 2.f;
     }
 
     for (auto& block_index : blocks) {
@@ -231,7 +262,7 @@ void SubmapVisualizer::generateBlockMsgs(
       marker.color.r = color.r;
       marker.color.g = color.g;
       marker.color.b = color.b;
-      marker.color.a = 0.5;
+      marker.color.a = alpha;
       marker.action = visualization_msgs::Marker::ADD;
       marker.type = visualization_msgs::Marker::CUBE;
       marker.id = counter++;
@@ -254,9 +285,9 @@ void SubmapVisualizer::generateBlockMsgs(
 }
 
 void SubmapVisualizer::generateFreeSpaceMsg(
-    const SubmapCollection& submaps,
-    pcl::PointCloud<pcl::PointXYZI>* output) const {
+    const SubmapCollection& submaps, pcl::PointCloud<pcl::PointXYZI>* output) {
   CHECK_NOTNULL(output);
+
   // Create a pointcloud with distance = intensity. Taken from voxblox.
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
   int free_space_id = submaps.getActiveFreeSpaceSubmapID();
@@ -268,9 +299,13 @@ void SubmapVisualizer::generateFreeSpaceMsg(
 }
 
 void SubmapVisualizer::generateBoundingVolumeMsgs(
-    const SubmapCollection& submaps,
-    visualization_msgs::MarkerArray* output) const {
+    const SubmapCollection& submaps, visualization_msgs::MarkerArray* output) {
   CHECK_NOTNULL(output);
+
+  // Update the visualization infos.
+  if (!vis_infos_are_updated_) {
+    updateVisInfos(submaps);
+  }
 
   for (const auto& submap : submaps) {
     if (submap->getLabel() == PanopticLabel::kSPACE &&
@@ -278,11 +313,13 @@ void SubmapVisualizer::generateBoundingVolumeMsgs(
       continue;
     }
 
-    // get Color.
+    // Get color.
     Color color = kUNKNOWNCOLOR;
+    float alpha = 1.f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
+      alpha = vis_it->second.alpha / 2.f;
     }
 
     visualization_msgs::Marker marker;
@@ -291,7 +328,7 @@ void SubmapVisualizer::generateBoundingVolumeMsgs(
     marker.color.r = color.r;
     marker.color.g = color.g;
     marker.color.b = color.b;
-    marker.color.a = 0.3;
+    marker.color.a = alpha;
     marker.action = visualization_msgs::Marker::ADD;
     marker.type = visualization_msgs::Marker::SPHERE;
     marker.ns = "bounding_volume_" + std::to_string(submap->getID());
@@ -341,18 +378,24 @@ void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
 
 void SubmapVisualizer::setVisualizationMode(
     VisualizationMode visualization_mode) {
-  // If there is a new visualization mode recompute the colors.
-  // NOTE(schmluk): the modes 'color' and 'normals' are handled by the mesher,
-  // so no need to recompute.
-  if (visualization_mode != visualization_mode_ &&
-      visualization_mode != VisualizationMode::kColor &&
-      visualization_mode != VisualizationMode::kNormals) {
-    for (auto& info : vis_infos_) {
-      info.second.change_color = true;
-      info.second.republish_everything = true;
-    }
+  // If there is a new visualization mode recompute the colors (alphas) and
+  // republish everything.
+  if (visualization_mode == visualization_mode_) {
+    return;
   }
   visualization_mode_ = visualization_mode;
+  reset();
+}
+
+void SubmapVisualizer::setColorMode(ColorMode color_mode) {
+  // If there is a new color mode recompute the colors.
+  // NOTE(schmluk): the modes 'color' and 'normals' are handled by the mesher,
+  // so no need to recompute.
+  if (color_mode == color_mode_) {
+    return;
+  }
+  color_mode_ = color_mode;
+  reset();
 }
 
 void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
@@ -364,9 +407,8 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
 
   // NOTE(schmluk): Modes 'color' and 'normals' are handled by the mesher,
   // so no need to set here.
-  switch (visualization_mode_) {
-    case VisualizationMode::kInstances: {
-      info->alpha = 255;
+  switch (color_mode_) {
+    case ColorMode::kInstances: {
       if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
         info->color = label_handler_->getColor(submap.getInstanceID());
       } else {
@@ -374,22 +416,17 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
       }
       break;
     }
-    case VisualizationMode::kSubmaps: {
-      info->alpha = 255;
-      float h = static_cast<float>(submap.getID() %
-                                   config_.submap_color_discretization) /
-                static_cast<float>(config_.submap_color_discretization - 1);
-      info->color = voxblox::rainbowColorMap(h);
+    case ColorMode::kSubmaps: {
+      info->color = id_color_map_.colorLookup(info->id);
       break;
     }
-    case VisualizationMode::kClasses: {
+    case ColorMode::kClasses: {
       LOG(WARNING) << "Class coloring is not yet implemented.";
       break;
     }
-    case VisualizationMode::kChange: {
+    case ColorMode::kChange: {
       if (submap.isActive()) {
         // Active maps.
-        info->alpha = 255;
         if (submap.getChangeDetectionData().is_matched) {
           info->color = Color(0, 255, 255);
         } else {
@@ -397,7 +434,6 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         }
       } else {
         // Loaded maps.
-        info->alpha = 80;
         if (submap.getChangeDetectionData().is_matched) {
           info->color = Color(0, 0, 255);
         } else {
@@ -414,15 +450,35 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
       break;
     }
   }
+  switch (visualization_mode_) {
+    case VisualizationMode::kAll: {
+      info->alpha = 1.f;
+      break;
+    }
+    case VisualizationMode::kActive: {
+      if (submap.isActive()) {
+        info->alpha = 1.f;
+      } else {
+        info->alpha = 0.3f;
+      }
+      break;
+    }
+    case VisualizationMode::kChange: {
+      info->alpha = submap.isActive() ? 1.f : 0.3f;
+      break;
+    }
+  }
 }
 
 void SubmapVisualizer::updateSubmapMesh(Submap* submap,
                                         bool update_all_blocks) {
   CHECK_NOTNULL(submap);
   constexpr bool clear_updated_flag = true;
+  // Use the default integrator config to have color always available.
+  voxblox::MeshIntegratorConfig config;
+  config.min_weight = config_.mesh_min_weight;
   mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
-      config_.mesh_integrator_config, submap->getTsdfLayerPtr().get(),
-      submap->getMeshLayerPtr().get());
+      config, submap->getTsdfLayerPtr().get(), submap->getMeshLayerPtr().get());
   mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
 }
 
@@ -437,46 +493,72 @@ void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {
   }
 }
 
+SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
+    const std::string& color_mode) {
+  if (color_mode == "color") {
+    return ColorMode::kColor;
+  } else if (color_mode == "normals") {
+    return ColorMode::kNormals;
+  } else if (color_mode == "submaps") {
+    return ColorMode::kSubmaps;
+  } else if (color_mode == "instances") {
+    return ColorMode::kInstances;
+  } else if (color_mode == "classes") {
+    return ColorMode::kClasses;
+  } else if (color_mode == "change") {
+    return ColorMode::kChange;
+  } else {
+    LOG(WARNING) << "Unknown ColorMode '" << color_mode
+                 << "', using 'color' instead.";
+    return ColorMode::kColor;
+  }
+}
+
+std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
+  switch (color_mode) {
+    case ColorMode::kColor:
+      return "color";
+    case ColorMode::kNormals:
+      return "normals";
+    case ColorMode::kSubmaps:
+      return "submaps";
+    case ColorMode::kInstances:
+      return "instances";
+    case ColorMode::kClasses:
+      return "classes";
+    case ColorMode::kChange:
+      return "change";
+  }
+  return "unknown";
+}
+
 SubmapVisualizer::VisualizationMode
 SubmapVisualizer::visualizationModeFromString(
     const std::string& visualization_mode) {
-  if (visualization_mode == "color") {
-    return VisualizationMode::kColor;
-  } else if (visualization_mode == "normals") {
-    return VisualizationMode::kNormals;
-  } else if (visualization_mode == "submaps") {
-    return VisualizationMode::kSubmaps;
-  } else if (visualization_mode == "instances") {
-    return VisualizationMode::kInstances;
-  } else if (visualization_mode == "classes") {
-    return VisualizationMode::kClasses;
-  }
-  if (visualization_mode == "change") {
+  if (visualization_mode == "all") {
+    return VisualizationMode::kAll;
+  } else if (visualization_mode == "active") {
+    return VisualizationMode::kActive;
+  } else if (visualization_mode == "change") {
     return VisualizationMode::kChange;
   } else {
     LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
-                 << "', using 'color' instead.";
-    return VisualizationMode::kColor;
+                 << "', using 'all' instead.";
+    return VisualizationMode::kAll;
   }
 }
 
 std::string SubmapVisualizer::visualizationModeToString(
     VisualizationMode visualization_mode) {
   switch (visualization_mode) {
-    case VisualizationMode::kColor:
-      return "color";
-    case VisualizationMode::kNormals:
-      return "normals";
-    case VisualizationMode::kSubmaps:
-      return "submaps";
-    case VisualizationMode::kInstances:
-      return "instances";
-    case VisualizationMode::kClasses:
-      return "classes";
+    case VisualizationMode::kAll:
+      return "all";
+    case VisualizationMode::kActive:
+      return "active";
     case VisualizationMode::kChange:
       return "change";
   }
-  return "unknown coloring mode";
+  return "unknown";
 }
 
 }  // namespace panoptic_mapping

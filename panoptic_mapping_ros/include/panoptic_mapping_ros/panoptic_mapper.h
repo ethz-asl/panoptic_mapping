@@ -57,6 +57,9 @@ class PanopticMapper {
   bool setVisualizationModeCallback(
       voxblox_msgs::FilePath::Request& request,     // NOLINT
       voxblox_msgs::FilePath::Response& response);  // NOLINT
+  bool setColorModeCallback(
+      voxblox_msgs::FilePath::Request& request,     // NOLINT
+      voxblox_msgs::FilePath::Response& response);  // NOLINT
 
   // io
   bool saveMap(const std::string& file_path);
@@ -90,6 +93,7 @@ class PanopticMapper {
   ros::ServiceServer load_map_srv_;
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_visualization_mode_srv_;
+  ros::ServiceServer set_color_mode_srv_;
   ros::Timer visualization_timer_;
   ros::Timer change_detection_timer_;
 

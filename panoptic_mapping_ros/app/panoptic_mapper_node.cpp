@@ -5,6 +5,8 @@
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "panoptic_mapper", ros::init_options::NoSigintHandler);
+  config_utilities::RequiredArguments ra(
+      &argc, &argv, {"--logtostderr", "--colorlogtostderr"});
 
   // Setup logging
   google::InitGoogleLogging(argv[0]);

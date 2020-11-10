@@ -97,6 +97,8 @@ void PanopticMapper::setupRos() {
   set_visualization_mode_srv_ = nh_private_.advertiseService(
       "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
       this);
+  set_color_mode_srv_ = nh_private_.advertiseService(
+      "set_color_mode", &PanopticMapper::setColorModeCallback, this);
 
   // Timers.
   if (config_.visualization_interval > 0.0) {
@@ -291,13 +293,23 @@ void PanopticMapper::findMatchingMessagesToPublish(
 bool PanopticMapper::setVisualizationModeCallback(
     voxblox_msgs::FilePath::Request& request,
     voxblox_msgs::FilePath::Response& response) {
-  SubmapVisualizer::VisualizationMode coloring_mode =
+  SubmapVisualizer::VisualizationMode visualization_mode =
       SubmapVisualizer::visualizationModeFromString(request.file_path);
-  submap_visualizer_->setVisualizationMode(coloring_mode);
-  submap_visualizer_->visualizeMeshes(&submaps_);
-  LOG(INFO) << "Set coloring mode to '"
-            << SubmapVisualizer::visualizationModeToString(coloring_mode)
+  submap_visualizer_->setVisualizationMode(visualization_mode);
+  LOG(INFO) << "Set visualization mode to '"
+            << SubmapVisualizer::visualizationModeToString(visualization_mode)
             << "'.";
+  return true;
+}
+
+bool PanopticMapper::setColorModeCallback(
+    voxblox_msgs::FilePath::Request& request,
+    voxblox_msgs::FilePath::Response& response) {
+  SubmapVisualizer::ColorMode color_mode =
+      SubmapVisualizer::colorModeFromString(request.file_path);
+  submap_visualizer_->setColorMode(color_mode);
+  LOG(INFO) << "Set visualization mode to '"
+            << SubmapVisualizer::colorModeToString(color_mode) << "'.";
   return true;
 }
 
@@ -351,7 +363,6 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
 bool PanopticMapper::loadMap(const std::string& file_path) {
   // Clear the current maps.
   submaps_.clear();
-  submap_visualizer_->reset();
 
   // Open and check the file.
   std::fstream proto_file;
@@ -390,8 +401,9 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   }
   proto_file.close();
 
-  // reproduce the mesh and visualization
-  submap_visualizer_->visualizeMeshes(&submaps_);
+  // Reproduce the mesh and visualization.
+  submap_visualizer_->reset();
+  submap_visualizer_->visualizeAll(&submaps_);
 
   LOG(INFO) << "Successfully loaded " << submaps_.size() << "/"
             << submap_collection_proto.num_submaps() << " submaps.";
