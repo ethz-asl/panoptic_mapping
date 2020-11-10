@@ -365,7 +365,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   submaps_.clear();
 
   // Open and check the file.
-  std::fstream proto_file;
+  std::ifstream proto_file;
   proto_file.open(file_path, std::fstream::in);
   if (!proto_file.is_open()) {
     LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";

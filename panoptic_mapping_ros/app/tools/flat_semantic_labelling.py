@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import csv
-import operator
-import collections
 
 import airsim
 import numpy as np
@@ -14,7 +12,8 @@ def create_label_ids(ir_correction_file):
     Create the class and instance labels for the objects in the flat dataset.
     """
     # Read infrared label mapping (because airsims infrared values are screwed)
-    instance_to_mesh_id = []  # inst_to_mesh_id[inst_id] = [mesh_id, ir_color]
+    mesh_ids = []
+    ir_ids = []  # These match in count and order.
     with open(ir_correction_file) as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         last_id = -1
@@ -22,37 +21,52 @@ def create_label_ids(ir_correction_file):
             if row[0] != 'MeshID':
                 if int(row[1]) > last_id:
                     last_id = int(row[1])
-                    instance_to_mesh_id.append([int(row[0]), last_id])
+                    mesh_ids.append(int(row[0]))
+                    ir_ids.append(last_id)
 
     # labels for the flat test dataset
-    label_ids = {}
-    mesh_ids = {}
-    class_ids = {}
-    counter = [0]
+    labels = []  # {InstanceID, ClassID, PanopticID, MeshID, InfraredID, Name}
+
+    # NOTE: These are lists so they are mutable in set label.
+    id_counter = [0]
     class_counter = [0]
+    panotpic_id = 0
     letters = [
         "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
-        "o", "p", "q", "r", "s", "t", "u"
+        "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
     ]
 
-    def set_label(name, label_id=None, increment_class=True, count=1):
+    def set_label(name, increment_class=True, count=1):
         for i in range(count):
+            if i >= len(letters):
+                print("Warning: can only write %i (request is %i) suffixes "
+                      "using 'letters'." % (len(letters), i))
             full_name = name + "_" + letters[i]
-            if label_id is None:
-                label_id = counter[0]
-                counter[0] = counter[0] + 1
-            label_ids[full_name] = label_id
-            if label_id < len(instance_to_mesh_id):
-                mesh_ids[full_name] = instance_to_mesh_id[label_id]
+            label = {}
+
+            # Instance ID
+            label_id = id_counter[0]
+            id_counter[0] = id_counter[0] + 1
+            label["InstanceID"] = label_id
+            label["Name"] = full_name
+
+            # IR and mesh
+            if label_id < len(mesh_ids):
+                label["MeshID"] = mesh_ids[label_id]
+                label["InfraredID"] = ir_ids[label_id]
             else:
-                print "Warning: id '%i' is larger than the maximum supported " \
-                      "id count" % label_id
+                print("Warning: id '%i' is larger than the maximum supported "
+                      "id count of %i." % (label_id, len(mesh_ids)))
+            # Class and Panoptic
+            label["ClassID"] = class_counter[0]
             if increment_class:
                 class_counter[0] = class_counter[0] + 1
-            class_ids[full_name] = class_counter[0]
+            label["PanopticID"] = panotpic_id
             increment_class = False  # for multiple count
+            labels.append(label)
 
     # Background classes
+    panotpic_id = 0
     set_label("SM_Ceiling")
     set_label("SM_Curtains")
     set_label("SM_Floor")
@@ -61,17 +75,17 @@ def create_label_ids(ir_correction_file):
     set_label("SM_Windows_Windows")
     set_label("SM_TV_Wall")
 
-    panoptic_count = counter[0] - 1
     # Instances
+    panotpic_id = 1
     set_label("SM_Bed")
     set_label("SM_Bed_lamp", count=2)
     set_label("SM_Bed_table", count=2)
     set_label("SM_Bottle")
     set_label("SM_Ceiling_lamp", count=12)
     set_label("SM_Chair", count=2)
-    set_label("SM_Kitchen_Chair_a", increment_class=False)
+    set_label("SM_Kitchen_Chair", increment_class=False)
     set_label("SM_Coffee_table")
-    set_label("SM_Cup_", count=3)
+    set_label("SM_Cup", count=3)
     set_label("SM_Decor", count=2)
     set_label("SM_Digital_Clock")
     set_label("SM_Dimmer", count=2)
@@ -94,11 +108,11 @@ def create_label_ids(ir_correction_file):
     set_label("SM_Nightstand")
 
     print("Created a labelling with %i instances and %i classes." %
-          (counter[0] - 1, class_counter[0] - 1))
-    return label_ids, class_ids, mesh_ids, panoptic_count
+          (id_counter[0], class_counter[0]))
+    return labels
 
 
-def apply_labels(mesh_labels):
+def apply_labels(labels):
     """
     Set the segmentation id for all object in unreal based on the info in
     'mesh_labels'
@@ -106,15 +120,16 @@ def apply_labels(mesh_labels):
     client = airsim.MultirotorClient()
     success = 0
     client.confirmConnection()
-    # reset the labels of everything to invisible
+    # Reset the labels of everything to invisible.
     client.simSetSegmentationObjectID(r"[\w]*", -1, True)
-    for key in mesh_labels:
-        if client.simSetSegmentationObjectID(key, mesh_labels[key][0], False):
+    for label in labels:
+        key = label["Name"]
+        if client.simSetSegmentationObjectID(key, label["MeshID"], False):
             success = success + 1
             print "Successfully set label for '%s'." % key
         else:
             print "Failed to set label for '%s'." % key
-    print "Applied %i labels." % success
+    print "Applied %i/%i labels." % (success, len(labels))
 
 
 def get_available_meshes(comparison_labels=None):
@@ -128,14 +143,16 @@ def get_available_meshes(comparison_labels=None):
     names = client.simListSceneObjects(r"[\w]*")
     names = [str(name) for name in names]
     counts = []
-    print "Available mesh names: ", sorted(names)
+    print "Available mesh names: "
     for name in sorted(names):
-        print "Found Mesh '%s'" % name
+        print str(name)
     if comparison_labels is not None:
-        for key in comparison_labels:
-            matches = [name == key for name in names]
+        for label in comparison_labels:
+            matches = [name == label["Name"] for name in names]
             counts.append(np.sum(np.array(matches)))
-        print "Label names found: ", counts
+        # TODO(schmluk): These last parts are not cleaned up, change these if
+        #                the function is needed.
+        print "Comparison Label names found in the scene: ", counts
         print "Unique labels matched: %.1f percent" \
               % (np.mean(np.array(counts) == 1) * 100)
 
@@ -170,7 +187,7 @@ def get_infrared_correction(target_file):
     print "Saved infrared corrections in '%s'." % target_file
 
 
-def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
+def export_labels(labels, out_file_name):
     """
     Save label data to file.
     """
@@ -193,23 +210,20 @@ def export_labels(labels, classes, mesh_ids, panoptic_count, out_file_name):
             "B",
             "Name",
         ])
-        sorted_labels = sorted(labels.items(), key=operator.itemgetter(1))
-        sorted_labels = collections.OrderedDict(sorted_labels)
-        for key in sorted_labels:
-            instance_id = labels[key]
-            mesh_id = mesh_ids[key]
+        for label in labels:
             writer.writerow([
-                instance_id, classes[key],
-                int(instance_id <= panoptic_count), mesh_id[0], mesh_id[1],
-                color_palette[0, mesh_id[0] * 4, 0],
-                color_palette[0, mesh_id[0], 1], color_palette[0, mesh_id[0],
-                                                               2], key
+                label["InstanceID"], label["ClassID"], label["PanopticID"],
+                label["MeshID"], label["InfraredID"],
+                color_palette[0, label["MeshID"] * 4,
+                              0], color_palette[0, label["MeshID"] * 4, 1],
+                color_palette[0, label["MeshID"] * 4, 2], label["Name"]
             ])
         writer.writerow([255, 255, 1, 255, 255, 80, 80, 80, "Unknown"])
     print "Saved labels in '%s'." % out_file_name
 
 
 if __name__ == "__main__":
+    # Args.
     get_ir_corrections = False
     apply_mesh_labels = True
     export_mesh_labels = True
@@ -218,15 +232,14 @@ if __name__ == "__main__":
               "infrared_corrections.csv"
     label_file = "/home/lukas/Documents/PanopticMapping/Data/labels.csv"
 
+    # Run.
     if get_ir_corrections:
         get_infrared_correction(ir_file)
-    if apply_mesh_labels or export_mesh_labels:
-        f_labels, f_classes, f_mesh_ids, f_panoptic_count = create_label_ids(
-            ir_file)
+    f_labels = create_label_ids(ir_file)
     if apply_mesh_labels:
-        apply_labels(f_mesh_ids)
+        apply_labels(f_labels)
     if export_mesh_labels:
-        export_labels(f_labels, f_classes, f_mesh_ids, f_panoptic_count,
-                      label_file)
+        export_labels(f_labels, label_file)
 
-    # get_available_meshes(labels)
+    # Tools.
+    # get_available_meshes(f_labels)

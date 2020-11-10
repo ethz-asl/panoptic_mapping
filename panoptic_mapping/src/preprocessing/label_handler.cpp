@@ -10,19 +10,27 @@ namespace panoptic_mapping {
 void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   // Currently assumes fixed header names in the target file. Reading
   // exceptions should be handled by the CSVReader.
-  io::CSVReader<7> in(source_file);
+  mesh_to_instance_id_.clear();
+  labels_.clear();
+
+  // Read data.
+  io::CSVReader<8> in(source_file);
   in.read_header(io::ignore_extra_column, "InstanceID", "ClassID", "PanopticID",
-                 "R", "G", "B", "Name");
+                 "MeshID", "R", "G", "B", "Name");
   std::string name;
-  int inst, cls, pan, r, g, b;
-  while (in.read_row(inst, cls, pan, r, g, b, name)) {
+  int inst, cls, pan, mesh, r, g, b;
+  while (in.read_row(inst, cls, pan, mesh, r, g, b, name)) {
+    // Label.
     LabelEntry label;
     label.segmentation_id = inst;
     label.class_id = cls;
-    label.label = pan ? PanopticLabel::kBACKGROUND : PanopticLabel::kINSTANCE;
+    label.label = pan ? PanopticLabel::kINSTANCE : PanopticLabel::kBACKGROUND;
     label.name = name;
     label.color = voxblox::Color(r, g, b);
     labels_[inst] = label;
+
+    // Mesh.
+    mesh_to_instance_id_[mesh] = inst;
   }
   LOG(INFO) << "Read " << labels_.size() << " labels from '" << source_file
             << "'.";
@@ -39,6 +47,15 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
 
 bool LabelHandler::segmentationIdExists(int segmentation_id) const {
   return labels_.find(segmentation_id) != labels_.end();
+}
+
+int LabelHandler::getSegmentationIdFromMeshId(int mesh_id) const {
+  auto it = mesh_to_instance_id_.find(mesh_id);
+  if (it != mesh_to_instance_id_.end()) {
+    return it->second;
+  } else {
+    return 255;  // Label reserved for unknown things.
+  }
 }
 
 int LabelHandler::getClassID(int segmentation_id) const {

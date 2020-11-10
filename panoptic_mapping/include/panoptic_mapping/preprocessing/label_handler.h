@@ -18,16 +18,18 @@ class LabelHandler {
     int segmentation_id = 0;
     int class_id = 0;
     PanopticLabel label = PanopticLabel::kUNKNOWN;
-    std::string name = "Name is not initialized";
+    std::string name = "UnInitializedName";
     voxblox::Color color;
   };
 
   LabelHandler() = default;
 
+  // Setup.
   void readLabelsFromFile(const std::string& source_file);
 
   // This returns true if the id was found.
   bool segmentationIdExists(int segmentation_id) const;
+  int getSegmentationIdFromMeshId(int mesh_id) const;
 
   // These acessors assume that the segmentation_id exists.
   int getClassID(int segmentation_id) const;
@@ -43,6 +45,7 @@ class LabelHandler {
  private:
   // List of the labels associated with each segmentation id.
   std::unordered_map<int, LabelEntry> labels_;
+  std::unordered_map<int, int> mesh_to_instance_id_;
 };
 
 }  // namespace panoptic_mapping

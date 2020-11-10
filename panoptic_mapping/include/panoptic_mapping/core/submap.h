@@ -1,6 +1,7 @@
 #ifndef PANOPTIC_MAPPING_CORE_SUBMAP_H_
 #define PANOPTIC_MAPPING_CORE_SUBMAP_H_
 
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -42,7 +43,7 @@ class Submap {
   // io
   void getProto(SubmapProto* proto) const;
   bool saveToStream(std::fstream* outfile_ptr) const;
-  static std::unique_ptr<Submap> loadFromStream(std::fstream* proto_file_ptr,
+  static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
   // const accessors

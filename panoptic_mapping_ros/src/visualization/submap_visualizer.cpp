@@ -248,11 +248,10 @@ void SubmapVisualizer::generateBlockMsgs(
 
     // Get color.
     Color color = kUNKNOWNCOLOR;
-    float alpha = 1.f;
+    const float alpha = 0.2f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
-      alpha = vis_it->second.alpha / 2.f;
     }
 
     for (auto& block_index : blocks) {
@@ -315,11 +314,10 @@ void SubmapVisualizer::generateBoundingVolumeMsgs(
 
     // Get color.
     Color color = kUNKNOWNCOLOR;
-    float alpha = 1.f;
+    const float alpha = 0.2f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
-      alpha = vis_it->second.alpha / 2.f;
     }
 
     visualization_msgs::Marker marker;

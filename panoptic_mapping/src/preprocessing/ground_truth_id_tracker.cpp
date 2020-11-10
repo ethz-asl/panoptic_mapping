@@ -26,6 +26,7 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("input_is_mesh_id", &input_is_mesh_id);
 }
 
 GroundTruthIDTracker::GroundTruthIDTracker(
@@ -49,7 +50,12 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
 
   // Allocate new submaps if necessary.
   for (const auto& instance : instances) {
-    allocateSubmap(instance, submaps);
+    if (config_.input_is_mesh_id) {
+      allocateSubmap(label_handler_->getSegmentationIdFromMeshId(instance),
+                     submaps);
+    } else {
+      allocateSubmap(instance, submaps);
+    }
   }
   printAndResetWarnings();
 
@@ -69,6 +75,9 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
                                              std::vector<int>* ids) {
   // Iterate through point cloud and replace labels.
   for (int& id : *ids) {
+    if (config_.input_is_mesh_id) {
+      id = label_handler_->getSegmentationIdFromMeshId(id);
+    }
     allocateSubmap(id, submaps);
     id = instance_to_id_[id];
   }
