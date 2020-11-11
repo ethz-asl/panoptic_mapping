@@ -12,7 +12,7 @@ change_detection_interval: 2.0
 
 tsdf_integrator:  
   type: projective # naive, projective, projective_multi_tsdf
-  verbosity: 4
+  verbosity: 1
   
   # projective args
   width: 640

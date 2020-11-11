@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <future>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <voxblox/integrator/merge_integration.h>
@@ -40,9 +43,12 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
     : config_(config.checkValid()) {
-  // setup the interpolator
-  interpolator_ = config_utilities::Factory::create<InterpolatorBase>(
-      config_.interpolation_method);
+  // Setup the interpolator (one for each thread.)
+  for (int i = 0; i < config_.integration_threads; ++i) {
+    interpolators_.emplace_back(
+        config_utilities::Factory::create<InterpolatorBase>(
+            config_.interpolation_method));
+  }
 
   // pre-compute the view frustum (top, right, bottom, left, plane normals)
   Eigen::Vector3f p1(-config_.vx, -config_.vy, config_.focal_length);
@@ -66,18 +72,36 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
   range_image_ = Eigen::MatrixXf(config_.height, config_.width);
 }
 
+ProjectiveIntegrator::ThreadSafeIndexGetter::ThreadSafeIndexGetter(
+    std::vector<int> indices)
+    : indices_(std::move(indices)), current_index_(0) {}
+
+bool ProjectiveIntegrator::ThreadSafeIndexGetter::getNextIndex(int* index) {
+  if (current_index_ >= indices_.size()) {
+    return false;
+  }
+  CHECK_NOTNULL(index);
+  mutex_.lock();
+  *index = indices_[current_index_];
+  current_index_++;
+  mutex_.unlock();
+  return true;
+}
+
 void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
                                          const Transformation& T_M_C,
                                          const cv::Mat& depth_image,
                                          const cv::Mat& color_image,
                                          const cv::Mat& id_image) {
-  // allocate all blocks in corresponding submaps
+  // Allocate all blocks in corresponding submaps.
   auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(submaps, T_M_C, depth_image, id_image);
   auto t2 = std::chrono::high_resolution_clock::now();
 
   // Find all active blocks that are in the field of view.
-  std::vector<voxblox::BlockIndexList> block_lists;
+  // Note(schmluk): This could potentially also be included in the parallel part
+  // but is already almost instantaneous.
+  std::unordered_map<int, voxblox::BlockIndexList> block_lists;
   std::vector<int> id_list;
   for (auto& submap_ptr : *submaps) {
     if (!submap_ptr->isActive()) {
@@ -89,16 +113,31 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
     voxblox::BlockIndexList block_list;
     findVisibleBlocks(*submap_ptr, T_M_C, &block_list);
     if (!block_list.empty()) {
-      block_lists.push_back(block_list);
-      id_list.push_back(submap_ptr->getID());
+      block_lists[submap_ptr->getID()] = block_list;
+      id_list.emplace_back(submap_ptr->getID());
     }
   }
   auto t3 = std::chrono::high_resolution_clock::now();
 
-  // integrate
-  for (size_t i = 0; i < block_lists.size(); ++i) {
-    updateSubmap(block_lists[i], submaps->getSubmapPtr(id_list[i]), T_M_C,
-                 color_image, id_image);
+  // Integrate in parallel.
+  ThreadSafeIndexGetter index_getter(id_list);
+  std::vector<std::future<bool>> threads;
+  for (int i = 0; i < config_.integration_threads; ++i) {
+    threads.emplace_back(std::async(
+        std::launch::async, [this, &index_getter, &block_lists, submaps, &T_M_C,
+                             &color_image, &id_image, i]() {
+          int index;
+          while (index_getter.getNextIndex(&index)) {
+            this->updateSubmap(submaps->getSubmapPtr(index),
+                               interpolators_[i].get(), block_lists[index],
+                               T_M_C, color_image, id_image);
+          }
+          return true;
+        }));
+  }
+  // Join all threads.
+  for (auto& thread : threads) {
+    thread.get();
   }
   auto t4 = std::chrono::high_resolution_clock::now();
 
@@ -113,21 +152,22 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
 }
 
 void ProjectiveIntegrator::updateSubmap(
-    const voxblox::BlockIndexList& block_indices, Submap* submap,
-    const Transformation& T_M_C, const cv::Mat& color_image,
-    const cv::Mat& id_image) {
+    Submap* submap, InterpolatorBase* interpolator,
+    const voxblox::BlockIndexList& block_indices, const Transformation& T_M_C,
+    const cv::Mat& color_image, const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
-  // update
+  // Update.
   for (const auto& index : block_indices) {
-    updateTsdfBlock(index, submap, T_M_C, color_image, id_image);
+    updateTsdfBlock(submap, interpolator, index, T_M_C, color_image, id_image);
   }
 }
 
-void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
-                                           Submap* submap,
+void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
+                                           InterpolatorBase* interpolator,
+                                           const voxblox::BlockIndex& index,
                                            const Transformation& T_M_C,
                                            const cv::Mat& color_image,
-                                           const cv::Mat& id_image) {
+                                           const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
   // set up preliminaries
   if (!submap->getTsdfLayer().hasBlock(index)) {
@@ -157,8 +197,8 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
     const bool is_free_space_submap =
         submap->getLabel() == PanopticLabel::kSPACE;
     if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &point_belongs_to_this_submap, p_C, color_image,
-            id_image, id, truncation_distance, voxel_size,
+            &sdf, &weight, &point_belongs_to_this_submap, interpolator, p_C,
+            color_image, id_image, id, truncation_distance, voxel_size,
             is_free_space_submap)) {
       continue;
     }
@@ -174,7 +214,7 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
       if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
         voxel.color = Color::blendTwoColors(
             voxel.color, voxel.weight,
-            interpolator_->interpolateColor(color_image), weight);
+            interpolator->interpolateColor(color_image), weight);
       }
     } else {
       // Voxels that don't belong to the submap are 'cleared' if they are in
@@ -191,9 +231,10 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
 
 bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     float* sdf, float* weight, bool* point_belongs_to_this_submap,
-    const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-    int submap_id, float truncation_distance, float voxel_size,
-    bool is_free_space_submap) {
+    InterpolatorBase* interpolator, const Point& p_C,
+    const cv::Mat& color_image, const cv::Mat& id_image, int submap_id,
+    float truncation_distance, float voxel_size,
+    bool is_free_space_submap) const {
   // Skip voxels that are too far or too close.
   if (p_C.z() < 0.0) {
     return false;
@@ -217,8 +258,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Set up the interpolator and check whether this is a clearing or an updating
   // measurement.
-  interpolator_->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
-                                range_image_, id_image);
+  interpolator->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
+                               range_image_, id_image);
   if (!(*point_belongs_to_this_submap) &&
       !(config_.foreign_rays_clear || is_free_space_submap)) {
     return false;
@@ -226,7 +267,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   //  Compute the signed distance.
   const float distance_to_surface =
-      interpolator_->interpolateDepth(range_image_);
+      interpolator->interpolateDepth(range_image_);
   const float new_sdf = distance_to_surface - distance_to_voxel;
   if (new_sdf < -truncation_distance) {
     return false;
@@ -269,7 +310,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
 void ProjectiveIntegrator::findVisibleBlocks(
     const Submap& submap, const Transformation& T_M_C,
-    voxblox::BlockIndexList* block_list) {
+    voxblox::BlockIndexList* block_list) const {
   // setup
   voxblox::BlockIndexList all_blocks;
   submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);

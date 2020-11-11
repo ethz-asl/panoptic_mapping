@@ -59,7 +59,7 @@ void Submap::getProto(SubmapProto* proto) const {
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
   cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
 
-  // Filling out the description of the submap
+  // Filling out the description of the submap.
   proto->set_instance_id(instance_id_);
   proto->set_class_id(class_id_);
   proto->set_panoptic_label(static_cast<int>(label_));
@@ -71,7 +71,7 @@ void Submap::getProto(SubmapProto* proto) const {
 
 bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   CHECK_NOTNULL(outfile_ptr);
-  // Saving the TSDF submap header
+  // Saving the TSDF submap header.
   SubmapProto submap_proto;
   getProto(&submap_proto);
   if (!voxblox::utils::writeProtoMsgToStream(submap_proto, outfile_ptr)) {
@@ -80,7 +80,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     return false;
   }
 
-  // Saving the blocks
+  // Saving the blocks.
   constexpr bool kIncludeAllBlocks = true;
   const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
