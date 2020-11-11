@@ -2,26 +2,17 @@
 
 #include <cmath>
 #include <limits>
-#include <memory>
-#include <string>
 
 namespace panoptic_mapping {
 
-std::unique_ptr<InterpolatorBase> InterpolatorFactory::create(
-    const std::string& type) {
-  if (type == "nearest") {
-    return std::make_unique<InterpolatorNearest>();
-  } else if (type == "bilinear") {
-    return std::make_unique<InterpolatorBilinear>();
-  } else if (type == "adaptive") {
-    return std::make_unique<InterpolatorAdaptive>();
-  } else if (type == "semantic") {
-    return std::make_unique<InterpolatorSemantic>();
-  } else {
-    LOG(ERROR) << "Unknown interpolator type '" << type << "'.";
-    return nullptr;
-  }
-}
+config_utilities::Factory::Registration<InterpolatorBase, InterpolatorNearest>
+    InterpolatorNearest::registration_("nearest");
+config_utilities::Factory::Registration<InterpolatorBase, InterpolatorBilinear>
+    InterpolatorBilinear::registration_("bilinear");
+config_utilities::Factory::Registration<InterpolatorBase, InterpolatorAdaptive>
+    InterpolatorAdaptive::registration_("adaptive");
+config_utilities::Factory::Registration<InterpolatorBase, InterpolatorSemantic>
+    InterpolatorSemantic::registration_("semantic");
 
 void InterpolatorNearest::computeWeights(float u, float v, int id,
                                          bool* belongs_to_this_submap,

@@ -6,11 +6,10 @@
 
 #include <opencv2/core/mat.hpp>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/core/common.h"
 
 namespace panoptic_mapping {
-
-class InterpolatorBase;
 
 /**
  * Different ways to interpolate.
@@ -29,17 +28,6 @@ class InterpolatorBase {
 };
 
 /**
- * Creation Utility.
- */
-class InterpolatorFactory {
- public:
-  static std::unique_ptr<InterpolatorBase> create(const std::string& type);
-
- private:
-  InterpolatorFactory() = default;
-};
-
-/**
  * Nearest neighbor point.
  */
 class InterpolatorNearest : public InterpolatorBase {
@@ -53,6 +41,11 @@ class InterpolatorNearest : public InterpolatorBase {
  protected:
   int u_;
   int v_;
+
+ private:
+  static config_utilities::Factory::Registration<InterpolatorBase,
+                                                 InterpolatorNearest>
+      registration_;
 };
 
 /**
@@ -70,6 +63,11 @@ class InterpolatorBilinear : public InterpolatorBase {
   int u_;
   int v_;
   float weight_[4];
+
+ private:
+  static config_utilities::Factory::Registration<InterpolatorBase,
+                                                 InterpolatorBilinear>
+      registration_;
 };
 
 /**
@@ -91,6 +89,11 @@ class InterpolatorAdaptive : public InterpolatorBilinear {
   int v_offset_[4] = {0, 1, 0, 1};
   float weight_[4];
   bool use_bilinear_;
+
+ private:
+  static config_utilities::Factory::Registration<InterpolatorBase,
+                                                 InterpolatorAdaptive>
+      registration_;
 };
 
 /**
@@ -111,6 +114,11 @@ class InterpolatorSemantic : public InterpolatorBase {
   int v_offset_[4] = {0, 1, 0, 1};
   float weight_[4];
   float total_weight_;
+
+ private:
+  static config_utilities::Factory::Registration<InterpolatorBase,
+                                                 InterpolatorSemantic>
+      registration_;
 };
 
 }  // namespace panoptic_mapping

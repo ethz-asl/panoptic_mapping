@@ -1,46 +1,54 @@
 #include "panoptic_mapping/integrator/projective_integrator.h"
 
-#include <voxblox/integrator/merge_integration.h>
-
 #include <algorithm>
 #include <chrono>
-#include <numeric>
-#include <thread>
+#include <future>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
+
+#include <voxblox/integrator/merge_integration.h>
 
 namespace panoptic_mapping {
 
-ProjectiveIntegrator::Config ProjectiveIntegrator::Config::isValid() const {
-  Config config(*this);
-  // setup default values
-  if (vx <= 0) {
-    config.vx = width / 2.0;
-  }
-  if (vy <= 0) {
-    config.vy = config.height / 2.0;
-  }
-  if (integration_threads <= 0) {
-    config.integration_threads = std::thread::hardware_concurrency();
-  }
+void ProjectiveIntegrator::Config::checkParams() const {
+  checkParamGT(height, 0, "height");
+  checkParamGT(width, 0, "width");
+  checkParamGT(vx, 0.f, "vx");
+  checkParamGT(vy, 0.f, "vy");
+  checkParamGT(focal_length, 0.f, "focal_length");
+  checkParamGT(integration_threads, 0, "integration_threads");
+  checkParamCond(vx < width, "'vx' is required < 'width'");
+  checkParamCond(vy < height, "'vy' is required < 'height'");
+}
 
-  // check params are valid
-  CHECK_GT(height, 0) << "'height' must be a positive integer.";
-  CHECK_GT(width, 0) << "'width' must be a positive integer.";
-  CHECK_GT(config.vx, 0) << "'vx' must be a positive float.";
-  CHECK_GT(config.vy, 0) << "'vy' must be a positive float.";
-  CHECK_GT(focal_length, 0) << "'focal_length' must be a positive integer.";
-  CHECK_GT(config.integration_threads, 0)
-      << "'integration_threads' must be a positive integer.";
-  CHECK_LT(config.vx, width) << "'vx' must be smaller than 'width'.";
-  CHECK_LT(config.vy, height) << "'vy' must be smaller than 'height'.";
-
-  return config;
+void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
+  setupParam("width", &width);
+  setupParam("height", &height);
+  setupParam("vx", &vx);
+  setupParam("vy", &vy);
+  setupParam("focal_length", &focal_length);
+  setupParam("max_range", &max_range);
+  setupParam("min_range", &min_range);
+  setupParam("use_weight_dropoff", &use_weight_dropoff);
+  setupParam("use_constant_weight", &use_constant_weight);
+  setupParam("foreign_rays_clear", &foreign_rays_clear);
+  setupParam("sparsity_compensation_factor", &sparsity_compensation_factor);
+  setupParam("max_weight", &max_weight);
+  setupParam("interpolation_method", &interpolation_method);
+  setupParam("integration_threads", &integration_threads);
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
-    : config_(config.isValid()) {
-  // setup the interpolator
-  interpolator_ = InterpolatorFactory::create(config_.interpolation_method);
+    : config_(config.checkValid()) {
+  // Setup the interpolator (one for each thread.)
+  for (int i = 0; i < config_.integration_threads; ++i) {
+    interpolators_.emplace_back(
+        config_utilities::Factory::create<InterpolatorBase>(
+            config_.interpolation_method));
+  }
 
   // pre-compute the view frustum (top, right, bottom, left, plane normals)
   Eigen::Vector3f p1(-config_.vx, -config_.vy, config_.focal_length);
@@ -64,36 +72,72 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
   range_image_ = Eigen::MatrixXf(config_.height, config_.width);
 }
 
+ProjectiveIntegrator::ThreadSafeIndexGetter::ThreadSafeIndexGetter(
+    std::vector<int> indices)
+    : indices_(std::move(indices)), current_index_(0) {}
+
+bool ProjectiveIntegrator::ThreadSafeIndexGetter::getNextIndex(int* index) {
+  if (current_index_ >= indices_.size()) {
+    return false;
+  }
+  CHECK_NOTNULL(index);
+  mutex_.lock();
+  *index = indices_[current_index_];
+  current_index_++;
+  mutex_.unlock();
+  return true;
+}
+
 void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
                                          const Transformation& T_M_C,
                                          const cv::Mat& depth_image,
                                          const cv::Mat& color_image,
                                          const cv::Mat& id_image) {
-  // allocate all blocks in corresponding submaps
+  // Allocate all blocks in corresponding submaps.
   auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(submaps, T_M_C, depth_image, id_image);
   auto t2 = std::chrono::high_resolution_clock::now();
 
-  // find all active blocks that are in the field of view
-  std::vector<voxblox::BlockIndexList> block_lists;
+  // Find all active blocks that are in the field of view.
+  // Note(schmluk): This could potentially also be included in the parallel part
+  // but is already almost instantaneous.
+  std::unordered_map<int, voxblox::BlockIndexList> block_lists;
   std::vector<int> id_list;
   for (auto& submap_ptr : *submaps) {
     if (!submap_ptr->isActive()) {
       continue;
     }
+    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+      continue;
+    }
     voxblox::BlockIndexList block_list;
     findVisibleBlocks(*submap_ptr, T_M_C, &block_list);
     if (!block_list.empty()) {
-      block_lists.push_back(block_list);
-      id_list.push_back(submap_ptr->getID());
+      block_lists[submap_ptr->getID()] = block_list;
+      id_list.emplace_back(submap_ptr->getID());
     }
   }
   auto t3 = std::chrono::high_resolution_clock::now();
 
-  // integrate
-  for (size_t i = 0; i < block_lists.size(); ++i) {
-    updateSubmap(block_lists[i], submaps->getSubmapPtr(id_list[i]), T_M_C,
-                 color_image, id_image);
+  // Integrate in parallel.
+  ThreadSafeIndexGetter index_getter(id_list);
+  std::vector<std::future<bool>> threads;
+  for (int i = 0; i < config_.integration_threads; ++i) {
+    threads.emplace_back(std::async(
+        std::launch::async, [this, &index_getter, &block_lists, submaps, &T_M_C,
+                             &color_image, &id_image, i]() {
+          int index;
+          while (index_getter.getNextIndex(&index)) {
+            this->updateSubmap(submaps->getSubmapPtr(index),
+                               interpolators_[i].get(), block_lists[index],
+                               T_M_C, color_image, id_image);
+          }
+          return true;
+        }));
+  }
+  // Join all threads.
+  for (auto& thread : threads) {
+    thread.get();
   }
   auto t4 = std::chrono::high_resolution_clock::now();
 
@@ -108,21 +152,22 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
 }
 
 void ProjectiveIntegrator::updateSubmap(
-    const voxblox::BlockIndexList& block_indices, Submap* submap,
-    const Transformation& T_M_C, const cv::Mat& color_image,
-    const cv::Mat& id_image) {
+    Submap* submap, InterpolatorBase* interpolator,
+    const voxblox::BlockIndexList& block_indices, const Transformation& T_M_C,
+    const cv::Mat& color_image, const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
-  // update
+  // Update.
   for (const auto& index : block_indices) {
-    updateTsdfBlock(index, submap, T_M_C, color_image, id_image);
+    updateTsdfBlock(submap, interpolator, index, T_M_C, color_image, id_image);
   }
 }
 
-void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
-                                           Submap* submap,
+void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
+                                           InterpolatorBase* interpolator,
+                                           const voxblox::BlockIndex& index,
                                            const Transformation& T_M_C,
                                            const cv::Mat& color_image,
-                                           const cv::Mat& id_image) {
+                                           const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
   // set up preliminaries
   if (!submap->getTsdfLayer().hasBlock(index)) {
@@ -137,7 +182,7 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
       T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const float voxel_size = block.voxel_size();
   const float truncation_distance =
-      voxel_size * 2.f;  // 2vs is used as an adaptive heuristic
+      voxel_size * 2.f;  // 2vs is used as an adaptive heuristic.
   const int id = submap->getID();
 
   // update all voxels
@@ -149,22 +194,27 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
     bool point_belongs_to_this_submap;
     float sdf;
     float weight;
+    const bool is_free_space_submap =
+        submap->getLabel() == PanopticLabel::kSPACE;
     if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &point_belongs_to_this_submap, p_C, color_image,
-            id_image, id, truncation_distance, voxel_size)) {
+            &sdf, &weight, &point_belongs_to_this_submap, interpolator, p_C,
+            color_image, id_image, id, truncation_distance, voxel_size,
+            is_free_space_submap)) {
       continue;
     }
 
     // Apply distance, color, and weight.
-    if (point_belongs_to_this_submap) {
+    if (point_belongs_to_this_submap || is_free_space_submap) {
       voxel.distance = (voxel.distance * voxel.weight +
-                        std::min(truncation_distance, sdf) * weight) /
+                        std::max(std::min(truncation_distance, sdf),
+                                 -1.f * truncation_distance) *
+                            weight) /
                        (voxel.weight + weight);
       // only merge color near the surface and if point belongs to the submap.
-      if (std::abs(sdf) < truncation_distance) {
+      if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
         voxel.color = Color::blendTwoColors(
             voxel.color, voxel.weight,
-            interpolator_->interpolateColor(color_image), weight);
+            interpolator->interpolateColor(color_image), weight);
       }
     } else {
       // Voxels that don't belong to the submap are 'cleared' if they are in
@@ -181,9 +231,14 @@ void ProjectiveIntegrator::updateTsdfBlock(const voxblox::BlockIndex& index,
 
 bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     float* sdf, float* weight, bool* point_belongs_to_this_submap,
-    const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-    int submap_id, float truncation_distance, float voxel_size) {
-  // skip voxels that are too far or too close
+    InterpolatorBase* interpolator, const Point& p_C,
+    const cv::Mat& color_image, const cv::Mat& id_image, int submap_id,
+    float truncation_distance, float voxel_size,
+    bool is_free_space_submap) const {
+  // Skip voxels that are too far or too close.
+  if (p_C.z() < 0.0) {
+    return false;
+  }
   const float distance_to_voxel = p_C.norm();
   if (distance_to_voxel < config_.min_range ||
       distance_to_voxel > config_.max_range) {
@@ -203,15 +258,16 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Set up the interpolator and check whether this is a clearing or an updating
   // measurement.
-  interpolator_->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
-                                range_image_, id_image);
-  if (!config_.foreign_rays_clear && !point_belongs_to_this_submap) {
+  interpolator->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
+                               range_image_, id_image);
+  if (!(*point_belongs_to_this_submap) &&
+      !(config_.foreign_rays_clear || is_free_space_submap)) {
     return false;
   }
 
-  //  compute the signed distance
+  //  Compute the signed distance.
   const float distance_to_surface =
-      interpolator_->interpolateDepth(range_image_);
+      interpolator->interpolateDepth(range_image_);
   const float new_sdf = distance_to_surface - distance_to_voxel;
   if (new_sdf < -truncation_distance) {
     return false;
@@ -228,7 +284,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   }
 
   // Apply weight drop-off if appropriate
-  if (config_.use_weight_dropoff && point_belongs_to_this_submap) {
+  if (config_.use_weight_dropoff && *point_belongs_to_this_submap) {
     const voxblox::FloatingPoint dropoff_epsilon = voxel_size;
     if (new_sdf < -dropoff_epsilon) {
       observation_weight = observation_weight *
@@ -240,7 +296,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Apply sparsity compensation if appropriate
   if (config_.sparsity_compensation_factor != 1.f &&
-      point_belongs_to_this_submap) {
+      *point_belongs_to_this_submap) {
     if (std::abs(new_sdf) < truncation_distance) {
       observation_weight *= config_.sparsity_compensation_factor;
     }
@@ -254,14 +310,14 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
 void ProjectiveIntegrator::findVisibleBlocks(
     const Submap& submap, const Transformation& T_M_C,
-    voxblox::BlockIndexList* block_list) {
+    voxblox::BlockIndexList* block_list) const {
   // setup
   voxblox::BlockIndexList all_blocks;
   submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
-  Transformation T_C_S =
+  const Transformation T_C_S =
       T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
-  float block_size = submap.getTsdfLayer().block_size();
-  float block_diag = std::sqrt(3.0f) * block_size / 2.0f;
+  const FloatingPoint block_size = submap.getTsdfLayer().block_size();
+  const FloatingPoint block_diag = std::sqrt(3.0f) * block_size / 2.0f;
 
   // iterate through all blocks
   for (auto& index : all_blocks) {
@@ -270,39 +326,63 @@ void ProjectiveIntegrator::findVisibleBlocks(
         T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
                                       2.0);  // center point of the block
 
-    // sort out points that don't meet the criteria of
-    // 1: in front, 2: close, 3: in view frustum.
-    if (p_C.z() < block_size / 2.0) {
-      continue;
+    if (blockIsInViewFrustum(p_C, block_diag)) {
+      block_list->push_back(index);
     }
-    if (p_C.norm() > max_range_in_image_ + block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[0]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[1]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[2]) < -block_diag) {
-      continue;
-    }
-    if (p_C.dot(view_frustum_[3]) < -block_diag) {
-      continue;
-    }
-    block_list->push_back(index);
   }
+}
+
+bool ProjectiveIntegrator::submapIsInViewFrustum(
+    const Submap& submap, const Transformation& T_M_C) const {
+  // Assumes the range image is read to use the cached max_range_in_image_.
+  // Sort out points that don't meet the criteria of
+  // 1: in front, 2: close, 3: in view frustum.
+  const FloatingPoint radius = submap.getBoundingVolume().getRadius();
+  const Point center_C = T_M_C.inverse() * submap.getT_M_S() *
+                         submap.getBoundingVolume().getCenter();
+  if (center_C.z() < -radius) {
+    return false;
+  }
+  if (center_C.norm() > max_range_in_image_ + radius) {
+    return false;
+  }
+  for (const Point& view_frustum_plane : view_frustum_) {
+    if (center_C.dot(view_frustum_plane) < -radius) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ProjectiveIntegrator::blockIsInViewFrustum(const Point& center_point_C,
+                                                float block_diag_half) const {
+  // Assumes the range image is read to use the cached max_range_in_image_.
+  // Sort out points that don't meet the criteria of
+  // 1: in front, 2: close, 3: in view frustum.
+  if (center_point_C.z() < -block_diag_half) {
+    return false;
+  }
+  if (center_point_C.norm() > max_range_in_image_ + block_diag_half) {
+    return false;
+  }
+  for (const Point& view_frustum_plane : view_frustum_) {
+    if (center_point_C.dot(view_frustum_plane) < -block_diag_half) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const Transformation& T_M_C,
                                              const cv::Mat& depth_image,
                                              const cv::Mat& id_image) {
-  // This method also resets the depth image
+  // This method also resets the depth image.
   range_image_.setZero();
   max_range_in_image_ = 0.f;
 
-  // parse through each point
+  // Parse through each point to allocate instance + background blocks.
+  std::unordered_set<Submap*> touched_submaps;
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float z = depth_image.at<float>(v, u);
@@ -319,8 +399,37 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const Point p_S = submap->getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
       submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+      touched_submaps.insert(submap);
     }
   }
+
+  // Allocate all potential free space blocks.
+  Submap* space = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+  const float block_size = space->getTsdfLayer().block_size();
+  const float block_diag = std::sqrt(3.f) * block_size / 2.f;
+  const Transformation T_C_S = T_M_C.inverse() * space->getT_M_S();
+  const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
+  const int max_steps = std::floor((max_range_in_image_ + block_diag) /
+                                   space->getTsdfLayer().block_size());
+  for (int x = -max_steps; x <= max_steps; ++x) {
+    for (int y = -max_steps; y <= max_steps; ++y) {
+      for (int z = -max_steps; z <= max_steps; ++z) {
+        const Point offset(x, y, z);
+        const Point candidate_S = camera_S + offset * block_size;
+        if (blockIsInViewFrustum(T_C_S * candidate_S, block_diag)) {
+          space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+        }
+      }
+    }
+  }
+
+  // Update all bounding volumes. This is currently done in every integration
+  // step since it's not too expensive and won't do anything if no new block
+  // was allocated.
+  for (auto& submap : touched_submaps) {
+    submap->getBoundingVolumePtr()->update();
+  }
+  space->getBoundingVolumePtr()->update();
 }
 
 }  // namespace panoptic_mapping

@@ -22,6 +22,9 @@ using TsdfLayer = voxblox::Layer<voxblox::TsdfVoxel>;
 using Color = voxblox::Color;
 using Colors = voxblox::Colors;
 
+// panoptic type labels.
+enum class PanopticLabel { kUNKNOWN = 0, kINSTANCE, kBACKGROUND, kSPACE };
+
 }  // namespace panoptic_mapping
 
 #endif  // PANOPTIC_MAPPING_CORE_COMMON_H_

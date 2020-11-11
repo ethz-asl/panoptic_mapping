@@ -26,6 +26,7 @@ target_link_libraries(${PROJECT_NAME}_proto ${PROTOBUF_LIBRARIES})
 cs_add_library(${PROJECT_NAME}
         src/core/submap.cpp
         src/core/submap_id.cpp
+        src/core/submap_bounding_volume.cpp
         src/core/submap_collection.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/ground_truth_id_tracker.cpp

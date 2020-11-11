@@ -16,12 +16,6 @@ class ComponentFactoryROS {
  public:
   static std::unique_ptr<IntegratorBase> createIntegrator(
       const ros::NodeHandle& nh);
-
-  static std::unique_ptr<IDTrackerBase> createIDTracker(
-      const ros::NodeHandle& nh, std::shared_ptr<LabelHandler> label_handler);
-
- private:
-  static std::string getType(const ros::NodeHandle& nh);
 };
 
 }  // namespace panoptic_mapping

@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /MarkerArray2/Namespaces1
       Splitter Ratio: 0.520588219165802
     Tree Height: 726
   - Class: rviz/Selection
@@ -26,7 +25,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ColorPcl
+    SyncSource: FreeSpaceTsdf
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -64,7 +63,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -81,14 +80,27 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
       Enabled: true
       Name: VoxbloxMultiMesh
-      Reset Mesh: false
-      Topic: /panoptic_mapper/mesh
+      Topic: /panoptic_mapper/visualization/mesh
       Unreliable: false
       Value: true
+      Visible:
+        31: true
+        32: true
+        33: true
+        34: true
+        35: true
+        36: true
+        38: true
+        39: true
+        40: true
+        41: true
+        42: true
+        43: true
+        Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
@@ -121,8 +133,8 @@ Visualization Manager:
       Value: false
     - Class: rviz/MarkerArray
       Enabled: false
-      Marker Topic: /panoptic_mapper/tsdf_blocks
-      Name: MarkerArray
+      Marker Topic: /panoptic_mapper/visualization/tsdf_blocks
+      Name: TsdfBlocks
       Namespaces:
         {}
       Queue Size: 100
@@ -141,18 +153,48 @@ Visualization Manager:
       Radius: 0.05000000074505806
       Reference Frame: <Fixed Frame>
       Value: false
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /integrator_debug
-      Name: MarkerArray
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /path_visualizer/path
-      Name: Marker
+      Name: Path
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Alpha: 0.30000001192092896
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0.6000001430511475
+      Min Color: 0; 0; 0
+      Min Intensity: -0.5992627143859863
+      Name: FreeSpaceTsdf
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 5
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic: /panoptic_mapper/visualization/free_space_tsdf
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /panoptic_mapper/visualization/bounding_volumes
+      Name: BoundingVolumes
       Namespaces:
         {}
       Queue Size: 100
@@ -185,25 +227,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 14.453932762145996
+      Distance: 16.100936889648438
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.3168801069259644
-        Y: -1.9679628610610962
-        Z: -0.0037339990958571434
+        X: -1.916404366493225
+        Y: -1.3091392517089844
+        Z: -0.7680944800376892
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0297976732254028
+      Pitch: 1.0947967767715454
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.399144649505615
+      Yaw: 0.6309665441513062
     Saved: ~
 Window Geometry:
   Displays:

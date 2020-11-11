@@ -1,28 +1,41 @@
 #ifndef PANOPTIC_MAPPING_REGISTRATION_TSDF_REGISTRATOR_H_
 #define PANOPTIC_MAPPING_REGISTRATION_TSDF_REGISTRATOR_H_
 
-#include "panoptic_mapping/core/submap.h"
-#include "panoptic_mapping/core/submap_collection.h"
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/core/common.h"
 
 namespace panoptic_mapping {
+
+class Submap;
+class SubmapCollection;
 
 /**
  * This class directly compares TSDF volumes of two submaps with each other,
  * using the registration constraints adapted from voxgraph to detect matches
  * and solve for transformations using ceres.
  */
+
 class TsdfRegistrator {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
+    int verbosity = 4;
     double min_voxel_weight = 1e-6;
     double error_threshold = -1;  // m, negative values are multiples of
     // the average voxel_size.
     bool weight_error_by_tsdf_weight = true;
-    unsigned int min_number_of_matching_points = 50;
+    int min_number_of_matching_points = 50;
     double match_rejection_percentage = 0.9;  // Percentage of points required
     // within the error threshold.
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
+  };
+
+  // Change detection data is stored with each submap.
+  struct ChangeDetectionData {
+    bool is_matched = false;
+    int matching_submap_id = 0;
   };
 
   struct ChangeDetectionResult {

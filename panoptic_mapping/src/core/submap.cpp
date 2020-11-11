@@ -9,17 +9,23 @@
 
 namespace panoptic_mapping {
 
-Submap::Config Submap::Config::isValid() const {
-  CHECK_GT(voxel_size, 0.0) << "The voxel size is expected > 0.0.";
-  CHECK_GT(voxels_per_side, 0.0) << "The voxels per side are expected > 0.";
-  return Config(*this);
+void Submap::Config::checkParams() const {
+  checkParamGT(voxel_size, 0.0, "voxel_size");
+  checkParamGT(voxels_per_side, 0.0, "voxels_per_side");
+}
+
+void Submap::Config::setupParamsAndPrinting() {
+  setupParam("voxel_size", &voxel_size);
+  setupParam("voxels_per_side", &voxels_per_side);
 }
 
 Submap::Submap(const Config& config)
-    : config_(config.isValid()),
+    : config_(config.checkValid()),
       instance_id_(-1),
       class_id_(-1),
-      is_active_(true) {
+      is_active_(true),
+      label_(PanopticLabel::kUNKNOWN),
+      bounding_volume_(*this) {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << id_.toInt();
@@ -42,6 +48,8 @@ void Submap::setT_M_S(const Transformation& T_M_S) {
   T_M_S_inv_ = T_M_S_.inverse();
 }
 
+void Submap::setLabel(const PanopticLabel& label) { label_ = label; }
+
 void Submap::finishActivePeriod() { is_active_ = false; }
 
 void Submap::getProto(SubmapProto* proto) const {
@@ -51,9 +59,10 @@ void Submap::getProto(SubmapProto* proto) const {
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
   cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
 
-  // Filling out the description of the submap
+  // Filling out the description of the submap.
   proto->set_instance_id(instance_id_);
   proto->set_class_id(class_id_);
+  proto->set_panoptic_label(static_cast<int>(label_));
   proto->set_num_blocks(num_tsdf_blocks);
   proto->set_voxel_size(tsdf_layer_->voxel_size());
   proto->set_voxels_per_side(tsdf_layer_->voxels_per_side());
@@ -62,7 +71,7 @@ void Submap::getProto(SubmapProto* proto) const {
 
 bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   CHECK_NOTNULL(outfile_ptr);
-  // Saving the TSDF submap header
+  // Saving the TSDF submap header.
   SubmapProto submap_proto;
   getProto(&submap_proto);
   if (!voxblox::utils::writeProtoMsgToStream(submap_proto, outfile_ptr)) {
@@ -71,7 +80,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     return false;
   }
 
-  // Saving the blocks
+  // Saving the blocks.
   constexpr bool kIncludeAllBlocks = true;
   const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
@@ -83,7 +92,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   return true;
 }
 
-std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
+std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
                                                uint64_t* tmp_byte_offset_ptr) {
   CHECK_NOTNULL(proto_file_ptr);
   CHECK_NOTNULL(tmp_byte_offset_ptr);
@@ -110,16 +119,17 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::fstream* proto_file_ptr,
     return nullptr;
   }
 
-  // Getting the transformation
+  // Getting the transformation.
   Transformation T_M_S;
   cblox::QuatTransformationProto transformation_proto =
       submap_proto.transform();
   cblox::conversions::transformProtoToKindr(transformation_proto, &T_M_S);
   submap->setT_M_S(T_M_S);
 
-  // other data
+  // Other data.
   submap->setInstanceID(submap_proto.instance_id());
   submap->setClassID(submap_proto.class_id());
+  submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
 
   // recompute required data
   submap->finishActivePeriod();

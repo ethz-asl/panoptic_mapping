@@ -47,15 +47,32 @@ tsdf_integrator:
 
 id_tracker:
   type: ground_truth
+  verbosity: 2
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
+  unknown_voxel_size: 0.08
+  freespace_voxel_size: 0.3
   voxels_per_side: 16
+  
+tsdf_registrator:
+  verbosity: 1
+  min_voxel_weight: 0.000001
+  error_threshold: -1 # m, negative = #voxel_sizes
+  weight_error_by_tsdf_weight: true
+  min_number_of_matching_points: 50
+  match_rejection_percentage: 0.9
   
 visualization:
   visualization_interval: 1.0
-  visualization_mode: change # submaps, instances, color, normals, classes, change
+  visualization_mode: change  # all, active, change
+  color_mode: submaps # submaps, instances, color, normals, classes, change
   submap_color_discretization: 20
   visualize_mesh: true
-  visualize_tsdf_blocks: false
+  visualize_tsdf_blocks: true
+  visualize_free_space: true
+  visualize_bounding_volumes: true
+  include_free_space: false
+#  mesh_min_weight: 0.01
+
   
 

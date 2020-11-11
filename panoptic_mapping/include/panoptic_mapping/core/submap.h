@@ -1,6 +1,7 @@
 #ifndef PANOPTIC_MAPPING_CORE_SUBMAP_H_
 #define PANOPTIC_MAPPING_CORE_SUBMAP_H_
 
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,19 +9,24 @@
 #include <voxblox/core/layer.h>
 #include <voxblox/mesh/mesh_layer.h>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/core/submap_bounding_volume.h"
 #include "panoptic_mapping/core/submap_id.h"
+#include "panoptic_mapping/registration/tsdf_registrator.h"
 
 namespace panoptic_mapping {
 
 class Submap {
  public:
-  struct Config {
+  struct Config : public config_utilities::Config<Config> {
     double voxel_size = 0.1;
     double voxels_per_side = 16;
 
-    [[nodiscard]] Config isValid() const;
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
   };
 
   // Iso-surface-points are used to check alignment and represent the surface
@@ -31,47 +37,34 @@ class Submap {
     FloatingPoint weight;
   };
 
-  struct ChangeDetectionData {
-    bool is_matched = false;
-    int matching_submap_id = 0;
-  };
-
   explicit Submap(const Config& config);
   virtual ~Submap() = default;
 
   // io
   void getProto(SubmapProto* proto) const;
   bool saveToStream(std::fstream* outfile_ptr) const;
-  static std::unique_ptr<Submap> loadFromStream(std::fstream* proto_file_ptr,
+  static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
   // const accessors
-  [[nodiscard]] int getID() const {
-    return id_.toInt();
-  }[[nodiscard]] int getInstanceID() const {
-    return instance_id_;
-  }
-  [[nodiscard]] int getClassID() const {
-    return class_id_;
-  }[[nodiscard]] const std::string& getFrameName() const {
-    return frame_name_;
-  }
-  [[nodiscard]] const TsdfLayer& getTsdfLayer() const {
-    return *tsdf_layer_;
-  }[[nodiscard]] const voxblox::MeshLayer& getMeshLayer() const {
-    return *mesh_layer_;
-  }
-  [[nodiscard]] const Transformation& getT_M_S() const {
-    return T_M_S_;
-  }[[nodiscard]] const Transformation& getT_S_M() const {
-    return T_M_S_inv_;
-  }
-  [[nodiscard]] bool isActive() const { return is_active_; }[[nodiscard]] const
-      std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
+  int getID() const { return id_.toInt(); }
+  int getInstanceID() const { return instance_id_; }
+  int getClassID() const { return class_id_; }
+  const std::string& getFrameName() const { return frame_name_; }
+  const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
+  const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
+  const Transformation& getT_M_S() const { return T_M_S_; }
+  const Transformation& getT_S_M() const { return T_M_S_inv_; }
+  bool isActive() const { return is_active_; }
+  const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
-  [[nodiscard]] const ChangeDetectionData& getChangeDetectionData() const {
+  const TsdfRegistrator::ChangeDetectionData& getChangeDetectionData() const {
     return change_detection_data_;
+  }
+  PanopticLabel getLabel() const { return label_; }
+  const SubmapBoundingVolume& getBoundingVolume() const {
+    return bounding_volume_;
   }
 
   // modifying accessors
@@ -82,28 +75,32 @@ class Submap {
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
     return &iso_surface_points_;
   }
-  ChangeDetectionData* getChangeDetectionDataPtr() {
+  TsdfRegistrator::ChangeDetectionData* getChangeDetectionDataPtr() {
     return &change_detection_data_;
   }
+  SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
 
   // setters
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
   void setFrameName(const std::string& name) { frame_name_ = name; }
+  void setLabel(const PanopticLabel& label);
 
   // processing
   void finishActivePeriod();
 
  private:
   friend class SubmapCollection;
-
   const Config config_;
 
-  // state
+  // Labels.
   const SubmapID id_;
   int instance_id_;
   int class_id_;
+  PanopticLabel label_;
+
+  // State.
   bool is_active_;
 
   // transformation
@@ -111,11 +108,14 @@ class Submap {
   Transformation T_M_S_;  // Transformation mission to submap.
   Transformation T_M_S_inv_;
 
-  // map
+  // Map.
   std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
+
+  // Data.
   std::vector<IsoSurfacePoint> iso_surface_points_;
-  ChangeDetectionData change_detection_data_;
+  TsdfRegistrator::ChangeDetectionData change_detection_data_;
+  SubmapBoundingVolume bounding_volume_;
 };
 
 }  // namespace panoptic_mapping

@@ -1,22 +1,28 @@
 <launch>
-  <!-- Arguments -->
+<!-- ============ Arguments ============ -->
+  <!-- Dataset -->
   <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run1.bag"/> 
-  <arg name="config" default="devel_mapper_cfg"/>
   <arg name="bag_play_rate" default="1"/>
+  <arg name="use_sim_time" default="false"/>
+    
+  <!-- Mapper -->
+  <arg name="config" default="devel_mapper"/>
   <arg name="use_image_input" default = "true"/>
-  <arg name="load_map" default = "true"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run2.panmap"/>
+  
+  <!-- Load maps -->
+  <arg name="load_map" default = "false"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run1.panmap"/>
 
 
 
-  <!-- Run -->
-  <param name="/use_sim_time" value="true" />
+<!-- ============ Run ============ -->
+  <param name="/use_sim_time" value="$(arg use_sim_time)" />
   
   <!-- Play data -->
   <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate) -d 3"/>
 
-  <!-- RVIZ Visualization -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/cfg/devel_vis.rviz" output="screen"/>
+  <!-- RVIZ Visualization-->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/devel_vis.rviz" output="screen"/>
 
   <!-- Path visualization -->
   <node name="path_visualizer" pkg="panoptic_mapping_ros" type="path_visualizer.py" output="screen">
@@ -26,8 +32,8 @@
   </node>
   
   <!-- Mapper -->
-  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" args="-logtostderr">
-    <rosparam file="$(find panoptic_mapping_ros)/cfg/$(arg config).yaml" />
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen">
+    <rosparam file="$(find panoptic_mapping_ros)/config/$(arg config).yaml" />
     <remap from="pointcloud_in" to="/airsim_drone/Pointcloud" unless="$(arg use_image_input)"/>
     <remap from="color_image_in" to="/airsim_drone/Scene_cam" if="$(arg use_image_input)"/>
     <remap from="depth_image_in" to="/airsim_drone/Depth_cam" if="$(arg use_image_input)"/>
@@ -38,7 +44,7 @@
   <node name="map_loader" pkg="panoptic_mapping_ros" type="map_loader.py" if="$(arg load_map)">
      <param name="path" value="$(arg load_file)" /> 
      <param name="srv_name" value="/panoptic_mapper/load_map" /> 
-     <param name="delay" value="0.25" /> 
+     <param name="delay" value="1.0" /> 
   </node>  
 
 </launch>

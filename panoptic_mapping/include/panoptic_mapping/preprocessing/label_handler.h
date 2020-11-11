@@ -14,32 +14,38 @@ namespace panoptic_mapping {
 
 class LabelHandler {
  public:
-  struct Label {
+  struct LabelEntry {
     int segmentation_id = 0;
-    int class_label = 0;
-    bool is_background_class = true;
-    std::string name = "Name is not initialized";
+    int class_id = 0;
+    PanopticLabel label = PanopticLabel::kUNKNOWN;
+    std::string name = "UnInitializedName";
     voxblox::Color color;
   };
 
   LabelHandler() = default;
 
+  // Setup.
   void readLabelsFromFile(const std::string& source_file);
 
-  // these return true if the id was found
+  // This returns true if the id was found.
   bool segmentationIdExists(int segmentation_id) const;
+  int getSegmentationIdFromMeshId(int mesh_id) const;
 
-  // these acessors assume that the segmentation_id exists
-  int getClassLabel(int segmentation_id) const;
+  // These acessors assume that the segmentation_id exists.
+  int getClassID(int segmentation_id) const;
   bool isBackgroundClass(int segmentation_id) const;
   bool isInstanceClass(int segmentation_id) const;
+  bool isUknownClass(int segmentation_id) const;
+  bool isSpaceClass(int segmentation_id) const;
+  PanopticLabel getPanopticLabel(int segmentation_id) const;
   const voxblox::Color& getColor(int segmentation_id) const;
   const std::string& getName(int segmentation_id) const;
-  const Label& getLabel(int segmentation_id) const;
+  const LabelEntry& getLabelEntry(int segmentation_id) const;
 
  private:
-  // list of the labels associated with each segmentation id
-  std::unordered_map<int, Label> labels_;
+  // List of the labels associated with each segmentation id.
+  std::unordered_map<int, LabelEntry> labels_;
+  std::unordered_map<int, int> mesh_to_instance_id_;
 };
 
 }  // namespace panoptic_mapping

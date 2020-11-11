@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap.h"
 
@@ -30,13 +31,17 @@ class SubmapCollection {
   void addSubmap(std::unique_ptr<Submap> submap);
   Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
-  const Submap& getSubmap(int id) const;  // This assumes that the id exists.
-  Submap* getSubmapPtr(int id) const;     // This assumes that the id exists.
   void clear();
 
   // Accessors.
   size_t size() const { return submaps_.size(); }
   bool submapIdExists(int id) const;  // Check whether id exists.
+  const Submap& getSubmap(int id) const;  // This assumes that the id exists.
+  Submap* getSubmapPtr(int id) const;     // This assumes that the id exists.
+  int getActiveFreeSpaceSubmapID() const { return active_freespace_submap_id_; }
+
+  // Setters.
+  void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
 
   // Tools.
   void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
@@ -45,6 +50,7 @@ class SubmapCollection {
  private:
   std::vector<std::unique_ptr<Submap>> submaps_;
   std::unordered_map<int, size_t> id_to_index_;
+  int active_freespace_submap_id_ = -1;
 };
 
 }  // namespace panoptic_mapping

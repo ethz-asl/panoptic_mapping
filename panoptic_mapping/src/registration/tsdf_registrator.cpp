@@ -2,19 +2,32 @@
 
 #include <voxblox/mesh/mesh_integrator.h>
 
+#include "panoptic_mapping/core/submap.h"
+#include "panoptic_mapping/core/submap_collection.h"
+
 namespace panoptic_mapping {
 
-TsdfRegistrator::Config TsdfRegistrator::Config::isValid() const {
-  CHECK_NE(error_threshold, 0.0);
-  return Config(*this);
+void TsdfRegistrator::Config::checkParams() const {
+  checkParamNE(error_threshold, 0.0, "error_threshold");
+  checkParamGT(min_number_of_matching_points, 0,
+               "min_number_of_matching_points");
+}
+
+void TsdfRegistrator::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
+  setupParam("min_voxel_weight", &min_voxel_weight);
+  setupParam("error_threshold", &error_threshold);
+  setupParam("weight_error_by_tsdf_weight", &weight_error_by_tsdf_weight);
+  setupParam("min_number_of_matching_points", &min_number_of_matching_points);
+  setupParam("match_rejection_percentage", &match_rejection_percentage);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
-    : config_(config.isValid()) {}
+    : config_(config.checkValid()) {}
 
 void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
   // NOTE(schmluk): Currently all surface points are computed from scratch every
-  // time, but since they are currently only computed when a submpa is finished
+  // time, but since they are currently only computed when a submap is finished
   // it should be fine.
   CHECK_NOTNULL(submap);
   submap->getIsoSurfacePointsPtr()->clear();
@@ -121,16 +134,17 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
   // TODO(schmluk): Extend to track for deleted/deactivated submaps later.
   for (const auto& submap : submaps) {
-    std::cout << submap->getID() << ": active " << submap->isActive()
-              << ", matched " << submap->getChangeDetectionData().is_matched
-              << "-" << submap->getChangeDetectionData().matching_submap_id
-              << " n_iso_p: " << submap->getIsoSurfacePoints().size()
-              << std::endl;
+    //    std::cout << submap->getID() << ": active " << submap->isActive()
+    //              << ", matched " <<
+    //              submap->getChangeDetectionData().is_matched
+    //              << "-" <<
+    //              submap->getChangeDetectionData().matching_submap_id
+    //              << " n_iso_p: " << submap->getIsoSurfacePoints().size()
+    //              << std::endl;
 
     // Only match all active submaps vs inactive ones.
     if (submap->isActive()) {
-      Submap::ChangeDetectionData* change_data =
-          submap->getChangeDetectionDataPtr();
+      ChangeDetectionData* change_data = submap->getChangeDetectionDataPtr();
       if (change_data->is_matched) {
         // Check if the match still holds.
         Submap* matched_submap =

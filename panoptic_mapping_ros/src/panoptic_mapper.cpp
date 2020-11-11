@@ -21,67 +21,27 @@
 
 namespace panoptic_mapping {
 
+void PanopticMapper::Config::checkParams() const {
+  checkParamGT(max_image_queue_length, 0, "max_image_queue_length");
+}
+
+void PanopticMapper::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
+  setupParam("max_image_queue_length", &max_image_queue_length);
+  setupParam("global_frame_name", &global_frame_name);
+  setupParam("visualization_interval", &visualization_interval);
+  setupParam("change_detection_interval", &change_detection_interval);
+}
+
 PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
                                const ::ros::NodeHandle& nh_private)
-    : nh_(nh), nh_private_(nh_private) {
-  setupConfigFromRos();
+    : nh_(nh),
+      nh_private_(nh_private),
+      config_(
+          config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
+              .checkValid()) {
   setupMembers();
   setupRos();
-}
-
-void PanopticMapper::setupConfigFromRos() {
-  nh_private_.param("verbosity", config_.verbosity, config_.verbosity);
-  nh_private_.param("max_image_queue_length", config_.max_image_queue_length,
-                    config_.max_image_queue_length);
-  nh_private_.param("global_frame_name", config_.global_frame_name,
-                    config_.global_frame_name);
-  nh_private_.param("visualization/visualization_interval",
-                    config_.visualization_interval,
-                    config_.visualization_interval);
-  nh_private_.param("change_detection_interval",
-                    config_.change_detection_interval,
-                    config_.change_detection_interval);
-}
-
-void PanopticMapper::setupRos() {
-  // Subscribers.
-  pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10,
-                                  &PanopticMapper::pointcloudCallback, this);
-  depth_image_sub_ =
-      nh_.subscribe("depth_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::depthImageCallback, this);
-  color_image_sub_ =
-      nh_.subscribe("color_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::colorImageCallback, this);
-  segmentation_image_sub_ =
-      nh_.subscribe("segmentation_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::segmentationImageCallback, this);
-
-  // Publishers.
-  mesh_pub_ = nh_private_.advertise<voxblox_msgs::MultiMesh>("mesh", 100, true);
-  tsdf_blocks_pub_ = nh_private_.advertise<visualization_msgs::MarkerArray>(
-      "tsdf_blocks", 100, true);
-
-  // Services.
-  save_map_srv_ = nh_private_.advertiseService(
-      "save_map", &PanopticMapper::saveMapCallback, this);
-  load_map_srv_ = nh_private_.advertiseService(
-      "load_map", &PanopticMapper::loadMapCallback, this);
-  set_visualization_mode_srv_ = nh_private_.advertiseService(
-      "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
-      this);
-
-  // Timers.
-  if (config_.visualization_interval > 0.0) {
-    visualization_timer_ = nh_private_.createTimer(
-        ros::Duration(config_.visualization_interval),
-        &PanopticMapper::publishVisualizationCallback, this);
-  }
-  if (config_.change_detection_interval > 0.0) {
-    change_detection_timer_ = nh_private_.createTimer(
-        ros::Duration(config_.change_detection_interval),
-        &PanopticMapper::changeDetectionCallback, this);
-  }
 }
 
 void PanopticMapper::setupMembers() {
@@ -98,18 +58,59 @@ void PanopticMapper::setupMembers() {
   // visualization
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-      getSubmapVisualizerConfigFromRos(visualization_nh), label_handler_);
+      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
+          visualization_nh),
+      label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // id tracking
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
-  id_tracker_ =
-      ComponentFactoryROS::createIDTracker(id_tracker_nh, label_handler_);
+  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
+      id_tracker_nh, label_handler_);
 
   // tsdf registrator
   ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
   tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
-      getTsdfRegistatorConfigFromRos(registrator_nh));
+      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
+          registrator_nh));
+}
+
+void PanopticMapper::setupRos() {
+  // Subscribers.
+  pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10,
+                                  &PanopticMapper::pointcloudCallback, this);
+  depth_image_sub_ =
+      nh_.subscribe("depth_image_in", config_.max_image_queue_length,
+                    &PanopticMapper::depthImageCallback, this);
+  color_image_sub_ =
+      nh_.subscribe("color_image_in", config_.max_image_queue_length,
+                    &PanopticMapper::colorImageCallback, this);
+  segmentation_image_sub_ =
+      nh_.subscribe("segmentation_image_in", config_.max_image_queue_length,
+                    &PanopticMapper::segmentationImageCallback, this);
+
+  // Services.
+  save_map_srv_ = nh_private_.advertiseService(
+      "save_map", &PanopticMapper::saveMapCallback, this);
+  load_map_srv_ = nh_private_.advertiseService(
+      "load_map", &PanopticMapper::loadMapCallback, this);
+  set_visualization_mode_srv_ = nh_private_.advertiseService(
+      "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
+      this);
+  set_color_mode_srv_ = nh_private_.advertiseService(
+      "set_color_mode", &PanopticMapper::setColorModeCallback, this);
+
+  // Timers.
+  if (config_.visualization_interval > 0.0) {
+    visualization_timer_ = nh_private_.createTimer(
+        ros::Duration(config_.visualization_interval),
+        &PanopticMapper::publishVisualizationCallback, this);
+  }
+  if (config_.change_detection_interval > 0.0) {
+    change_detection_timer_ = nh_private_.createTimer(
+        ros::Duration(config_.change_detection_interval),
+        &PanopticMapper::changeDetectionCallback, this);
+  }
 }
 
 void PanopticMapper::processImages(
@@ -215,27 +216,11 @@ void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
-  // update meshes
-  publishMeshes();
-
-  // visualize tsdf blocks
-  publishTsdfBlocks();
+  publishVisualization();
 }
 
-void PanopticMapper::publishMeshes() {
-  // let the visualizer do all the work
-  std::vector<voxblox_msgs::MultiMesh> msgs;
-  submap_visualizer_->generateMeshMsgs(&submaps_, &msgs);
-  for (auto& msg : msgs) {
-    mesh_pub_.publish(msg);
-  }
-}
-
-void PanopticMapper::publishTsdfBlocks() {
-  // let the visualizer do all the work
-  visualization_msgs::MarkerArray markers;
-  submap_visualizer_->generateBlockMsgs(submaps_, &markers);
-  tsdf_blocks_pub_.publish(markers);
+void PanopticMapper::publishVisualization() {
+  submap_visualizer_->visualizeAll(&submaps_);
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
@@ -308,13 +293,23 @@ void PanopticMapper::findMatchingMessagesToPublish(
 bool PanopticMapper::setVisualizationModeCallback(
     voxblox_msgs::FilePath::Request& request,
     voxblox_msgs::FilePath::Response& response) {
-  SubmapVisualizer::VisualizationMode coloring_mode =
+  SubmapVisualizer::VisualizationMode visualization_mode =
       SubmapVisualizer::visualizationModeFromString(request.file_path);
-  submap_visualizer_->setVisualizationMode(coloring_mode);
-  publishMeshes();
-  LOG(INFO) << "Set coloring mode to '"
-            << SubmapVisualizer::visualizationModeToString(coloring_mode)
+  submap_visualizer_->setVisualizationMode(visualization_mode);
+  LOG(INFO) << "Set visualization mode to '"
+            << SubmapVisualizer::visualizationModeToString(visualization_mode)
             << "'.";
+  return true;
+}
+
+bool PanopticMapper::setColorModeCallback(
+    voxblox_msgs::FilePath::Request& request,
+    voxblox_msgs::FilePath::Response& response) {
+  SubmapVisualizer::ColorMode color_mode =
+      SubmapVisualizer::colorModeFromString(request.file_path);
+  submap_visualizer_->setColorMode(color_mode);
+  LOG(INFO) << "Set visualization mode to '"
+            << SubmapVisualizer::colorModeToString(color_mode) << "'.";
   return true;
 }
 
@@ -368,10 +363,9 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
 bool PanopticMapper::loadMap(const std::string& file_path) {
   // Clear the current maps.
   submaps_.clear();
-  submap_visualizer_->reset();
 
   // Open and check the file.
-  std::fstream proto_file;
+  std::ifstream proto_file;
   proto_file.open(file_path, std::fstream::in);
   if (!proto_file.is_open()) {
     LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";
@@ -400,14 +394,16 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     // Re-compute cached data and set the relevant flags.
     submap_ptr->finishActivePeriod();
     tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
+    submap_ptr->getBoundingVolumePtr()->update();
 
     // add to the collection
     submaps_.addSubmap(std::move(submap_ptr));
   }
   proto_file.close();
 
-  // reproduce the mesh and visualization
-  publishMeshes();
+  // Reproduce the mesh and visualization.
+  submap_visualizer_->reset();
+  submap_visualizer_->visualizeAll(&submaps_);
 
   LOG(INFO) << "Successfully loaded " << submaps_.size() << "/"
             << submap_collection_proto.num_submaps() << " submaps.";
