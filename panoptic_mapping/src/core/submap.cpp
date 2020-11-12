@@ -21,10 +21,6 @@ void Submap::Config::setupParamsAndPrinting() {
 
 Submap::Submap(const Config& config)
     : config_(config.checkValid()),
-      instance_id_(-1),
-      class_id_(-1),
-      is_active_(true),
-      label_(PanopticLabel::kUNKNOWN),
       bounding_volume_(*this) {
   // Default values.
   std::stringstream ss;
@@ -48,9 +44,13 @@ void Submap::setT_M_S(const Transformation& T_M_S) {
   T_M_S_inv_ = T_M_S_.inverse();
 }
 
-void Submap::setLabel(const PanopticLabel& label) { label_ = label; }
-
-void Submap::finishActivePeriod() { is_active_ = false; }
+void Submap::finishActivePeriod() {
+  // TODO(schmluk): at the moment these things are specifically set when loading
+  // submaps, need to update automatically once submaps can go out of scope.
+  is_active_ = false;
+  change_detection_data_.state = ChangeDetectionData::State::kUnobserved;
+  bounding_volume_.update();
+}
 
 void Submap::getProto(SubmapProto* proto) const {
   CHECK_NOTNULL(proto);
@@ -97,7 +97,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   CHECK_NOTNULL(proto_file_ptr);
   CHECK_NOTNULL(tmp_byte_offset_ptr);
 
-  // Getting the header for this submap
+  // Getting the header for this submap.
   SubmapProto submap_proto;
   if (!voxblox::utils::readProtoMsgFromStream(proto_file_ptr, &submap_proto,
                                               tmp_byte_offset_ptr)) {
@@ -105,13 +105,13 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
     return nullptr;
   }
 
-  // Creating a new submap to hold the data
+  // Creating a new submap to hold the data.
   Config cfg;
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   auto submap = std::make_unique<Submap>(cfg);
 
-  // Getting the tsdf blocks for this submap (the tsdf layer)
+  // Getting the tsdf blocks for this submap (the tsdf layer).
   if (!voxblox::io::LoadBlocksFromStream(
           submap_proto.num_blocks(), TsdfLayer::BlockMergingStrategy::kReplace,
           proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
@@ -131,7 +131,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
 
-  // recompute required data
+  // Recompute required data.
   submap->finishActivePeriod();
   return submap;
 }

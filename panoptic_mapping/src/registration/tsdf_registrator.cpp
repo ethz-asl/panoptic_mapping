@@ -1,5 +1,7 @@
 #include "panoptic_mapping/registration/tsdf_registrator.h"
 
+#include <algorithm>
+
 #include <voxblox/mesh/mesh_integrator.h>
 
 #include "panoptic_mapping/core/submap.h"
@@ -8,22 +10,28 @@
 namespace panoptic_mapping {
 
 void TsdfRegistrator::Config::checkParams() const {
-  checkParamNE(error_threshold, 0.0, "error_threshold");
-  checkParamGT(min_number_of_matching_points, 0,
-               "min_number_of_matching_points");
+  checkParamNE(error_threshold, 0.f, "error_threshold");
+  checkParamGE(min_voxel_weight, 0.f, "min_voxel_weight");
+  checkParamGE(match_rejection_points, 0, "match_rejection_points");
+  checkParamGE(match_rejection_percentage, 0.f, "match_rejection_percentage");
+  checkParamGE(match_acceptance_points, 0, "match_acceptance_points");
+  checkParamGE(match_acceptance_percentage, 0.f, "match_acceptance_percentage");
 }
 
 void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("min_voxel_weight", &min_voxel_weight);
   setupParam("error_threshold", &error_threshold);
-  setupParam("weight_error_by_tsdf_weight", &weight_error_by_tsdf_weight);
-  setupParam("min_number_of_matching_points", &min_number_of_matching_points);
+  setupParam("error_threshold", &error_threshold);
   setupParam("match_rejection_percentage", &match_rejection_percentage);
+  setupParam("match_acceptance_points", &match_acceptance_points);
+  setupParam("match_acceptance_percentage", &match_acceptance_percentage);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
-    : config_(config.checkValid()) {}
+    : config_(config.checkValid()) {
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+}
 
 void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
   // NOTE(schmluk): Currently all surface points are computed from scratch every
@@ -32,7 +40,7 @@ void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
   CHECK_NOTNULL(submap);
   submap->getIsoSurfacePointsPtr()->clear();
 
-  // Initialize the mesh layer with new points
+  // Initialize the mesh layer with new points.
   const float voxel_size = submap->getTsdfLayer().voxel_size();
   const float block_size = submap->getTsdfLayer().block_size();
   voxblox::MeshLayer mesh_layer(block_size);
@@ -63,140 +71,127 @@ void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
       CHECK_LE(voxel.distance, 1e-2 * voxel_size);
 
       // Store the isosurface vertex.
-      submap->getIsoSurfacePointsPtr()->emplace_back(Submap::IsoSurfacePoint{
+      submap->getIsoSurfacePointsPtr()->emplace_back(IsoSurfacePoint{
           mesh_vertex_coordinates, voxel.distance, voxel.weight});
     }
   }
 }
 
-TsdfRegistrator::ChangeDetectionResult
-TsdfRegistrator::computeSurfaceDifference(Submap* reference,
-                                          Submap* other) const {
-  // NOTE(schmluk): 'reference' is the submap under construction, 'other' is the
-  // finished submap containing the isosurface points.
-  CHECK_NOTNULL(reference);
-  CHECK_NOTNULL(other);
-
-  // Set up data and intzerpolator.
-  const double distance_threshold =
-      config_.error_threshold > 0.0
-          ? config_.error_threshold
-          : config_.error_threshold * -0.5 *
-                (reference->getTsdfLayer().voxel_size() +
-                 other->getTsdfLayer().voxel_size());
-  ChangeDetectionResult result;
-  double squared_error = 0.0;
-  double total_weight = 0.0;
-  voxblox::Interpolator<TsdfVoxel> interpolator(
-      reference->getTsdfLayerPtr().get());
-
-  // Iterate through all points in other.
-  for (const auto& point : other->getIsoSurfacePoints()) {
-    // Check minimum weight other point weight.
-    if (point.weight < config_.min_voxel_weight) {
-      continue;
-    }
-
-    // Try to interpolate the voxel in the reference map.
-    TsdfVoxel voxel;
-    if (!interpolator.getVoxel(point.position, &voxel, true)) {
-      result.number_of_checked_points++;
-      continue;
-    }
-
-    // Check minimum reference weight.
-    if (voxel.weight < config_.min_voxel_weight) {
-      continue;
-    }
-
-    // The distance on the surface should be 0.
-    double error = std::abs(voxel.distance);
-    double weight = 1.0;
-    if (config_.weight_error_by_tsdf_weight) {
-      weight = voxel.weight * point.weight;
-    }
-    squared_error += weight * error * error;
-    total_weight += weight;
-    if (error <= distance_threshold) {
-      result.points_within_threshold++;
-    }
-    result.number_of_observed_points++;
-    result.number_of_checked_points++;
-  }
-  result.distance_rmse =
-      total_weight != 0.0 ? std::sqrt(squared_error / total_weight) : 0.0;
-  return result;
-}
-
 void TsdfRegistrator::checkSubmapCollectionForChange(
-    const SubmapCollection& submaps) {
-  std::cout << " ===== Checking for change ===== " << std::endl;
-
-  // TODO(schmluk): Extend to track for deleted/deactivated submaps later.
+    const SubmapCollection& submaps) const {
+  auto t_start = std::chrono::high_resolution_clock::now();
   for (const auto& submap : submaps) {
-    //    std::cout << submap->getID() << ": active " << submap->isActive()
-    //              << ", matched " <<
-    //              submap->getChangeDetectionData().is_matched
-    //              << "-" <<
-    //              submap->getChangeDetectionData().matching_submap_id
-    //              << " n_iso_p: " << submap->getIsoSurfacePoints().size()
-    //              << std::endl;
+    // Check all unobserved and persistent maps for changes.
+    // NOTE(Schmluk): At the moment objects can't move so they stay absent
+    // forever. Need to change this once PGO is supported.
+    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+      continue;
+    }
+    if (submap->getChangeDetectionData().state !=
+            ChangeDetectionData::State::kUnobserved &&
+        submap->getChangeDetectionData().state !=
+            ChangeDetectionData::State::kPersistent) {
+      continue;
+    }
 
-    // Only match all active submaps vs inactive ones.
-    if (submap->isActive()) {
-      ChangeDetectionData* change_data = submap->getChangeDetectionDataPtr();
-      if (change_data->is_matched) {
-        // Check if the match still holds.
-        Submap* matched_submap =
-            submaps.getSubmapPtr(change_data->matching_submap_id);
-        ChangeDetectionResult change_detection_result =
-            computeSurfaceDifference(submap.get(), matched_submap);
-        if (!isMatch(change_detection_result)) {
-          std::cout << "Previous match deleted." << std::endl;
-          change_data->is_matched = false;
-          matched_submap->getChangeDetectionDataPtr()->is_matched = false;
+    // Find all potentially overlapping submaps and check for conflicts.
+    for (const auto& other : submaps) {
+      if (!other->isActive() ||
+          !submap->getBoundingVolume().intersects(other->getBoundingVolume())) {
+        continue;
+      }
+      ChangeDetectionData* change = submap->getChangeDetectionDataPtr();
+      bool is_match = false;
+      if (submapsConflict(*submap, *other, &is_match)) {
+        // No conflicts allowed, update also the matched submap if it exists.
+        if (change->state == ChangeDetectionData::State::kMatched) {
+          submaps.getSubmapPtr(change->matched_submap_id)
+              ->getChangeDetectionDataPtr()
+              ->state = ChangeDetectionData::State::kNew;
         }
-      } else {
-        // Compare against all inactive submaps of the same class for a match.
-        for (const auto& candidate : submaps) {
-          if (candidate->isActive()) {
-            continue;
-          }
-
-          if (candidate->getClassID() == submap->getClassID()) {
-            ChangeDetectionResult change_detection_result =
-                computeSurfaceDifference(submap.get(), candidate.get());
-            if (isMatch(change_detection_result)) {
-              std::cout << "Found new match to: " << candidate->getID()
-                        << std::endl;
-              change_data->is_matched = true;
-              change_data->matching_submap_id = candidate->getID();
-              candidate->getChangeDetectionDataPtr()->is_matched = true;
-              candidate->getChangeDetectionDataPtr()->matching_submap_id =
-                  submap->getID();
-            }
-          }
-        }
+        change->state = ChangeDetectionData::State::kAbsent;
+        break;
+      } else if (submap->getClassID() == other->getClassID() && is_match) {
+        // Geometry and semantic class match.
+        change->state = ChangeDetectionData::State::kPersistent;
+        change->matched_submap_id = other->getID();
+        other->getChangeDetectionDataPtr()->state =
+            ChangeDetectionData::State::kMatched;
+        other->getChangeDetectionDataPtr()->matched_submap_id = submap->getID();
       }
     }
   }
+  auto t_end = std::chrono::high_resolution_clock::now();
+  LOG_IF(INFO, config_.verbosity >= 2)
+      << "Performed change detection in "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)
+             .count()
+      << "ms.";
 }
 
-bool TsdfRegistrator::isMatch(const ChangeDetectionResult& change_data) const {
-  // Currently just check whether minimum number of points is observed and the
-  // majority of points matches.
-  if (change_data.number_of_observed_points <
-      config_.min_number_of_matching_points) {
+bool TsdfRegistrator::submapsConflict(const Submap& reference,
+                                      const Submap& other,
+                                      bool* is_match) const {
+  // Reference is the finished submap (with Iso-surfce-points) that is compared
+  // to the active submap other.
+  const unsigned int rejection_count =
+      std::min(config_.match_rejection_points,
+               static_cast<int>(config_.match_rejection_percentage *
+                                other.getIsoSurfacePoints().size()));
+  const float rejection_distance =
+      config_.error_threshold > 0
+          ? config_.error_threshold
+          : config_.error_threshold * -1.f * other.getTsdfLayer().voxel_size();
+  const float direction_multiplier =
+      other.getLabel() == PanopticLabel::kFreeSpace ? 1.f : -1.f;
+  unsigned int conflicting_points = 0;
+  unsigned int matching_points = 0;
+  voxblox::Interpolator<TsdfVoxel> interpolator(&(other.getTsdfLayer()));
+
+  // Check for disagreement.
+  float distance;
+  for (const auto& point : reference.getIsoSurfacePoints()) {
+    if (getDistanceAtPoint(&distance, point, interpolator)) {
+      if (distance * direction_multiplier > rejection_distance) {
+        conflicting_points++;
+        if (conflicting_points >= rejection_count) {
+          return true;
+        }
+      } else {
+        matching_points++;
+      }
+    }
+  }
+  if (is_match) {
+    const unsigned int acceptance_count =
+        std::min(config_.match_acceptance_points,
+                 static_cast<int>(config_.match_acceptance_percentage *
+                                  other.getIsoSurfacePoints().size()));
+    *is_match = matching_points >= acceptance_count;
+  }
+  return false;
+}
+
+bool TsdfRegistrator::getDistanceAtPoint(
+    float* distance, const IsoSurfacePoint& point,
+    const voxblox::Interpolator<TsdfVoxel>& interpolator) const {
+  // Check minimum input point weight.
+  if (point.weight < config_.min_voxel_weight) {
     return false;
   }
-  if (static_cast<double>(change_data.points_within_threshold) /
-          static_cast<double>(change_data.number_of_observed_points) <
-      config_.match_rejection_percentage) {
+  // Try to interpolate the voxel in the  map.
+  // NOTE(Schmluk): This also interpolates color etc, but otherwise the
+  // interpolation lookup has to be done twice. Getting only what we want is
+  // also in voxblox::interpolator but private. Atm not performance critical.
+  TsdfVoxel voxel;
+  if (!interpolator.getVoxel(point.position, &voxel, true)) {
     return false;
   }
+  if (voxel.weight < config_.min_voxel_weight) {
+    return false;
+  }
+  *distance = voxel.distance;
   return true;
 }
-
-void TsdfRegistrator::resetChangeTracking() {}
 
 }  // namespace panoptic_mapping

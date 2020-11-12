@@ -1,7 +1,7 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- Dataset -->
-  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run1.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run2.bag"/> 
   <arg name="bag_play_rate" default="1"/>
   <arg name="use_sim_time" default="false"/>
     
@@ -10,7 +10,7 @@
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
-  <arg name="load_map" default = "false"/>
+  <arg name="load_map" default = "true"/>
   <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run1.panmap"/>
 
 
@@ -19,7 +19,7 @@
   <param name="/use_sim_time" value="$(arg use_sim_time)" />
   
   <!-- Play data -->
-  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate) -d 3"/>
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate) -d 2 -s 1"/>
 
   <!-- RVIZ Visualization-->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/devel_vis.rviz" output="screen"/>
@@ -44,7 +44,7 @@
   <node name="map_loader" pkg="panoptic_mapping_ros" type="map_loader.py" if="$(arg load_map)">
      <param name="path" value="$(arg load_file)" /> 
      <param name="srv_name" value="/panoptic_mapper/load_map" /> 
-     <param name="delay" value="1.0" /> 
+     <param name="delay" value="0.25" /> 
   </node>  
 
 </launch>

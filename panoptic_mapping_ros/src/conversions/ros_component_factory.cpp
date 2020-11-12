@@ -17,7 +17,7 @@ std::unique_ptr<IntegratorBase> ComponentFactoryROS::createIntegrator(
   nh.param("type", type, std::string("type param is not set"));
   if (type == "naive") {
     // Specific implementation for using the standard voxblox integrator.
-        NaiveIntegrator::Config config;
+    NaiveIntegrator::Config config;
     config.voxblox_integrator_config =
         voxblox::getTsdfIntegratorConfigFromRosParam(nh);
     nh.param("voxblox_integrator_type", config.voxblox_integrator_type,

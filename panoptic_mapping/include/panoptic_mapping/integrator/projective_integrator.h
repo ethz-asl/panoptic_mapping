@@ -44,6 +44,8 @@ class ProjectiveIntegrator : public IntegratorBase {
     // system params
     int integration_threads = std::thread::hardware_concurrency();
 
+    Config() { setConfigName("ProjectiveIntegrator"); }
+
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;

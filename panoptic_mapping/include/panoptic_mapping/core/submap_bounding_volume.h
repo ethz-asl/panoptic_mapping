@@ -28,7 +28,7 @@ class SubmapBoundingVolume {
   const Point& getCenter() const { return center_; }
 
  private:
-  const Submap* submap_;
+  const Submap* const submap_;
   Point center_;  // This is in submap frame.
   FloatingPoint radius_ = 0.f;
   size_t num_previous_blocks_ = 0;

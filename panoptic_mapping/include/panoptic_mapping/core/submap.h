@@ -14,9 +14,28 @@
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/core/submap_bounding_volume.h"
 #include "panoptic_mapping/core/submap_id.h"
-#include "panoptic_mapping/registration/tsdf_registrator.h"
 
 namespace panoptic_mapping {
+
+// Iso-surface-points are used to check alignment and represent the surface
+// of finished submaps.
+struct IsoSurfacePoint {
+  Point position;
+  FloatingPoint distance;
+  FloatingPoint weight;
+};
+
+// Change detection data stores relevant information for associating submaps.
+struct ChangeDetectionData {
+  enum class State {
+    kNew = 0,
+    kMatched,
+    kUnobserved,
+    kAbsent,
+    kPersistent
+  } state;
+  int matched_submap_id;  // currently only allows for a single match.
+};
 
 class Submap {
  public:
@@ -29,24 +48,16 @@ class Submap {
     void checkParams() const override;
   };
 
-  // Iso-surface-points are used to check alignment and represent the surface
-  // of finished submaps.
-  struct IsoSurfacePoint {
-    Point position;
-    FloatingPoint distance;
-    FloatingPoint weight;
-  };
-
   explicit Submap(const Config& config);
   virtual ~Submap() = default;
 
-  // io
+  // IO.
   void getProto(SubmapProto* proto) const;
   bool saveToStream(std::fstream* outfile_ptr) const;
   static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
-  // const accessors
+  // Const accessors.
   int getID() const { return id_.toInt(); }
   int getInstanceID() const { return instance_id_; }
   int getClassID() const { return class_id_; }
@@ -59,7 +70,7 @@ class Submap {
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
-  const TsdfRegistrator::ChangeDetectionData& getChangeDetectionData() const {
+  const ChangeDetectionData& getChangeDetectionData() const {
     return change_detection_data_;
   }
   PanopticLabel getLabel() const { return label_; }
@@ -67,7 +78,7 @@ class Submap {
     return bounding_volume_;
   }
 
-  // modifying accessors
+  // Modifying accessors.
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() {
     return tsdf_layer_;
   }
@@ -75,19 +86,19 @@ class Submap {
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
     return &iso_surface_points_;
   }
-  TsdfRegistrator::ChangeDetectionData* getChangeDetectionDataPtr() {
+  SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
+  ChangeDetectionData* getChangeDetectionDataPtr() {
     return &change_detection_data_;
   }
-  SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
 
-  // setters
+  // Setters.
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
   void setFrameName(const std::string& name) { frame_name_ = name; }
-  void setLabel(const PanopticLabel& label);
+  void setLabel(PanopticLabel label) { label_ = label; }
 
-  // processing
+  // Processing.
   void finishActivePeriod();
 
  private:
@@ -96,14 +107,14 @@ class Submap {
 
   // Labels.
   const SubmapID id_;
-  int instance_id_;
-  int class_id_;
-  PanopticLabel label_;
+  int instance_id_ = -1;
+  int class_id_ = -1;
+  PanopticLabel label_ = PanopticLabel::kUnknown;
 
   // State.
-  bool is_active_;
+  bool is_active_ = true;
 
-  // transformation
+  // Transformations.
   std::string frame_name_;
   Transformation T_M_S_;  // Transformation mission to submap.
   Transformation T_M_S_inv_;
@@ -113,8 +124,8 @@ class Submap {
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
 
   // Data.
+  ChangeDetectionData change_detection_data_;
   std::vector<IsoSurfacePoint> iso_surface_points_;
-  TsdfRegistrator::ChangeDetectionData change_detection_data_;
   SubmapBoundingVolume bounding_volume_;
 };
 

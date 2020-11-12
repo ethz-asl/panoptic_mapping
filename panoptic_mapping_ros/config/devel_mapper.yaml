@@ -58,14 +58,15 @@ tsdf_registrator:
   verbosity: 1
   min_voxel_weight: 0.000001
   error_threshold: -1 # m, negative = #voxel_sizes
-  weight_error_by_tsdf_weight: true
-  min_number_of_matching_points: 50
-  match_rejection_percentage: 0.9
+  match_rejection_points: 50
+  match_rejection_percentage: 0.1
+  match_acceptance_points: 50
+  match_acceptance_percentage: 0.1
   
 visualization:
   visualization_interval: 1.0
-  visualization_mode: change  # all, active, change
-  color_mode: submaps # submaps, instances, color, normals, classes, change
+  color_mode: change # submaps, instances, color, normals, classes, change
+  visualization_mode: active  # all, active 
   submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: true

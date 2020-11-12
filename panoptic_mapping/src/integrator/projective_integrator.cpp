@@ -43,6 +43,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
     : config_(config.checkValid()) {
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
   // Setup the interpolator (one for each thread.)
   for (int i = 0; i < config_.integration_threads; ++i) {
     interpolators_.emplace_back(
@@ -77,11 +79,12 @@ ProjectiveIntegrator::ThreadSafeIndexGetter::ThreadSafeIndexGetter(
     : indices_(std::move(indices)), current_index_(0) {}
 
 bool ProjectiveIntegrator::ThreadSafeIndexGetter::getNextIndex(int* index) {
-  if (current_index_ >= indices_.size()) {
-    return false;
-  }
   CHECK_NOTNULL(index);
   mutex_.lock();
+  if (current_index_ >= indices_.size()) {
+    mutex_.unlock();
+    return false;
+  }
   *index = indices_[current_index_];
   current_index_++;
   mutex_.unlock();
@@ -113,8 +116,8 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
     voxblox::BlockIndexList block_list;
     findVisibleBlocks(*submap_ptr, T_M_C, &block_list);
     if (!block_list.empty()) {
-      block_lists[submap_ptr->getID()] = block_list;
       id_list.emplace_back(submap_ptr->getID());
+      block_lists[submap_ptr->getID()] = block_list;
     }
   }
   auto t3 = std::chrono::high_resolution_clock::now();
@@ -195,7 +198,7 @@ void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
     float sdf;
     float weight;
     const bool is_free_space_submap =
-        submap->getLabel() == PanopticLabel::kSPACE;
+        submap->getLabel() == PanopticLabel::kFreeSpace;
     if (!computeVoxelDistanceAndWeight(
             &sdf, &weight, &point_belongs_to_this_submap, interpolator, p_C,
             color_image, id_image, id, truncation_distance, voxel_size,
