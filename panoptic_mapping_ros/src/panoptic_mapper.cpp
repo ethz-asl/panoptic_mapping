@@ -80,11 +80,11 @@ void PanopticMapper::setupMembers() {
           visualization_nh),
       label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
-  //  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-  //      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
-  //          plan_visualization_nh),
-  //      label_handler_);
-  //  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
+  planning_visualizer_ = std::make_unique<PlanningVisualizer>(
+      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
+          visualization_nh),
+      planning_interface_);
+  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
 
 void PanopticMapper::setupRos() {

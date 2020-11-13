@@ -21,6 +21,7 @@
 #include <panoptic_mapping/registration/tsdf_registrator.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
+#include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
 namespace panoptic_mapping {
@@ -90,7 +91,7 @@ class PanopticMapper {
                      const sensor_msgs::ImagePtr& segmentation_img);
 
  private:
-  // Node handles
+  // Node handles.
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
@@ -113,9 +114,10 @@ class PanopticMapper {
   std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
-  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
   std::shared_ptr<PlanningInterface> planning_interface_;
+  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
+  std::unique_ptr<PlanningVisualizer> planning_visualizer_;
 
   // Input processing.
   std::deque<sensor_msgs::ImagePtr> depth_queue_;

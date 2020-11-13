@@ -65,6 +65,9 @@ tsdf_registrator:
   match_acceptance_percentage: 0.1
   
 visualization:
+  verbosity: 1
+  
+  # Submaps
   color_mode: change # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
   submap_color_discretization: 20
@@ -73,7 +76,12 @@ visualization:
   visualize_free_space: true
   visualize_bounding_volumes: true
   include_free_space: false
-#  mesh_min_weight: 0.01
+  mesh_min_weight: 0.000001
+  
+  # Planning
+  visualize_slice: true
+  slice_resolution: 0.1
+  slice_height: 0.1
 
 
   
