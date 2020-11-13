@@ -33,7 +33,7 @@ struct ChangeDetectionData {
     kUnobserved,
     kAbsent,
     kPersistent
-  } state;
+  } state = State::kNew;
   int matched_submap_id;  // currently only allows for a single match.
 };
 
@@ -62,6 +62,7 @@ class Submap {
   int getInstanceID() const { return instance_id_; }
   int getClassID() const { return class_id_; }
   const std::string& getFrameName() const { return frame_name_; }
+  const std::string& getName() const { return name_; }
   const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
   const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
   const Transformation& getT_M_S() const { return T_M_S_; }
@@ -97,6 +98,7 @@ class Submap {
   void setClassID(int id) { class_id_ = id; }
   void setFrameName(const std::string& name) { frame_name_ = name; }
   void setLabel(PanopticLabel label) { label_ = label; }
+  void setName(const std::string& name) { name_ = name; }
 
   // Processing.
   void finishActivePeriod();
@@ -106,10 +108,11 @@ class Submap {
   const Config config_;
 
   // Labels.
-  const SubmapID id_;
+  const SubmapID id_;  // UUID
   int instance_id_ = -1;
   int class_id_ = -1;
   PanopticLabel label_ = PanopticLabel::kUnknown;
+  std::string name_;
 
   // State.
   bool is_active_ = true;

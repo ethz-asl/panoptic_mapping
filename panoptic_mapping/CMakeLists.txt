@@ -28,6 +28,7 @@ cs_add_library(${PROJECT_NAME}
         src/core/submap_id.cpp
         src/core/submap_bounding_volume.cpp
         src/core/submap_collection.cpp
+        src/core/planning_interface.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/ground_truth_id_tracker.cpp
         src/integrator/integrator_base.cpp

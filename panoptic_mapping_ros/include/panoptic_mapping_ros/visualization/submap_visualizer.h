@@ -95,7 +95,7 @@ class SubmapVisualizer {
   }
 
  private:
-  const Color kUNKNOWNCOLOR = Color(50, 50, 50);
+  static const Color kUnknownColor_;
 
   struct SubmapVisInfo {
     // General.
@@ -104,7 +104,7 @@ class SubmapVisualizer {
     bool republish_everything = false;
     bool was_deleted = false;
     bool change_color = true;
-    Color color;
+    Color color = kUnknownColor_;
     float alpha = 1.0;
 
     // Tracking.

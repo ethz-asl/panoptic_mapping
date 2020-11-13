@@ -52,6 +52,7 @@ class TsdfRegistrator {
   // Methods.
   bool getDistanceAtPoint(
       float* distance, const IsoSurfacePoint& point,
+      const Transformation& T_P_S,
       const voxblox::Interpolator<TsdfVoxel>& interpolator) const;
 };
 

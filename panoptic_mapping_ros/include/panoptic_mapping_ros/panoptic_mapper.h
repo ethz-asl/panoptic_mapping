@@ -12,6 +12,7 @@
 #include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
+#include <panoptic_mapping/core/planning_interface.h>
 #include <panoptic_mapping/core/submap.h>
 #include <panoptic_mapping/core/submap_collection.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
@@ -72,6 +73,9 @@ class PanopticMapper {
 
   // Access.
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
+  const PlanningInterface& getPlanningInterface() const {
+    return *planning_interface_;
+  }
 
  private:
   // Setup.
@@ -111,6 +115,7 @@ class PanopticMapper {
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
+  std::shared_ptr<PlanningInterface> planning_interface_;
 
   // Input processing.
   std::deque<sensor_msgs::ImagePtr> depth_queue_;

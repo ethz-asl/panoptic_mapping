@@ -91,12 +91,12 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
 
 void GroundTruthIDTracker::allocateSubmap(int instance,
                                           SubmapCollection* submaps) {
-  // known existing submap
+  // Known existing submap.
   if (instance_to_id_.find(instance) != instance_to_id_.end()) {
     return;
   }
 
-  // check whether the instance code is known
+  // Check whether the instance code is known.
   int new_instance = instance;
   if (!label_handler_->segmentationIdExists(instance)) {
     new_instance = 255;  // reserved code for unknown objects
@@ -135,6 +135,7 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   new_submap->setInstanceID(new_instance);
   new_submap->setClassID(label_handler_->getClassID(new_instance));
   new_submap->setLabel(label);
+  new_submap->setName(label_handler_->getName(new_instance));
 }
 
 void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
@@ -150,6 +151,7 @@ void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.
+  space_submap->setName("FreeSpace");
   submaps->setActiveFreeSpaceSubmapID(space_submap->getID());
 }
 

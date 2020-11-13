@@ -59,14 +59,6 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
   tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
 
-  // Visualization.
-  ros::NodeHandle visualization_nh(nh_private_, "visualization");
-  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
-          visualization_nh),
-      label_handler_);
-  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
-
   // Id tracking.
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
@@ -77,6 +69,22 @@ void PanopticMapper::setupMembers() {
   tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
       config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
           registrator_nh));
+
+  // Planning Interface.
+  planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
+
+  // Visualization.
+  ros::NodeHandle visualization_nh(nh_private_, "visualization");
+  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
+      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
+          visualization_nh),
+      label_handler_);
+  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
+  //  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
+  //      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
+  //          plan_visualization_nh),
+  //      label_handler_);
+  //  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
 
 void PanopticMapper::setupRos() {
@@ -229,7 +237,7 @@ void PanopticMapper::publishVisualization() {
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // store depth img in queue
+  // Store depth img in queue.
   depth_queue_.push_back(msg);
   if (depth_queue_.size() > config_.max_image_queue_length) {
     depth_queue_.pop_front();
@@ -238,7 +246,7 @@ void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
 }
 
 void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // store color img in queue
+  // Store color img in queue.
   color_queue_.push_back(msg);
   if (color_queue_.size() > config_.max_image_queue_length) {
     color_queue_.pop_front();
@@ -248,7 +256,7 @@ void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr& msg) {
 
 void PanopticMapper::segmentationImageCallback(
     const sensor_msgs::ImagePtr& msg) {
-  // store segmentation img in queue
+  // store segmentation img in queue.
   segmentation_queue_.push_back(msg);
   if (segmentation_queue_.size() > config_.max_image_queue_length) {
     segmentation_queue_.pop_front();
@@ -258,7 +266,7 @@ void PanopticMapper::segmentationImageCallback(
 
 void PanopticMapper::findMatchingMessagesToPublish(
     const sensor_msgs::ImagePtr& reference_msg) {
-  // check whether there exist 3 images with matching timestamp
+  // Check whether there exist 3 images with matching timestamp.
   std::deque<sensor_msgs::ImagePtr>::iterator depth_it, color_it,
       segmentation_it;
 
@@ -288,7 +296,7 @@ void PanopticMapper::findMatchingMessagesToPublish(
     return;
   }
 
-  // a matching set was found
+  // A matching set was found.
   processImages(*depth_it, *color_it, *segmentation_it);
   depth_queue_.erase(depth_it);
   color_queue_.erase(color_it);
@@ -399,6 +407,11 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     // Re-compute cached data and set the relevant flags.
     tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
     submap_ptr->finishActivePeriod();
+    if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
+      submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
+    } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
+      submap_ptr->setName("FreeSpace");
+    }
 
     // Add to the collection.
     submaps_->addSubmap(std::move(submap_ptr));

@@ -11,6 +11,8 @@
 
 namespace panoptic_mapping {
 
+const Color SubmapVisualizer::kUnknownColor_(50, 50, 50);
+
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
   checkParamGT(mesh_min_weight, 0.f, "mesh_min_weight");
@@ -238,7 +240,7 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
     unsigned int counter = 0;
 
     // Get color.
-    Color color = kUNKNOWNCOLOR;
+    Color color = kUnknownColor_;
     const float alpha = 0.2f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
@@ -303,7 +305,7 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
     }
 
     // Get color.
-    Color color = kUNKNOWNCOLOR;
+    Color color = kUnknownColor_;
     const float alpha = 0.2f;
     auto vis_it = vis_infos_.find(submap->getID());
     if (vis_it != vis_infos_.end()) {
@@ -396,6 +398,8 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
   if (info->was_deleted) {
     return;
   }
+
+  // Update according to color mode.
   if (info->change_color || color_mode_ == ColorMode::kChange) {
     // NOTE(schmluk): Modes 'color' and 'normals' are handled by the mesher,
     // so no need to set here.
@@ -404,7 +408,7 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
           info->color = label_handler_->getColor(submap.getInstanceID());
         } else {
-          info->color = kUNKNOWNCOLOR;
+          info->color = kUnknownColor_;
         }
         break;
       }
@@ -422,7 +426,7 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
             info->change_color) {
           switch (submap.getChangeDetectionData().state) {
             case ChangeDetectionData::State::kNew: {
-              info->color = Color(0, 255, 0);
+              info->color = Color(0, 200, 0);
               break;
             }
             case ChangeDetectionData::State::kMatched: {
@@ -438,7 +442,7 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
               break;
             }
             case ChangeDetectionData::State::kUnobserved: {
-              info->color = Color(100, 100, 100);
+              info->color = Color(150, 150, 150);
               break;
             }
           }
@@ -450,23 +454,25 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
     }
   }
 
-  // Update the visualization mode.
-  switch (visualization_mode_) {
-    case VisualizationMode::kAll: {
-      info->alpha = 1.f;
-      break;
-    }
-    case VisualizationMode::kActive: {
-      if (info->was_active != submap.isActive() || info->change_color) {
-        if (submap.isActive()) {
-          info->alpha = 1.f;
-        } else {
-          info->alpha = 0.4f;
-        }
-        info->republish_everything = true;
-        info->was_active = submap.isActive();
+  // Update according to visualization mode.
+  if (info->change_color || visualization_mode_ == VisualizationMode::kActive) {
+    switch (visualization_mode_) {
+      case VisualizationMode::kAll: {
+        info->alpha = 1.f;
+        break;
       }
-      break;
+      case VisualizationMode::kActive: {
+        if (info->was_active != submap.isActive() || info->change_color) {
+          if (submap.isActive()) {
+            info->alpha = 1.f;
+          } else {
+            info->alpha = 0.4f;
+          }
+          info->republish_everything = true;
+          info->was_active = submap.isActive();
+        }
+        break;
+      }
     }
   }
 
