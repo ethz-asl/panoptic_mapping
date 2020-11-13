@@ -90,6 +90,7 @@ void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
   visualizeTsdfBlocks(*submaps);
   visualizeFreeSpace(*submaps);
   visualizeBoundingVolume(*submaps);
+  publishTfTransforms(*submaps);
   vis_infos_are_updated_ = false;
 }
 

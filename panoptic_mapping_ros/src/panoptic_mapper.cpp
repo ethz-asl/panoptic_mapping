@@ -234,6 +234,7 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 
 void PanopticMapper::publishVisualization() {
   submap_visualizer_->visualizeAll(submaps_.get());
+  planning_visualizer_->visualizeAll();
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {

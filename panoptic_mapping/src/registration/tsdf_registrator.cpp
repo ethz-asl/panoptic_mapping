@@ -131,6 +131,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
+
   LOG_IF(INFO, config_.verbosity >= 2)
       << "Performed change detection in "
       << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)

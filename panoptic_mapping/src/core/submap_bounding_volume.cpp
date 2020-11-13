@@ -9,7 +9,10 @@
 namespace panoptic_mapping {
 
 SubmapBoundingVolume::SubmapBoundingVolume(const Submap& submap)
-    : submap_(&submap) {}
+    : submap_(&submap),
+      center_(0.f, 0.f, 0.f),
+      radius_(0.f),
+      num_previous_blocks_(0) {}
 
 void SubmapBoundingVolume::update() {
   // A conservative approximation that computes the centroid from the

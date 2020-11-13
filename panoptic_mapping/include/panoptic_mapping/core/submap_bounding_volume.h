@@ -32,8 +32,8 @@ class SubmapBoundingVolume {
  private:
   const Submap* const submap_;
   Point center_;  // This is in submap frame.
-  FloatingPoint radius_ = 0.f;
-  size_t num_previous_blocks_ = 0;
+  FloatingPoint radius_;
+  size_t num_previous_blocks_;
 };
 
 }  // namespace panoptic_mapping
