@@ -44,7 +44,7 @@ class TsdfRegistrator {
   void computeIsoSurfacePoints(Submap* submap) const;
   void checkSubmapCollectionForChange(const SubmapCollection& submaps) const;
   bool submapsConflict(const Submap& reference, const Submap& other,
-                       bool* is_match = nullptr) const;
+                       unsigned int* matching_points = nullptr) const;
 
  private:
   const Config config_;
