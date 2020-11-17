@@ -8,8 +8,8 @@
 #include <visualization_msgs/MarkerArray.h>
 
 #include <panoptic_mapping/core/common.h>
-#include <panoptic_mapping/core/planning_interface.h>
 #include <panoptic_mapping/core/submap_collection.h>
+#include <panoptic_mapping/planning/planning_interface.h>
 
 namespace panoptic_mapping {
 

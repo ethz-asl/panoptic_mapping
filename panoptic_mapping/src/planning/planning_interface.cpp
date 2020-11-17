@@ -1,4 +1,4 @@
-#include "panoptic_mapping/core/planning_interface.h"
+#include "panoptic_mapping/planning/planning_interface.h"
 
 #include <memory>
 #include <utility>
@@ -41,14 +41,10 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
       continue;
     }
     if (submap->getLabel() == PanopticLabel::kFreeSpace) {
-      if (is_known_free) {
+      if (is_known_free || (is_expected_free && !submap->isActive())) {
         continue;
       }
-      if (is_expected_free && !submap->isActive()) {
-        continue;
-      }
-    }
-    if (!submap->isActive() && is_expected_occupied) {
+    } else if (!submap->isActive() && is_expected_occupied) {
       continue;
     }
 

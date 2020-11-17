@@ -8,8 +8,8 @@
 verbosity: 2
 label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
 global_frame_name: world
-change_detection_interval: 1.0
-visualization_interval: 1.0
+change_detection_interval: -1.0
+visualization_interval: -1.0
 
 tsdf_integrator:  
   type: projective # naive, projective, projective_multi_tsdf
@@ -56,7 +56,7 @@ id_tracker:
   voxels_per_side: 16
   
 tsdf_registrator:
-  verbosity: 2
+  verbosity: 1
   min_voxel_weight: 0.000001
   error_threshold: -2 # m, negative = #voxel_sizes
   match_rejection_points: 50
@@ -65,7 +65,7 @@ tsdf_registrator:
   match_acceptance_percentage: 0.1
   
 visualization:
-  verbosity: 1
+  verbosity: 3
   
   # Submaps
   color_mode: color # submaps, instances, color, normals, classes, change

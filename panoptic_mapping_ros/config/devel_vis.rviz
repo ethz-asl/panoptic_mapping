@@ -142,8 +142,37 @@ Visualization Manager:
         0: true
         1: true
         10: true
+        100: true
+        101: true
+        102: true
+        103: true
+        104: true
+        105: true
+        106: true
+        107: true
+        108: true
+        109: true
         11: true
+        110: true
+        111: true
+        112: true
+        113: true
+        114: true
+        115: true
+        116: true
+        117: true
+        118: true
+        119: true
         12: true
+        120: true
+        121: true
+        122: true
+        123: true
+        124: true
+        125: true
+        126: true
+        127: true
+        128: true
         13: true
         14: true
         15: true
@@ -219,7 +248,24 @@ Visualization Manager:
         80: true
         81: true
         82: true
+        83: true
+        84: true
+        85: true
+        86: true
+        87: true
+        88: true
+        89: true
         9: true
+        90: true
+        91: true
+        92: true
+        93: true
+        94: true
+        95: true
+        96: true
+        97: true
+        98: true
+        99: true
         Value: true
     - Alpha: 0.30000001192092896
       Autocompute Intensity Bounds: true
@@ -272,7 +318,7 @@ Visualization Manager:
       Marker Topic: /panoptic_mapper/visualization/planning_slice
       Name: PlanningSlice
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -303,25 +349,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 13.565502166748047
+      Distance: 15.19336223602295
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.916404366493225
-        Y: -1.3091392517089844
-        Z: -0.7680944800376892
+        X: -2.0764777660369873
+        Y: -1.3186320066452026
+        Z: -0.7255342602729797
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.344796061515808
+      Pitch: 0.9752026200294495
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.5559580326080322
+      Yaw: 0.9159592390060425
     Saved: ~
 Window Geometry:
   Displays:

@@ -12,10 +12,10 @@
 #include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
-#include <panoptic_mapping/core/planning_interface.h>
 #include <panoptic_mapping/core/submap.h>
 #include <panoptic_mapping/core/submap_collection.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
+#include <panoptic_mapping/planning/planning_interface.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>
@@ -33,8 +33,8 @@ class PanopticMapper {
     int max_image_queue_length = 10;  // after this many images are queued for
     // integration start discarding old ones.
     std::string global_frame_name = "mission";
-    double visualization_interval = 1.0;  // s
-    double change_detection_interval = 1.0;  // s
+    double visualization_interval = 1.0;     // s, use -1 for always.
+    double change_detection_interval = 1.0;  // s, use -1 for always.
 
     Config() { setConfigName("PanopticMapper"); }
 
