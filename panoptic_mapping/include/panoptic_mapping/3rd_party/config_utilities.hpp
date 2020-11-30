@@ -2,7 +2,7 @@
 AUTHOR:       Lukas Schmid <schmluk@mavt.ethz.ch>
 AFFILIATION:  Autonomous Systems Lab (ASL), ETH Zürich
 SOURCE:       https://github.com/ethz-asl/config_utilities
-VERSION:      1.1.1
+VERSION:      1.1.2
 LICENSE:      BSD-3-Clause
 
 Copyright 2020 Autonomous Systems Lab (ASL), ETH Zürich.
@@ -36,7 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ros/node_handle.h>
 
 // Raise a redefined warning if different versions are used. v=MMmmPP.
-#define CONFIG_UTILITIES_VERSION 010101
+#define CONFIG_UTILITIES_VERSION 010102
 
 /**
  * Depending on which headers are available, ROS dependencies are included in
@@ -692,15 +692,6 @@ struct ConfigInternal : public ConfigInternalVerificator {
         std::string(meta_data_->indent, ' ').append(text));
   }
 
-  template <typename T>
-  void setupParam(const std::string& name, T* param) {
-    if (meta_data_->merged_setup_set_params) {
-      rosParam(name, param);
-    } else {
-      printField(name, *param);
-    }
-  }
-
  private:
   void printFieldInternal(const std::string& name,
                           const std::string& field) const {
@@ -782,7 +773,10 @@ struct ConfigInternal : public ConfigInternalVerificator {
   };
 
   void setupFromParamMap(const internal::ParamMap& params) {
-    xmlCast(params.at("_name_space"), &param_namespace_);
+    auto it = params.find("_name_space");
+    if (it != params.end()) {
+      xmlCast(params.at("_name_space"), &param_namespace_);
+    }
     meta_data_->params = &params;
     meta_data_->merged_setup_already_used = true;
     meta_data_->merged_setup_set_params = true;
@@ -849,8 +843,18 @@ struct ConfigInternal : public ConfigInternalVerificator {
     *param = values;
   }
 
+  template <typename T>
+  void setupParamInternal(const std::string& name, T* param) {
+    if (meta_data_->merged_setup_set_params) {
+      rosParam(name, param);
+    } else {
+      printField(name, *param);
+    }
+  }
+
  protected:
-  // These are explicitly overloaded for agreement with ROS-params.
+  // These are explicitly overloaded for agreement with ROS-params and to
+  // prevent messy compilation errors.
   void rosParam(const std::string& name, int* param) {
     this->rosParamInternal(name, param);
   }
@@ -969,6 +973,78 @@ struct ConfigInternal : public ConfigInternalVerificator {
     return param_namespace_;
   }
 
+  void setupParam(const std::string& name, int* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, float* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, double* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, bool* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::string* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::vector<int>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::vector<double>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::vector<float>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::vector<bool>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::vector<std::string>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::map<std::string, int>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name,
+                  std::map<std::string, double>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name,
+                  std::map<std::string, float>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, std::map<std::string, bool>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name,
+                  std::map<std::string, std::string>* param) {
+    this->setupParamInternal(name, param);
+  }
+
+  void setupParam(const std::string& name, ConfigInternal* config,
+                  const std::string& sub_namespace = "") {
+    if (meta_data_->merged_setup_set_params) {
+      rosParam(config, sub_namespace);
+    } else {
+      printField(name, *config);
+    }
+  }
+
 #ifdef CONFIG_UTILITIES_TRANSFORMATION_ENABLED
   template <typename Scalar>
   void rosParam(const std::string& name,
@@ -1040,6 +1116,12 @@ struct ConfigInternal : public ConfigInternalVerificator {
        << ", " << field.getPosition()[2] << "] RPY°: [" << rot.x() << ", "
        << rot.y() << ", " << rot.z() << "]";
     printFieldInternal(name, ss.str());
+  }
+
+  template <typename Scalar>
+  void setupParam(const std::string& name,
+                  kindr::minimal::QuatTransformationTemplate<Scalar>* param) {
+    this->setupParamInternal(name, param);
   }
 #endif  // CONFIG_UTILITIES_TRANSFORMATION_ENABLED
 
@@ -1265,7 +1347,7 @@ inline ParamMap getParamMapFromRos(const ros::NodeHandle& nh) {
 }
 }  // namespace internal
 
-// Tool to create configs from ROS
+// Tool to create configs from ROS.
 template <typename ConfigT>
 ConfigT getConfigFromRos(const ros::NodeHandle& nh) {
   ConfigT config;

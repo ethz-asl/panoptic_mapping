@@ -1,0 +1,28 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <arg name="bag_name" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/run2.bag"/> 
+  <arg name="bag_play_rate" default="1"/>
+  <arg name="use_sim_time" default="false"/>
+  <arg name="start_at" default="1"/>
+  <arg name="wait_time" default="2"/>
+  <arg name="namespace" default=""/>
+    
+   
+<!-- ============ Play Data ============ -->
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) --clock -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)" if="$(arg use_sim_time)">
+    <remap from="/airsim_drone/ground_truth/pose" to="$(arg namespace)/pose" />
+    <remap from="/airsim_drone/Pointcloud" to="$(arg namespace)/pointcloud" />  
+    <remap from="/airsim_drone/Scene_cam" to="$(arg namespace)/color_image" />
+    <remap from="/airsim_drone/Depth_cam" to="$(arg namespace)/depth_image" />
+    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_image" />
+  </node>
+  
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)" unless="$(arg use_sim_time)">
+    <remap from="/airsim_drone/ground_truth/pose" to="$(arg namespace)/pose" />
+    <remap from="/airsim_drone/Pointcloud" to="$(arg namespace)/pointcloud" />  
+    <remap from="/airsim_drone/Scene_cam" to="$(arg namespace)/color_image" />
+    <remap from="/airsim_drone/Depth_cam" to="$(arg namespace)/depth_image" />
+    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_image" />
+  </node>
+  
+</launch>

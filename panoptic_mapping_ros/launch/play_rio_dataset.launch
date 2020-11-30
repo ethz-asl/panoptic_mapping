@@ -1,0 +1,22 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <arg name="data_path" default="/home/lukas/Documents/PanopticMapping/Data/3RScan"/>
+  <arg name="scan_id" default="0"/>
+  <arg name="rio_play_rate" default="5"/>
+  <arg name="namespace" default=""/>
+
+
+
+<!-- ============ Play Data ============ -->
+  <node name="rio_player" pkg="panoptic_mapping_ros" type="rio_player.py" output="screen">
+    <param name="data_path" value="$(arg data_path)" /> 
+    <param name="scan_id" value="$(arg scan_id)" /> 
+    <param name="play_rate" value="$(arg rio_play_rate)" /> 
+    
+    <remap from="~color_image" to="$(arg data_path)/color_image" />
+    <remap from="~depth_image" to="$(arg data_path)/depth_image" />
+    <remap from="~segmentation_image" to="$(arg data_path)/segmentation_image" />
+  </node>
+  
+
+</launch>

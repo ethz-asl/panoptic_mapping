@@ -29,6 +29,7 @@ class TsdfRegistrator {
     float match_rejection_percentage = 0.1;
     int match_acceptance_points = 50;
     float match_acceptance_percentage = 0.1;
+    bool normalize_by_voxel_weight = true;
 
     Config() { setConfigName("TsdfRegistrator"); }
 
@@ -44,14 +45,14 @@ class TsdfRegistrator {
   void computeIsoSurfacePoints(Submap* submap) const;
   void checkSubmapCollectionForChange(const SubmapCollection& submaps) const;
   bool submapsConflict(const Submap& reference, const Submap& other,
-                       unsigned int* matching_points = nullptr) const;
+                       float* matching_points = nullptr) const;
 
  private:
   const Config config_;
 
   // Methods.
-  bool getDistanceAtPoint(
-      float* distance, const IsoSurfacePoint& point,
+  bool getDistanceAndWeightAtPoint(
+      float* distance, float* weight, const IsoSurfacePoint& point,
       const Transformation& T_P_S,
       const voxblox::Interpolator<TsdfVoxel>& interpolator) const;
 };

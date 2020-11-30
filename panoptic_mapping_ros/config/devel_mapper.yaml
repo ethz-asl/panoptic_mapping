@@ -3,10 +3,10 @@
 # - [ 0, 1, 0, 0]
 # - [ 0,  0, 1, 0]
 # - [ 0.0, 0.0, 0.0, 1.0]
+# label_path: asd
  
 # General Params
 verbosity: 2
-label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
 global_frame_name: world
 change_detection_interval: -1.0
 visualization_interval: -1.0
@@ -63,14 +63,15 @@ tsdf_registrator:
   match_rejection_percentage: 0.1
   match_acceptance_points: 50
   match_acceptance_percentage: 0.1
+  normalize_by_voxel_weight: true
   
 visualization:
-  verbosity: 3
+  verbosity: 1
   
   # Submaps
-  color_mode: color # submaps, instances, color, normals, classes, change
+  color_mode: submaps # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
-  submap_color_discretization: 20
+  submap_color_discretization: 50
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true
