@@ -6,9 +6,9 @@
 
  
 # General Params
-verbosity: 2
+verbosity: 3
 global_frame_name: world
-label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/PanopticMapping/Data/3RScan/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 
@@ -17,12 +17,22 @@ tsdf_integrator:
   verbosity: 1
   
   # projective args
-  width: 640
-  height: 480
-  vx: 320
-  vy: 240
-  focal_length: 320
+  # rio rendered
+  width: 960
+  height: 540
+  vx: 488.945
+  vy: 269.186
+  fx: 756.525
+  fy: 755.581
   
+  # rio original
+#  width: 224
+#  height: 172
+#  vx: 113.696
+#  vy: 85.4004
+#  fx: 176.523
+#  fy: 240.667
+    
   max_range: 5  # m
   min_range: 0.1
   use_weight_dropoff: true
@@ -30,26 +40,11 @@ tsdf_integrator:
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
   foreign_rays_clear: true
-  
-  # naive args
-  voxblox_integrator_type: fast # projective, fast
-  sensor_vertical_field_of_view_degrees: 73.7397952
-  use_const_weight: true  
-  max_ray_length_m: 5
-  voxel_carving_enabled: true
-  use_weight_dropoff: true
-  sparsity_compensation_factor: 1.0
-
-#  truncation_distance: 0.2
-#  max_ray_length_m: 5.0
-#  use_const_weight: false
-#  use_sparsity_compensation_factor: true
-#  sparsity_compensation_factor: 20.0
-#  integration_order_mode: "sorted"
 
 id_tracker:
   type: ground_truth
   verbosity: 2
+  input_is_mesh_id: false
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
   unknown_voxel_size: 0.08

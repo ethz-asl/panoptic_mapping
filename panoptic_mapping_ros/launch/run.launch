@@ -1,8 +1,8 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- General -->
-  <arg name="use_rio" value="false"/>
-  <arg name="use_flat" value="true"/>
+  <arg name="use_rio" value="true"/>
+  <arg name="use_flat" value="false"/>
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
@@ -15,7 +15,7 @@
   <arg name="rio_play_rate" default="5"/>
     
   <!-- Mapper -->
-  <arg name="config" default="devel_mapper"/>
+  <arg name="config" default="devel_mapper_rio"/>
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
@@ -34,17 +34,13 @@
   <!-- Mapper -->
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen">
     <!-- Config -->
-    <rosparam file="$(find panoptic_mapping_ros)/config/$(arg config).yaml" />
-    
+    <rosparam file="$(find panoptic_mapping_ros)/config/$(arg config).yaml"/>
+
     <!-- Input -->
     <remap from="pointcloud_in" to="$(arg namespace)/pointcloud" unless="$(arg use_image_input)"/>
     <remap from="color_image_in" to="$(arg namespace)/color_image" if="$(arg use_image_input)"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image" if="$(arg use_image_input)"/>
     <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image" if="$(arg use_image_input)"/>
-    
-    <!-- Labels -->
-    <param name="label_path" value="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv" if="$(arg use_flat)" />
-    <param name="label_path" value="/home/lukas/Documents/PanopticMapping/Data/3RScan/labels.csv" if="$(arg use_rio)" />
   </node>  
   
   <!-- Map loader -->

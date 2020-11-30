@@ -17,7 +17,8 @@ void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(width, 0, "width");
   checkParamGT(vx, 0.f, "vx");
   checkParamGT(vy, 0.f, "vy");
-  checkParamGT(focal_length, 0.f, "focal_length");
+  checkParamGT(fx, 0.f, "fx");
+  checkParamGT(fy, 0.f, "fy");
   checkParamGT(integration_threads, 0, "integration_threads");
   checkParamCond(vx < width, "'vx' is required < 'width'");
   checkParamCond(vy < height, "'vy' is required < 'height'");
@@ -29,7 +30,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("height", &height);
   setupParam("vx", &vx);
   setupParam("vy", &vy);
-  setupParam("focal_length", &focal_length);
+  setupParam("fx", &fx);
+  setupParam("fy", &fy);
   setupParam("max_range", &max_range);
   setupParam("min_range", &min_range);
   setupParam("use_weight_dropoff", &use_weight_dropoff);
@@ -45,32 +47,34 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
     : config_(config.checkValid()) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
-  // Setup the interpolator (one for each thread.)
+  // Setup the interpolators (one for each thread).
   for (int i = 0; i < config_.integration_threads; ++i) {
     interpolators_.emplace_back(
         config_utilities::Factory::create<InterpolatorBase>(
             config_.interpolation_method));
   }
 
-  // pre-compute the view frustum (top, right, bottom, left, plane normals)
-  Eigen::Vector3f p1(-config_.vx, -config_.vy, config_.focal_length);
-  Eigen::Vector3f p2(config_.width - config_.vx, -config_.vy,
-                     config_.focal_length);
+  // Pre-compute the view frustum (top, right, bottom, left, plane normals).
+  const float scale_factor = config_.fy / config_.fx;
+  Eigen::Vector3f p1(-config_.vx, -config_.vy * scale_factor, config_.fx);
+  Eigen::Vector3f p2(config_.width - config_.vx, -config_.vy * scale_factor,
+                     config_.fx);
   Eigen::Vector3f normal = p1.cross(p2);
   view_frustum_.push_back(normal.normalized());
-  p1 = Eigen::Vector3f(config_.width - config_.vx, config_.height - config_.vy,
-                       config_.focal_length);
+  p1 =
+      Eigen::Vector3f(config_.width - config_.vx,
+                      (config_.height - config_.vy) * scale_factor, config_.fx);
   normal = p2.cross(p1);
   view_frustum_.push_back(normal.normalized());
-  p2 = Eigen::Vector3f(-config_.vx, config_.height - config_.vy,
-                       config_.focal_length);
+  p2 = Eigen::Vector3f(
+      -config_.vx, (config_.height - config_.vy) * scale_factor, config_.fx);
   normal = p1.cross(p2);
   view_frustum_.push_back(normal.normalized());
-  p1 = Eigen::Vector3f(-config_.vx, -config_.vy, config_.focal_length);
+  p1 = Eigen::Vector3f(-config_.vx, -config_.vy * scale_factor, config_.fx);
   normal = p2.cross(p1);
   view_frustum_.push_back(normal.normalized());
 
-  // allocate range image
+  // Allocate range image.
   range_image_ = Eigen::MatrixXf(config_.height, config_.width);
 }
 
@@ -250,11 +254,11 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
-  float u = p_C.x() * config_.focal_length / p_C.z() + config_.vx;
+  float u = p_C.x() * config_.fx / p_C.z() + config_.vx;
   if (std::ceil(u) >= config_.width || std::floor(u) < 0) {
     return false;
   }
-  float v = p_C.y() * config_.focal_length / p_C.z() + config_.vy;
+  float v = p_C.y() * config_.fy / p_C.z() + config_.vy;
   if (std::ceil(v) >= config_.height || std::floor(v) < 0) {
     return false;
   }
@@ -276,12 +280,12 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     return false;
   }
 
-  // Compute the weight of the measurement
-  // Approximates the number of rays that would hit this voxel
+  // Compute the weight of the measurement.
+  // This approximates the number of rays that would hit this voxel.
   float observation_weight =
-      std::pow(voxel_size * config_.focal_length / p_C.z(), 2.f);
+      config_.fx * config_.fy * std::pow(voxel_size / p_C.z(), 2.f);
 
-  // weight reduction with distance squared (according to sensor noise models)
+  // Weight reduction with distance squared (according to sensor noise models).
   if (!config_.use_constant_weight) {
     observation_weight /= std::pow(p_C.z(), 2.f);
   }
@@ -389,11 +393,12 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float z = depth_image.at<float>(v, u);
-      float x = (static_cast<float>(u) - config_.vx) * z / config_.focal_length;
-      float y = (static_cast<float>(v) - config_.vy) * z / config_.focal_length;
+      float x = (static_cast<float>(u) - config_.vx) * z / config_.fx;
+      float y = (static_cast<float>(v) - config_.vy) * z / config_.fy;
       float ray_distance = std::sqrt(x * x + y * y + z * z);
       range_image_(v, u) = ray_distance;
-      if (ray_distance > config_.max_range) {
+      if (ray_distance > config_.max_range ||
+          ray_distance < config_.min_range) {
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);

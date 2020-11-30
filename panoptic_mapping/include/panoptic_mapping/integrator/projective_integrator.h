@@ -26,9 +26,10 @@ class ProjectiveIntegrator : public IntegratorBase {
     // camera settings  [px]
     int width = 640;
     int height = 480;
-    float vx = 320;
+    float vx = 320;  // center point offsets
     float vy = 240;
-    float focal_length = 320;
+    float fx = 320;
+    float fy = 320;
 
     // integration params
     float max_range = 5;    // m
