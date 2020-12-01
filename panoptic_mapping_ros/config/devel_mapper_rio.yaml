@@ -62,12 +62,12 @@ tsdf_registrator:
   normalize_by_voxel_weight: true
   
 visualization:
-  verbosity: 1
+  verbosity: 3
   
   # Submaps
-  color_mode: instances # submaps, instances, color, normals, classes, change
+  color_mode: color # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
-  submap_color_discretization: 50
+  submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true
@@ -77,8 +77,8 @@ visualization:
   
   # Planning
   visualize_slice: true
-  planning_slice_resolution: 0.1
-  planning_slice_height: -0.5
+  planning_slice_resolution: 0.08
+  planning_slice_height: -1.0
 
 
   

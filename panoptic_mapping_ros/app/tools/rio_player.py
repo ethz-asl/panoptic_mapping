@@ -2,13 +2,16 @@
 
 import os
 from struct import pack, unpack
+import json
 
 import numpy as np
 import rospy
 from sensor_msgs.msg import Image, PointCloud2, PointField
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, TransformStamped
 from cv_bridge import CvBridge
 import tf
+import tf2_ros
+
 import cv2
 
 
@@ -40,6 +43,7 @@ class RioPlayer(object):
         self.global_frame_name = rospy.get_param('~global_frame_name', 'world')
         self.use_rendered_data = rospy.get_param('~use_rendered_data', False)
         self.adjust_image_size = rospy.get_param('~adjust_image_size', True)
+        self.wait_time = rospy.get_param('~wait_time', 1.0)  # s
 
         # ROS
         self.color_pub = rospy.Publisher("~color_image", Image, queue_size=10)
@@ -56,7 +60,7 @@ class RioPlayer(object):
         info_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
                                  "sequence", "_info.txt")
         if not os.path.isfile(info_file):
-            rospy.logerr("Info file '%s' does not exist.")
+            rospy.logerr("[RIO Player] Info file '%s' does not exist.")
         else:
             lines = open(info_file, 'r').readlines()
             self.color_cam = CameraIntrinsics()
@@ -75,10 +79,56 @@ class RioPlayer(object):
             self.depth_cam.fx = float(lines[9][30:].split()[0])
             self.depth_cam.fy = float(lines[9][30:].split()[5])
 
+        # Get transform to reference
+        ref_file = os.path.join(self.data_path, "3RScan.json")
+        self.T_ref = np.eye(4)
+        if not os.path.isfile(ref_file):
+            rospy.logerr("[RIO Player] Meta data file '%s' does not exist.")
+        else:
+            with open(ref_file) as json_file:
+                index = json.load(json_file)
+                transform_found = False
+                for i in range(478):
+                    info = index[i]
+                    if transform_found:
+                        break
+                    if info['reference'] == self.data_ids[self.scan_id]:
+                        # It's a reference scan
+                        transform_found = True
+
+                    for scan in info['scans']:
+                        if scan['reference'] == self.data_ids[self.scan_id]:
+                            transform = scan['transform']
+                            for r in range(4):
+                                for c in range(4):
+                                    self.T_ref[r, c] = transform[c * 4 + r]
+                            transform_found = True
+                            break
+                if transform_found:
+                    rospy.loginfo(
+                        "[RIO Player] Initialized reference transform.")
+
+                    self.static_tf = tf2_ros.StaticTransformBroadcaster()
+                    msg = TransformStamped()
+                    msg.header.stamp = rospy.Time.now()
+                    msg.header.frame_id = self.global_frame_name
+                    msg.child_frame_id = self.frame_name + "_ref"
+                    msg.transform.translation.x = self.T_ref[0, 3]
+                    msg.transform.translation.y = self.T_ref[1, 3]
+                    msg.transform.translation.z = self.T_ref[2, 3]
+                    rotation = tf.transformations.quaternion_from_matrix(
+                        self.T_ref)
+                    msg.transform.rotation.x = rotation[0]
+                    msg.transform.rotation.y = rotation[1]
+                    msg.transform.rotation.z = rotation[2]
+                    msg.transform.rotation.w = rotation[3]
+                    self.static_tf.sendTransform(msg)
+
         # setup
         self.cv_bridge = CvBridge()
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.frame_no = 0
+        rospy.sleep(self.wait_time)
         self.timer = rospy.Timer(rospy.Duration(1 / self.rate), self.timer_cb)
 
     def timer_cb(self, _):
@@ -89,7 +139,7 @@ class RioPlayer(object):
         color_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
                                   "sequence", frame_name + ".color.jpg")
         if not os.path.isfile(color_file):
-            rospy.logwarn("No more frames found (published %i)." %
+            rospy.logwarn("[RIO Player] No more frames found (published %i)." %
                           self.frame_no)
             rospy.signal_shutdown("No more frames found.")
             return
@@ -106,7 +156,7 @@ class RioPlayer(object):
         rotation = tf.transformations.quaternion_from_matrix(transform)
         self.tf_broadcaster.sendTransform(
             (transform[0, 3], transform[1, 3], transform[2, 3]), rotation,
-            time_stamp, self.frame_name, self.global_frame_name)
+            time_stamp, self.frame_name, self.frame_name + "_ref")
         pose_msg = Pose()
         pose_msg.position.x = pose_data[3]
         pose_msg.position.y = pose_data[7]
@@ -211,7 +261,7 @@ class RioPlayer(object):
         seg_msg.header.frame_id = self.frame_name
         self.seg_pub.publish(seg_msg)
 
-        # TEST create pointcloud
+        # Create pointcloud
         # get 3d cloud
         points_x = im_x.reshape(-1)
         points_y = im_y.reshape(-1)

@@ -54,7 +54,7 @@ def produce_instance_images(scan_names):
     for scan in scan_names:
         scan_dir = os.path.join(SOURCE_DIR, scan)
         if not os.path.isdir(scan_dir):
-            print("Warning: Cannot fid dir '%s'" % scan_dir)
+            print "Warning: Cannot fid dir '%s'" % scan_dir
             continue
 
         # Read objects
@@ -66,7 +66,7 @@ def produce_instance_images(scan_names):
                     object_index = index['objects']
                     break
         if object_index is None:
-            print("Warning: Could not find scan '%s' i object list." % scan)
+            print "Warning: Could not find scan '%s' i object list." % scan
             continue
 
         # Write objects to label list
@@ -141,10 +141,11 @@ def produce_instance_images(scan_names):
 
 
 if __name__ == "__main__":
-    # list_matching_scans()
-    produce_instance_images([
-        '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
-        '2451c041-fae8-24f6-9213-b8b6af8d86c1',
-        'ddc73793-765b-241a-9ecd-b0cebb7cf916',
-        'ddc73795-765b-241a-9c5d-b97744afe077'
-    ])
+    list_matching_scans()
+
+    # produce_instance_images([
+    #     '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
+    #     '2451c041-fae8-24f6-9213-b8b6af8d86c1',
+    #     'ddc73793-765b-241a-9ecd-b0cebb7cf916',
+    #     'ddc73795-765b-241a-9c5d-b97744afe077'
+    # ])

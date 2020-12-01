@@ -11,7 +11,7 @@
   <arg name="use_sim_time" default="false"/>
   
   <!-- Rio Dataset args -->
-  <arg name="scan_id" default="1"/>
+  <arg name="scan_id" default="3"/>
   <arg name="rio_play_rate" default="5"/>
     
   <!-- Mapper -->
@@ -19,8 +19,8 @@
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
-  <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run1.panmap"/>
+  <arg name="load_map" default = "true"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>
 
 
 

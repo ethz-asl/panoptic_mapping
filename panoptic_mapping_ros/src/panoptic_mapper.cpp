@@ -160,19 +160,32 @@ void PanopticMapper::processImages(
   tsdf_integrator_->processImages(submaps_.get(), T_M_C, depth->image,
                                   color->image, segmentation->image);
   ros::WallTime t3 = ros::WallTime::now();
-  LOG_IF(INFO, config_.verbosity >= 2) << "Integrated images.";
-  LOG_IF(INFO, config_.verbosity >= 3)
-      << "(id tracking: " << int((t2 - t1).toSec() * 1000)
-      << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
-      << int((t3 - t0).toSec() * 1000) << "ms)";
 
   // If requested perform change detection and visualization.
   if (config_.change_detection_interval <= 0.f) {
     tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
   }
+  ros::WallTime t4 = ros::WallTime::now();
   if (config_.visualization_interval <= 0.f) {
     publishVisualization();
   }
+  ros::WallTime t5 = ros::WallTime::now();
+
+  // Log if requested.
+  std::stringstream info;
+  info << "Integrated images.";
+  if (config_.verbosity >= 3) {
+    info << "\n(id tracking: " << int((t2 - t1).toSec() * 1000)
+         << " + integration: " << int((t3 - t2).toSec() * 1000);
+    if (config_.change_detection_interval <= 0.f) {
+      info << " + change: " << int((t4 - t3).toSec() * 1000);
+    }
+    if (config_.visualization_interval <= 0.f) {
+      info << " + visual: " << int((t5 - t4).toSec() * 1000);
+    }
+    info << " = " << int((t5 - t0).toSec() * 1000) << "ms)";
+  }
+  LOG_IF(INFO, config_.verbosity >= 2) << info.str();
 }
 
 void PanopticMapper::pointcloudCallback(
