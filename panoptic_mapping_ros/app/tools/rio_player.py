@@ -38,8 +38,8 @@ class RioPlayer(object):
         self.rate = float(rospy.get_param('~play_rate', 5))  # Hz
         self.frame_name = rospy.get_param('~frame_name', 'rio')
         self.global_frame_name = rospy.get_param('~global_frame_name', 'world')
-        self.use_rendered_data = rospy.get_param('~use_rendered_data', True)
-        self.adjust_image_size = rospy.get_param('~adjust_image_size', False)
+        self.use_rendered_data = rospy.get_param('~use_rendered_data', False)
+        self.adjust_image_size = rospy.get_param('~adjust_image_size', True)
 
         # ROS
         self.color_pub = rospy.Publisher("~color_image", Image, queue_size=10)
@@ -194,18 +194,17 @@ class RioPlayer(object):
                                 frame_name + ".rendered.panlabels.png")
         cv_seg = cv2.imread(seg_file)
         cv_seg = cv_seg[:, :, 0]
-        if self.use_rendered_data:
-            cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        elif self.adjust_image_size:
-            seg_img = np.ones((self.depth_cam.height, self.depth_cam.width),
-                              dtype=np.uint8) * 255
-            for u in range(self.depth_cam.width):
-                for v in range(self.depth_cam.height):
-                    seg_img[v, u] = cv_seg[im_u[v, u], im_v[v, u]]
-            cv_seg = seg_img
+        cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-        # TEST
-        cv_seg = np.ones(np.shape(cv_seg), dtype=np.uint8) * 15
+        # if self.use_rendered_data:
+        #     cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        # elif self.adjust_image_size:
+        seg_img = np.ones((self.depth_cam.height, self.depth_cam.width),
+                          dtype=np.uint8) * 255
+        for u in range(self.depth_cam.width):
+            for v in range(self.depth_cam.height):
+                seg_img[v, u] = cv_seg[im_v[v, u], im_u[v, u]]
+        cv_seg = seg_img
 
         seg_msg = self.cv_bridge.cv2_to_imgmsg(cv_seg, "mono8")
         seg_msg.header.stamp = time_stamp

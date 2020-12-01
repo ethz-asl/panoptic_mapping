@@ -18,20 +18,20 @@ tsdf_integrator:
   
   # projective args
   # rio rendered
-  width: 960
-  height: 540
-  vx: 488.945
-  vy: 269.186
-  fx: 756.525
-  fy: 755.581
+#  width: 960
+#  height: 540
+#  vx: 488.945
+#  vy: 269.186
+#  fx: 756.525
+#  fy: 755.581
   
   # rio original
-#  width: 224
-#  height: 172
-#  vx: 113.696
-#  vy: 85.4004
-#  fx: 176.523
-#  fy: 240.667
+  width: 224
+  height: 172
+  vx: 113.696
+  vy: 85.4004
+  fx: 176.523
+  fy: 240.667
     
   max_range: 5  # m
   min_range: 0.1
@@ -65,7 +65,7 @@ visualization:
   verbosity: 1
   
   # Submaps
-  color_mode: color # submaps, instances, color, normals, classes, change
+  color_mode: instances # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
   submap_color_discretization: 50
   visualize_mesh: true

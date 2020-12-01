@@ -275,6 +275,10 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   //  Compute the signed distance.
   const float distance_to_surface =
       interpolator->interpolateDepth(range_image_);
+  if (distance_to_surface > config_.max_range ||
+      distance_to_surface < config_.min_range) {
+    return false;
+  }
   const float new_sdf = distance_to_surface - distance_to_voxel;
   if (new_sdf < -truncation_distance) {
     return false;

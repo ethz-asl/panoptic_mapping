@@ -11,7 +11,7 @@
   <arg name="use_sim_time" default="false"/>
   
   <!-- Rio Dataset args -->
-  <arg name="scan_id" default="0"/>
+  <arg name="scan_id" default="1"/>
   <arg name="rio_play_rate" default="5"/>
     
   <!-- Mapper -->
