@@ -24,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -174,14 +174,10 @@ Visualization Manager:
         31: true
         32: true
         33: true
-        34: true
         35: true
         36: true
-        38: true
-        39: true
+        37: true
         4: true
-        41: true
-        42: true
         5: true
         7: true
         8: true
@@ -234,13 +230,13 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /panoptic_mapper/visualization/planning_slice
       Name: PlanningSlice
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:

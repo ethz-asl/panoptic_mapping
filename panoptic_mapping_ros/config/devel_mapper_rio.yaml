@@ -65,7 +65,7 @@ visualization:
   verbosity: 3
   
   # Submaps
-  color_mode: color # submaps, instances, color, normals, classes, change
+  color_mode: change # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
   submap_color_discretization: 20
   visualize_mesh: true
