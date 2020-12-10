@@ -51,4 +51,4 @@ qtcreator-*
 CATKIN_IGNORE
 
 # Local utilities
-panoptic_mapping_ros/tools/
+Notes.txt
