@@ -7,19 +7,20 @@
   
   <!-- Flat Dataset args -->
   <arg name="bag_name" default="/home/lukas/Documents/datasets/flat_dataset/run2.bag"/> 
-  <arg name="bag_play_rate" default="1"/>
+  <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
+  <arg name="use_detectron" default="true"/>
   
   <!-- Rio Dataset args -->
   <arg name="scan_id" default="1"/>
-  <arg name="rio_play_rate" default="5"/>
+  <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
   <arg name="config" default="devel_mapper_rio"/>
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
-  <arg name="load_map" default = "true"/>
+  <arg name="load_map" default = "false"/>
   <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>
 
 

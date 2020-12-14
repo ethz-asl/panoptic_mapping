@@ -26,3 +26,10 @@ cs_add_executable(panoptic_mapper_node
         )
 target_link_libraries(panoptic_mapper_node ${PROJECT_NAME})
 
+###########
+# Export #
+###########
+
+cs_install()
+cs_export()
+

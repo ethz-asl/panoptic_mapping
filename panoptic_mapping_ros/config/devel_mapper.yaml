@@ -1,10 +1,3 @@
-#T_base_sensor:
-# - [1, 0, 0, 0.3]
-# - [ 0, 1, 0, 0]
-# - [ 0,  0, 1, 0]
-# - [ 0.0, 0.0, 0.0, 1.0]
-
- 
 # General Params
 verbosity: 3
 global_frame_name: world

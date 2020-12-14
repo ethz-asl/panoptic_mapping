@@ -2,7 +2,7 @@
 <package format="2">
   <name>panoptic_mapping_tools</name>
   <version>0.0.0</version>
-  <description>Utilities to setup and run data. </description>
+  <description>Utilities to setup and run data for panoptic mapping. </description>
   
   <author email="schmluk@mavt.ethz.ch">Lukas Schmid</author>
   <maintainer email="schmluk@mavt.ethz.ch">Lukas Schmid</maintainer>
@@ -12,14 +12,11 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
 
-  <depend>message_generation</depend>
-  <depend>message_runtime</depend>
   <depend>rospy</depend>
   <depend>roscpp</depend>
 
-  
   <depend>panoptic_mapping</depend>
-  <depend>eigen_catkin</depend>
+  <depend>panoptic_mapping_ros</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>

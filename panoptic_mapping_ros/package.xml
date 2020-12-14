@@ -17,6 +17,8 @@
   <depend>rospy</depend>
   <depend>roscpp</depend>
 
+  <depend>voxblox</depend>
+  <depend>voxblox_ros</depend>
   <depend>voxgraph</depend>
   <depend>voxgraph_msgs</depend>
   <depend>cblox</depend>
