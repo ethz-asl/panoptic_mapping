@@ -529,8 +529,13 @@ void PanopticMapper::processImages(
   ros::WallTime t1 = ros::WallTime::now();
 
   // Allocate new submaps.
-  id_tracker_->processImages(submaps_.get(), T_M_C, depth->image, color->image,
-                             &segmentation->image);
+  auto tracker = dynamic_cast<DetectronIDTracker*>(id_tracker_.get());
+  if (!tracker) {
+    LOG(WARNING) << "Labels can only be used with detectron id tracker.";
+    return;
+  }
+  tracker->processImages(submaps_.get(), T_M_C, depth->image, color->image,
+                         &segmentation->image, detectronLabelsFromMsg(labels));
   ros::WallTime t2 = ros::WallTime::now();
 
   // Integrate the images.

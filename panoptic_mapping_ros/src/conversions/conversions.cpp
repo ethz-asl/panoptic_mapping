@@ -1,13 +1,10 @@
 #include "panoptic_mapping_ros/conversions/conversions.h"
 
-#include <panoptic_mapping_msgs/DetectronLabel.h>
-#include <panoptic_mapping_msgs/DetectronLabels.h>
-
 namespace panoptic_mapping {
 
-DetectronLabel detectronLabelFromMsg(
+DetectronIDTracker::DetectronLabel detectronLabelFromMsg(
     const panoptic_mapping_msgs::DetectronLabel& msg) {
-  DetectronLabel result;
+  DetectronIDTracker::DetectronLabel result;
   result.id = msg.id;
   result.instance_id = msg.instance_id;
   result.is_thing = msg.is_thing;
@@ -16,9 +13,9 @@ DetectronLabel detectronLabelFromMsg(
   return result;
 }
 
-DetectronLabels detectronLabelsFromMsg(
+DetectronIDTracker::DetectronLabels detectronLabelsFromMsg(
     const panoptic_mapping_msgs::DetectronLabels& msg) {
-  DetectronLabels result;
+  DetectronIDTracker::DetectronLabels result;
   for (const panoptic_mapping_msgs::DetectronLabel& label : msg.labels) {
     result[label.id] = detectronLabelFromMsg(label);
   }
