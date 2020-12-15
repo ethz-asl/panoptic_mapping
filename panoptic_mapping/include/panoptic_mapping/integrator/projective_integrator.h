@@ -28,7 +28,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     int height = 480;
     float vx = 320;  // center point offsets
     float vy = 240;
-    float fx = 320;
+    float fx = 320;  // focal lengths
     float fy = 320;
 
     // integration params

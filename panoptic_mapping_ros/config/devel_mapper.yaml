@@ -6,7 +6,7 @@ change_detection_interval: -1.0
 visualization_interval: -1.0
 
 tsdf_integrator:  
-  type: projective # naive, projective, projective_multi_tsdf
+  type: projective # naive, projective
   verbosity: 1
   
   # projective args
@@ -14,7 +14,8 @@ tsdf_integrator:
   height: 480
   vx: 320
   vy: 240
-  focal_length: 320
+  fx: 320
+  fy: 320
   
   max_range: 5  # m
   min_range: 0.1

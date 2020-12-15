@@ -12,8 +12,10 @@ catkin_package()
 
 cs_add_library(${PROJECT_NAME}
         src/panoptic_mapper.cpp
+        #src/input/input_synchronizer.cpp
         src/visualization/submap_visualizer.cpp
         src/visualization/planning_visualizer.cpp
+        src/conversions/conversions.cpp
         src/conversions/ros_component_factory.cpp
         )
 

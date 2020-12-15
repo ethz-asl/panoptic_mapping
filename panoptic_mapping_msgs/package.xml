@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>panoptic_mapping_tools</name>
+  <name>panoptic_mapping_msgs</name>
   <version>0.0.0</version>
   <description>Utilities to setup and run data for panoptic mapping. </description>
   
@@ -12,15 +12,9 @@
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
 
-  <depend>rospy</depend>
-  <depend>roscpp</depend>
-
-  <depend>panoptic_mapping_msgs</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
   <depend>std_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>rosgraph_msgs</depend>
-  <depend>tf2_ros</depend>
 
   <export>
   </export>

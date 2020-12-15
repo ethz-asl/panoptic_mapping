@@ -1,15 +1,17 @@
 #ifndef PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_
-#define PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_
+#define PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H__
 
 #include <deque>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include <panoptic_mapping_msgs/DetectronLabels.h>
+#include <panoptic_mapping_msgs/SaveLoadMap.h>
+#include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
 #include <panoptic_mapping/core/submap.h>
@@ -54,16 +56,16 @@ class PanopticMapper {
   void segmentationImageCallback(const sensor_msgs::ImagePtr& msg);
   void publishVisualizationCallback(const ros::TimerEvent&);
   void changeDetectionCallback(const ros::TimerEvent&);
-  bool saveMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
-                       voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool loadMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
-                       voxblox_msgs::FilePath::Response& response);  // NOLINT
+  bool saveMapCallback(
+      panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
+      panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
+  bool loadMapCallback(
+      panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
+      panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
   bool setVisualizationModeCallback(
-      voxblox_msgs::FilePath::Request& request,     // NOLINT
-      voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool setColorModeCallback(
-      voxblox_msgs::FilePath::Request& request,     // NOLINT
-      voxblox_msgs::FilePath::Response& response);  // NOLINT
+      panoptic_mapping_msgs::SetVisualizationMode::Request& request,  // NOLINT
+      panoptic_mapping_msgs::SetVisualizationMode::Response&
+          response);  // NOLINT
 
   // IO.
   bool saveMap(const std::string& file_path);
@@ -84,8 +86,7 @@ class PanopticMapper {
   void setupMembers();
 
   // Input processing.
-  void findMatchingMessagesToPublish(
-      const sensor_msgs::ImagePtr& reference_msg);
+  void findMatchingMessagesToPublish(const ros::Time& timestamp);
   void processImages(const sensor_msgs::ImagePtr& depth_img,
                      const sensor_msgs::ImagePtr& color_img,
                      const sensor_msgs::ImagePtr& segmentation_img);
@@ -123,8 +124,19 @@ class PanopticMapper {
   std::deque<sensor_msgs::ImagePtr> depth_queue_;
   std::deque<sensor_msgs::ImagePtr> color_queue_;
   std::deque<sensor_msgs::ImagePtr> segmentation_queue_;
+
+  // TODO factor this out properly
+  std::deque<panoptic_mapping_msgs::DetectronLabels> labels_queue_;
+  bool use_detectron_ = true;
+  void detectronLabelsCallback(
+      const panoptic_mapping_msgs::DetectronLabels& msg);
+  ros::Subscriber detectron_label_sub_;
+  void processImages(const sensor_msgs::ImagePtr& depth_img,
+                     const sensor_msgs::ImagePtr& color_img,
+                     const sensor_msgs::ImagePtr& segmentation_img,
+                     const panoptic_mapping_msgs::DetectronLabels& labels);
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_
+#endif  // PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H__
