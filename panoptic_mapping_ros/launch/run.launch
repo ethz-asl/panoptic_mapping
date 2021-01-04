@@ -1,12 +1,12 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- General -->
-  <arg name="use_rio" value="true"/>
-  <arg name="use_flat" value="false"/>
+  <arg name="use_rio" value="false"/>
+  <arg name="use_flat" value="true"/>
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
-  <arg name="bag_name" default="/home/lukas/Documents/datasets/flat_dataset/run2.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/datasets/flat_dataset/run1.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
   <arg name="use_detectron" default="true"/>
@@ -16,7 +16,7 @@
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="devel_mapper_rio"/>
+  <arg name="config" default="devel_mapper"/>
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
@@ -42,6 +42,7 @@
     <remap from="color_image_in" to="$(arg namespace)/color_image" if="$(arg use_image_input)"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image" if="$(arg use_image_input)"/>
     <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image" if="$(arg use_image_input)"/>
+    <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
   </node>  
   
   <!-- Map loader -->

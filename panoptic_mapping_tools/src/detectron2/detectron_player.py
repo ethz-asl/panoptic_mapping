@@ -72,6 +72,7 @@ class DetectronPlayer(object):
 
         # Load and publish labels.
         label_msg = DetectronLabels()
+        label_msg.header.stamp = img_msg.header.stamp
         with open(labels_file) as json_file:
             data = json.load(json_file)
             for d in data:

@@ -14,6 +14,7 @@ namespace panoptic_mapping {
 /**
  * This id tracker looks up the corresponding instance id for each sumbap.
  */
+// TODO(schmluk): Clean submap creation away from id tracking.
 class DetectronIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
@@ -25,6 +26,11 @@ class DetectronIDTracker : public IDTrackerBase {
     float unknown_voxel_size = 0.1;
     float freespace_voxel_size = 0.3;
     int voxels_per_side = 16;
+
+    float vx = 320;
+    float vy = 240;
+    float fx = 320;
+    float fy = 320;
 
     Config() { setConfigName("DetectronIDTracker"); }
 
@@ -41,6 +47,7 @@ class DetectronIDTracker : public IDTrackerBase {
     float score = 0.f;
   };
 
+  // id - label pairs
   typedef std::unordered_map<int, DetectronLabel> DetectronLabels;
 
   DetectronIDTracker(const Config& config,
@@ -60,7 +67,8 @@ class DetectronIDTracker : public IDTrackerBase {
                          std::vector<int>* ids) override;
 
  private:
-  void allocateSubmap(int instance, SubmapCollection* submaps);
+  int allocateSubmap(int detectron_id, SubmapCollection* submaps,
+                     const DetectronLabels& labels);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
   void printAndResetWarnings();
 
@@ -69,8 +77,12 @@ class DetectronIDTracker : public IDTrackerBase {
       IDTrackerBase, DetectronIDTracker, std::shared_ptr<LabelHandler>>
       registration_;
   const Config config_;
-  std::unordered_map<int, int> instance_to_id_;  // track active maps
   std::unordered_map<int, int> unknown_ids;      // for error handling
+
+  // Tracking information.
+  bool is_initialized_ = false;
+  Transformation T_M_C_prev_;
+  cv::Mat id_image_prev_;
 };
 
 }  // namespace panoptic_mapping

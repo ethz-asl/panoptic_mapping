@@ -111,12 +111,12 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz/Axes
-      Enabled: false
+      Enabled: true
       Length: 0.5
       Name: Drone_flat
       Radius: 0.15000000596046448
       Reference Frame: airsim_drone
-      Value: false
+      Value: true
     - Class: rviz/Axes
       Enabled: true
       Length: 0.5
@@ -145,44 +145,7 @@ Visualization Manager:
       Topic: /panoptic_mapper/visualization/mesh
       Unreliable: false
       Value: true
-      Visible:
-        0: true
-        1: true
-        10: true
-        11: true
-        12: true
-        13: true
-        14: true
-        15: true
-        16: true
-        17: true
-        18: true
-        19: true
-        2: true
-        20: true
-        21: true
-        22: true
-        23: true
-        24: true
-        25: true
-        26: true
-        27: true
-        28: true
-        29: true
-        3: true
-        30: true
-        31: true
-        32: true
-        33: true
-        35: true
-        36: true
-        37: true
-        4: true
-        5: true
-        7: true
-        8: true
-        9: true
-        Value: true
+      Visible: true
     - Alpha: 0.30000001192092896
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
