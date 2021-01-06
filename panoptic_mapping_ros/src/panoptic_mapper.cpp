@@ -490,10 +490,10 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   return true;
 }
 
-// TODO: Proper label processing
+// TODO(schmluk): Proper label processing
 void PanopticMapper::detectronLabelsCallback(
     const panoptic_mapping_msgs::DetectronLabels& msg) {
-  // Store depth img in queue.
+  // Store label in queue.
   labels_queue_.push_back(msg);
   if (labels_queue_.size() > config_.max_image_queue_length) {
     labels_queue_.pop_front();

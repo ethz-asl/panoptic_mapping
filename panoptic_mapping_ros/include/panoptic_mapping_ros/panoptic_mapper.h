@@ -1,5 +1,5 @@
 #ifndef PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_
-#define PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H__
+#define PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_
 
 #include <deque>
 #include <memory>
@@ -17,10 +17,10 @@
 #include <panoptic_mapping/core/submap.h>
 #include <panoptic_mapping/core/submap_collection.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
-#include <panoptic_mapping/planning/planning_interface.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>
+#include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
@@ -125,7 +125,7 @@ class PanopticMapper {
   std::deque<sensor_msgs::ImagePtr> color_queue_;
   std::deque<sensor_msgs::ImagePtr> segmentation_queue_;
 
-  // TODO factor this out properly
+  // TODO(schmluk) factor this out properly
   std::deque<panoptic_mapping_msgs::DetectronLabels> labels_queue_;
   bool use_detectron_ = true;
   void detectronLabelsCallback(
@@ -139,4 +139,4 @@ class PanopticMapper {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H__
+#endif  // PANOPTIC_MAPPING_ROS_PANOPTIC_MAPPER_H_

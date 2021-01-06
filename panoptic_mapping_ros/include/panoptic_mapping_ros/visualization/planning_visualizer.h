@@ -9,7 +9,7 @@
 
 #include <panoptic_mapping/core/common.h>
 #include <panoptic_mapping/core/submap_collection.h>
-#include <panoptic_mapping/planning/planning_interface.h>
+#include <panoptic_mapping/tools/planning_interface.h>
 
 namespace panoptic_mapping {
 

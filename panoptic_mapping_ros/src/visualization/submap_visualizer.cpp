@@ -418,7 +418,11 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         break;
       }
       case ColorMode::kClasses: {
-        LOG(WARNING) << "Class coloring is not yet implemented.";
+        if (submap.getLabel() == PanopticLabel::kUnknown) {
+          info->color = kUnknownColor_;
+        } else {
+          info->color = id_color_map_.colorLookup(submap.getClassID());
+        }
         break;
       }
       case ColorMode::kChange: {
