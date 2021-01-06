@@ -31,7 +31,9 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
 
 GroundTruthIDTracker::GroundTruthIDTracker(
     const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {}
+    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+}
 
 void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          const Transformation& T_M_C,
@@ -89,12 +91,12 @@ void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
 
 void GroundTruthIDTracker::allocateSubmap(int instance,
                                           SubmapCollection* submaps) {
-  // known existing submap
+  // Known existing submap.
   if (instance_to_id_.find(instance) != instance_to_id_.end()) {
     return;
   }
 
-  // check whether the instance code is known
+  // Check whether the instance code is known.
   int new_instance = instance;
   if (!label_handler_->segmentationIdExists(instance)) {
     new_instance = 255;  // reserved code for unknown objects
@@ -111,19 +113,19 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   cfg.voxels_per_side = config_.voxels_per_side;
   PanopticLabel label = label_handler_->getPanopticLabel(new_instance);
   switch (label) {
-    case PanopticLabel::kINSTANCE: {
+    case PanopticLabel::kInstance: {
       cfg.voxel_size = config_.instance_voxel_size;
       break;
     }
-    case PanopticLabel::kBACKGROUND: {
+    case PanopticLabel::kBackground: {
       cfg.voxel_size = config_.background_voxel_size;
       break;
     }
-    case PanopticLabel::kSPACE: {
+    case PanopticLabel::kFreeSpace: {
       cfg.voxel_size = config_.freespace_voxel_size;
       break;
     }
-    case PanopticLabel::kUNKNOWN: {
+    case PanopticLabel::kUnknown: {
       cfg.voxel_size = config_.unknown_voxel_size;
       break;
     }
@@ -133,6 +135,7 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   new_submap->setInstanceID(new_instance);
   new_submap->setClassID(label_handler_->getClassID(new_instance));
   new_submap->setLabel(label);
+  new_submap->setName(label_handler_->getName(new_instance));
 }
 
 void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
@@ -146,8 +149,9 @@ void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   config.voxels_per_side = config_.voxels_per_side;
   config.voxel_size = config_.freespace_voxel_size;
   Submap* space_submap = submaps->createSubmap(config);
-  space_submap->setLabel(PanopticLabel::kSPACE);
+  space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.
+  space_submap->setName("FreeSpace");
   submaps->setActiveFreeSpaceSubmapID(space_submap->getID());
 }
 

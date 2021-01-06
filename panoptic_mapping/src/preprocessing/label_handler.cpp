@@ -24,7 +24,7 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
     LabelEntry label;
     label.segmentation_id = inst;
     label.class_id = cls;
-    label.label = pan ? PanopticLabel::kINSTANCE : PanopticLabel::kBACKGROUND;
+    label.label = pan ? PanopticLabel::kInstance : PanopticLabel::kBackground;
     label.name = name;
     label.color = voxblox::Color(r, g, b);
     labels_[inst] = label;
@@ -39,7 +39,7 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   LabelEntry label;
   label.segmentation_id = 255;
   label.class_id = 0;
-  label.label = PanopticLabel::kUNKNOWN;
+  label.label = PanopticLabel::kUnknown;
   label.name = "Unknown";
   label.color = voxblox::Color(80, 80, 80);
   labels_[255] = label;
@@ -63,19 +63,19 @@ int LabelHandler::getClassID(int segmentation_id) const {
 }
 
 bool LabelHandler::isBackgroundClass(int segmentation_id) const {
-  return labels_.at(segmentation_id).label == PanopticLabel::kBACKGROUND;
+  return labels_.at(segmentation_id).label == PanopticLabel::kBackground;
 }
 
 bool LabelHandler::isInstanceClass(int segmentation_id) const {
-  return labels_.at(segmentation_id).label == PanopticLabel::kINSTANCE;
+  return labels_.at(segmentation_id).label == PanopticLabel::kInstance;
 }
 
 bool LabelHandler::isUknownClass(int segmentation_id) const {
-  return labels_.at(segmentation_id).label == PanopticLabel::kUNKNOWN;
+  return labels_.at(segmentation_id).label == PanopticLabel::kUnknown;
 }
 
 bool LabelHandler::isSpaceClass(int segmentation_id) const {
-  return labels_.at(segmentation_id).label == PanopticLabel::kSPACE;
+  return labels_.at(segmentation_id).label == PanopticLabel::kFreeSpace;
 }
 
 PanopticLabel LabelHandler::getPanopticLabel(int segmentation_id) const {

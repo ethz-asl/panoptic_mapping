@@ -3,8 +3,7 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Global Options1
+      Expanded: ~
       Splitter Ratio: 0.520588219165802
     Tree Height: 726
   - Class: rviz/Selection
@@ -81,26 +80,6 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
-      Enabled: true
-      Name: VoxbloxMultiMesh
-      Topic: /panoptic_mapper/visualization/mesh
-      Unreliable: false
-      Value: true
-      Visible:
-        31: true
-        32: true
-        33: true
-        34: true
-        35: true
-        36: true
-        38: true
-        39: true
-        40: true
-        41: true
-        42: true
-        43: true
-        Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
@@ -131,14 +110,6 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Class: rviz/MarkerArray
-      Enabled: false
-      Marker Topic: /panoptic_mapper/visualization/tsdf_blocks
-      Name: TsdfBlocks
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
     - Class: rviz/Axes
       Enabled: true
       Length: 0.5
@@ -161,6 +132,129 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: false
+    - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
+      Enabled: true
+      Name: Mesh
+      Topic: /panoptic_mapper/visualization/mesh
+      Unreliable: false
+      Value: true
+      Visible:
+        0: true
+        1: true
+        10: true
+        100: true
+        101: true
+        102: true
+        103: true
+        104: true
+        105: true
+        106: true
+        107: true
+        108: true
+        109: true
+        11: true
+        110: true
+        111: true
+        112: true
+        113: true
+        114: true
+        115: true
+        116: true
+        117: true
+        118: true
+        119: true
+        12: true
+        13: true
+        14: true
+        15: true
+        16: true
+        17: true
+        18: true
+        19: true
+        2: true
+        20: true
+        21: true
+        22: true
+        23: true
+        24: true
+        25: true
+        26: true
+        27: true
+        28: true
+        29: true
+        3: true
+        30: true
+        31: true
+        32: true
+        33: true
+        34: true
+        35: true
+        36: true
+        37: true
+        38: true
+        39: true
+        4: true
+        40: true
+        41: true
+        42: true
+        43: true
+        44: true
+        45: true
+        46: true
+        47: true
+        48: true
+        49: true
+        5: true
+        50: true
+        51: true
+        52: true
+        53: true
+        54: true
+        55: true
+        56: true
+        57: true
+        58: true
+        59: true
+        60: true
+        61: true
+        62: true
+        63: true
+        64: true
+        65: true
+        66: true
+        67: true
+        68: true
+        69: true
+        7: true
+        70: true
+        71: true
+        73: true
+        74: true
+        75: true
+        76: true
+        77: true
+        78: true
+        79: true
+        8: true
+        80: true
+        81: true
+        82: true
+        83: true
+        84: true
+        85: true
+        86: true
+        87: true
+        88: true
+        89: true
+        9: true
+        90: true
+        91: true
+        92: true
+        93: true
+        96: true
+        98: true
+        99: true
+        Value: true
     - Alpha: 0.30000001192092896
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -173,12 +267,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 0.6000001430511475
+      Max Intensity: 0.6000002026557922
       Min Color: 0; 0; 0
-      Min Intensity: -0.5992627143859863
+      Min Intensity: -0.5999771356582642
       Name: FreeSpaceTsdf
       Position Transformer: XYZ
       Queue Size: 10
@@ -190,11 +284,19 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: false
       Marker Topic: /panoptic_mapper/visualization/bounding_volumes
       Name: BoundingVolumes
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /panoptic_mapper/visualization/tsdf_blocks
+      Name: TsdfBlocks
       Namespaces:
         {}
       Queue Size: 100
@@ -227,7 +329,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.100936889648438
+      Distance: 13.565502166748047
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -242,10 +344,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0947967767715454
+      Pitch: 1.344796061515808
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.6309665441513062
+      Yaw: 1.5559580326080322
     Saved: ~
 Window Geometry:
   Displays:

@@ -40,39 +40,51 @@ PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
       config_(
           config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
               .checkValid()) {
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   setupMembers();
   setupRos();
 }
 
 void PanopticMapper::setupMembers() {
-  // labels
+  // Map.
+  submaps_ = std::make_shared<SubmapCollection>();
+
+  // Labels.
   std::string label_path;
   nh_private_.param("label_path", label_path, std::string(""));
   label_handler_ = std::make_shared<LabelHandler>();
   label_handler_->readLabelsFromFile(label_path);
 
-  // tsdf_integrator
+  // Tsdf-integrator.
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
   tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
 
-  // visualization
+  // Id tracking.
+  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
+  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
+      id_tracker_nh, label_handler_);
+
+  // Tsdf-registrator.
+  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
+  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
+      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
+          registrator_nh));
+
+  // Planning Interface.
+  planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
+
+  // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
           visualization_nh),
       label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
-
-  // id tracking
-  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
-  id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
-      id_tracker_nh, label_handler_);
-
-  // tsdf registrator
-  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
-  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
-      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
-          registrator_nh));
+  //  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
+  //      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
+  //          plan_visualization_nh),
+  //      label_handler_);
+  //  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
 
 void PanopticMapper::setupRos() {
@@ -119,7 +131,7 @@ void PanopticMapper::processImages(
     const sensor_msgs::ImagePtr& segmentation_img) {
   ros::WallTime t0 = ros::WallTime::now();
 
-  // look up transform
+  // Look up transform.
   voxblox::Transformation T_M_C;
   if (!tf_transformer_.lookupTransform(config_.global_frame_name,
                                        depth_img->header.frame_id,
@@ -130,7 +142,7 @@ void PanopticMapper::processImages(
     return;
   }
 
-  // read images, segmentation is mutable (copied) for the id tracker
+  // Read images, segmentation is mutable (copied) for the id tracker.
   cv_bridge::CvImageConstPtr depth =
       cv_bridge::toCvShare(depth_img, depth_img->encoding);
   cv_bridge::CvImageConstPtr color =
@@ -139,14 +151,14 @@ void PanopticMapper::processImages(
       cv_bridge::toCvCopy(segmentation_img, segmentation_img->encoding);
   ros::WallTime t1 = ros::WallTime::now();
 
-  // allocate new submaps
-  id_tracker_->processImages(&submaps_, T_M_C, depth->image, color->image,
+  // Allocate new submaps.
+  id_tracker_->processImages(submaps_.get(), T_M_C, depth->image, color->image,
                              &segmentation->image);
   ros::WallTime t2 = ros::WallTime::now();
 
-  // integrate the images
-  tsdf_integrator_->processImages(&submaps_, T_M_C, depth->image, color->image,
-                                  segmentation->image);
+  // Integrate the images.
+  tsdf_integrator_->processImages(submaps_.get(), T_M_C, depth->image,
+                                  color->image, segmentation->image);
   ros::WallTime t3 = ros::WallTime::now();
   LOG_IF(INFO, config_.verbosity >= 2) << "Integrated images.";
   LOG_IF(INFO, config_.verbosity >= 3)
@@ -196,11 +208,12 @@ void PanopticMapper::pointcloudCallback(
   ros::WallTime t1 = ros::WallTime::now();
 
   // allocate new submaps
-  id_tracker_->processPointcloud(&submaps_, T_S_C, pointcloud, colors, &ids);
+  id_tracker_->processPointcloud(submaps_.get(), T_S_C, pointcloud, colors,
+                                 &ids);
   ros::WallTime t2 = ros::WallTime::now();
 
   // integrate pointcloud
-  tsdf_integrator_->processPointcloud(&submaps_, T_S_C, pointcloud, colors,
+  tsdf_integrator_->processPointcloud(submaps_.get(), T_S_C, pointcloud, colors,
                                       ids);
   ros::WallTime t3 = ros::WallTime::now();
   LOG_IF(INFO, config_.verbosity >= 2) << "Integrated point cloud.";
@@ -212,7 +225,7 @@ void PanopticMapper::pointcloudCallback(
 }
 
 void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
-  tsdf_registrator_->checkSubmapCollectionForChange(submaps_);
+  tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
@@ -220,11 +233,11 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualization() {
-  submap_visualizer_->visualizeAll(&submaps_);
+  submap_visualizer_->visualizeAll(submaps_.get());
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // store depth img in queue
+  // Store depth img in queue.
   depth_queue_.push_back(msg);
   if (depth_queue_.size() > config_.max_image_queue_length) {
     depth_queue_.pop_front();
@@ -233,7 +246,7 @@ void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
 }
 
 void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // store color img in queue
+  // Store color img in queue.
   color_queue_.push_back(msg);
   if (color_queue_.size() > config_.max_image_queue_length) {
     color_queue_.pop_front();
@@ -243,7 +256,7 @@ void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr& msg) {
 
 void PanopticMapper::segmentationImageCallback(
     const sensor_msgs::ImagePtr& msg) {
-  // store segmentation img in queue
+  // store segmentation img in queue.
   segmentation_queue_.push_back(msg);
   if (segmentation_queue_.size() > config_.max_image_queue_length) {
     segmentation_queue_.pop_front();
@@ -253,7 +266,7 @@ void PanopticMapper::segmentationImageCallback(
 
 void PanopticMapper::findMatchingMessagesToPublish(
     const sensor_msgs::ImagePtr& reference_msg) {
-  // check whether there exist 3 images with matching timestamp
+  // Check whether there exist 3 images with matching timestamp.
   std::deque<sensor_msgs::ImagePtr>::iterator depth_it, color_it,
       segmentation_it;
 
@@ -283,7 +296,7 @@ void PanopticMapper::findMatchingMessagesToPublish(
     return;
   }
 
-  // a matching set was found
+  // A matching set was found.
   processImages(*depth_it, *color_it, *segmentation_it);
   depth_queue_.erase(depth_it);
   color_queue_.erase(color_it);
@@ -325,7 +338,7 @@ bool PanopticMapper::loadMapCallback(
   return loadMap(request.file_path);
 }
 
-// Save load functionality was heavily adapted from cblox
+// Save load functionality was heavily adapted from cblox.
 bool PanopticMapper::saveMap(const std::string& file_path) {
   CHECK(!file_path.empty());
   std::fstream outfile;
@@ -334,18 +347,18 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
     LOG(ERROR) << "Could not open file for writing: " << file_path;
     return false;
   }
-  // Saving the submap collection header object
+  // Saving the submap collection header object.
   SubmapCollectionProto submap_collection_proto;
-  submap_collection_proto.set_num_submaps(submaps_.size());
+  submap_collection_proto.set_num_submaps(submaps_->size());
   if (!voxblox::utils::writeProtoMsgToStream(submap_collection_proto,
                                              &outfile)) {
     LOG(ERROR) << "Could not write submap collection header message.";
     outfile.close();
     return false;
   }
-  // Saving the submaps
+  // Saving the submaps.
   int saved_submaps = 0;
-  for (const auto& submap : submaps_) {
+  for (const auto& submap : *submaps_) {
     bool success = submap->saveToStream(&outfile);
     if (success) {
       saved_submaps++;
@@ -354,7 +367,7 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
                    << "'.";
     }
   }
-  LOG(INFO) << "Successfully saved " << saved_submaps << "/" << submaps_.size()
+  LOG(INFO) << "Successfully saved " << saved_submaps << "/" << submaps_->size()
             << " submaps.";
   outfile.close();
   return true;
@@ -362,7 +375,7 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
 
 bool PanopticMapper::loadMap(const std::string& file_path) {
   // Clear the current maps.
-  submaps_.clear();
+  submaps_->clear();
 
   // Open and check the file.
   std::ifstream proto_file;
@@ -392,20 +405,24 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     }
 
     // Re-compute cached data and set the relevant flags.
-    submap_ptr->finishActivePeriod();
     tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
-    submap_ptr->getBoundingVolumePtr()->update();
+    submap_ptr->finishActivePeriod();
+    if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
+      submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
+    } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
+      submap_ptr->setName("FreeSpace");
+    }
 
-    // add to the collection
-    submaps_.addSubmap(std::move(submap_ptr));
+    // Add to the collection.
+    submaps_->addSubmap(std::move(submap_ptr));
   }
   proto_file.close();
 
   // Reproduce the mesh and visualization.
   submap_visualizer_->reset();
-  submap_visualizer_->visualizeAll(&submaps_);
+  submap_visualizer_->visualizeAll(submaps_.get());
 
-  LOG(INFO) << "Successfully loaded " << submaps_.size() << "/"
+  LOG(INFO) << "Successfully loaded " << submaps_->size() << "/"
             << submap_collection_proto.num_submaps() << " submaps.";
   return true;
 }

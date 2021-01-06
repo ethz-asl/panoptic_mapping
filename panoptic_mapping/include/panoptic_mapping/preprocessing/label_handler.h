@@ -17,7 +17,7 @@ class LabelHandler {
   struct LabelEntry {
     int segmentation_id = 0;
     int class_id = 0;
-    PanopticLabel label = PanopticLabel::kUNKNOWN;
+    PanopticLabel label = PanopticLabel::kUnknown;
     std::string name = "UnInitializedName";
     voxblox::Color color;
   };

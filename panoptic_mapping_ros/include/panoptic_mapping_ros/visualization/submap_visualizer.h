@@ -24,6 +24,7 @@ class SubmapVisualizer {
  public:
   // config
   struct Config : public config_utilities::Config<Config> {
+    int verbosity = 1;
     std::string visualization_mode = "all";  // initial visualization mode.
     std::string color_mode = "color";        // initial color mode.
     int submap_color_discretization = 20;
@@ -34,6 +35,8 @@ class SubmapVisualizer {
     bool include_free_space = false;
     float mesh_min_weight = 1e-4;
     std::string ros_namespace;
+
+    Config() { setConfigName("SubmapVisualizer"); }
 
    protected:
     void setupParamsAndPrinting() override;
@@ -55,7 +58,7 @@ class SubmapVisualizer {
     kClasses,
     kChange
   };
-  enum class VisualizationMode { kAll = 0, kActive, kChange };
+  enum class VisualizationMode { kAll = 0, kActive };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);
@@ -66,16 +69,16 @@ class SubmapVisualizer {
       VisualizationMode visualization_mode);
 
   // Visualization message creation.
-  void generateMeshMsgs(SubmapCollection* submaps,
-                        std::vector<voxblox_msgs::MultiMesh>* output);
-  void generateBlockMsgs(const SubmapCollection& submaps,
-                         visualization_msgs::MarkerArray* output);
-  void generateFreeSpaceMsg(const SubmapCollection& submaps,
-                            pcl::PointCloud<pcl::PointXYZI>* output);
-  void generateBoundingVolumeMsgs(const SubmapCollection& submaps,
-                                  visualization_msgs::MarkerArray* output);
+  std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
+      SubmapCollection* submaps);
+  visualization_msgs::MarkerArray generateBlockMsgs(
+      const SubmapCollection& submaps);
+  pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
+      const SubmapCollection& submaps);
+  visualization_msgs::MarkerArray generateBoundingVolumeMsgs(
+      const SubmapCollection& submaps);
 
-  // publish visualization requests
+  // Publish visualization requests.
   void visualizeAll(SubmapCollection* submaps);
   void visualizeMeshes(SubmapCollection* submaps);
   void visualizeTsdfBlocks(const SubmapCollection& submaps);
@@ -83,7 +86,7 @@ class SubmapVisualizer {
   void visualizeBoundingVolume(const SubmapCollection& submaps);
   void publishTfTransforms(const SubmapCollection& submaps);
 
-  // interaction
+  // Interaction.
   void reset();
   void setVisualizationMode(VisualizationMode visualization_mode);
   void setColorMode(ColorMode color_mode);
@@ -92,7 +95,7 @@ class SubmapVisualizer {
   }
 
  private:
-  const Color kUNKNOWNCOLOR = Color(50, 50, 50);
+  static const Color kUnknownColor_;
 
   struct SubmapVisInfo {
     // General.
@@ -100,12 +103,13 @@ class SubmapVisualizer {
     bool remesh_everything = false;
     bool republish_everything = false;
     bool was_deleted = false;
-    bool change_color = false;
-    Color color;
+    bool change_color = true;
+    Color color = kUnknownColor_;
     float alpha = 1.0;
 
-    // Tracking: kChange
-    int was_matched = 0;  // 0-init, 1-no, 2-yes
+    // Tracking.
+    ChangeDetectionData::State previous_change_state;  // kChange
+    bool was_active;                                   // kActive
   };
 
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);

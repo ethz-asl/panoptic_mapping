@@ -26,6 +26,8 @@ class GroundTruthIDTracker : public IDTrackerBase {
     float freespace_voxel_size = 0.3;
     int voxels_per_side = 16;
 
+    Config() { setConfigName("GroundTruthIDTracker"); }
+
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;
