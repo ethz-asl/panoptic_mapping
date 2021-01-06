@@ -28,6 +28,7 @@ cs_add_library(${PROJECT_NAME}
         src/core/submap_id.cpp
         src/core/submap_bounding_volume.cpp
         src/core/submap_collection.cpp
+        src/core/camera.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/ground_truth_id_tracker.cpp
         src/preprocessing/detectron_id_tracker.cpp
@@ -36,7 +37,8 @@ cs_add_library(${PROJECT_NAME}
         src/integrator/projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
         src/registration/tsdf_registrator.cpp
-        src/planning/planning_interface.cpp
+        src/tools/planning_interface.cpp
+        src/tools/map_renderer.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
 

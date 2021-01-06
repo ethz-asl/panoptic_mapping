@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/core/camera.h"
 #include "panoptic_mapping/core/common.h"
 #include "panoptic_mapping/integrator/integrator_base.h"
 #include "panoptic_mapping/integrator/projection_interpolators.h"
@@ -23,17 +24,7 @@ class ProjectiveIntegrator : public IntegratorBase {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // camera settings  [px]
-    int width = 640;
-    int height = 480;
-    float vx = 320;  // center point offsets
-    float vy = 240;
-    float fx = 320;  // focal lengths
-    float fy = 320;
-
-    // integration params
-    float max_range = 5;    // m
-    float min_range = 0.1;  // m
+    // Integration params.
     bool use_weight_dropoff = true;
     bool use_constant_weight = false;
     bool foreign_rays_clear = true;  // observations of object B can clear
@@ -42,8 +33,11 @@ class ProjectiveIntegrator : public IntegratorBase {
     float max_weight = 1e5;
     std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
 
-    // system params
+    // System params.
     int integration_threads = std::thread::hardware_concurrency();
+
+    // Camera settings.
+    Camera::Config camera;
 
     Config() { setConfigName("ProjectiveIntegrator"); }
 
@@ -75,6 +69,7 @@ class ProjectiveIntegrator : public IntegratorBase {
   const Config config_;
   std::vector<std::unique_ptr<InterpolatorBase>>
       interpolators_;  // one for each thread.
+  Camera camera_;
 
   // Cached data.
   Eigen::MatrixXf range_image_;
@@ -86,12 +81,6 @@ class ProjectiveIntegrator : public IntegratorBase {
   // Methods.
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
-
-  bool submapIsInViewFrustum(const Submap& submap,
-                             const Transformation& T_M_C) const;
-
-  bool blockIsInViewFrustum(const Point& center_point_C,
-                            float block_diag_half) const;
 
   void findVisibleBlocks(const Submap& submap, const Transformation& T_M_C,
                          voxblox::BlockIndexList* block_list) const;

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/planning/planning_interface.h"
+#include "panoptic_mapping/tools/planning_interface.h"
 
 #include <memory>
 #include <utility>

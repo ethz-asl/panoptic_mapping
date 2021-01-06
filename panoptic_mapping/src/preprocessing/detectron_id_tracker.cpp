@@ -17,6 +17,12 @@ void DetectronIDTracker::Config::checkParams() const {
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
+  checkParamGT(width, 0, "width");
+  checkParamGT(heihgt, 0, "heihgt");
+  checkParamGT(vx, 0.f, "vx");
+  checkParamGT(vy, 0.f, "vy");
+  checkParamGT(fx, 0.f, "fx");
+  checkParamGT(fy, 0.f, "fy");
 }
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
@@ -26,8 +32,8 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("input_is_mesh_id", &input_is_mesh_id);
-
+  setupParam("width", &width);
+  setupParam("heihgt", &heihgt);
   setupParam("vx", &vx);
   setupParam("vy", &vy);
   setupParam("fx", &fx);

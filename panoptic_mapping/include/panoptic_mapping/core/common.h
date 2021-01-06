@@ -25,6 +25,8 @@ using Colors = voxblox::Colors;
 // Panoptic type labels.
 enum class PanopticLabel { kUnknown = 0, kInstance, kBackground, kFreeSpace };
 
+// Frame names are abreviated consistently: S - Submap, M - Mission, C - Camera
+
 }  // namespace panoptic_mapping
 
 #endif  // PANOPTIC_MAPPING_CORE_COMMON_H_
