@@ -91,16 +91,19 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
             ChangeDetectionData::State::kAbsent) {
       continue;
     }
-    // Find all potentially overlapping submaps and check for conflicts.
+
+    // Check overlapping submaps for conflicts or matches and store best match.
     ChangeDetectionData* change = submap->getChangeDetectionDataPtr();
+    int best_matching_id;
+    unsigned int best_matching_points = 0;
     for (const auto& other : submaps) {
       if (!other->isActive() ||
           !submap->getBoundingVolume().intersects(other->getBoundingVolume()) ||
           change->matched_submap_id == other->getID()) {
         continue;
       }
-      bool is_match = false;
-      if (submapsConflict(*submap, *other, &is_match)) {
+      unsigned int matching_points;
+      if (submapsConflict(*submap, *other, &matching_points)) {
         // No conflicts allowed, update also the matched submap if it exists.
         info << "\nSubmap " << submap->getID() << " (" << submap->getName()
              << ") conflicts with submap " << other->getID() << " ("
@@ -117,20 +120,35 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
         change->state = ChangeDetectionData::State::kAbsent;
         info << ".";
         break;
-      } else if (submap->getClassID() == other->getClassID() && is_match) {
-        // Geometry and semantic class match.
-        change->state = ChangeDetectionData::State::kPersistent;
-        change->matched_submap_id = other->getID();
-        other->getChangeDetectionDataPtr()->state =
-            ChangeDetectionData::State::kMatched;
-        other->getChangeDetectionDataPtr()->matched_submap_id = submap->getID();
-        info << "\nSubmap " << submap->getID() << " (" << submap->getName()
-             << ") was matched with submap " << other->getID() << " ("
-             << other->getName() << ").";
+      } else if (submap->getClassID() == other->getClassID() &&
+                 matching_points > best_matching_points) {
+        // Semantically match, so could be a candidate.
+        best_matching_id = other->getID();
+        best_matching_points = matching_points;
       }
+    }
+
+    // Check for sufficient alignment and match the most suitable candidate.
+    const unsigned int acceptance_count =
+        std::min(config_.match_acceptance_points,
+                 static_cast<int>(
+                     config_.match_acceptance_percentage *
+                     static_cast<float>(submap->getIsoSurfacePoints().size())));
+    if (best_matching_points > acceptance_count) {
+      Submap* other = submaps.getSubmapPtr(best_matching_id);
+      // Geometry and semantic class match.
+      change->state = ChangeDetectionData::State::kPersistent;
+      change->matched_submap_id = other->getID();
+      other->getChangeDetectionDataPtr()->state =
+          ChangeDetectionData::State::kMatched;
+      other->getChangeDetectionDataPtr()->matched_submap_id = submap->getID();
+      info << "\nSubmap " << submap->getID() << " (" << submap->getName()
+           << ") was matched with submap " << other->getID() << " ("
+           << other->getName() << ").";
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
+
   LOG_IF(INFO, config_.verbosity >= 2)
       << "Performed change detection in "
       << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)
@@ -141,7 +159,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
 bool TsdfRegistrator::submapsConflict(const Submap& reference,
                                       const Submap& other,
-                                      bool* is_match) const {
+                                      unsigned int* matching_points) const {
   // Reference is the finished submap (with Iso-surfce-points) that is compared
   // to the active submap other.
   Transformation T_O_R = other.getT_S_M() * reference.getT_M_S();
@@ -154,7 +172,7 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
           ? config_.error_threshold
           : config_.error_threshold * -1.f * other.getTsdfLayer().voxel_size();
   unsigned int conflicting_points = 0;
-  unsigned int matching_points = 0;
+  unsigned int matched_points = 0;
   voxblox::Interpolator<TsdfVoxel> interpolator(&(other.getTsdfLayer()));
 
   // Check for disagreement.
@@ -167,16 +185,12 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
           return true;
         }
       } else {
-        matching_points++;
+        matched_points++;
       }
     }
   }
-  if (is_match) {
-    const unsigned int acceptance_count =
-        std::min(config_.match_acceptance_points,
-                 static_cast<int>(config_.match_acceptance_percentage *
-                                  reference.getIsoSurfacePoints().size()));
-    *is_match = matching_points >= acceptance_count;
+  if (matching_points) {
+    *matching_points = matched_points;
   }
   return false;
 }

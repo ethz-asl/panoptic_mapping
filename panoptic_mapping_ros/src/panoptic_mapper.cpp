@@ -80,11 +80,11 @@ void PanopticMapper::setupMembers() {
           visualization_nh),
       label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
-  //  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-  //      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
-  //          plan_visualization_nh),
-  //      label_handler_);
-  //  submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
+  planning_visualizer_ = std::make_unique<PlanningVisualizer>(
+      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
+          visualization_nh),
+      planning_interface_);
+  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
 
 void PanopticMapper::setupRos() {
@@ -165,6 +165,14 @@ void PanopticMapper::processImages(
       << "(id tracking: " << int((t2 - t1).toSec() * 1000)
       << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
       << int((t3 - t0).toSec() * 1000) << "ms)";
+
+  // If requested perform change detection and visualization.
+  if (config_.change_detection_interval <= 0.f) {
+    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  }
+  if (config_.visualization_interval <= 0.f) {
+    publishVisualization();
+  }
 }
 
 void PanopticMapper::pointcloudCallback(
@@ -222,6 +230,14 @@ void PanopticMapper::pointcloudCallback(
       << " + id tracking: " << int((t2 - t1).toSec() * 1000)
       << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
       << int((t3 - t0).toSec() * 1000) << "ms)";
+
+  // If requested perform change detection and visualization.
+  if (config_.change_detection_interval <= 0.f) {
+    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  }
+  if (config_.visualization_interval <= 0.f) {
+    publishVisualization();
+  }
 }
 
 void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
@@ -234,6 +250,7 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 
 void PanopticMapper::publishVisualization() {
   submap_visualizer_->visualizeAll(submaps_.get());
+  planning_visualizer_->visualizeAll();
 }
 
 void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {

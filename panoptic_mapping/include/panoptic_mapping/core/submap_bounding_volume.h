@@ -19,9 +19,11 @@ class SubmapBoundingVolume {
 
   // Interaction.
   void update();
-  bool contains(const Point& point_S) const;
+  bool contains_S(const Point& point_S) const;
+  bool contains_M(const Point& point_M) const;
   bool intersects(const SubmapBoundingVolume& other) const;
-  bool isInsidePlane(const Point& normal_S) const;
+  bool isInsidePlane_S(const Point& normal_S) const;
+  bool isInsidePlane_M(const Point& normal_M) const;
 
   // Access.
   FloatingPoint getRadius() const { return radius_; }
@@ -30,8 +32,8 @@ class SubmapBoundingVolume {
  private:
   const Submap* const submap_;
   Point center_;  // This is in submap frame.
-  FloatingPoint radius_ = 0.f;
-  size_t num_previous_blocks_ = 0;
+  FloatingPoint radius_;
+  size_t num_previous_blocks_;
 };
 
 }  // namespace panoptic_mapping

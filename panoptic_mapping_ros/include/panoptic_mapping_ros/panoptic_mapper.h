@@ -12,15 +12,16 @@
 #include <voxblox_msgs/FilePath.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
-#include <panoptic_mapping/core/planning_interface.h>
 #include <panoptic_mapping/core/submap.h>
 #include <panoptic_mapping/core/submap_collection.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
+#include <panoptic_mapping/planning/planning_interface.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
+#include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 
 namespace panoptic_mapping {
@@ -32,8 +33,8 @@ class PanopticMapper {
     int max_image_queue_length = 10;  // after this many images are queued for
     // integration start discarding old ones.
     std::string global_frame_name = "mission";
-    double visualization_interval = 1.0;  // s
-    double change_detection_interval = 1.0;  // s
+    double visualization_interval = 1.0;     // s, use -1 for always.
+    double change_detection_interval = 1.0;  // s, use -1 for always.
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -90,7 +91,7 @@ class PanopticMapper {
                      const sensor_msgs::ImagePtr& segmentation_img);
 
  private:
-  // Node handles
+  // Node handles.
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
@@ -113,9 +114,10 @@ class PanopticMapper {
   std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
-  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
   std::shared_ptr<PlanningInterface> planning_interface_;
+  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
+  std::unique_ptr<PlanningVisualizer> planning_visualizer_;
 
   // Input processing.
   std::deque<sensor_msgs::ImagePtr> depth_queue_;

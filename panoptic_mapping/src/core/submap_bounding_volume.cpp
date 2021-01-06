@@ -9,7 +9,10 @@
 namespace panoptic_mapping {
 
 SubmapBoundingVolume::SubmapBoundingVolume(const Submap& submap)
-    : submap_(&submap) {}
+    : submap_(&submap),
+      center_(0.f, 0.f, 0.f),
+      radius_(0.f),
+      num_previous_blocks_(0) {}
 
 void SubmapBoundingVolume::update() {
   // A conservative approximation that computes the centroid from the
@@ -53,9 +56,13 @@ void SubmapBoundingVolume::update() {
   radius_ += std::sqrt(3.f) * grid_size / 2.f;  // outermost voxel.
 }
 
-bool SubmapBoundingVolume::contains(const Point& point_S) const {
+bool SubmapBoundingVolume::contains_S(const Point& point_S) const {
   // Point is expected in submap frame.
   return (center_ - point_S).norm() <= radius_;
+}
+
+bool SubmapBoundingVolume::contains_M(const Point& point_M) const {
+  return contains_S(submap_->getT_S_M() * point_M);
 }
 
 bool SubmapBoundingVolume::intersects(const SubmapBoundingVolume& other) const {
@@ -65,9 +72,13 @@ bool SubmapBoundingVolume::intersects(const SubmapBoundingVolume& other) const {
          radius_ + other.radius_;
 }
 
-bool SubmapBoundingVolume::isInsidePlane(const Point& normal_S) const {
+bool SubmapBoundingVolume::isInsidePlane_S(const Point& normal_S) const {
   // The normal is expected in submap frame.
   return center_.dot(normal_S) >= -radius_;
+}
+
+bool SubmapBoundingVolume::isInsidePlane_M(const Point& normal_S) const {
+  return isInsidePlane_S(submap_->getT_S_M() * normal_S);
 }
 
 }  // namespace panoptic_mapping
