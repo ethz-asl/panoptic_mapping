@@ -26,6 +26,7 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("match_rejection_percentage", &match_rejection_percentage);
   setupParam("match_acceptance_points", &match_acceptance_points);
   setupParam("match_acceptance_percentage", &match_acceptance_percentage);
+  setupParam("normalize_by_voxel_weight", &normalize_by_voxel_weight);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
@@ -95,14 +96,14 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     // Check overlapping submaps for conflicts or matches and store best match.
     ChangeDetectionData* change = submap->getChangeDetectionDataPtr();
     int best_matching_id;
-    unsigned int best_matching_points = 0;
+    float best_matching_points = -1.f;
     for (const auto& other : submaps) {
       if (!other->isActive() ||
           !submap->getBoundingVolume().intersects(other->getBoundingVolume()) ||
           change->matched_submap_id == other->getID()) {
         continue;
       }
-      unsigned int matching_points;
+      float matching_points;
       if (submapsConflict(*submap, *other, &matching_points)) {
         // No conflicts allowed, update also the matched submap if it exists.
         info << "\nSubmap " << submap->getID() << " (" << submap->getName()
@@ -129,11 +130,10 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     }
 
     // Check for sufficient alignment and match the most suitable candidate.
-    const unsigned int acceptance_count =
-        std::min(config_.match_acceptance_points,
-                 static_cast<int>(
-                     config_.match_acceptance_percentage *
-                     static_cast<float>(submap->getIsoSurfacePoints().size())));
+    const float acceptance_count =
+        std::min(static_cast<float>(config_.match_acceptance_points),
+                 config_.match_acceptance_percentage *
+                     submap->getIsoSurfacePoints().size());
     if (best_matching_points > acceptance_count) {
       Submap* other = submaps.getSubmapPtr(best_matching_id);
       // Geometry and semantic class match.
@@ -159,33 +159,34 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
 bool TsdfRegistrator::submapsConflict(const Submap& reference,
                                       const Submap& other,
-                                      unsigned int* matching_points) const {
+                                      float* matching_points) const {
   // Reference is the finished submap (with Iso-surfce-points) that is compared
   // to the active submap other.
   Transformation T_O_R = other.getT_S_M() * reference.getT_M_S();
-  const unsigned int rejection_count =
-      std::min(config_.match_rejection_points,
-               static_cast<int>(config_.match_rejection_percentage *
-                                reference.getIsoSurfacePoints().size()));
+  const float rejection_count =
+      std::min(static_cast<float>(config_.match_rejection_points),
+               config_.match_rejection_percentage *
+                   reference.getIsoSurfacePoints().size());
   const float rejection_distance =
       config_.error_threshold > 0
           ? config_.error_threshold
           : config_.error_threshold * -1.f * other.getTsdfLayer().voxel_size();
-  unsigned int conflicting_points = 0;
-  unsigned int matched_points = 0;
+  float conflicting_points = 0;
+  float matched_points = 0;
   voxblox::Interpolator<TsdfVoxel> interpolator(&(other.getTsdfLayer()));
 
   // Check for disagreement.
-  float distance;
+  float distance, weight;
   for (const auto& point : reference.getIsoSurfacePoints()) {
-    if (getDistanceAtPoint(&distance, point, T_O_R, interpolator)) {
+    if (getDistanceAndWeightAtPoint(&distance, &weight, point, T_O_R,
+                                    interpolator)) {
       if (std::abs(distance) > rejection_distance) {
-        conflicting_points++;
+        conflicting_points += 1.f;
         if (conflicting_points >= rejection_count) {
           return true;
         }
       } else {
-        matched_points++;
+        matched_points += 1.f;
       }
     }
   }
@@ -195,8 +196,9 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
   return false;
 }
 
-bool TsdfRegistrator::getDistanceAtPoint(
-    float* distance, const IsoSurfacePoint& point, const Transformation& T_P_S,
+bool TsdfRegistrator::getDistanceAndWeightAtPoint(
+    float* distance, float* weight, const IsoSurfacePoint& point,
+    const Transformation& T_P_S,
     const voxblox::Interpolator<TsdfVoxel>& interpolator) const {
   // Check minimum input point weight.
   if (point.weight < config_.min_voxel_weight) {
@@ -216,6 +218,7 @@ bool TsdfRegistrator::getDistanceAtPoint(
     return false;
   }
   *distance = voxel.distance;
+  *weight = voxel.weight;
   return true;
 }
 
