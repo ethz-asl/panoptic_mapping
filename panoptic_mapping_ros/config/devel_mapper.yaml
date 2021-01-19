@@ -8,7 +8,7 @@
 # General Params
 verbosity: 3
 global_frame_name: world
-label_path: /home/lukas/Documents/PanopticMapping/Data/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 

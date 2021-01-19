@@ -1,8 +1,8 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- General -->
-  <arg name="use_rio" value="true"/>
-  <arg name="use_flat" value="false"/>
+  <arg name="use_rio" value="false"/>
+  <arg name="use_flat" value="true"/>
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
@@ -15,11 +15,11 @@
   <arg name="rio_play_rate" default="5"/>
     
   <!-- Mapper -->
-  <arg name="config" default="devel_mapper_rio"/>
+  <arg name="config" default="devel_mapper"/>
   <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
-  <arg name="load_map" default = "true"/>
+  <arg name="load_map" default = "false"/>
   <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>
 
 
