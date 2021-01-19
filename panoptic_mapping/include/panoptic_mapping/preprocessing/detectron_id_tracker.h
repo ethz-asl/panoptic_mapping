@@ -8,13 +8,23 @@
 #include <opencv2/core/mat.hpp>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/core/camera.h"
 #include "panoptic_mapping/preprocessing/id_tracker_base.h"
 #include "panoptic_mapping/preprocessing/label_handler.h"
+#include "panoptic_mapping/tools/map_renderer.h"
+
+// TEST
+#include <cv_bridge/cv_bridge.h>
+#include <ros/ros.h>
+#include <sensor_msgs/Image.h>
+#include "panoptic_mapping/preprocessing/ground_truth_id_tracker.h"
 
 namespace panoptic_mapping {
 
 /**
- * This id tracker looks up the corresponding instance id for each sumbap.
+ * This id tracker tries to match prdictions of the detectron2 panoptic
+ * semgentation (https://github.com/facebookresearch/detectron2) against the
+ * map for integration.
  */
 // TODO(schmluk): Clean submap creation away from id tracking.
 class DetectronIDTracker : public IDTrackerBase {
@@ -27,12 +37,13 @@ class DetectronIDTracker : public IDTrackerBase {
     float freespace_voxel_size = 0.3;
     int voxels_per_side = 16;
 
-    int width = 640;
-    int heihgt = 480;
-    float vx = 320;
-    float vy = 240;
-    float fx = 320;
-    float fy = 320;
+    // TODO(schmluk): clean this up and factor out
+    Camera::Config camera;
+    MapRenderer::Config renderer;
+
+    // TEST Visualization
+    bool paint_by_id = true;         // false: render class label instead
+    bool track_against_map = false;  // false: track against last image
 
     Config() { setConfigName("DetectronIDTracker"); }
 
@@ -74,17 +85,41 @@ class DetectronIDTracker : public IDTrackerBase {
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
   void printAndResetWarnings();
 
+  void trackAgainstPreviousImage(SubmapCollection* submaps,
+                                 const Transformation& T_M_C,
+                                 const cv::Mat& depth_image,
+                                 const cv::Mat& color_image, cv::Mat* id_image,
+                                 const DetectronLabels& labels);
+
+  void trackAgainstMap(SubmapCollection* submaps, const Transformation& T_M_C,
+                       const cv::Mat& depth_image, const cv::Mat& color_image,
+                       cv::Mat* id_image, const DetectronLabels& labels);
+
  private:
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, DetectronIDTracker, std::shared_ptr<LabelHandler>>
       registration_;
+
+  // Members
   const Config config_;
+  Camera camera_;
+  MapRenderer renderer_;
+
   std::unordered_map<int, int> unknown_ids;      // for error handling
 
-  // Tracking information.
+  // Tracking against previous image information.
   bool is_initialized_ = false;
   Transformation T_M_C_prev_;
   cv::Mat id_image_prev_;
+
+  // TEST
+  ros::NodeHandle nh_;
+  ros::Publisher input_pub_;
+  ros::Publisher color_pub_;
+  ros::Publisher rendered_pub_;
+  ros::Publisher tracking_pub_;
+  std::unordered_map<int, int> instance_to_id_;  // track active maps
+  GroundTruthIDTracker gt_tracker_;
 };
 
 }  // namespace panoptic_mapping

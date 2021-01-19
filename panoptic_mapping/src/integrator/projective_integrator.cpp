@@ -41,7 +41,8 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
   }
 
   // Allocate range image.
-  range_image_ = Eigen::MatrixXf(config_.camera.height, config_.camera.width);
+  range_image_ =
+      Eigen::MatrixXf(camera_.getConfig().height, camera_.getConfig().width);
 }
 
 ProjectiveIntegrator::ThreadSafeIndexGetter::ThreadSafeIndexGetter(
@@ -213,14 +214,15 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     return false;
   }
   const float distance_to_voxel = p_C.norm();
-  if (distance_to_voxel < config_.camera.min_range ||
-      distance_to_voxel > config_.camera.max_range) {
+  if (distance_to_voxel < camera_.getConfig().min_range ||
+      distance_to_voxel > camera_.getConfig().max_range) {
     return false;
   }
 
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
-  float u, v;
+  float u;
+  float v;
   if (!camera_.projectPointToImagePlane(p_C, &u, &v)) {
     return false;
   }
@@ -237,8 +239,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   //  Compute the signed distance.
   const float distance_to_surface =
       interpolator->interpolateDepth(range_image_);
-  if (distance_to_surface > config_.camera.max_range ||
-      distance_to_surface < config_.camera.min_range) {
+  if (distance_to_surface > camera_.getConfig().max_range ||
+      distance_to_surface < camera_.getConfig().min_range) {
     return false;
   }
   const float new_sdf = distance_to_surface - distance_to_voxel;
@@ -248,7 +250,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Compute the weight of the measurement.
   // This approximates the number of rays that would hit this voxel.
-  float observation_weight = config_.camera.fx * config_.camera.fy *
+  float observation_weight = camera_.getConfig().fx * camera_.getConfig().fy *
                              std::pow(voxel_size / p_C.z(), 2.f);
 
   // Weight reduction with distance squared (according to sensor noise models).
@@ -320,19 +322,18 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float z = depth_image.at<float>(v, u);
-      float x =
-          (static_cast<float>(u) - config_.camera.vx) * z / config_.camera.fx;
-      float y =
-          (static_cast<float>(v) - config_.camera.vy) * z / config_.camera.fy;
+      float x = (static_cast<float>(u) - camera_.getConfig().vx) * z /
+                camera_.getConfig().fx;
+      float y = (static_cast<float>(v) - camera_.getConfig().vy) * z /
+                camera_.getConfig().fy;
       float ray_distance = std::sqrt(x * x + y * y + z * z);
       range_image_(v, u) = ray_distance;
-      if (ray_distance > config_.camera.max_range ||
-          ray_distance < config_.camera.min_range) {
+      if (ray_distance > camera_.getConfig().max_range ||
+          ray_distance < camera_.getConfig().min_range) {
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      Submap* submap =
-          submaps->getSubmapPtr(static_cast<int>(id_image.at<uchar>(v, u)));
+      Submap* submap = submaps->getSubmapPtr(id_image.at<int>(v, u));
       const Point p_S = submap->getT_S_M() * T_M_C *
                         Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
       submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);

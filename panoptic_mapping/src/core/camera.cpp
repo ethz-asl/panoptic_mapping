@@ -77,14 +77,17 @@ bool Camera::submapIsInViewFrustum(const Submap& submap,
 
 bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
                                       float* v) const {
-  CHECK_NOTNULL(u);
-  CHECK_NOTNULL(v);
+  if (p_C.z() < config_.min_range) {
+    return false;
+  }
   // All values are ceiled and floored to guarantee that the resulting points
   // will be valid for any integer conversion.
+  CHECK_NOTNULL(u);
   *u = p_C.x() * config_.fx / p_C.z() + config_.vx;
   if (std::ceil(*u) >= config_.width || std::floor(*u) < 0) {
     return false;
   }
+  CHECK_NOTNULL(v);
   *v = p_C.y() * config_.fy / p_C.z() + config_.vy;
   if (std::ceil(*v) >= config_.height || std::floor(*v) < 0) {
     return false;
@@ -93,6 +96,9 @@ bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
 }
 
 bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
+  if (p_C.z() <= config_.min_range) {
+    return false;
+  }
   CHECK_NOTNULL(u);
   CHECK_NOTNULL(v);
   *u = std::round(p_C.x() * config_.fx / p_C.z() + config_.vx);

@@ -17,13 +17,13 @@ class Camera {
     // Camera Intrinsics. [px]
     int width = 640;
     int height = 480;
-    float vx = 320;  // center point
-    float vy = 240;
-    float fx = 320;  // focal lengths
-    float fy = 320;
+    float vx = 320.f;  // center point
+    float vy = 240.f;
+    float fx = 320.f;  // focal lengths
+    float fy = 320.f;
 
-    float max_range = 5;    // m
-    float min_range = 0.1;  // m
+    float max_range = 5.f;   // m
+    float min_range = 0.1f;  // m
 
     Config() { setConfigName("Camera"); }
 

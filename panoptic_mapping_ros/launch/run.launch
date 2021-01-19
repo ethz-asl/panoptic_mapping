@@ -41,7 +41,8 @@
     <remap from="pointcloud_in" to="$(arg namespace)/pointcloud" unless="$(arg use_image_input)"/>
     <remap from="color_image_in" to="$(arg namespace)/color_image" if="$(arg use_image_input)"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image" if="$(arg use_image_input)"/>
-    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image" if="$(arg use_image_input)"/>
+<!--    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image" if="$(arg use_image_input)"/>-->
+<remap from="segmentation_image_in" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_image_input)"/>
     <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
   </node>  
   
@@ -54,6 +55,9 @@
   
   <!-- RVIZ Visualization-->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/devel_vis.rviz" output="screen"/>
+  
+  <!-- RVIZ Images Visualization-->
+  <node type="rviz" name="id_rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/test_detectron_ids.rviz" output="screen"/>
 
   <!-- Path visualization -->
   <node name="path_visualizer" pkg="panoptic_mapping_tools" type="path_visualizer.py" output="screen">

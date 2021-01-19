@@ -1,6 +1,7 @@
 #ifndef PANOPTIC_MAPPING_TOOLS_MAP_RENDERER_H_
 #define PANOPTIC_MAPPING_TOOLS_MAP_RENDERER_H_
 
+#include <voxblox/utils/color_maps.h>
 #include <opencv2/core/mat.hpp>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
@@ -28,15 +29,26 @@ class MapRenderer {
   explicit MapRenderer(const Config& config);
   virtual ~MapRenderer() = default;
 
-  // tools
+  // Tools.
   cv::Mat renderActiveSubmapIDs(const SubmapCollection& submaps,
                                 const Transformation& T_M_C);
+  cv::Mat renderActiveSubmapClasses(const SubmapCollection& submaps,
+                                    const Transformation& T_M_C);
+  cv::Mat colorIdImage(const cv::Mat& id_image, int colors_per_revolution = 10);
 
  private:
   const Config config_;
   const Camera camera_;
 
+  //
   Eigen::MatrixXf range_image_;
+  voxblox::ExponentialOffsetIdColorMap id_color_map_;
+
+  // Methods.
+  cv::Mat render(const SubmapCollection& submaps, const Transformation& T_M_C,
+                 bool only_active_submaps, int (*paint)(const Submap&));
+  static int paintSubmapID(const Submap& submap);
+  static int paintClass(const Submap& submap);
 };
 
 }  // namespace panoptic_mapping

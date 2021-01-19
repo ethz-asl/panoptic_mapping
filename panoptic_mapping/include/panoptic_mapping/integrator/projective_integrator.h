@@ -73,7 +73,7 @@ class ProjectiveIntegrator : public IntegratorBase {
 
   // Cached data.
   Eigen::MatrixXf range_image_;
-  float max_range_in_image_;
+  float max_range_in_image_ = 0.f;
 
   // Precomputed stored values.
   std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals

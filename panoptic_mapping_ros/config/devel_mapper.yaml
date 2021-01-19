@@ -16,9 +16,9 @@ tsdf_integrator:
   vy: 240
   fx: 320
   fy: 320
-  
   max_range: 5  # m
   min_range: 0.1
+  
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
   max_weight: 10000
@@ -42,7 +42,7 @@ tsdf_integrator:
 #  integration_order_mode: "sorted"
 
 id_tracker:
-  type: detectron # ground_truth, detectron
+  type: ground_truth # ground_truth, detectron
   verbosity: 4
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
@@ -51,10 +51,16 @@ id_tracker:
   voxels_per_side: 16
   
   # Detectron ID tracker (TODO clean up)
+  width: 640
+  height: 480
   vx: 320
   vy: 240
   fx: 320
   fy: 320
+  max_range: 5  # m
+  min_range: 0.1
+  paint_by_id: true
+  track_against_map: true
   
 tsdf_registrator:
   verbosity: 1
@@ -70,7 +76,7 @@ visualization:
   verbosity: 1
   
   # Submaps
-  color_mode: classes # submaps, instances, color, normals, classes, change
+  color_mode: submaps # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
   submap_color_discretization: 50
   visualize_mesh: true

@@ -17,12 +17,8 @@ void DetectronIDTracker::Config::checkParams() const {
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
-  checkParamGT(width, 0, "width");
-  checkParamGT(heihgt, 0, "heihgt");
-  checkParamGT(vx, 0.f, "vx");
-  checkParamGT(vy, 0.f, "vy");
-  checkParamGT(fx, 0.f, "fx");
-  checkParamGT(fy, 0.f, "fy");
+  checkParamConfig(camera);
+  checkParamConfig(renderer);
 }
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
@@ -32,18 +28,27 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("width", &width);
-  setupParam("heihgt", &heihgt);
-  setupParam("vx", &vx);
-  setupParam("vy", &vy);
-  setupParam("fx", &fx);
-  setupParam("fy", &fy);
+  setupParam("camera", &camera);
+  setupParam("renderer", &renderer);
+  setupParam("paint_by_id", &paint_by_id);
+  setupParam("track_against_map", &track_against_map);
 }
 
 DetectronIDTracker::DetectronIDTracker(
     const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {
+    : config_(config.checkValid()),
+      IDTrackerBase(std::move(label_handler)),
+      camera_(config.camera.checkValid()),
+      renderer_(MapRenderer::Config()),
+      gt_tracker_(GroundTruthIDTracker::Config(), label_handler_) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
+  // TEST
+  nh_ = ros::NodeHandle("/test");
+  color_pub_ = nh_.advertise<sensor_msgs::Image>("color", 10);
+  input_pub_ = nh_.advertise<sensor_msgs::Image>("input", 10);
+  rendered_pub_ = nh_.advertise<sensor_msgs::Image>("rendered", 10);
+  tracking_pub_ = nh_.advertise<sensor_msgs::Image>("tracking", 10);
 }
 
 void DetectronIDTracker::processImages(SubmapCollection* submaps,
@@ -53,10 +58,53 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
                                        cv::Mat* id_image,
                                        const DetectronLabels& labels) {
   CHECK_NOTNULL(id_image);
-  CV_Assert(id_image->depth() == CV_8U);
-  std::cout << "Processing Detectron IDs." << std::endl;
-  const cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
-  const cv::MatIterator_<uchar> end = id_image->end<uchar>();
+
+  cv::Mat rendered_ids;
+  if (config_.paint_by_id) {
+    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
+  } else {
+    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
+  }
+  cv::Mat input_vis = renderer_.colorIdImage(*id_image);
+  cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
+
+  if (config_.track_against_map) {
+    // This is the old implementation that performs pretty bad.
+    trackAgainstMap(submaps, T_M_C, depth_image, color_image, id_image, labels);
+  } else {
+    trackAgainstPreviousImage(submaps, T_M_C, depth_image, color_image,
+                              id_image, labels);
+  }
+
+  // Publish Visualization
+  cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
+  std_msgs::Header header;
+  header.stamp = ros::Time::now();
+  auto enc = sensor_msgs::image_encodings::BGR8;
+  color_pub_.publish(cv_bridge::CvImage(header, enc, color_image).toImageMsg());
+  input_pub_.publish(cv_bridge::CvImage(header, enc, input_vis).toImageMsg());
+  rendered_pub_.publish(
+      cv_bridge::CvImage(header, enc, rendered_vis).toImageMsg());
+  tracking_pub_.publish(
+      cv_bridge::CvImage(header, enc, tracked_vis).toImageMsg());
+}
+
+void DetectronIDTracker::trackAgainstMap(SubmapCollection* submaps,
+                                         const Transformation& T_M_C,
+                                         const cv::Mat& depth_image,
+                                         const cv::Mat& color_image,
+                                         cv::Mat* id_image,
+                                         const DetectronLabels& labels) {
+  // TEST
+  gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image, id_image);
+}
+
+void DetectronIDTracker::trackAgainstPreviousImage(
+    SubmapCollection* submaps, const Transformation& T_M_C,
+    const cv::Mat& depth_image, const cv::Mat& color_image, cv::Mat* id_image,
+    const DetectronLabels& labels) {
+  const cv::MatIterator_<int> begin = id_image->begin<int>();
+  const cv::MatIterator_<int> end = id_image->end<int>();
   std::unordered_map<int, int> detectron_to_submap_id;
 
   if (!is_initialized_) {
@@ -74,24 +122,25 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
       for (int u = 0; u < depth_image.cols; u++) {
         Point p_is;
         p_is.z() = depth_image.at<float>(v, u);
-        p_is.x() = (static_cast<float>(u) - config_.vx) * p_is.z() / config_.fx;
-        p_is.y() = (static_cast<float>(v) - config_.vy) * p_is.z() / config_.fy;
+        p_is.x() = (static_cast<float>(u) - config_.camera.vx) * p_is.z() /
+                   config_.camera.fx;
+        p_is.y() = (static_cast<float>(v) - config_.camera.vy) * p_is.z() /
+                   config_.camera.fy;
         const Point p_prev = T_prev_is * p_is;
-        int u_prev =
-            std::round(config_.fx * p_prev.x() / p_prev.z() + config_.vx);
+        int u_prev = std::round(config_.camera.fx * p_prev.x() / p_prev.z() +
+                                config_.camera.vx);
         if (u_prev < 0 || u_prev >= id_image_prev_.cols) {
           continue;
         }
-        int v_prev =
-            std::round(config_.fy * p_prev.y() / p_prev.z() + config_.vy);
+        int v_prev = std::round(config_.camera.fy * p_prev.y() / p_prev.z() +
+                                config_.camera.vy);
         if (v_prev < 0 || v_prev >= id_image_prev_.rows) {
           continue;
         }
 
         // Store the found id.
-        int detectron_id = static_cast<int>(id_image->at<uchar>(v, u));
-        int prev_id =
-            static_cast<int>(id_image_prev_.at<uchar>(v_prev, u_prev));
+        int detectron_id = id_image->at<int>(v, u);
+        int prev_id = id_image_prev_.at<int>(v_prev, u_prev);
         auto it = detectron_id_occurences.find(detectron_id);
         if (it == detectron_id_occurences.end()) {
           detectron_id_occurences[detectron_id] = 1;
@@ -178,9 +227,9 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
     if (id_it == detectron_to_submap_id.end()) {
       int submap_id = allocateSubmap(detectron_id, submaps, labels);
       detectron_to_submap_id[detectron_id] = submap_id;
-      *it = static_cast<uchar>(submap_id);
+      *it = submap_id;
     } else {
-      *it = static_cast<uchar>(id_it->second);
+      *it = id_it->second;
     }
   }
   printAndResetWarnings();

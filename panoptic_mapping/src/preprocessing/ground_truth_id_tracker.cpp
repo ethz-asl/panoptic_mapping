@@ -42,16 +42,14 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          cv::Mat* id_image) {
   // Look for new instances.
   std::unordered_set<int> instances;
-
-  CV_Assert(id_image->depth() == CV_8U);
-  const cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
-  const cv::MatIterator_<uchar> end = id_image->end<uchar>();
+  const cv::MatIterator_<int> begin = id_image->begin<int>();
+  const cv::MatIterator_<int> end = id_image->end<int>();
   for (auto it = begin; it != end; ++it) {
-    instances.insert(static_cast<int>(*it));
+    instances.insert(*it);
   }
 
   // Allocate new submaps if necessary.
-  for (const auto& instance : instances) {
+  for (const int instance : instances) {
     if (config_.input_is_mesh_id) {
       allocateSubmap(label_handler_->getSegmentationIdFromMeshId(instance),
                      submaps);
@@ -63,7 +61,7 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
 
   // Set segmentation image to submap ids.
   for (auto it = begin; it != end; ++it) {
-    *it = static_cast<uchar>(instance_to_id_[static_cast<int>(*it)]);
+    *it = instance_to_id_[*it];
   }
 
   // Allocate free space map if required.
