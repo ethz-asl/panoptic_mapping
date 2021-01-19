@@ -28,8 +28,11 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("camera", &camera);
+  setupParam("camera_namespace", &camera_namespace);
+  setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
+  renderer.camera = camera;
+
   setupParam("paint_by_id", &paint_by_id);
   setupParam("track_against_map", &track_against_map);
 }

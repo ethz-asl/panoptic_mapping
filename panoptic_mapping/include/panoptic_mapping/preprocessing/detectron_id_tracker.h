@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_ID_TRACKER_H_
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -37,8 +38,9 @@ class DetectronIDTracker : public IDTrackerBase {
     float freespace_voxel_size = 0.3;
     int voxels_per_side = 16;
 
-    // TODO(schmluk): clean this up and factor out
+    // Camera and renderer settings.
     Camera::Config camera;
+    std::string camera_namespace = "";
     MapRenderer::Config renderer;
 
     // TEST Visualization

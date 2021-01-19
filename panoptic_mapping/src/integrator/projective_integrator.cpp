@@ -26,7 +26,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("max_weight", &max_weight);
   setupParam("interpolation_method", &interpolation_method);
   setupParam("integration_threads", &integration_threads);
-  setupParam("camera", &camera);
+  setupParam("camera_namespace", &camera_namespace);
+  setupParam("camera", &camera, camera_namespace);
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)

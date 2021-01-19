@@ -5,12 +5,9 @@ label_path: /home/lukas/Documents/datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 
-tsdf_integrator:  
-  type: projective # naive, projective
-  verbosity: 1
-  
-  # projective args
-  width: 640
+camera:
+  verbosity: 0
+  width: 640  # Px
   height: 480
   vx: 320
   vy: 240
@@ -18,7 +15,13 @@ tsdf_integrator:
   fy: 320
   max_range: 5  # m
   min_range: 0.1
+
+tsdf_integrator:  
+  type: projective # naive, projective
+  verbosity: 1
   
+  # projective args
+  camera_namespace: /panoptic_mapper/camera
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
   max_weight: 10000
@@ -50,15 +53,8 @@ id_tracker:
   freespace_voxel_size: 0.3
   voxels_per_side: 16
   
-  # Detectron ID tracker (TODO clean up)
-  width: 640
-  height: 480
-  vx: 320
-  vy: 240
-  fx: 320
-  fy: 320
-  max_range: 5  # m
-  min_range: 0.1
+  # Detectron ID tracker
+  camera_namespace: /panoptic_mapper/camera
   paint_by_id: true
   track_against_map: true
   

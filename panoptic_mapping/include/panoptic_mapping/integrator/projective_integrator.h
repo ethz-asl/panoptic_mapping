@@ -38,6 +38,7 @@ class ProjectiveIntegrator : public IntegratorBase {
 
     // Camera settings.
     Camera::Config camera;
+    std::string camera_namespace = "";
 
     Config() { setConfigName("ProjectiveIntegrator"); }
 
