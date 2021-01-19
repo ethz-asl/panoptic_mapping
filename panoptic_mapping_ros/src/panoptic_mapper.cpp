@@ -157,6 +157,7 @@ void PanopticMapper::processImages(
   cv::Mat id_image;
   segmentation->image.convertTo(id_image,
                                 CV_32SC1);  // Use int images for segmentation.
+
   ros::WallTime t1 = ros::WallTime::now();
 
   // Allocate new submaps.

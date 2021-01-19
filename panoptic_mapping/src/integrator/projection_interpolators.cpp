@@ -20,7 +20,7 @@ void InterpolatorNearest::computeWeights(float u, float v, int id,
                                          const cv::Mat& id_image) {
   u_ = std::round(u);
   v_ = std::round(v);
-  *belongs_to_this_submap = static_cast<int>(id_image.at<uchar>(v_, u_)) == id;
+  *belongs_to_this_submap = id_image.at<int>(v_, u_) == id;
 }
 
 float InterpolatorNearest::interpolateDepth(
@@ -45,11 +45,10 @@ void InterpolatorBilinear::computeWeights(float u, float v, int id,
   weight_[1] = (1.f - du) * dv;
   weight_[2] = du * (1.f - dv);
   weight_[3] = du * dv;
-  float c1 = static_cast<int>(id_image.at<uchar>(v_, u_)) == id ? 1.f : 0.f;
-  float c2 = static_cast<int>(id_image.at<uchar>(v_ + 1, u_)) == id ? 1.f : 0.f;
-  float c3 = static_cast<int>(id_image.at<uchar>(v_, u_ + 1)) == id ? 1.f : 0.f;
-  float c4 =
-      static_cast<int>(id_image.at<uchar>(v_ + 1, u_ + 1)) == id ? 1.f : 0.f;
+  float c1 = id_image.at<int>(v_, u_) == id ? 1.f : 0.f;
+  float c2 = id_image.at<int>(v_ + 1, u_) == id ? 1.f : 0.f;
+  float c3 = id_image.at<int>(v_, u_ + 1) == id ? 1.f : 0.f;
+  float c4 = id_image.at<int>(v_ + 1, u_ + 1) == id ? 1.f : 0.f;
   *belongs_to_this_submap =
       c1 * weight_[0] + c2 * weight_[1] + c3 * weight_[2] + c4 * weight_[3] >=
       0.5f;
@@ -113,7 +112,7 @@ void InterpolatorAdaptive::computeWeights(float u, float v, int id,
     use_bilinear_ = false;
   }
   *belongs_to_this_submap =
-      static_cast<int>(id_image.at<uchar>(std::round(v), std::round(u))) == id;
+      id_image.at<int>(std::round(v), std::round(u)) == id;
 }
 
 float InterpolatorAdaptive::interpolateDepth(
