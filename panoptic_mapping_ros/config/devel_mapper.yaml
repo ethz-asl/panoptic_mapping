@@ -21,7 +21,7 @@ tsdf_integrator:
   verbosity: 1
   
   # projective args
-  camera_namespace: /panoptic_mapper/camera
+  camera_namespace: ~/camera
   use_weight_dropoff: true
   sparsity_compensation_factor: 1.0
   max_weight: 10000
@@ -54,7 +54,7 @@ id_tracker:
   voxels_per_side: 16
   
   # Detectron ID tracker
-  camera_namespace: /panoptic_mapper/camera
+  camera_namespace: ~/camera
   paint_by_id: true
   track_against_map: true
   

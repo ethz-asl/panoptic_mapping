@@ -188,9 +188,9 @@ inline bool isConfig(const T* candidate) {
 }
 
 // Setup param type. These contain all params of the nodehandle and the full
-// namespaces, the param "_name_space" is reserved for the target namespace
-// to look up data. Namespacing adheres to ROS standards with "/" for global
-// data and as separator.
+// namespaces, the params "_name_space" and "_name_space_private" are reserved
+// for the target namespace to look up data. Namespacing adheres to ROS
+// standards with "/" for global and "~" for private namespaces.
 using ParamMap = std::unordered_map<std::string, XmlRpc::XmlRpcValue>;
 
 // XML casts
@@ -952,11 +952,16 @@ struct ConfigInternal : public ConfigInternalVerificator {
     }
 
     // Update the sub-namespace. Default to same ns. Leading "/" for global ns.
+    // Leading "~" for private ns.
     internal::ParamMap params = *(meta_data_->params);
     if (sub_namespace.empty()) {
       params["_name_space"] = param_namespace_;
     } else if (sub_namespace.front() == '/') {
       params["_name_space"] = sub_namespace;
+    } else if (sub_namespace.front() == '~') {
+      params["_name_space"] =
+          static_cast<std::string>(params["_name_space_private"]) +
+          sub_namespace.substr(1);
     } else {
       params["_name_space"] = param_namespace_ + "/" + sub_namespace;
     }
@@ -1341,6 +1346,7 @@ inline ParamMap getParamMapFromRos(const ros::NodeHandle& nh) {
     params[key] = value;
   }
   params["_name_space"] = ns;
+  params["_name_space_private"] = ns;
   return params;
 }
 }  // namespace internal
