@@ -192,7 +192,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
                                     color_mode_voxblox, &msg.mesh);
 
     if (msg.mesh.mesh_blocks.empty()) {
-      // Nothing changed, don't sent an empty msg which would reset the mesh.
+      // Nothing changed, don't send an empty msg which would reset the mesh.
       continue;
     }
 

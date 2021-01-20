@@ -45,19 +45,43 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
 
     // Project all surface points.
     const Transformation T_C_S = T_M_C.inverse() * submap_ptr->getT_M_S();
-    for (const auto& surface_point : submap_ptr->getIsoSurfacePoints()) {
-      const Point p_C = T_C_S * surface_point.position;
-      int u, v;
-      if (camera_.projectPointToImagePlane(p_C, &u, &v)) {
-        float range = p_C.norm();
-        if (range < range_image_(v, u)) {
-          range_image_(v, u) = range;
-          result.at<int>(v, u) = (*paint)(*submap_ptr);
+    const float size_factor_x =
+        camera_.getConfig().fx * submap_ptr->getTsdfLayer().voxel_size() / 2.f;
+    const float size_factor_y =
+        camera_.getConfig().fy * submap_ptr->getTsdfLayer().voxel_size() / 2.f;
+
+    voxblox::BlockIndexList index_list;
+    submap_ptr->getMeshLayer().getAllAllocatedMeshes(&index_list);
+    for (const voxblox::BlockIndex& index : index_list) {
+      for (const Point& vertex :
+           submap_ptr->getMeshLayer().getMeshByIndex(index).vertices) {
+        const Point p_C = T_C_S * vertex;
+        int u, v;
+        if (camera_.projectPointToImagePlane(p_C, &u, &v)) {
+          // Compensate for vertex sparsity.
+          const int size_x = std::ceil(size_factor_x / p_C.z());
+          const int size_y = std::ceil(size_factor_y / p_C.z());
+          const float range = p_C.norm();
+          for (int dx = -size_x; dx <= size_x; ++dx) {
+            const int u_new = u + dx;
+            if (u_new < 0 || u_new >= camera_.getConfig().width) {
+              continue;
+            }
+            for (int dy = -size_y; dy <= size_y; ++dy) {
+              const int v_new = v + dy;
+              if (v_new < 0 || v_new >= camera_.getConfig().height) {
+                continue;
+              }
+              if (range < range_image_(v_new, u_new)) {
+                range_image_(v_new, u_new) = range;
+                result.at<int>(v_new, u_new) = (*paint)(*submap_ptr);
+              }
+            }
+          }
         }
       }
     }
   }
-
   return result;
 }
 int MapRenderer::paintSubmapID(const Submap& submap) { return submap.getID(); }
