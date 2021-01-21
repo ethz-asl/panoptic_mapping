@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_CORE_SUBMAP_H_
-#define PANOPTIC_MAPPING_CORE_SUBMAP_H_
+#ifndef PANOPTIC_MAPPING_MAP_SUBMAP_H_
+#define PANOPTIC_MAPPING_MAP_SUBMAP_H_
 
 #include <fstream>
 #include <memory>
@@ -11,9 +11,9 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
-#include "panoptic_mapping/core/common.h"
-#include "panoptic_mapping/core/submap_bounding_volume.h"
-#include "panoptic_mapping/core/submap_id.h"
+#include "panoptic_mapping/common/common.h"
+#include "panotpic_mapping/map/submap_bounding_volume.h"
+#include "panotpic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 
@@ -134,4 +134,4 @@ class Submap {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_CORE_SUBMAP_H_
+#endif  // PANOPTIC_MAPPING_MAP_SUBMAP_H_

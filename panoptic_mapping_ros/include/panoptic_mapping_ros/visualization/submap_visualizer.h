@@ -14,8 +14,8 @@
 #include <voxblox_msgs/MultiMesh.h>
 #include <voxblox_ros/mesh_vis.h>
 
-#include <panoptic_mapping/core/common.h>
-#include <panoptic_mapping/core/submap_collection.h>
+#include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 
 namespace panoptic_mapping {

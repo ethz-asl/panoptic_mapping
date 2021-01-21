@@ -9,6 +9,7 @@ void MapRenderer::Config::checkParams() const { checkParamConfig(camera); }
 
 void MapRenderer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
+  setupParam("impaint_voxel_size", &impaint_voxel_size);
   setupParam("camera", &camera);
 }
 
@@ -58,24 +59,32 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
         const Point p_C = T_C_S * vertex;
         int u, v;
         if (camera_.projectPointToImagePlane(p_C, &u, &v)) {
-          // Compensate for vertex sparsity.
-          const int size_x = std::ceil(size_factor_x / p_C.z());
-          const int size_y = std::ceil(size_factor_y / p_C.z());
           const float range = p_C.norm();
-          for (int dx = -size_x; dx <= size_x; ++dx) {
-            const int u_new = u + dx;
-            if (u_new < 0 || u_new >= camera_.getConfig().width) {
-              continue;
-            }
-            for (int dy = -size_y; dy <= size_y; ++dy) {
-              const int v_new = v + dy;
-              if (v_new < 0 || v_new >= camera_.getConfig().height) {
+
+          if (config_.impaint_voxel_size) {
+            // Compensate for vertex sparsity.
+            const int size_x = std::ceil(size_factor_x / p_C.z());
+            const int size_y = std::ceil(size_factor_y / p_C.z());
+            for (int dx = -size_x; dx <= size_x; ++dx) {
+              const int u_new = u + dx;
+              if (u_new < 0 || u_new >= camera_.getConfig().width) {
                 continue;
               }
-              if (range < range_image_(v_new, u_new)) {
-                range_image_(v_new, u_new) = range;
-                result.at<int>(v_new, u_new) = (*paint)(*submap_ptr);
+              for (int dy = -size_y; dy <= size_y; ++dy) {
+                const int v_new = v + dy;
+                if (v_new < 0 || v_new >= camera_.getConfig().height) {
+                  continue;
+                }
+                if (range < range_image_(v_new, u_new)) {
+                  range_image_(v_new, u_new) = range;
+                  result.at<int>(v_new, u_new) = (*paint)(*submap_ptr);
+                }
               }
+            }
+          } else {
+            if (range < range_image_(v, u)) {
+              range_image_(v, u) = range;
+              result.at<int>(v, u) = (*paint)(*submap_ptr);
             }
           }
         }

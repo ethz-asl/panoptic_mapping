@@ -1,7 +1,7 @@
-#ifndef PANOPTIC_MAPPING_CORE_SUBMAP_BOUNDING_VOLUME_H_
-#define PANOPTIC_MAPPING_CORE_SUBMAP_BOUNDING_VOLUME_H_
+#ifndef PANOPTIC_MAPPING_MAP_SUBMAP_BOUNDING_VOLUME_H_
+#define PANOPTIC_MAPPING_MAP_SUBMAP_BOUNDING_VOLUME_H_
 
-#include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/common/common.h"
 
 namespace panoptic_mapping {
 
@@ -38,4 +38,4 @@ class SubmapBoundingVolume {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_CORE_SUBMAP_BOUNDING_VOLUME_H_
+#endif  // PANOPTIC_MAPPING_MAP_SUBMAP_BOUNDING_VOLUME_H_

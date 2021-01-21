@@ -9,6 +9,7 @@ namespace panoptic_mapping {
 
 DetectronIDTracker::DetectronLabel detectronLabelFromMsg(
     const panoptic_mapping_msgs::DetectronLabel& msg);
+
 DetectronIDTracker::DetectronLabels detectronLabelsFromMsg(
     const panoptic_mapping_msgs::DetectronLabels& msg);
 

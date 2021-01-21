@@ -2,14 +2,13 @@
 #define PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
 
 #include <memory>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/core/camera.h"
-#include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/common/camera.h"
+#include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/integrator/integrator_base.h"
 #include "panoptic_mapping/integrator/projection_interpolators.h"
 
@@ -55,17 +54,6 @@ class ProjectiveIntegrator : public IntegratorBase {
                      const cv::Mat& id_image) override;
 
  protected:
-  class ThreadSafeIndexGetter {
-   public:
-    explicit ThreadSafeIndexGetter(std::vector<int> indices);
-    bool getNextIndex(int* index);
-
-   private:
-    std::mutex mutex_;
-    std::vector<int> indices_;
-    size_t current_index_;
-  };
-
   // Components.
   const Config config_;
   std::vector<std::unique_ptr<InterpolatorBase>>

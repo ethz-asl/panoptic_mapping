@@ -10,6 +10,8 @@
 
 #include <voxblox/integrator/merge_integration.h>
 
+#include "panoptic_mapping/common/index_getter.h"
+
 namespace panoptic_mapping {
 
 void ProjectiveIntegrator::Config::checkParams() const {
@@ -46,23 +48,6 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
       Eigen::MatrixXf(camera_.getConfig().height, camera_.getConfig().width);
 }
 
-ProjectiveIntegrator::ThreadSafeIndexGetter::ThreadSafeIndexGetter(
-    std::vector<int> indices)
-    : indices_(std::move(indices)), current_index_(0) {}
-
-bool ProjectiveIntegrator::ThreadSafeIndexGetter::getNextIndex(int* index) {
-  CHECK_NOTNULL(index);
-  mutex_.lock();
-  if (current_index_ >= indices_.size()) {
-    mutex_.unlock();
-    return false;
-  }
-  *index = indices_[current_index_];
-  current_index_++;
-  mutex_.unlock();
-  return true;
-}
-
 void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
                                          const Transformation& T_M_C,
                                          const cv::Mat& depth_image,
@@ -95,7 +80,7 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
   auto t3 = std::chrono::high_resolution_clock::now();
 
   // Integrate in parallel.
-  ThreadSafeIndexGetter index_getter(id_list);
+  SubmapIndexGetter index_getter(id_list);
   std::vector<std::future<bool>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {
     threads.emplace_back(std::async(

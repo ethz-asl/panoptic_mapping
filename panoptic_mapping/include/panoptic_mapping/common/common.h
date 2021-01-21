@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_CORE_COMMON_H_
-#define PANOPTIC_MAPPING_CORE_COMMON_H_
+#ifndef PANOPTIC_MAPPING_COMMON_COMMON_H_
+#define PANOPTIC_MAPPING_COMMON_COMMON_H_
 
 #include <glog/logging.h>
 #include <voxblox/core/common.h>
@@ -29,4 +29,4 @@ enum class PanopticLabel { kUnknown = 0, kInstance, kBackground, kFreeSpace };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_CORE_COMMON_H_
+#endif  // PANOPTIC_MAPPING_COMMON_COMMON_H_

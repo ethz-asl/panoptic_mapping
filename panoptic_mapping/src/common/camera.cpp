@@ -1,4 +1,4 @@
-#include "panoptic_mapping/core/camera.h"
+#include "panoptic_mapping/common/camera.h"
 
 namespace panoptic_mapping {
 

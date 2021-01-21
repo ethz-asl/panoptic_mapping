@@ -1,10 +1,10 @@
-#include "panoptic_mapping/core/submap_bounding_volume.h"
+#include "panoptic_mapping/map/submap_bounding_volume.h"
 
 #include <algorithm>
 #include <limits>
 #include <vector>
 
-#include "panoptic_mapping/core/submap.h"
+#include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
 

@@ -19,6 +19,7 @@ void DetectronIDTracker::Config::checkParams() const {
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
   checkParamConfig(camera);
   checkParamConfig(renderer);
+  checkParamConfig(gt_id_tracker_config);
 }
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
@@ -35,6 +36,7 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
 
   setupParam("paint_by_id", &paint_by_id);
   setupParam("track_against_map", &track_against_map);
+  setupParam("gt_id_tracker_config", &gt_id_tracker_config);
 }
 
 DetectronIDTracker::DetectronIDTracker(
@@ -42,8 +44,8 @@ DetectronIDTracker::DetectronIDTracker(
     : config_(config.checkValid()),
       IDTrackerBase(std::move(label_handler)),
       camera_(config.camera.checkValid()),
-      renderer_(MapRenderer::Config()),
-      gt_tracker_(GroundTruthIDTracker::Config(), label_handler_) {
+      renderer_(config.renderer.checkValid()),
+      gt_tracker_(config.gt_id_tracker_config, label_handler_) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // TEST
@@ -66,14 +68,15 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
   if (config_.paint_by_id) {
     rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
   } else {
-    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
+    rendered_ids = renderer_.renderActiveSubmapClasses(*submaps, T_M_C);
   }
   cv::Mat input_vis = renderer_.colorIdImage(*id_image);
   cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
 
   if (config_.track_against_map) {
     // This is the old implementation that performs pretty bad.
-    trackAgainstMap(submaps, T_M_C, depth_image, color_image, id_image, labels);
+    trackAgainstMap(submaps, T_M_C, depth_image, color_image, id_image, labels,
+                    rendered_ids);
   } else {
     trackAgainstPreviousImage(submaps, T_M_C, depth_image, color_image,
                               id_image, labels);
@@ -92,14 +95,53 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
       cv_bridge::CvImage(header, enc, tracked_vis).toImageMsg());
 }
 
-void DetectronIDTracker::trackAgainstMap(SubmapCollection* submaps,
-                                         const Transformation& T_M_C,
-                                         const cv::Mat& depth_image,
-                                         const cv::Mat& color_image,
-                                         cv::Mat* id_image,
-                                         const DetectronLabels& labels) {
-  // TEST
+void DetectronIDTracker::trackAgainstMap(
+    SubmapCollection* submaps, const Transformation& T_M_C,
+    const cv::Mat& depth_image, const cv::Mat& color_image, cv::Mat* id_image,
+    const DetectronLabels& labels, const cv::Mat& rendered_ids) {
   gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image, id_image);
+
+  return;
+  // Compute the overlaps for each new id with rendered ids.
+  std::unordered_map<int, std::unordered_map<int, int>>
+      overlap;  // <input_id, <rendered_id, count>>
+  std::unordered_map<int, int> input_count;
+  std::unordered_map<int, int> rendered_count;
+  for (int u = 0; u < camera_.getConfig().width; ++u) {
+    for (int v = 0; v < camera_.getConfig().height; ++v) {
+      const int input = id_image->at<int>(v, u);
+      const int rendered = rendered_ids.at<int>(v, u);
+
+      // Book keeping.
+      auto it = overlap.find(input);
+      if (it == overlap.end()) {
+        it = overlap.emplace(input, std::unordered_map<int, int>()).first;
+      }
+      auto& counts = it->second;
+      auto it2 = counts.find(rendered);
+      if (it2 == counts.end()) {
+        counts.emplace(rendered, 1);
+      } else {
+        it2->second++;
+      }
+      auto it3 = input_count.find(input);
+      if (it3 == input_count.end()) {
+        input_count.emplace(input, 1);
+      } else {
+        it3->second++;
+      }
+      auto it4 = rendered_count.find(rendered);
+      if (it4 == rendered_count.end()) {
+        rendered_count.emplace(rendered, 1);
+      } else {
+        it4->second++;
+      }
+    }
+  }
+
+  // TRY OUT METRICS
+  // For each input compute some metrics:
+  // Highest and second highest Overlap.
 }
 
 void DetectronIDTracker::trackAgainstPreviousImage(

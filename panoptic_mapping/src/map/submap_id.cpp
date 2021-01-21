@@ -1,4 +1,4 @@
-#include "panoptic_mapping/core/submap_id.h"
+#include "panoptic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 

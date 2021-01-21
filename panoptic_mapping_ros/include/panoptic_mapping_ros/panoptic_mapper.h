@@ -14,9 +14,10 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <voxgraph/frontend/map_tracker/transformers/tf_transformer.h>
 
-#include <panoptic_mapping/core/submap.h>
-#include <panoptic_mapping/core/submap_collection.h>
+#include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
+#include <panoptic_mapping/map/submap.h>
+#include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>

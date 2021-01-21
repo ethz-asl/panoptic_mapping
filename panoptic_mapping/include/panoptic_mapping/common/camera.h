@@ -1,11 +1,11 @@
-#ifndef PANOPTIC_MAPPING_CORE_CAMERA_H_
-#define PANOPTIC_MAPPING_CORE_CAMERA_H_
+#ifndef PANOPTIC_MAPPING_COMMON_CAMERA_H_
+#define PANOPTIC_MAPPING_COMMON_CAMERA_H_
 
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/core/common.h"
-#include "panoptic_mapping/core/submap.h"
+#include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
 
@@ -57,4 +57,4 @@ class Camera {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_CORE_CAMERA_H_
+#endif  // PANOPTIC_MAPPING_COMMON_CAMERA_H_

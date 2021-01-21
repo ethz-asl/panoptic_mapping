@@ -1,4 +1,4 @@
-#include "panoptic_mapping/core/submap_collection.h"
+#include "panoptic_mapping/map/submap_collection.h"
 
 #include <memory>
 #include <utility>

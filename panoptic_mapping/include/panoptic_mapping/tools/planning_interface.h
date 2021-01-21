@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "panoptic_mapping/core/submap.h"
-#include "panoptic_mapping/core/submap_collection.h"
+#include "panoptic_mapping/map/submap.h"
+#include "panoptic_mapping/map/submap_collection.h"
 
 namespace panoptic_mapping {
 

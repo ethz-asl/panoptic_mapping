@@ -7,7 +7,7 @@
 #include <opencv2/core/mat.hpp>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/core/common.h"
+#include "panoptic_mapping/common/common.h"
 
 namespace panoptic_mapping {
 

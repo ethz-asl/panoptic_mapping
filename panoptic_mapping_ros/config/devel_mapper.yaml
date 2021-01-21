@@ -57,6 +57,7 @@ id_tracker:
   camera_namespace: ~/camera
   paint_by_id: true
   track_against_map: true
+  impaint_voxel_size: true
   
 tsdf_registrator:
   verbosity: 1

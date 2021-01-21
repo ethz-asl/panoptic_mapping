@@ -9,7 +9,7 @@
 #include <opencv2/core/mat.hpp>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/core/camera.h"
+#include "panoptic_mapping/common/camera.h"
 #include "panoptic_mapping/preprocessing/id_tracker_base.h"
 #include "panoptic_mapping/preprocessing/label_handler.h"
 #include "panoptic_mapping/tools/map_renderer.h"
@@ -46,6 +46,7 @@ class DetectronIDTracker : public IDTrackerBase {
     // TEST Visualization
     bool paint_by_id = true;         // false: render class label instead
     bool track_against_map = false;  // false: track against last image
+    GroundTruthIDTracker::Config gt_id_tracker_config;
 
     Config() { setConfigName("DetectronIDTracker"); }
 
@@ -95,7 +96,8 @@ class DetectronIDTracker : public IDTrackerBase {
 
   void trackAgainstMap(SubmapCollection* submaps, const Transformation& T_M_C,
                        const cv::Mat& depth_image, const cv::Mat& color_image,
-                       cv::Mat* id_image, const DetectronLabels& labels);
+                       cv::Mat* id_image, const DetectronLabels& labels,
+                       const cv::Mat& rendered_ids);
 
  private:
   static config_utilities::Factory::RegistrationRos<
