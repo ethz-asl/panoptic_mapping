@@ -7,7 +7,7 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
-#include "panotpic_mapping/map/submap.h"
+#include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
 

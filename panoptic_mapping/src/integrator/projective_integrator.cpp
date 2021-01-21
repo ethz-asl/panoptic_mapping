@@ -5,7 +5,6 @@
 #include <future>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include <voxblox/integrator/merge_integration.h>
@@ -61,21 +60,12 @@ void ProjectiveIntegrator::processImages(SubmapCollection* submaps,
   // Find all active blocks that are in the field of view.
   // Note(schmluk): This could potentially also be included in the parallel part
   // but is already almost instantaneous.
-  std::unordered_map<int, voxblox::BlockIndexList> block_lists;
+  std::unordered_map<int, voxblox::BlockIndexList> block_lists =
+      camera_.findVisibleBlocks(*submaps, T_M_C, true);
   std::vector<int> id_list;
-  for (auto& submap_ptr : *submaps) {
-    if (!submap_ptr->isActive()) {
-      continue;
-    }
-    if (!camera_.submapIsInViewFrustum(*submap_ptr, T_M_C)) {
-      continue;
-    }
-    voxblox::BlockIndexList block_list;
-    findVisibleBlocks(*submap_ptr, T_M_C, &block_list);
-    if (!block_list.empty()) {
-      id_list.emplace_back(submap_ptr->getID());
-      block_lists[submap_ptr->getID()] = block_list;
-    }
+  id_list.reserve(block_lists.size());
+  for (const auto& id_blocklist_pair : block_lists) {
+    id_list.emplace_back(id_blocklist_pair.first);
   }
   auto t3 = std::chrono::high_resolution_clock::now();
 
@@ -268,32 +258,6 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   *weight = observation_weight;
   return true;
 }
-
-void ProjectiveIntegrator::findVisibleBlocks(
-    const Submap& submap, const Transformation& T_M_C,
-    voxblox::BlockIndexList* block_list) const {
-  // setup
-  voxblox::BlockIndexList all_blocks;
-  submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
-  const Transformation T_C_S =
-      T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
-  const FloatingPoint block_size = submap.getTsdfLayer().block_size();
-  const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
-
-  // iterate through all blocks
-  for (auto& index : all_blocks) {
-    auto& block = submap.getTsdfLayer().getBlockByIndex(index);
-    const Point p_C =
-        T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
-                                      2.0);  // center point of the block
-
-    if (camera_.pointIsInViewFrustum(p_C, block_diag_half)) {
-      block_list->push_back(index);
-    }
-  }
-}
-
-
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const Transformation& T_M_C,

@@ -71,9 +71,6 @@ class ProjectiveIntegrator : public IntegratorBase {
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
 
-  void findVisibleBlocks(const Submap& submap, const Transformation& T_M_C,
-                         voxblox::BlockIndexList* block_list) const;
-
   void updateSubmap(Submap* submap, InterpolatorBase* interpolator,
                     const voxblox::BlockIndexList& block_indices,
                     const Transformation& T_M_C, const cv::Mat& color_image,

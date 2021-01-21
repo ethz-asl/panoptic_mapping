@@ -55,9 +55,7 @@ id_tracker:
   
   # Detectron ID tracker
   camera_namespace: ~/camera
-  paint_by_id: true
-  track_against_map: true
-  impaint_voxel_size: true
+  depth_tolerance: -1.0
   
 tsdf_registrator:
   verbosity: 1

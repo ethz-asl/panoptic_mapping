@@ -1,9 +1,12 @@
 #include "panoptic_mapping/preprocessing/detectron_id_tracker.h"
 
+#include <future>
 #include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "panoptic_mapping/common/index_getter.h"
 
 namespace panoptic_mapping {
 
@@ -17,6 +20,8 @@ void DetectronIDTracker::Config::checkParams() const {
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
+  checkParamGT(rendering_threads, 0, "rendering_threads");
+  checkParamNE(depth_tolerance, 0.f, "depth_tolerance");
   checkParamConfig(camera);
   checkParamConfig(renderer);
   checkParamConfig(gt_id_tracker_config);
@@ -29,13 +34,12 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("rendering_threads", &rendering_threads);
+  setupParam("depth_tolerance", &depth_tolerance);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
   renderer.camera = camera;
-
-  setupParam("paint_by_id", &paint_by_id);
-  setupParam("track_against_map", &track_against_map);
   setupParam("gt_id_tracker_config", &gt_id_tracker_config);
 }
 
@@ -64,25 +68,49 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
                                        const DetectronLabels& labels) {
   CHECK_NOTNULL(id_image);
 
+  // TEST images
   cv::Mat rendered_ids;
-  if (config_.paint_by_id) {
-    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
-  } else {
-    rendered_ids = renderer_.renderActiveSubmapClasses(*submaps, T_M_C);
-  }
+  rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
   cv::Mat input_vis = renderer_.colorIdImage(*id_image);
   cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
 
-  if (config_.track_against_map) {
-    // This is the old implementation that performs pretty bad.
-    trackAgainstMap(submaps, T_M_C, depth_image, color_image, id_image, labels,
-                    rendered_ids);
-  } else {
-    trackAgainstPreviousImage(submaps, T_M_C, depth_image, color_image,
-                              id_image, labels);
+  // Render each active submap in parallel to collect overlap statistics.
+  //  std::unordered_map<int, voxblox::BlockIndexList> block_lists =
+  //  camera_.findVisibleBlocks(*submaps, T_M_C, true); std::vector<int>
+  //  id_list; id_list.reserve(block_lists.size()); for (const auto&
+  //  id_blocklist_pair : block_lists) {
+  //    id_list.emplace_back(id_blocklist_pair.first);
+  //  }
+
+  // Render submaps in parallel.
+  SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, T_M_C));
+  std::vector<std::future<std::vector<TrackingInfo>>> threads;
+  TrackingInfoAggregator tracking_data;
+  for (int i = 0; i < config_.rendering_threads; ++i) {
+    threads.emplace_back(std::async(
+        std::launch::async,
+        [this, i, &tracking_data, &index_getter, submaps, &T_M_C, &depth_image,
+         id_image]() -> std::vector<TrackingInfo> {
+          // Also process the input image.
+          if (i == 0) {
+            tracking_data.insertInputImage(*id_image);
+          }
+          std::vector<TrackingInfo> result;
+          int index;
+          while (index_getter.getNextIndex(&index)) {
+            result.emplace_back(this->renderTrackingInfo(
+                submaps->getSubmap(index), T_M_C, depth_image, *id_image));
+          }
+          return result;
+        }));
   }
 
-  // Publish Visualization
+  // Join all threads and evaluate.
+  for (auto& thread : threads) {
+    tracking_data.insertTrackingInfos(thread.get());
+  }
+
+  // TEST Publish Visualization
   cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
   std_msgs::Header header;
   header.stamp = ros::Time::now();
@@ -95,197 +123,59 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
       cv_bridge::CvImage(header, enc, tracked_vis).toImageMsg());
 }
 
-void DetectronIDTracker::trackAgainstMap(
-    SubmapCollection* submaps, const Transformation& T_M_C,
-    const cv::Mat& depth_image, const cv::Mat& color_image, cv::Mat* id_image,
-    const DetectronLabels& labels, const cv::Mat& rendered_ids) {
-  gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image, id_image);
+TrackingInfo DetectronIDTracker::renderTrackingInfo(
+    const Submap& submap, const Transformation& T_M_C,
+    const cv::Mat& depth_image, const cv::Mat& input_ids) const {
+  // Setup.
+  TrackingInfo result(submap.getID(), camera_.getConfig().width);
+  const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();
+  const float size_factor_x =
+      camera_.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_y =
+      camera_.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
+  const float block_size = submap.getTsdfLayer().block_size();
+  const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
 
-  return;
-  // Compute the overlaps for each new id with rendered ids.
-  std::unordered_map<int, std::unordered_map<int, int>>
-      overlap;  // <input_id, <rendered_id, count>>
-  std::unordered_map<int, int> input_count;
-  std::unordered_map<int, int> rendered_count;
-  for (int u = 0; u < camera_.getConfig().width; ++u) {
-    for (int v = 0; v < camera_.getConfig().height; ++v) {
-      const int input = id_image->at<int>(v, u);
-      const int rendered = rendered_ids.at<int>(v, u);
+  // Parse all blocks.
+  voxblox::BlockIndexList index_list;
+  submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
+  for (const voxblox::BlockIndex& index : index_list) {
+    if (!camera_.blockIsInViewFrustum(submap, index, T_C_S, block_size,
+                                      block_diag_half)) {
+      continue;
+    }
+    for (const Point& vertex :
+         submap.getMeshLayer().getMeshByIndex(index).vertices) {
+      // Project vertex and check depth value.
+      const Point p_C = T_C_S * vertex;
+      int u, v;
+      if (!camera_.projectPointToImagePlane(p_C, &u, &v)) {
+        continue;
+      }
+      if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >=
+          config_.depth_tolerance) {
+        continue;
+      }
 
-      // Book keeping.
-      auto it = overlap.find(input);
-      if (it == overlap.end()) {
-        it = overlap.emplace(input, std::unordered_map<int, int>()).first;
-      }
-      auto& counts = it->second;
-      auto it2 = counts.find(rendered);
-      if (it2 == counts.end()) {
-        counts.emplace(rendered, 1);
-      } else {
-        it2->second++;
-      }
-      auto it3 = input_count.find(input);
-      if (it3 == input_count.end()) {
-        input_count.emplace(input, 1);
-      } else {
-        it3->second++;
-      }
-      auto it4 = rendered_count.find(rendered);
-      if (it4 == rendered_count.end()) {
-        rendered_count.emplace(rendered, 1);
-      } else {
-        it4->second++;
+      // Compensate for vertex sparsity.
+      const int size_x = std::ceil(size_factor_x / p_C.z());
+      const int size_y = std::ceil(size_factor_y / p_C.z());
+      for (int dx = -size_x; dx <= size_x; ++dx) {
+        const int u_new = u + dx;
+        if (u_new < 0 || u_new >= camera_.getConfig().width) {
+          continue;
+        }
+        for (int dy = -size_y; dy <= size_y; ++dy) {
+          const int v_new = v + dy;
+          if (v_new < 0 || v_new >= camera_.getConfig().height) {
+            continue;
+          }
+          result.insertRenderedPoint(u, v, input_ids.at<int>(v, u));
+        }
       }
     }
   }
-
-  // TRY OUT METRICS
-  // For each input compute some metrics:
-  // Highest and second highest Overlap.
-}
-
-void DetectronIDTracker::trackAgainstPreviousImage(
-    SubmapCollection* submaps, const Transformation& T_M_C,
-    const cv::Mat& depth_image, const cv::Mat& color_image, cv::Mat* id_image,
-    const DetectronLabels& labels) {
-  const cv::MatIterator_<int> begin = id_image->begin<int>();
-  const cv::MatIterator_<int> end = id_image->end<int>();
-  std::unordered_map<int, int> detectron_to_submap_id;
-
-  if (!is_initialized_) {
-    // If this is the first image don't track, all ids will be newly allocated.
-    is_initialized_ = true;
-  } else {
-    // Track the image against the previous one.
-    Transformation T_prev_is = T_M_C_prev_.inverse() * T_M_C;
-
-    // Store the occurences of previous submap ids vs current detectron ids.
-    // Note(schmluk): assumes depth and id images are from identical camera!
-    std::unordered_map<int, std::unordered_map<int, int>> counts;
-    std::unordered_map<int, int> detectron_id_occurences;
-    for (int v = 0; v < depth_image.rows; v++) {
-      for (int u = 0; u < depth_image.cols; u++) {
-        Point p_is;
-        p_is.z() = depth_image.at<float>(v, u);
-        p_is.x() = (static_cast<float>(u) - config_.camera.vx) * p_is.z() /
-                   config_.camera.fx;
-        p_is.y() = (static_cast<float>(v) - config_.camera.vy) * p_is.z() /
-                   config_.camera.fy;
-        const Point p_prev = T_prev_is * p_is;
-        int u_prev = std::round(config_.camera.fx * p_prev.x() / p_prev.z() +
-                                config_.camera.vx);
-        if (u_prev < 0 || u_prev >= id_image_prev_.cols) {
-          continue;
-        }
-        int v_prev = std::round(config_.camera.fy * p_prev.y() / p_prev.z() +
-                                config_.camera.vy);
-        if (v_prev < 0 || v_prev >= id_image_prev_.rows) {
-          continue;
-        }
-
-        // Store the found id.
-        int detectron_id = id_image->at<int>(v, u);
-        int prev_id = id_image_prev_.at<int>(v_prev, u_prev);
-        auto it = detectron_id_occurences.find(detectron_id);
-        if (it == detectron_id_occurences.end()) {
-          detectron_id_occurences[detectron_id] = 1;
-        } else {
-          (it->second)++;
-        }
-
-        auto it2 = counts.find(detectron_id);
-        if (it2 == counts.end()) {
-          it2 = counts.emplace(detectron_id, std::unordered_map<int, int>())
-                    .first;
-        }
-
-        auto it3 = it2->second.find(prev_id);
-        if (it3 == it2->second.end()) {
-          it2->second[prev_id] = 1;
-        } else {
-          (it3->second)++;
-        }
-      }
-    }
-
-    // Lookup the submap with highest overlap and matching panoptic and class
-    // id.
-    int number_of_matched_ids = 0;
-    for (const auto& id_occurences : counts) {
-      std::vector<std::pair<int, int>> occurences;
-      occurences.reserve(id_occurences.second.size());
-      for (const auto& occ : id_occurences.second) {
-        occurences.emplace_back(occ);
-      }
-      std::sort(
-          occurences.begin(), occurences.end(),
-          [](const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) {
-            return lhs.second > rhs.second;
-          });
-
-      // Find the best match.
-      for (const auto& occ : occurences) {
-        const Submap& submap = submaps->getSubmap(occ.first);
-        auto it = labels.find(id_occurences.first);
-        if (it == labels.end()) {
-          LOG(WARNING) << "Could not find a detectron label for id "
-                       << id_occurences.first << ".";
-          break;
-        }
-
-        // Check class and panoptic label.
-        if (it->second.category_id != submap.getClassID()) {
-          continue;
-        }
-        if ((!it->second.is_thing &&
-             submap.getLabel() != PanopticLabel::kBackground) ||
-            (it->second.is_thing &&
-             submap.getLabel() != PanopticLabel::kInstance)) {
-          continue;
-        }
-
-        // Store match.
-        detectron_to_submap_id[id_occurences.first] = submap.getID();
-        number_of_matched_ids++;
-        if (config_.verbosity >= 4) {
-          // NOTE(schmluk): better use IoU here instead of highest overlap?
-          float percentage =
-              100.f * static_cast<float>(occ.second) /
-              static_cast<float>(detectron_id_occurences[id_occurences.first]);
-          LOG(INFO) << "Matched detectron id " << id_occurences.first << " ("
-                    << std::fixed << std::setprecision(2) << percentage
-                    << "%).";
-        }
-        break;
-      }
-    }
-    LOG_IF(INFO, config_.verbosity >= 3)
-        << "Matched " << number_of_matched_ids << "/"
-        << detectron_id_occurences.size()
-        << " detectron ids with the previous frame.";
-  }
-
-  // Write the new ids to the id image and allocate submaps.
-  for (auto it = begin; it != end; ++it) {
-    int detectron_id = static_cast<int>(*it);
-    auto id_it = detectron_to_submap_id.find(detectron_id);
-    if (id_it == detectron_to_submap_id.end()) {
-      int submap_id = allocateSubmap(detectron_id, submaps, labels);
-      detectron_to_submap_id[detectron_id] = submap_id;
-      *it = submap_id;
-    } else {
-      *it = id_it->second;
-    }
-  }
-  printAndResetWarnings();
-
-
-  // Allocate free space map if required.
-  allocateFreeSpaceSubmap(submaps);
-
-  // Store data.
-  T_M_C_prev_ = T_M_C;
-  id_image_prev_ = *id_image;
+  return result;
 }
 
 void DetectronIDTracker::processImages(SubmapCollection* submaps,

@@ -1,5 +1,8 @@
 #include "panoptic_mapping/common/camera.h"
 
+#include <unordered_map>
+#include <vector>
+
 namespace panoptic_mapping {
 
 void Camera::Config::checkParams() const {
@@ -75,6 +78,28 @@ bool Camera::submapIsInViewFrustum(const Submap& submap,
   return pointIsInViewFrustum(center_C, radius);
 }
 
+bool Camera::blockIsInViewFrustum(const Submap& submap,
+                                  const voxblox::BlockIndex& block_index,
+                                  const Transformation& T_M_C) const {
+  const Transformation T_C_S =
+      T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+  const FloatingPoint block_size = submap.getTsdfLayer().block_size();
+  const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
+  return blockIsInViewFrustum(submap, block_index, T_C_S, block_size,
+                              block_diag_half);
+}
+
+bool Camera::blockIsInViewFrustum(const Submap& submap,
+                                  const voxblox::BlockIndex& block_index,
+                                  const Transformation& T_C_S, float block_size,
+                                  float block_diag_half) const {
+  auto& block = submap.getTsdfLayer().getBlockByIndex(block_index);
+  const Point p_C =
+      T_C_S * (block.origin() +
+               Point(1, 1, 1) * block_size / 2.0);  // center point of the block
+  return pointIsInViewFrustum(p_C, block_diag_half);
+}
+
 bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
                                       float* v) const {
   if (p_C.z() < config_.min_range) {
@@ -110,6 +135,66 @@ bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
     return false;
   }
   return true;
+}
+
+std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
+                                              const Transformation& T_M_C,
+                                              bool only_active_submaps) const {
+  std::vector<int> result;
+  for (auto& submap_ptr : submaps) {
+    if (!submap_ptr->isActive() && only_active_submaps) {
+      continue;
+    }
+    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+      continue;
+    }
+    result.push_back(submap_ptr->getID());
+  }
+  return result;
+}
+
+voxblox::BlockIndexList Camera::findVisibleBlocks(
+    const Submap& submap, const Transformation& T_M_C) const {
+  // Setup.
+  voxblox::BlockIndexList result;
+  voxblox::BlockIndexList all_blocks;
+  submap.getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
+  const Transformation T_C_S =
+      T_M_C.inverse() * submap.getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+  const FloatingPoint block_size = submap.getTsdfLayer().block_size();
+  const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
+
+  // Iterate through all blocks.
+  for (auto& index : all_blocks) {
+    auto& block = submap.getTsdfLayer().getBlockByIndex(index);
+    const Point p_C =
+        T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
+                                      2.0);  // center point of the block
+
+    if (pointIsInViewFrustum(p_C, block_diag_half)) {
+      result.push_back(index);
+    }
+  }
+  return result;
+}
+
+std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
+    const SubmapCollection& submaps, const Transformation& T_M_C,
+    bool only_active_submaps) const {
+  std::unordered_map<int, voxblox::BlockIndexList> result;
+  for (auto& submap_ptr : submaps) {
+    if (!submap_ptr->isActive() && only_active_submaps) {
+      continue;
+    }
+    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+      continue;
+    }
+    voxblox::BlockIndexList block_list = findVisibleBlocks(*submap_ptr, T_M_C);
+    if (!block_list.empty()) {
+      result[submap_ptr->getID()] = block_list;
+    }
+  }
+  return result;
 }
 
 }  // namespace panoptic_mapping

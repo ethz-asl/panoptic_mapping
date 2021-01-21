@@ -12,8 +12,8 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
-#include "panotpic_mapping/map/submap_bounding_volume.h"
-#include "panotpic_mapping/map/submap_id.h"
+#include "panoptic_mapping/map/submap_bounding_volume.h"
+#include "panoptic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 
