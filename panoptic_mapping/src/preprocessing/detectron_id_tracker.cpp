@@ -37,6 +37,7 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("rendering_threads", &rendering_threads);
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
+  setupParam("debug", &debug);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
@@ -69,22 +70,7 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
                                        const DetectronLabels& labels) {
   CHECK_NOTNULL(id_image);
 
-  // TEST images
-  cv::Mat rendered_ids;
-  rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
-  cv::Mat input_vis = renderer_.colorIdImage(*id_image);
-  cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
-  gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image, id_image);
-
   // Render each active submap in parallel to collect overlap statistics.
-  //  std::unordered_map<int, voxblox::BlockIndexList> block_lists =
-  //  camera_.findVisibleBlocks(*submaps, T_M_C, true); std::vector<int>
-  //  id_list; id_list.reserve(block_lists.size()); for (const auto&
-  //  id_blocklist_pair : block_lists) {
-  //    id_list.emplace_back(id_blocklist_pair.first);
-  //  }
-
-  // Render submaps in parallel.
   SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, T_M_C));
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
@@ -135,24 +121,33 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
               << info.str();
   }
 
-  // TEST Publish Visualization
-  cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
-  auto enc = sensor_msgs::image_encodings::BGR8;
-  color_pub_.publish(cv_bridge::CvImage(header, enc, color_image).toImageMsg());
-  input_pub_.publish(cv_bridge::CvImage(header, enc, input_vis).toImageMsg());
-  rendered_pub_.publish(
-      cv_bridge::CvImage(header, enc, rendered_vis).toImageMsg());
-  tracking_pub_.publish(
-      cv_bridge::CvImage(header, enc, tracked_vis).toImageMsg());
+  // TEST Publish Visualization.
+  if (config_.debug) {
+    cv::Mat rendered_ids;
+    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
+    cv::Mat input_vis = renderer_.colorIdImage(*id_image);
+    cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
+    gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
+                              id_image);
+    cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+    auto enc = sensor_msgs::image_encodings::BGR8;
+    color_pub_.publish(
+        cv_bridge::CvImage(header, enc, color_image).toImageMsg());
+    input_pub_.publish(cv_bridge::CvImage(header, enc, input_vis).toImageMsg());
+    rendered_pub_.publish(
+        cv_bridge::CvImage(header, enc, rendered_vis).toImageMsg());
+    tracking_pub_.publish(
+        cv_bridge::CvImage(header, enc, tracked_vis).toImageMsg());
+  }
 }
 
 TrackingInfo DetectronIDTracker::renderTrackingInfo(
     const Submap& submap, const Transformation& T_M_C,
     const cv::Mat& depth_image, const cv::Mat& input_ids) const {
   // Setup.
-  TrackingInfo result(submap.getID(), camera_.getConfig().width);
+  TrackingInfo result(submap.getID(), camera_.getConfig());
   const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();
   const float size_factor_x =
       camera_.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
@@ -188,21 +183,10 @@ TrackingInfo DetectronIDTracker::renderTrackingInfo(
       // Compensate for vertex sparsity.
       const int size_x = std::ceil(size_factor_x / p_C.z());
       const int size_y = std::ceil(size_factor_y / p_C.z());
-      for (int dx = -size_x; dx <= size_x; ++dx) {
-        const int u_new = u + dx;
-        if (u_new < 0 || u_new >= camera_.getConfig().width) {
-          continue;
-        }
-        for (int dy = -size_y; dy <= size_y; ++dy) {
-          const int v_new = v + dy;
-          if (v_new < 0 || v_new >= camera_.getConfig().height) {
-            continue;
-          }
-          result.insertRenderedPoint(u, v, input_ids.at<int>(v, u));
-        }
-      }
+      result.insertRenderedPoint(u, v, size_x, size_y);
     }
   }
+  result.evaluate(input_ids);
   return result;
 }
 

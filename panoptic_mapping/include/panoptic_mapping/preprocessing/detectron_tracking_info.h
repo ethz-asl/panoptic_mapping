@@ -11,6 +11,8 @@
 
 #include <opencv2/core/mat.hpp>
 
+#include "panoptic_mapping/common/camera.h"
+
 namespace panoptic_mapping {
 
 /**
@@ -21,18 +23,19 @@ class TrackingInfoAggregator;
 
 class TrackingInfo {
  public:
-  explicit TrackingInfo(int submap_id, int width);
+  explicit TrackingInfo(int submap_id, const Camera::Config& camera);
   ~TrackingInfo() = default;
 
-  void insertRenderedPoint(int u, int v, int input_id);
+  void insertRenderedPoint(int u, int v, int size_x, int size_y);
+  void evaluate(const cv::Mat& id_image);
 
  private:
   friend TrackingInfoAggregator;
   const int submap_id_;
   const int width_;
-
-  // Data.
-  std::unordered_set<int> pixel_tracks_;
+  const int height_;
+  int u_min_, u_max_, v_min_, v_max_;
+  cv::Mat image_;
   std::unordered_map<int, int> counts_;  // <input_id, count>
 };
 
@@ -59,6 +62,7 @@ class TrackingInfoAggregator {
       const std::string& metric);
   float computIoU(int input_id, int submap_id) const;
   float computOverlap(int input_id, int submap_id) const;
+
   // Data.
   std::unordered_map<int, std::unordered_map<int, int>>
       overlap_;  // <input_id, <rendered_id, count>>

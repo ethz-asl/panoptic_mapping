@@ -54,6 +54,7 @@ class DetectronIDTracker : public IDTrackerBase {
 
     // TEST Visualization
     GroundTruthIDTracker::Config gt_id_tracker_config;
+    bool debug = false;
 
     Config() { setConfigName("DetectronIDTracker"); }
 

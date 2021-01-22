@@ -11,9 +11,6 @@
 
 namespace panoptic_mapping {
 
-TrackingInfo::TrackingInfo(int submap_id, int width)
-    : submap_id_(submap_id), width_(width) {}
-
 // Utility function.
 void incrementMap(std::unordered_map<int, int>* map, int id, int value = 1) {
   auto it = map->find(id);
@@ -24,12 +21,42 @@ void incrementMap(std::unordered_map<int, int>* map, int id, int value = 1) {
   }
 }
 
-void TrackingInfo::insertRenderedPoint(int u, int v, int input_id) {
-  // Avoid duplicates here.
-  const int linear_index = u + width_ * v;
-  if (pixel_tracks_.find(linear_index) == pixel_tracks_.end()) {
-    incrementMap(&counts_, input_id);
-    pixel_tracks_.insert(linear_index);
+TrackingInfo::TrackingInfo(int submap_id, const Camera::Config& camera)
+    : submap_id_(submap_id), width_(camera.width), height_(camera.height) {
+  image_ = cv::Mat(cv::Size(width_, height_), CV_32SC1, cv::Scalar(0));
+  u_min_ = width_;
+  u_max_ = 0;
+  v_min_ = height_;
+  v_max_ = 0;
+}
+
+void TrackingInfo::insertRenderedPoint(int u, int v, int size_x, int size_y) {
+  // Mark the left side of the maximum vertex size for later evaluation.
+  const int u_min = std::max(0, u - size_x);
+  const int width = u + 2 * size_x + 1 - u_min;
+  const int v_max = std::min(height_ - 1, v + size_y);
+  const int v_min = std::max(0, v - size_y);
+  for (int v2 = v_min; v2 <= v_max; ++v2) {
+    int& data = image_.at<int>(v2, u_min);
+    data = std::max(data, width);
+  }
+  u_min_ = std::min(u_min_, u_min);
+  u_max_ = std::max(u_max_, u_min + width);
+  v_min_ = std::min(v_min_, v_min);
+  v_max_ = std::max(v_max_, v_max);
+}
+
+void TrackingInfo::evaluate(const cv::Mat& id_image) {
+  // Pass through the image and lookup which pixels should be covered by the
+  // submap. Must be called after all input is inserted.
+  for (int v = v_min_; v <= v_max_; ++v) {
+    int range = 0;
+    for (int u = u_min_; u <= std::min(u_max_, width_ - 1); ++u) {
+      range = std::max(range, image_.at<int>(v, u)) - 1;
+      if (range > 0) {
+        incrementMap(&counts_, id_image.at<int>(v, u));
+      }
+    }
   }
 }
 

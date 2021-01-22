@@ -27,7 +27,7 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
                             int (*paint)(const Submap&)) {
   // Use the mesh vertices as an approximation to render active submaps.
   // Assumes that all active submap meshes are up to date and does not perform
-  // a meshing step of its own.
+  // a meshing step of its own. Very inefficient due to pixel duplicates.
   range_image_.setOnes();
   range_image_ *= camera_.getConfig().max_range;
   cv::Mat result = cv::Mat::ones(camera_.getConfig().height,
