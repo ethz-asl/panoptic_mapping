@@ -36,6 +36,7 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("rendering_threads", &rendering_threads);
   setupParam("depth_tolerance", &depth_tolerance);
+  setupParam("tracking_metric", &tracking_metric);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
@@ -73,6 +74,7 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
   rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
   cv::Mat input_vis = renderer_.colorIdImage(*id_image);
   cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
+  gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image, id_image);
 
   // Render each active submap in parallel to collect overlap statistics.
   //  std::unordered_map<int, voxblox::BlockIndexList> block_lists =
@@ -105,9 +107,32 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
         }));
   }
 
-  // Join all threads and evaluate.
+  // Join all threads.
   for (auto& thread : threads) {
     tracking_data.insertTrackingInfos(thread.get());
+  }
+
+  // Assign the input ids to tracks or allocate new maps.
+  std::unordered_map<int, int> input_to_output;
+  std::stringstream info;
+  for (const int input_id : tracking_data.getInputIDs()) {
+    // Print the matching statistics if required.
+    if (config_.verbosity >= 4) {
+      std::vector<std::pair<int, float>> mapid_ious;
+      if (tracking_data.getAllMetrics(input_id, &mapid_ious)) {
+        info << "\n  " << input_id << ":";
+        for (const auto& id_io : mapid_ious) {
+          info << " " << id_io.first << "(" << std::fixed
+               << std::setprecision(2) << id_io.second << ")";
+        }
+      } else {
+        info << "\n  " << input_id << ": new";
+      }
+    }
+  }
+  if (config_.verbosity >= 4) {
+    LOG(INFO) << "ID Tracking overlap statistics: input: submap(IoU)"
+              << info.str();
   }
 
   // TEST Publish Visualization
@@ -135,6 +160,10 @@ TrackingInfo DetectronIDTracker::renderTrackingInfo(
       camera_.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
   const float block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
+  const float depth_tolerance =
+      config_.depth_tolerance > 0
+          ? config_.depth_tolerance
+          : -config_.depth_tolerance * submap.getTsdfLayer().voxel_size();
 
   // Parse all blocks.
   voxblox::BlockIndexList index_list;
@@ -152,8 +181,7 @@ TrackingInfo DetectronIDTracker::renderTrackingInfo(
       if (!camera_.projectPointToImagePlane(p_C, &u, &v)) {
         continue;
       }
-      if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >=
-          config_.depth_tolerance) {
+      if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >= depth_tolerance) {
         continue;
       }
 

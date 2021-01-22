@@ -1,7 +1,9 @@
 #ifndef PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_TRACKING_INFO_H_
 #define PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_TRACKING_INFO_H_
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -47,12 +49,16 @@ class TrackingInfoAggregator {
 
   // Get results. Requires that all input data is already set.
   std::vector<int> getInputIDs() const;
-  bool getHighestIoU(int input_id, int* submap_id, float* iou);
-  bool getAllIoU(int input_id, std::vector<int>* submap_ids,
-                 std::vector<float>* ious);
+  bool getHighestMetric(int input_id, int* submap_id, float* value,
+                        const std::string& metric = "iou");
+  bool getAllMetrics(int input_id, std::vector<std::pair<int, float>>* id_value,
+                     const std::string& metric = "iou");
 
  private:
+  std::function<float(int, int)> getComputeValueFunction(
+      const std::string& metric);
   float computIoU(int input_id, int submap_id) const;
+  float computOverlap(int input_id, int submap_id) const;
   // Data.
   std::unordered_map<int, std::unordered_map<int, int>>
       overlap_;  // <input_id, <rendered_id, count>>

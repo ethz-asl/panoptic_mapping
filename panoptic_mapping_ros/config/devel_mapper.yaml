@@ -55,7 +55,8 @@ id_tracker:
   
   # Detectron ID tracker
   camera_namespace: ~/camera
-  depth_tolerance: -1.0
+  depth_tolerance: -2  # m, negative = #vs
+  tracking_metric: IoU  # IoU, overlap
   
 tsdf_registrator:
   verbosity: 1

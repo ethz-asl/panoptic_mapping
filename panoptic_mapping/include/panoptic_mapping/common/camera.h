@@ -1,8 +1,8 @@
 #ifndef PANOPTIC_MAPPING_COMMON_CAMERA_H_
 #define PANOPTIC_MAPPING_COMMON_CAMERA_H_
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"

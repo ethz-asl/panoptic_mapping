@@ -1,6 +1,10 @@
 #include "panoptic_mapping/preprocessing/detectron_tracking_info.h"
 
+#include <algorithm>
+#include <iostream>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <glog/logging.h>
@@ -23,10 +27,10 @@ void incrementMap(std::unordered_map<int, int>* map, int id, int value = 1) {
 void TrackingInfo::insertRenderedPoint(int u, int v, int input_id) {
   // Avoid duplicates here.
   const int linear_index = u + width_ * v;
-  if (pixel_tracks_.find(linear_index) != pixel_tracks_.end()) {
-    return;
+  if (pixel_tracks_.find(linear_index) == pixel_tracks_.end()) {
+    incrementMap(&counts_, input_id);
+    pixel_tracks_.insert(linear_index);
   }
-  incrementMap(&counts_, input_id);
 }
 
 void TrackingInfoAggregator::insertTrackingInfos(
@@ -78,36 +82,78 @@ float TrackingInfoAggregator::computIoU(int input_id, int submap_id) const {
                              total_input_count_.at(input_id) - count));
 }
 
-bool TrackingInfoAggregator::getHighestIoU(int input_id, int* submap_id,
-                                           float* iou) {
+float TrackingInfoAggregator::computOverlap(int input_id, int submap_id) const {
+  // This assumes that input and submap id exist.
+  return static_cast<float>(overlap_.at(input_id).at(submap_id)) /
+         static_cast<float>(total_input_count_.at(input_id));
+}
+
+std::function<float(int, int)> TrackingInfoAggregator::getComputeValueFunction(
+    const std::string& metric) {
+  if (metric == "overlap") {
+    return [=](int input_id, int submap_id) {
+      return this->computOverlap(input_id, submap_id);
+    };
+  }
+  if (metric != "iou" && metric != "IoU") {
+    LOG(WARNING) << "Unknown tracking metric '" << metric
+                 << "', using 'IoU' instead.";
+  }
+  return [=](int input_id, int submap_id) {
+    return this->computIoU(input_id, submap_id);
+  };
+}
+
+bool TrackingInfoAggregator::getHighestMetric(int input_id, int* submap_id,
+                                              float* value,
+                                              const std::string& metric) {
   CHECK_NOTNULL(submap_id);
-  CHECK_NOTNULL(iou);
+  CHECK_NOTNULL(value);
   if (overlap_.find(input_id) == overlap_.end()) {
     return false;
   }
+
+  auto value_function = getComputeValueFunction(metric);
   int id = 0;
-  float best_iou = -1.f;
+  float best_value = -1.f;
   for (const auto& id_count_pair : overlap_[input_id]) {
-    const float current_iou = computIoU(input_id, id_count_pair.first);
-    if (current_iou > best_iou) {
-      best_iou = current_iou;
+    const float current_value = value_function(input_id, id_count_pair.first);
+    if (current_value > best_value) {
+      best_value = current_value;
       id = id_count_pair.first;
     }
   }
-  if (best_iou >= 0.f) {
-    *iou = best_iou;
+  if (best_value >= 0.f) {
+    *value = best_value;
     *submap_id = id;
     return true;
   }
   return false;
 }
 
-bool TrackingInfoAggregator::getAllIoU(int input_id,
-                                       std::vector<int>* submap_ids,
-                                       std::vector<float>* ious) {
+bool TrackingInfoAggregator::getAllMetrics(
+    int input_id, std::vector<std::pair<int, float>>* id_value,
+    const std::string& metric) {
+  CHECK_NOTNULL(id_value);
   // Return all overlapping submap ids ordered by IoU.
-  CHECK_NOTNULL(submap_ids);
-  CHECK_NOTNULL(ious);
+  if (overlap_.find(input_id) == overlap_.end()) {
+    return false;
+  }
+  auto value_function = getComputeValueFunction(metric);
+  id_value->clear();
+  id_value->reserve(overlap_[input_id].size());
+  for (const auto& id_count_pair : overlap_[input_id]) {
+    id_value->emplace_back(id_count_pair.first,
+                           value_function(input_id, id_count_pair.first));
+  }
+  if (id_value->empty()) {
+    return false;
+  }
+  std::sort(std::begin(*id_value), std::end(*id_value),
+            [&](const auto& lhs, const auto& rhs) {
+              return lhs.second > rhs.second;
+            });
+  return true;
 }
 
 }  // namespace panoptic_mapping

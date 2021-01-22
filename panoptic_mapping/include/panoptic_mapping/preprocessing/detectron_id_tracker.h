@@ -42,6 +42,7 @@ class DetectronIDTracker : public IDTrackerBase {
 
     // Tracking
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
+    std::string tracking_metric = "IoU";  // iou, overlap
 
     // Camera and renderer settings.
     std::string camera_namespace = "";
@@ -99,11 +100,6 @@ class DetectronIDTracker : public IDTrackerBase {
                                   const cv::Mat& depth_image,
                                   const cv::Mat& input_ids) const;
 
-  void trackAgainstMap(SubmapCollection* submaps, const Transformation& T_M_C,
-                       const cv::Mat& depth_image, const cv::Mat& color_image,
-                       cv::Mat* id_image, const DetectronLabels& labels,
-                       const cv::Mat& rendered_ids);
-
  private:
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, DetectronIDTracker, std::shared_ptr<LabelHandler>>
@@ -115,11 +111,6 @@ class DetectronIDTracker : public IDTrackerBase {
   MapRenderer renderer_;
 
   std::unordered_map<int, int> unknown_ids;      // for error handling
-
-  // Tracking against previous image information.
-  bool is_initialized_ = false;
-  Transformation T_M_C_prev_;
-  cv::Mat id_image_prev_;
 
   // TEST
   ros::NodeHandle nh_;
