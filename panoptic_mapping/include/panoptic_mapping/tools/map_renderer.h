@@ -12,6 +12,10 @@
 
 namespace panoptic_mapping {
 
+/**
+ * Preliminary tool to visualize the map for debugging. Not very efficient or
+ * sophisticated.
+ */
 class MapRenderer {
  public:
   struct Config : public config_utilities::Config<Config> {

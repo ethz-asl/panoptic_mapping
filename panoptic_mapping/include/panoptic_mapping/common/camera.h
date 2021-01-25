@@ -11,6 +11,10 @@
 
 namespace panoptic_mapping {
 
+/**
+ * Utility class bundling camera related operations and data. Currently the
+ * camera pose T_M_C is not stored with a camera but provided by the caller.
+ */
 class Camera {
  public:
   struct Config : public config_utilities::Config<Config> {

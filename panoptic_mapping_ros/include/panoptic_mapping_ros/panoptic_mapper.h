@@ -21,6 +21,7 @@
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/registration/tsdf_registrator.h>
+#include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
@@ -36,8 +37,9 @@ class PanopticMapper {
     int max_image_queue_length = 10;  // after this many images are queued for
     // integration start discarding old ones.
     std::string global_frame_name = "mission";
-    double visualization_interval = 1.0;     // s, use -1 for always.
-    double change_detection_interval = 1.0;  // s, use -1 for always.
+    double visualization_interval = 1.0;     // s, use -1 for always, 0 never.
+    double change_detection_interval = 1.0;  // s, use -1 for always, 0 never.
+    double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -57,6 +59,7 @@ class PanopticMapper {
   void segmentationImageCallback(const sensor_msgs::ImagePtr& msg);
   void publishVisualizationCallback(const ros::TimerEvent&);
   void changeDetectionCallback(const ros::TimerEvent&);
+  void dataLoggingCallback(const ros::TimerEvent&);
   bool saveMapCallback(
       panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
       panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
@@ -108,12 +111,14 @@ class PanopticMapper {
   ros::ServiceServer set_color_mode_srv_;
   ros::Timer visualization_timer_;
   ros::Timer change_detection_timer_;
+  ros::Timer data_logging_timer_;
 
   // Members.
   const Config config_;
   std::shared_ptr<SubmapCollection> submaps_;
   voxgraph::TfTransformer tf_transformer_;
   std::shared_ptr<LabelHandler> label_handler_;
+  std::unique_ptr<DataWriter> data_logger_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;

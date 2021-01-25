@@ -32,6 +32,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("global_frame_name", &global_frame_name);
   setupParam("visualization_interval", &visualization_interval);
   setupParam("change_detection_interval", &change_detection_interval);
+  setupParam("data_logging_interval", &data_logging_interval);
 }
 
 PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
@@ -86,6 +87,11 @@ void PanopticMapper::setupMembers() {
           visualization_nh),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+
+  // Data Logging.
+  ros::NodeHandle data_nh(nh_private_, "data_writer");
+  data_logger_ = std::make_unique<DataWriter>(
+      config_utilities::getConfigFromRos<DataWriter::Config>(data_nh));
 }
 
 void PanopticMapper::setupRos() {
@@ -127,6 +133,11 @@ void PanopticMapper::setupRos() {
     change_detection_timer_ = nh_private_.createTimer(
         ros::Duration(config_.change_detection_interval),
         &PanopticMapper::changeDetectionCallback, this);
+  }
+  if (config_.data_logging_interval > 0.0) {
+    data_logging_timer_ =
+        nh_private_.createTimer(ros::Duration(config_.data_logging_interval),
+                                &PanopticMapper::dataLoggingCallback, this);
   }
 }
 
@@ -171,14 +182,18 @@ void PanopticMapper::processImages(
   ros::WallTime t3 = ros::WallTime::now();
 
   // If requested perform change detection and visualization.
-  if (config_.change_detection_interval <= 0.f) {
-    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  ros::TimerEvent now_event;
+  if (config_.change_detection_interval < 0.f) {
+    changeDetectionCallback(now_event);
   }
   ros::WallTime t4 = ros::WallTime::now();
-  if (config_.visualization_interval <= 0.f) {
-    publishVisualization();
+  if (config_.visualization_interval < 0.f) {
+    publishVisualizationCallback(now_event);
   }
   ros::WallTime t5 = ros::WallTime::now();
+  if (config_.data_logging_interval < 0.f) {
+    dataLoggingCallback(now_event);
+  }
 
   // Log if requested.
   std::stringstream info;
@@ -254,16 +269,24 @@ void PanopticMapper::pointcloudCallback(
       << int((t3 - t0).toSec() * 1000) << "ms)";
 
   // If requested perform change detection and visualization.
-  if (config_.change_detection_interval <= 0.f) {
-    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  ros::TimerEvent now_event;
+  if (config_.change_detection_interval < 0.f) {
+    changeDetectionCallback(now_event);
   }
-  if (config_.visualization_interval <= 0.f) {
-    publishVisualization();
+  if (config_.visualization_interval < 0.f) {
+    publishVisualizationCallback(now_event);
+  }
+  if (config_.data_logging_interval < 0.f) {
+    dataLoggingCallback(now_event);
   }
 }
 
 void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
   tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+}
+
+void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {
+  data_logger_->writeData(ros::Time::now().toSec(), *submaps_);
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
@@ -552,14 +575,18 @@ void PanopticMapper::processImages(
   ros::WallTime t3 = ros::WallTime::now();
 
   // If requested perform change detection and visualization.
-  if (config_.change_detection_interval <= 0.f) {
-    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  ros::TimerEvent now_event;
+  if (config_.change_detection_interval < 0.f) {
+    changeDetectionCallback(now_event);
   }
   ros::WallTime t4 = ros::WallTime::now();
-  if (config_.visualization_interval <= 0.f) {
-    publishVisualization();
+  if (config_.visualization_interval < 0.f) {
+    publishVisualizationCallback(now_event);
   }
   ros::WallTime t5 = ros::WallTime::now();
+  if (config_.data_logging_interval < 0.f) {
+    dataLoggingCallback(now_event);
+  }
 
   // Log if requested.
   std::stringstream info;

@@ -37,6 +37,7 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("rendering_threads", &rendering_threads);
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
+  setupParam("match_acceptance_threshold", &match_acceptance_threshold);
   setupParam("debug", &debug);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);

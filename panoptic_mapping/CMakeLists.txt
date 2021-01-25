@@ -40,6 +40,7 @@ cs_add_library(${PROJECT_NAME}
         src/registration/tsdf_registrator.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
+        src/tools/data_writer.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
 

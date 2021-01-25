@@ -43,6 +43,7 @@ class DetectronIDTracker : public IDTrackerBase {
     // Tracking
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
     std::string tracking_metric = "IoU";  // iou, overlap
+    float match_acceptance_threshold = 0.5;
 
     // Camera and renderer settings.
     std::string camera_namespace = "";

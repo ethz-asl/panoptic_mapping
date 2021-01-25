@@ -4,6 +4,7 @@ global_frame_name: world
 label_path: /home/lukas/Documents/datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
+data_logging_interval: -1.0
 
 camera:
   verbosity: 0
@@ -45,7 +46,7 @@ tsdf_integrator:
 #  integration_order_mode: "sorted"
 
 id_tracker:
-  type: detectron # ground_truth, detectron
+  type: ground_truth # ground_truth, detectron
   verbosity: 4
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
@@ -57,6 +58,7 @@ id_tracker:
   camera_namespace: ~/camera
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
+  match_acceptance_threshold: 0.3
   
   impaint_voxel_size: false
   debug: false
@@ -89,7 +91,11 @@ visualization:
   visualize_slice: true
   planning_slice_resolution: 0.1
   planning_slice_height: -0.5
-
+  
+data_writer:
+  verbosity: 1
+  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
+  file_name: ""
 
   
 
