@@ -35,17 +35,16 @@ GroundTruthIDTracker::GroundTruthIDTracker(
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
-                                         const Transformation& T_M_C,
-                                         const cv::Mat& depth_image,
-                                         const cv::Mat& color_image,
-                                         cv::Mat* id_image) {
+void GroundTruthIDTracker::processInput(SubmapCollection* submaps, InputData * input) {
+  CHECK_NOTNULL(submaps);
+  CHECK_NOTNULL(input);
+  CHECK(inputIsValid(*input));
   // NOTE: The id_image is always provided as CV_32SC1 (int) image
   // Look for new instances.
   // TODO(schmluk): Update to use only valid pixels.
   std::unordered_set<int> instances;
-  const cv::MatIterator_<int> begin = id_image->begin<int>();
-  const cv::MatIterator_<int> end = id_image->end<int>();
+  const cv::MatIterator_<int> begin = input->idImage()->begin<int>();
+  const cv::MatIterator_<int> end = input->idImage()->end<int>();
   for (auto it = begin; it != end; ++it) {
     instances.insert(*it);
   }
@@ -65,25 +64,6 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
   for (auto it = begin; it != end; ++it) {
     *it = instance_to_id_[*it];
   }
-
-  // Allocate free space map if required.
-  allocateFreeSpaceSubmap(submaps);
-}
-
-void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
-                                             const Transformation& T_M_C,
-                                             const Pointcloud& pointcloud,
-                                             const Colors& colors,
-                                             std::vector<int>* ids) {
-  // Iterate through point cloud and replace labels.
-  for (int& id : *ids) {
-    if (config_.input_is_mesh_id) {
-      id = label_handler_->getSegmentationIdFromMeshId(id);
-    }
-    allocateSubmap(id, submaps);
-    id = instance_to_id_[id];
-  }
-  printAndResetWarnings();
 
   // Allocate free space map if required.
   allocateFreeSpaceSubmap(submaps);

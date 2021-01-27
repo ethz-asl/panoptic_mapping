@@ -49,9 +49,7 @@ class ProjectiveIntegrator : public IntegratorBase {
   explicit ProjectiveIntegrator(const Config& config);
   ~ProjectiveIntegrator() override = default;
 
-  void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
-                     const cv::Mat& depth_image, const cv::Mat& color_image,
-                     const cv::Mat& id_image) override;
+  void processInput(SubmapCollection* submaps, InputData * input) override;
 
  protected:
   // Components.

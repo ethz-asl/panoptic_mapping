@@ -64,32 +64,11 @@ class DetectronIDTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  struct DetectronLabel {
-    int id = 0;
-    bool is_thing = true;
-    int category_id = 0;
-    int instance_id = 0;
-    float score = 0.f;
-  };
-
-  // id - label pairs
-  typedef std::unordered_map<int, DetectronLabel> DetectronLabels;
-
   DetectronIDTracker(const Config& config,
                      std::shared_ptr<LabelHandler> label_handler);
   ~DetectronIDTracker() override = default;
 
-  void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
-                     const cv::Mat& depth_image, const cv::Mat& color_image,
-                     cv::Mat* id_image) override;
-
-  void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
-                     const cv::Mat& depth_image, const cv::Mat& color_image,
-                     cv::Mat* id_image, const DetectronLabels& labels);
-
-  void processPointcloud(SubmapCollection* submaps, const Transformation& T_M_C,
-                         const Pointcloud& pointcloud, const Colors& colors,
-                         std::vector<int>* ids) override;
+  void processInput(SubmapCollection* submaps, InputData * input) override;
 
  private:
   int allocateSubmap(int detectron_id, SubmapCollection* submaps,

@@ -31,9 +31,7 @@ class NaiveIntegrator : public IntegratorBase {
   ~NaiveIntegrator() override = default;
 
   // process a and integrate a pointcloud
-  void processPointcloud(SubmapCollection* submaps, const Transformation& T_M_C,
-                         const Pointcloud& pointcloud, const Colors& colors,
-                         const std::vector<int>& ids) override;
+  void processInput(SubmapCollection* submaps, InputData * input) override;
 
  protected:
   const Config config_;

@@ -18,11 +18,17 @@ NaiveIntegrator::Config NaiveIntegrator::Config::isValid() const {
 NaiveIntegrator::NaiveIntegrator(const Config& config)
     : config_(config.isValid()) {}
 
-void NaiveIntegrator::processPointcloud(SubmapCollection* submaps,
-                                        const Transformation& T_M_C,
-                                        const Pointcloud& pointcloud,
-                                        const Colors& colors,
-                                        const std::vector<int>& ids) {
+void NaiveIntegrator::processInput(SubmapCollection* submaps, InputData * input) {
+
+  //NOTE(schmluk): This is legacy code for running the standard voxblox
+  // integrators. If this is to be used all the data is in the input, just need
+  // to convert the images to pointcloud.
+
+  CHECK_NOTNULL(submaps);
+  CHECK_NOTNULL(input);
+  CHECK(inputIsValid(*input));
+
+  /*
   CHECK_NOTNULL(submaps);
   CHECK_EQ(ids.size(), pointcloud.size());
   CHECK_EQ(ids.size(), colors.size());
@@ -62,7 +68,7 @@ void NaiveIntegrator::processPointcloud(SubmapCollection* submaps,
           submaps->getSubmapPtr(id_v[i])->getTsdfLayerPtr().get());
     }
     tsdf_integrator_->integratePointCloud(T_M_C, cloud_v[i], color_v[i]);
-  }
+  }*/
 }
 
 }  // namespace panoptic_mapping

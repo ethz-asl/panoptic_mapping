@@ -12,7 +12,7 @@
 namespace panoptic_mapping {
 
 /**
- * This id tracker looks up the corresponding instance id for each submap.
+ * This id tracker looks up the corresponding ground truth instance id for each submap.
  */
 class GroundTruthIDTracker : public IDTrackerBase {
  public:
@@ -37,13 +37,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
                        std::shared_ptr<LabelHandler> label_handler);
   ~GroundTruthIDTracker() override = default;
 
-  void processImages(SubmapCollection* submaps, const Transformation& T_M_C,
-                     const cv::Mat& depth_image, const cv::Mat& color_image,
-                     cv::Mat* id_image) override;
-
-  void processPointcloud(SubmapCollection* submaps, const Transformation& T_M_C,
-                         const Pointcloud& pointcloud, const Colors& colors,
-                         std::vector<int>* ids) override;
+  void processInput(SubmapCollection* submaps, InputData * input) override;
 
  private:
   void allocateSubmap(int instance, SubmapCollection* submaps);

@@ -63,16 +63,13 @@ DetectronIDTracker::DetectronIDTracker(
   tracking_pub_ = nh_.advertise<sensor_msgs::Image>("tracking", 10);
 }
 
-void DetectronIDTracker::processImages(SubmapCollection* submaps,
-                                       const Transformation& T_M_C,
-                                       const cv::Mat& depth_image,
-                                       const cv::Mat& color_image,
-                                       cv::Mat* id_image,
-                                       const DetectronLabels& labels) {
-  CHECK_NOTNULL(id_image);
+void DetectronIDTracker::processInput(SubmapCollection* submaps, InputData * input) {
+  CHECK_NOTNULL(submaps);
+  CHECK_NOTNULL(input);
+  CHECK(inputIsValid(*input));
 
   // TEST
-  cv::Mat input_vis = renderer_.colorIdImage(*id_image);
+  cv::Mat input_vis = renderer_.colorIdImage(*(input->idImage()));
   // gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
   // id_image);
 
@@ -82,24 +79,22 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
 
   // Render each active submap in parallel to collect overlap statistics.
   auto t0 = std::chrono::high_resolution_clock::now();
-  SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, T_M_C));
+  SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, input->T_M_C()));
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
   for (int i = 0; i < config_.rendering_threads; ++i) {
     threads.emplace_back(std::async(
         std::launch::async,
-        [this, i, &tracking_data, &index_getter, submaps, &T_M_C, &depth_image,
-         id_image]() -> std::vector<TrackingInfo> {
+        [this, i, &tracking_data, &index_getter, submaps, input]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(*id_image, depth_image,
-                                           camera_.getConfig());
+            tracking_data.insertInputImage(*(input->idImage()), input->depthImage(),                                           camera_.getConfig());
           }
           std::vector<TrackingInfo> result;
           int index;
           while (index_getter.getNextIndex(&index)) {
             result.emplace_back(this->renderTrackingInfo(
-                submaps->getSubmap(index), T_M_C, depth_image, *id_image));
+                submaps->getSubmap(index), input->T_M_C(), input->depthImage(), *(input->idImage())));
           }
           return result;
         }));
@@ -165,12 +160,12 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
       input_to_output[input_id] = submap_id;
     } else {
       n_new++;
-      input_to_output[input_id] = allocateSubmap(input_id, submaps, labels);
+      input_to_output[input_id] = allocateSubmap(input_id, submaps, input->detectronLabels());
     }
   }
 
   // Translate the id image.
-  for (auto it = id_image->begin<int>(); it != id_image->end<int>(); ++it) {
+  for (auto it = input->idImage()->begin<int>(); it != input->idImage()->end<int>(); ++it) {
     *it = input_to_output[*it];
   }
 
@@ -190,16 +185,16 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
   // TEST Publish Visualization.
   if (config_.debug) {
     cv::Mat rendered_ids;
-    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
+    rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, input->T_M_C());
     cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
     //    gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
     //                              id_image);
-    cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
+    cv::Mat tracked_vis = renderer_.colorIdImage(*(input->idImage()));
     std_msgs::Header header;
     header.stamp = ros::Time::now();
     auto enc = sensor_msgs::image_encodings::BGR8;
     color_pub_.publish(
-        cv_bridge::CvImage(header, enc, color_image).toImageMsg());
+        cv_bridge::CvImage(header, enc, input->colorImage()).toImageMsg());
     input_pub_.publish(cv_bridge::CvImage(header, enc, input_vis).toImageMsg());
     rendered_pub_.publish(
         cv_bridge::CvImage(header, enc, rendered_vis).toImageMsg());
@@ -253,22 +248,6 @@ TrackingInfo DetectronIDTracker::renderTrackingInfo(
   }
   result.evaluate(input_ids, depth_image);
   return result;
-}
-
-void DetectronIDTracker::processImages(SubmapCollection* submaps,
-                                       const Transformation& T_M_C,
-                                       const cv::Mat& depth_image,
-                                       const cv::Mat& color_image,
-                                       cv::Mat* id_image) {
-  LOG(WARNING) << "The detectron id tracker can only be used with labels.";
-}
-
-void DetectronIDTracker::processPointcloud(SubmapCollection* submaps,
-                                           const Transformation& T_M_C,
-                                           const Pointcloud& pointcloud,
-                                           const Colors& colors,
-                                           std::vector<int>* ids) {
-  LOG(WARNING) << "The detectron id tracker can only be used with labels.";
 }
 
 int DetectronIDTracker::allocateSubmap(int detectron_id,
