@@ -13,6 +13,9 @@
 
 namespace panoptic_mapping {
 
+config_utilities::Factory::RegistrationRos<IntegratorBase, ProjectiveIntegrator>
+    ProjectiveIntegrator::registration_("projective");
+
 void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(integration_threads, 0, "integration_threads");
   checkParamConfig(camera);
@@ -47,14 +50,16 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
       Eigen::MatrixXf(camera_.getConfig().height, camera_.getConfig().width);
 }
 
-void ProjectiveIntegrator::processInput(SubmapCollection* submaps, InputData * input){
+void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
+                                        InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));
 
   // Allocate all blocks in corresponding submaps.
   auto t1 = std::chrono::high_resolution_clock::now();
-  allocateNewBlocks(submaps, input->T_M_C(), input->depthImage(), (*input->idImage()));
+  allocateNewBlocks(submaps, input->T_M_C(), input->depthImage(),
+                    (*input->idImage()));
   auto t2 = std::chrono::high_resolution_clock::now();
 
   // Find all active blocks that are in the field of view.
@@ -74,12 +79,14 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps, InputData * i
   std::vector<std::future<bool>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {
     threads.emplace_back(std::async(
-        std::launch::async, [this, &index_getter, &block_lists, submaps, input, i]() {
+        std::launch::async,
+        [this, &index_getter, &block_lists, submaps, input, i]() {
           int index;
           while (index_getter.getNextIndex(&index)) {
             this->updateSubmap(submaps->getSubmapPtr(index),
                                interpolators_[i].get(), block_lists[index],
-                               input->T_M_C(), input->colorImage(), *(input->idImage()));
+                               input->T_M_C(), input->colorImage(),
+                               *(input->idImage()));
           }
           return true;
         }));

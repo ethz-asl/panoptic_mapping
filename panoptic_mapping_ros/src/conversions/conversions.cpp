@@ -2,9 +2,9 @@
 
 namespace panoptic_mapping {
 
-DetectronIDTracker::DetectronLabel detectronLabelFromMsg(
+DetectronLabel detectronLabelFromMsg(
     const panoptic_mapping_msgs::DetectronLabel& msg) {
-  DetectronIDTracker::DetectronLabel result;
+  DetectronLabel result;
   result.id = msg.id;
   result.instance_id = msg.instance_id;
   result.is_thing = msg.is_thing;
@@ -13,9 +13,9 @@ DetectronIDTracker::DetectronLabel detectronLabelFromMsg(
   return result;
 }
 
-DetectronIDTracker::DetectronLabels detectronLabelsFromMsg(
+DetectronLabels detectronLabelsFromMsg(
     const panoptic_mapping_msgs::DetectronLabels& msg) {
-  DetectronIDTracker::DetectronLabels result;
+  DetectronLabels result;
   for (const panoptic_mapping_msgs::DetectronLabel& label : msg.labels) {
     result[label.id] = detectronLabelFromMsg(label);
   }

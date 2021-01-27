@@ -30,7 +30,7 @@ class IDTrackerBase : public InputDataUser {
   ~IDTrackerBase() override = default;
 
   // Interface;
-  virtual void processInput(SubmapCollection* submaps, InputData * input) = 0;
+  virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 
  protected:
   std::shared_ptr<LabelHandler> label_handler_;

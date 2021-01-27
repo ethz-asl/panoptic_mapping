@@ -68,7 +68,7 @@ class DetectronIDTracker : public IDTrackerBase {
                      std::shared_ptr<LabelHandler> label_handler);
   ~DetectronIDTracker() override = default;
 
-  void processInput(SubmapCollection* submaps, InputData * input) override;
+  void processInput(SubmapCollection* submaps, InputData* input) override;
 
  private:
   int allocateSubmap(int detectron_id, SubmapCollection* submaps,

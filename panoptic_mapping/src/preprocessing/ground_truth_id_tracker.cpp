@@ -35,7 +35,8 @@ GroundTruthIDTracker::GroundTruthIDTracker(
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void GroundTruthIDTracker::processInput(SubmapCollection* submaps, InputData * input) {
+void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
+                                        InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));

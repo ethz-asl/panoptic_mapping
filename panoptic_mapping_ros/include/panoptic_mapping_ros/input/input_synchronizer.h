@@ -1,114 +1,86 @@
 #ifndef PANOPTIC_MAPPING_ROS_INPUT_INPUT_SYNCHRONIZER_H_
 #define PANOPTIC_MAPPING_ROS_INPUT_INPUT_SYNCHRONIZER_H_
 
-#include <deque>
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
+#include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include <ros/ros.h>
+#include <tf/transform_listener.h>
 
+#include <panoptic_mapping/common/input_data.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
+#include "panoptic_mapping_ros/input/input_queue.h"
+
 namespace panoptic_mapping {
+
+/**
+ * This class subscribes to all required input types via ROS and synchronizes
+ * them into an input data package to be processed.
+ */
 
 class InputSynchronizer {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
-    int max_image_queue_length = 10;  // after this many images are queued for
-    // integration start discarding old ones.
+    int max_input_queue_length = 10;  // Number of data points per type stored
+    // before old data starts being discarded.
     std::string global_frame_name = "mission";
-    double visualization_interval = 1.0;     // s, use -1 for always.
-    double change_detection_interval = 1.0;  // s, use -1 for always.
+    std::string sensor_frame_name = "sensor";
 
-    Config() { setConfigName("PanopticMapper"); }
+    Config() { setConfigName("InputSynchronizer"); }
 
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;
   };
 
-  PanopticMapper(const ::ros::NodeHandle& nh,
-                 const ::ros::NodeHandle& nh_private);
-  virtual ~PanopticMapper() = default;
+  InputSynchronizer(const Config& config, const ros::NodeHandle& nh);
+  virtual ~InputSynchronizer() = default;
 
-  // ROS callbacks.
-  void pointcloudCallback(const sensor_msgs::PointCloud2::Ptr& pointcloud_msg);
-  void depthImageCallback(const sensor_msgs::ImagePtr& msg);
-  void colorImageCallback(const sensor_msgs::ImagePtr& msg);
-  void segmentationImageCallback(const sensor_msgs::ImagePtr& msg);
-  void publishVisualizationCallback(const ros::TimerEvent&);
-  void changeDetectionCallback(const ros::TimerEvent&);
-  bool saveMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
-                       voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool loadMapCallback(voxblox_msgs::FilePath::Request& request,     // NOLINT
-                       voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool setVisualizationModeCallback(
-      voxblox_msgs::FilePath::Request& request,     // NOLINT
-      voxblox_msgs::FilePath::Response& response);  // NOLINT
-  bool setColorModeCallback(
-      voxblox_msgs::FilePath::Request& request,     // NOLINT
-      voxblox_msgs::FilePath::Response& response);  // NOLINT
+  // Setup tools. Add all inputs and set the callback, then advertise to setup.
+  void requestInputs(const std::unordered_set<InputData::InputType>& types);
+  void setInputCallback(std::function<void(InputData*)> callback) {
+    callback_ = std::move(callback);
+  }
+  void advertiseInputTopics();
 
-  // IO.
-  bool saveMap(const std::string& file_path);
-  bool loadMap(const std::string& file_path);
+ private:
+  // Check for matching data to trigger the callback.
+  void checkForMatchingMessages(const ros::Time& timestamp);
 
-  // Visualization.
-  void publishVisualization();
-
-  // Access.
-  const SubmapCollection& getSubmapCollection() const { return *submaps_; }
-  const PlanningInterface& getPlanningInterface() const {
-    return *planning_interface_;
+  // Utility function for more readable queue allocation.
+  template <typename MsgT>
+  void addQueue(
+      InputData::InputType type,
+      std::function<void(const MsgT&, InputData*)> extraction_function) {
+    input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
+        nh_, kTopicNames_.at(type), config_.max_input_queue_length,
+        extraction_function, [this](const ros::Time& timestamp) {
+          this->checkForMatchingMessages(timestamp);
+        }));
   }
 
  private:
-  // Setup.
-  void setupRos();
-  void setupMembers();
-
-  // Input processing.
-  void findMatchingMessagesToPublish(
-      const sensor_msgs::ImagePtr& reference_msg);
-  void processImages(const sensor_msgs::ImagePtr& depth_img,
-                     const sensor_msgs::ImagePtr& color_img,
-                     const sensor_msgs::ImagePtr& segmentation_img);
-
- private:
-  // Node handles.
-  ros::NodeHandle nh_;
-  ros::NodeHandle nh_private_;
-
-  // Subscribers, Publishers, Services, Timers.
-  ros::Subscriber pointcloud_sub_;
-  ros::Subscriber depth_image_sub_;
-  ros::Subscriber color_image_sub_;
-  ros::Subscriber segmentation_image_sub_;
-  ros::ServiceServer load_map_srv_;
-  ros::ServiceServer save_map_srv_;
-  ros::ServiceServer set_visualization_mode_srv_;
-  ros::ServiceServer set_color_mode_srv_;
-  ros::Timer visualization_timer_;
-  ros::Timer change_detection_timer_;
-
-  // Members.
   const Config config_;
-  std::shared_ptr<SubmapCollection> submaps_;
-  voxgraph::TfTransformer tf_transformer_;
-  std::shared_ptr<LabelHandler> label_handler_;
-  std::unique_ptr<IntegratorBase> tsdf_integrator_;
-  std::unique_ptr<IDTrackerBase> id_tracker_;
-  std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
-  std::shared_ptr<PlanningInterface> planning_interface_;
-  std::unique_ptr<SubmapVisualizer> submap_visualizer_;
-  std::unique_ptr<PlanningVisualizer> planning_visualizer_;
 
-  // Input processing.
-  std::deque<sensor_msgs::ImagePtr> depth_queue_;
-  std::deque<sensor_msgs::ImagePtr> color_queue_;
-  std::deque<sensor_msgs::ImagePtr> segmentation_queue_;
+  // ROS.
+  ros::NodeHandle nh_;
+  tf::TransformListener tf_listener_;
+
+  // Inputs.
+  std::unordered_set<InputData::InputType> requested_inputs_;
+  std::function<void(InputData*)> callback_;
+  std::vector<std::unique_ptr<InputQueueBase>> input_queues_;
+
+  // Settings.
+  static const std::unordered_map<InputData::InputType, std::string>
+      kTopicNames_;
 };
 
 }  // namespace panoptic_mapping

@@ -49,23 +49,9 @@ class ProjectiveIntegrator : public IntegratorBase {
   explicit ProjectiveIntegrator(const Config& config);
   ~ProjectiveIntegrator() override = default;
 
-  void processInput(SubmapCollection* submaps, InputData * input) override;
+  void processInput(SubmapCollection* submaps, InputData* input) override;
 
- protected:
-  // Components.
-  const Config config_;
-  std::vector<std::unique_ptr<InterpolatorBase>>
-      interpolators_;  // one for each thread.
-  Camera camera_;
-
-  // Cached data.
-  Eigen::MatrixXf range_image_;
-  float max_range_in_image_ = 0.f;
-
-  // Precomputed stored values.
-  std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals
-
-  // Methods.
+ private:
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
 
@@ -85,6 +71,20 @@ class ProjectiveIntegrator : public IntegratorBase {
       const cv::Mat& color_image, const cv::Mat& id_image, int submap_id,
       float truncation_distance, float voxel_size,
       bool is_free_space_submap) const;
+
+ private:
+  const Config config_;
+  static config_utilities::Factory::RegistrationRos<IntegratorBase,
+                                                    ProjectiveIntegrator>
+      registration_;
+
+  std::vector<std::unique_ptr<InterpolatorBase>>
+      interpolators_;  // one for each thread.
+  Camera camera_;
+
+  // Cached data.
+  Eigen::MatrixXf range_image_;
+  float max_range_in_image_ = 0.f;
 };
 
 }  // namespace panoptic_mapping

@@ -57,6 +57,7 @@ class InputData {
 
   // Input.
   void setT_M_C(const Transformation& T_M_C) { T_M_C_ = T_M_C; }
+  void setTimeStamp(double timestamp) { timestamp_ = timestamp; }
   void setDepthImage(const cv::Mat& depth_image) {
     depth_image_ = depth_image;
     contained_inputs_.insert(InputType::kDepthImage);
@@ -76,6 +77,7 @@ class InputData {
 
   // Access.
   const Transformation& T_M_C() const { return T_M_C_; }
+  double timestamp() const { return timestamp_; }
   const cv::Mat& depthImage() const { return depth_image_; }
   const cv::Mat& colorImage() const { return color_image_; }
   cv::Mat* idImage() { return &id_image_; }
@@ -85,13 +87,13 @@ class InputData {
   friend InputDataUser;
 
   // Permanent data.
-  Transformation T_M_C_;  // transform Camera (sensor) to Mission.
-  double time_stamp_;     // timestamp of the inputs.
+  Transformation T_M_C_;    // Transform Camera (sensor) to Mission.
+  double timestamp_ = 0.0;  // Timestamp of the inputs.
 
   // Common data.
-  cv::Mat depth_image_;  // float depth image (CV_32FC1).
+  cv::Mat depth_image_;  // Float depth image (CV_32FC1).
   cv::Mat color_image_;  // BGR (CV_8U).
-  cv::Mat id_image_;     // mutable assigned ids as ints (CV_32SC1).
+  cv::Mat id_image_;     // Mutable assigned ids as ints (CV_32SC1).
 
   // Optional data.
   DetectronLabels detectron_labels_;

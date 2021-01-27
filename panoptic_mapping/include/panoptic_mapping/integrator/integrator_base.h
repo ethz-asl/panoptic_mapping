@@ -24,8 +24,7 @@ class IntegratorBase : public InputDataUser {
   }
   ~IntegratorBase() override = default;
 
-  virtual void processInput(SubmapCollection* submaps, InputData * input) =0;
-
+  virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 };
 
 }  // namespace panoptic_mapping

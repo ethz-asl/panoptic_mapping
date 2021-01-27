@@ -63,7 +63,8 @@ DetectronIDTracker::DetectronIDTracker(
   tracking_pub_ = nh_.advertise<sensor_msgs::Image>("tracking", 10);
 }
 
-void DetectronIDTracker::processInput(SubmapCollection* submaps, InputData * input) {
+void DetectronIDTracker::processInput(SubmapCollection* submaps,
+                                      InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));
@@ -79,22 +80,26 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps, InputData * inp
 
   // Render each active submap in parallel to collect overlap statistics.
   auto t0 = std::chrono::high_resolution_clock::now();
-  SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, input->T_M_C()));
+  SubmapIndexGetter index_getter(
+      camera_.findVisibleSubmapIDs(*submaps, input->T_M_C()));
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
   for (int i = 0; i < config_.rendering_threads; ++i) {
     threads.emplace_back(std::async(
         std::launch::async,
-        [this, i, &tracking_data, &index_getter, submaps, input]() -> std::vector<TrackingInfo> {
+        [this, i, &tracking_data, &index_getter, submaps,
+         input]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(*(input->idImage()), input->depthImage(),                                           camera_.getConfig());
+            tracking_data.insertInputImage(
+                *(input->idImage()), input->depthImage(), camera_.getConfig());
           }
           std::vector<TrackingInfo> result;
           int index;
           while (index_getter.getNextIndex(&index)) {
             result.emplace_back(this->renderTrackingInfo(
-                submaps->getSubmap(index), input->T_M_C(), input->depthImage(), *(input->idImage())));
+                submaps->getSubmap(index), input->T_M_C(), input->depthImage(),
+                *(input->idImage())));
           }
           return result;
         }));
@@ -160,12 +165,14 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps, InputData * inp
       input_to_output[input_id] = submap_id;
     } else {
       n_new++;
-      input_to_output[input_id] = allocateSubmap(input_id, submaps, input->detectronLabels());
+      input_to_output[input_id] =
+          allocateSubmap(input_id, submaps, input->detectronLabels());
     }
   }
 
   // Translate the id image.
-  for (auto it = input->idImage()->begin<int>(); it != input->idImage()->end<int>(); ++it) {
+  for (auto it = input->idImage()->begin<int>();
+       it != input->idImage()->end<int>(); ++it) {
     *it = input_to_output[*it];
   }
 
