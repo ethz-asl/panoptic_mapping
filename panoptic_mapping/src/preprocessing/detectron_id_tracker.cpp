@@ -71,7 +71,17 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
                                        const DetectronLabels& labels) {
   CHECK_NOTNULL(id_image);
 
+  // TEST
+  cv::Mat input_vis = renderer_.colorIdImage(*id_image);
+  // gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
+  // id_image);
+
+  //  if (instance_to_id_.find()) {
+
+  //  }
+
   // Render each active submap in parallel to collect overlap statistics.
+  auto t0 = std::chrono::high_resolution_clock::now();
   SubmapIndexGetter index_getter(camera_.findVisibleSubmapIDs(*submaps, T_M_C));
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
@@ -82,7 +92,8 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
          id_image]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(*id_image);
+            tracking_data.insertInputImage(*id_image, depth_image,
+                                           camera_.getConfig());
           }
           std::vector<TrackingInfo> result;
           int index;
@@ -102,34 +113,87 @@ void DetectronIDTracker::processImages(SubmapCollection* submaps,
   // Assign the input ids to tracks or allocate new maps.
   std::unordered_map<int, int> input_to_output;
   std::stringstream info;
+  int n_matched = 0;
+  int n_new = 0;
   for (const int input_id : tracking_data.getInputIDs()) {
-    // Print the matching statistics if required.
-    if (config_.verbosity >= 4) {
-      std::vector<std::pair<int, float>> mapid_ious;
-      if (tracking_data.getAllMetrics(input_id, &mapid_ious)) {
-        info << "\n  " << input_id << ":";
-        for (const auto& id_io : mapid_ious) {
-          info << " " << id_io.first << "(" << std::fixed
-               << std::setprecision(2) << id_io.second << ")";
+    int submap_id;
+    bool matched = false;
+    if (config_.verbosity < 4) {
+      float value;
+      bool any_overlap = tracking_data.getHighestMetric(
+          input_id, &submap_id, &value, config_.tracking_metric);
+      if (any_overlap) {
+        if (value > config_.match_acceptance_threshold) {
+          matched = true;
+        }
+      }  // Logging data.
+      if (config_.verbosity >= 2) {
+        if (matched) {
+          info << "\n  " << input_id << "->" << submap_id << " (" << std::fixed
+               << std::setprecision(2) << value << ")";
+        } else if (any_overlap) {
+          info << "\n  " << input_id << "->new (" << std::fixed
+               << std::setprecision(2) << value << ")";
+        } else {
+          info << "\n  " << input_id << "->new";
+        }
+      }
+    } else {
+      // Print the matching statistics for al submaps.
+      std::vector<std::pair<int, float>> ids_values;
+      if (tracking_data.getAllMetrics(input_id, &ids_values,
+                                      config_.tracking_metric)) {
+        if (ids_values.front().second > config_.match_acceptance_threshold) {
+          matched = true;
+          submap_id = ids_values.front().first;
+        }
+        info << "\n  " << input_id << ": ";
+        for (const auto& id_value : ids_values) {
+          info << " " << id_value.first << "(" << std::fixed
+               << std::setprecision(2) << id_value.second << ")";
         }
       } else {
-        info << "\n  " << input_id << ": new";
+        info << "\n  " << input_id << ": no matches found.";
       }
+      info << " [" << input_id << "->"
+           << (matched ? std::to_string(submap_id) : "new") << "]";
+    }
+
+    // Allocate new submap if necessary and store tracking info.
+    if (matched) {
+      n_matched++;
+      input_to_output[input_id] = submap_id;
+    } else {
+      n_new++;
+      input_to_output[input_id] = allocateSubmap(input_id, submaps, labels);
     }
   }
-  if (config_.verbosity >= 4) {
-    LOG(INFO) << "ID Tracking overlap statistics: input: submap(IoU)"
-              << info.str();
+
+  // Translate the id image.
+  for (auto it = id_image->begin<int>(); it != id_image->end<int>(); ++it) {
+    *it = input_to_output[*it];
+  }
+
+  // Allocate free space map if required.
+  allocateFreeSpaceSubmap(submaps);
+
+  // Finish.
+  auto t1 = std::chrono::high_resolution_clock::now();
+  if (config_.verbosity >= 2) {
+    LOG(INFO) << "Tracked IDs in "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+                     .count()
+              << "ms, " << n_matched << " matched, " << n_new
+              << " newly allocated." << info.str();
   }
 
   // TEST Publish Visualization.
   if (config_.debug) {
     cv::Mat rendered_ids;
     rendered_ids = renderer_.renderActiveSubmapIDs(*submaps, T_M_C);
-    cv::Mat input_vis = renderer_.colorIdImage(*id_image);
     cv::Mat rendered_vis = renderer_.colorIdImage(rendered_ids);
-    gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
-                              id_image);
+    //    gt_tracker_.processImages(submaps, T_M_C, depth_image, color_image,
+    //                              id_image);
     cv::Mat tracked_vis = renderer_.colorIdImage(*id_image);
     std_msgs::Header header;
     header.stamp = ros::Time::now();
@@ -187,7 +251,7 @@ TrackingInfo DetectronIDTracker::renderTrackingInfo(
       result.insertRenderedPoint(u, v, size_x, size_y);
     }
   }
-  result.evaluate(input_ids);
+  result.evaluate(input_ids, depth_image);
   return result;
 }
 
@@ -214,12 +278,8 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   auto it = labels.find(detectron_id);
   PanopticLabel pan_label = PanopticLabel::kUnknown;
   if (it == labels.end()) {
-    auto error_it = unknown_ids.find(detectron_id);
-    if (error_it == unknown_ids.end()) {
-      unknown_ids[detectron_id] = 1;
-    } else {
-      unknown_ids[detectron_id] += 1;
-    }
+    //    LOG_IF(WARNING, config_.verbosity >= 2)  << "Encountered unknown
+    //    segmentation ID '" << detectron_id << "'.";
   } else {
     if (it->second.is_thing) {
       pan_label = PanopticLabel::kInstance;
@@ -240,10 +300,6 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
       cfg.voxel_size = config_.background_voxel_size;
       break;
     }
-    case PanopticLabel::kFreeSpace: {
-      cfg.voxel_size = config_.freespace_voxel_size;
-      break;
-    }
     case PanopticLabel::kUnknown: {
       cfg.voxel_size = config_.unknown_voxel_size;
       break;
@@ -254,8 +310,6 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   // TODO(schmluk): add proper data.
   if (pan_label != PanopticLabel::kUnknown) {
     new_submap->setClassID(it->second.category_id);
-  } else {
-    // new_submap->setClassID(-1);
   }
   // new_submap->setInstanceID(new_instance);
   // new_submap->setName(label_handler_->getName(new_instance));
@@ -277,15 +331,6 @@ void DetectronIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.
   space_submap->setName("FreeSpace");
   submaps->setActiveFreeSpaceSubmapID(space_submap->getID());
-}
-
-void DetectronIDTracker::printAndResetWarnings() {
-  for (auto it : unknown_ids) {
-    LOG_IF(WARNING, config_.verbosity >= 2)
-        << "Encountered " << it.second
-        << " occurences of unknown segmentation ID '" << it.first << "'.";
-  }
-  unknown_ids.clear();
 }
 
 }  // namespace panoptic_mapping

@@ -12,7 +12,7 @@
 namespace panoptic_mapping {
 
 /**
- * This id tracker looks up the corresponding instance id for each sumbap.
+ * This id tracker looks up the corresponding instance id for each submap.
  */
 class GroundTruthIDTracker : public IDTrackerBase {
  public:

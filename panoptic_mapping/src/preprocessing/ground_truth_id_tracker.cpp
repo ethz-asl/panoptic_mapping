@@ -42,6 +42,7 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
                                          cv::Mat* id_image) {
   // NOTE: The id_image is always provided as CV_32SC1 (int) image
   // Look for new instances.
+  // TODO(schmluk): Update to use only valid pixels.
   std::unordered_set<int> instances;
   const cv::MatIterator_<int> begin = id_image->begin<int>();
   const cv::MatIterator_<int> end = id_image->end<int>();

@@ -102,7 +102,7 @@ bool Camera::blockIsInViewFrustum(const Submap& submap,
 
 bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
                                       float* v) const {
-  if (p_C.z() < config_.min_range) {
+  if (p_C.z() < config_.min_range || p_C.z() > config_.max_range) {
     return false;
   }
   // All values are ceiled and floored to guarantee that the resulting points

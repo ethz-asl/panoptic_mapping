@@ -22,11 +22,12 @@ void incrementMap(std::unordered_map<int, int>* map, int id, int value = 1) {
 }
 
 TrackingInfo::TrackingInfo(int submap_id, const Camera::Config& camera)
-    : submap_id_(submap_id), width_(camera.width), height_(camera.height) {
-  image_ = cv::Mat(cv::Size(width_, height_), CV_32SC1, cv::Scalar(0));
-  u_min_ = width_;
+    : submap_id_(submap_id), camera_(camera) {
+  image_ =
+      cv::Mat(cv::Size(camera_.width, camera_.height), CV_32SC1, cv::Scalar(0));
+  u_min_ = camera_.width;
   u_max_ = 0;
-  v_min_ = height_;
+  v_min_ = camera_.height;
   v_max_ = 0;
 }
 
@@ -34,7 +35,7 @@ void TrackingInfo::insertRenderedPoint(int u, int v, int size_x, int size_y) {
   // Mark the left side of the maximum vertex size for later evaluation.
   const int u_min = std::max(0, u - size_x);
   const int width = u + 2 * size_x + 1 - u_min;
-  const int v_max = std::min(height_ - 1, v + size_y);
+  const int v_max = std::min(camera_.height - 1, v + size_y);
   const int v_min = std::max(0, v - size_y);
   for (int v2 = v_min; v2 <= v_max; ++v2) {
     int& data = image_.at<int>(v2, u_min);
@@ -46,15 +47,20 @@ void TrackingInfo::insertRenderedPoint(int u, int v, int size_x, int size_y) {
   v_max_ = std::max(v_max_, v_max);
 }
 
-void TrackingInfo::evaluate(const cv::Mat& id_image) {
+void TrackingInfo::evaluate(const cv::Mat& id_image,
+                            const cv::Mat& depth_image) {
   // Pass through the image and lookup which pixels should be covered by the
   // submap. Must be called after all input is inserted.
   for (int v = v_min_; v <= v_max_; ++v) {
-    int range = 0;
-    for (int u = u_min_; u <= std::min(u_max_, width_ - 1); ++u) {
+    int range =
+        0;  // Number of pixels in x direction from current index to be counted.
+    for (int u = u_min_; u <= std::min(u_max_, camera_.width - 1); ++u) {
       range = std::max(range, image_.at<int>(v, u)) - 1;
       if (range > 0) {
-        incrementMap(&counts_, id_image.at<int>(v, u));
+        const float depth = depth_image.at<float>(v, u);
+        if (depth >= camera_.min_range && depth <= camera_.max_range) {
+          incrementMap(&counts_, id_image.at<int>(v, u));
+        }
       }
     }
   }
@@ -83,10 +89,15 @@ void TrackingInfoAggregator::insertTrackingInfo(const TrackingInfo& info) {
   }
 }
 
-void TrackingInfoAggregator::insertInputImage(const cv::Mat& id_image) {
+void TrackingInfoAggregator::insertInputImage(const cv::Mat& id_image,
+                                              const cv::Mat& depth_image,
+                                              const Camera::Config& camera) {
   for (int u = 0; u < id_image.cols; ++u) {
     for (int v = 0; v < id_image.rows; ++v) {
-      incrementMap(&total_input_count_, id_image.at<int>(v, u));
+      const float depth = depth_image.at<float>(v, u);
+      if (depth >= camera.min_range && depth <= camera.max_range) {
+        incrementMap(&total_input_count_, id_image.at<int>(v, u));
+      }
     }
   }
 }

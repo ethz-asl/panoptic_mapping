@@ -554,8 +554,10 @@ void PanopticMapper::processImages(
   cv_bridge::CvImageConstPtr segmentation =
       cv_bridge::toCvShare(segmentation_img, segmentation_img->encoding);
   cv::Mat id_image;
-  segmentation->image.convertTo(id_image,
-                                CV_32SC1);  // Use int images for segmentation.
+  segmentation->image.clone().convertTo(
+      id_image,
+      CV_32SC1);  // Use int images for segmentation.
+
   ros::WallTime t1 = ros::WallTime::now();
 
   // Allocate new submaps.

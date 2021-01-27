@@ -69,7 +69,7 @@ void DataWriter::setupEvaluations() {
 
 void DataWriter::writeEntry(const std::string& value) {
   // Include leading separators (commas) here after timestamp.
-  outfile_ << ", " << value;
+  outfile_ << "," << value;
 }
 
 void DataWriter::writeData(double time_stamp, const SubmapCollection& submaps) {

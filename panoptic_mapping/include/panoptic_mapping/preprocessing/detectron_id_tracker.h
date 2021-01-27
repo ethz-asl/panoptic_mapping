@@ -95,7 +95,6 @@ class DetectronIDTracker : public IDTrackerBase {
   int allocateSubmap(int detectron_id, SubmapCollection* submaps,
                      const DetectronLabels& labels);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
-  void printAndResetWarnings();
 
   TrackingInfo renderTrackingInfo(const Submap& submap,
                                   const Transformation& T_M_C,
@@ -111,8 +110,6 @@ class DetectronIDTracker : public IDTrackerBase {
   const Config config_;
   Camera camera_;
   MapRenderer renderer_;
-
-  std::unordered_map<int, int> unknown_ids;      // for error handling
 
   // TEST
   ros::NodeHandle nh_;

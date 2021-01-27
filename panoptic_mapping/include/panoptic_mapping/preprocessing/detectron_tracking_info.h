@@ -19,6 +19,9 @@ namespace panoptic_mapping {
  * Tool to aid tracking metrics computation / comparison.
  */
 
+// NOTE(schmluk): Currently performs input validity checks (max ranges etc)
+// independent of other modules, maybe best to do this once and combine.
+
 class TrackingInfoAggregator;
 
 class TrackingInfo {
@@ -27,13 +30,12 @@ class TrackingInfo {
   ~TrackingInfo() = default;
 
   void insertRenderedPoint(int u, int v, int size_x, int size_y);
-  void evaluate(const cv::Mat& id_image);
+  void evaluate(const cv::Mat& id_image, const cv::Mat& depth_image);
 
  private:
   friend TrackingInfoAggregator;
   const int submap_id_;
-  const int width_;
-  const int height_;
+  const Camera::Config camera_;
   int u_min_, u_max_, v_min_, v_max_;
   cv::Mat image_;
   std::unordered_map<int, int> counts_;  // <input_id, count>
@@ -48,7 +50,8 @@ class TrackingInfoAggregator {
   // Input.
   void insertTrackingInfos(const std::vector<TrackingInfo>& infos);
   void insertTrackingInfo(const TrackingInfo& info);
-  void insertInputImage(const cv::Mat& id_image);
+  void insertInputImage(const cv::Mat& id_image, const cv::Mat& depth_image,
+                        const Camera::Config& camera);
 
   // Get results. Requires that all input data is already set.
   std::vector<int> getInputIDs() const;
