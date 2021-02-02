@@ -15,6 +15,7 @@ cs_add_library(${PROJECT_NAME}
         src/input/input_synchronizer.cpp
         src/visualization/submap_visualizer.cpp
         src/visualization/planning_visualizer.cpp
+        src/visualization/tracking_visualizer.cpp
         src/conversions/conversions.cpp
         )
 

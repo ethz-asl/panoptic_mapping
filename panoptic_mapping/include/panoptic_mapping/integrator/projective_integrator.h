@@ -15,8 +15,8 @@
 namespace panoptic_mapping {
 
 /**
- * Allocate blocks based on the image and project all visible blocks into the
- * image for updates.
+ * Allocate blocks based on the 3D points and project all visible blocks into
+ * the image for updates.
  */
 class ProjectiveIntegrator : public IntegratorBase {
  public:

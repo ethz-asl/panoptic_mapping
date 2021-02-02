@@ -32,6 +32,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/submap_collection.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/ground_truth_id_tracker.cpp
+        src/preprocessing/projective_id_tracker.cpp
         src/preprocessing/detectron_id_tracker.cpp
         src/preprocessing/detectron_tracking_info.cpp
         src/integrator/projective_integrator.cpp

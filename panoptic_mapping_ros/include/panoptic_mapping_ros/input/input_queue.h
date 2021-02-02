@@ -1,13 +1,13 @@
 #ifndef PANOPTIC_MAPPING_ROS_INPUT_INPUT_QUEUE_H_
 #define PANOPTIC_MAPPING_ROS_INPUT_INPUT_QUEUE_H_
 
+#include <deque>
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <deque>
 
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
@@ -17,7 +17,6 @@
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 
 namespace panoptic_mapping {
-class InputSynchronizer;
 
 /**
  * Tool to manage the subscription and and storage of each input topic.

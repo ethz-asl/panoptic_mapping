@@ -48,7 +48,7 @@ tsdf_integrator:
 #  integration_order_mode: "sorted"
 
 id_tracker:
-  type: detectron # ground_truth, detectron
+  type: projective # ground_truth, projective, detectron
   verbosity: 3
   instance_voxel_size: 0.05
   background_voxel_size: 0.05
@@ -93,6 +93,9 @@ visualization:
   visualize_slice: true
   planning_slice_resolution: 0.1
   planning_slice_height: -0.5
+  
+  # Tracking
+  visualize_tracking: true
   
 data_writer:
   verbosity: 1

@@ -1,7 +1,9 @@
 #ifndef PANOPTIC_MAPPING_PREPROCESSING_ID_TRACKER_BASE_H_
 #define PANOPTIC_MAPPING_PREPROCESSING_ID_TRACKER_BASE_H_
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -32,8 +34,28 @@ class IDTrackerBase : public InputDataUser {
   // Interface;
   virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 
+  // Visualization callbacks.
+  void setVisualizationCallback(
+      std::function<void(const cv::Mat&, const std::string&)> callback) {
+    visualization_callback_ = std::move(callback);
+    visualize_ = true;
+  }
+
  protected:
   std::shared_ptr<LabelHandler> label_handler_;
+
+  // Visualization
+  bool visualizationIsOn() const { return visualize_; }
+  void visualize(const cv::Mat& image, const std::string& name) {
+    if (visualize_) {
+      visualization_callback_(image, name);
+    }
+  }
+
+ private:
+  bool visualize_ = false;
+  std::function<void(const cv::Mat&, const std::string&)>
+      visualization_callback_;
 };
 
 }  // namespace panoptic_mapping

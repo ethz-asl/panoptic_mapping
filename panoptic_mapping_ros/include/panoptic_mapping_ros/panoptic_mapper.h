@@ -24,6 +24,7 @@
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
+#include "panoptic_mapping_ros/visualization/tracking_visualizer.h"
 
 namespace panoptic_mapping {
 
@@ -98,16 +99,25 @@ class PanopticMapper {
 
   // Members.
   const Config config_;
+
+  // Map.
   std::shared_ptr<SubmapCollection> submaps_;
-  std::shared_ptr<LabelHandler> label_handler_;
-  std::unique_ptr<InputSynchronizer> input_synchronizer_;
-  std::unique_ptr<DataWriter> data_logger_;
+
+  // Mapping.
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
+
+  // Tools.
+  std::unique_ptr<InputSynchronizer> input_synchronizer_;
+  std::shared_ptr<LabelHandler> label_handler_;
+  std::unique_ptr<DataWriter> data_logger_;
   std::shared_ptr<PlanningInterface> planning_interface_;
+
+  // Visualization.
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<PlanningVisualizer> planning_visualizer_;
+  std::unique_ptr<TrackingVisualizer> tracking_visualizer_;
 };
 
 }  // namespace panoptic_mapping

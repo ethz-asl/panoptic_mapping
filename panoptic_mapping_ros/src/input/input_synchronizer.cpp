@@ -1,8 +1,8 @@
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <string>
 
 #include <cv_bridge/cv_bridge.h>
 #include <minkindr_conversions/kindr_tf.h>

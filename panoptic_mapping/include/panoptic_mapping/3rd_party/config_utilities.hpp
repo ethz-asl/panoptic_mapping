@@ -33,8 +33,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <ros/node_handle.h>
-
 // Raises a redefined warning if different versions are used. v=MMmmPP.
 #define CONFIG_UTILITIES_VERSION 010103
 

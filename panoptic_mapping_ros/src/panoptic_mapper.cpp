@@ -66,17 +66,25 @@ void PanopticMapper::setupMembers() {
 
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
+  // Submaps.
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
           visualization_nh),
       label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
+  // Planning.
   planning_visualizer_ = std::make_unique<PlanningVisualizer>(
       config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
           visualization_nh),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+
+  // Tracking.
+  tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
+      config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
+          visualization_nh));
+  tracking_visualizer_->registerIDTracker(id_tracker_.get());
 
   // Data Logging.
   ros::NodeHandle data_nh(nh_private_, "data_writer");
