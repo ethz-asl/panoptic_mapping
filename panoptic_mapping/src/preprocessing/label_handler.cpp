@@ -54,7 +54,7 @@ int LabelHandler::getSegmentationIdFromMeshId(int mesh_id) const {
   if (it != mesh_to_instance_id_.end()) {
     return it->second;
   } else {
-    return 255;  // Label reserved for unknown things.
+    return -1;  // Label for unknown things.
   }
 }
 

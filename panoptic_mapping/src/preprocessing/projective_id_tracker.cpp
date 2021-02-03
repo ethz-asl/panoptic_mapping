@@ -37,6 +37,7 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
+  setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
@@ -150,8 +151,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
       input_to_output[input_id] = submap_id;
     } else {
       n_new++;
-      input_to_output[input_id] =
-          allocateSubmap(input_id, submaps, input->detectronLabels());
+      input_to_output[input_id] = allocateSubmap(input_id, submaps);
     }
   }
 
@@ -233,27 +233,22 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
   return result;
 }
 
-int ProjectiveIDTracker::allocateSubmap(int detectron_id,
-                                        SubmapCollection* submaps,
-                                        const DetectronLabels& labels) {
-  // Check whether the instance code is known.
-  auto it = labels.find(detectron_id);
-  PanopticLabel pan_label = PanopticLabel::kUnknown;
-  if (it == labels.end()) {
-    //    LOG_IF(WARNING, config_.verbosity >= 2)  << "Encountered unknown
-    //    segmentation ID '" << detectron_id << "'.";
-  } else {
-    if (it->second.is_thing) {
-      pan_label = PanopticLabel::kInstance;
-    } else {
-      pan_label = PanopticLabel::kBackground;
-    }
+int ProjectiveIDTracker::allocateSubmap(int instance_id,
+                                        SubmapCollection* submaps) {
+  // Lookup the labels associated with the input_id
+  PanopticLabel label = PanopticLabel::kUnknown;
+  if (config_.input_is_mesh_id) {
+    instance_id = label_handler_->getSegmentationIdFromMeshId(instance_id);
+    // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
+  }
+  if (label_handler_->segmentationIdExists(instance_id)) {
+    label = label_handler_->getPanopticLabel(instance_id);
   }
 
   // Allocate new submap.
   Submap::Config cfg;
   cfg.voxels_per_side = config_.voxels_per_side;
-  switch (pan_label) {
+  switch (label) {
     case PanopticLabel::kInstance: {
       cfg.voxel_size = config_.instance_voxel_size;
       break;
@@ -262,19 +257,24 @@ int ProjectiveIDTracker::allocateSubmap(int detectron_id,
       cfg.voxel_size = config_.background_voxel_size;
       break;
     }
+    case PanopticLabel::kFreeSpace: {
+      cfg.voxel_size = config_.freespace_voxel_size;
+      break;
+    }
     case PanopticLabel::kUnknown: {
       cfg.voxel_size = config_.unknown_voxel_size;
       break;
     }
   }
   Submap* new_submap = submaps->createSubmap(cfg);
-  new_submap->setLabel(pan_label);
-  // TODO(schmluk): add proper data.
-  if (pan_label != PanopticLabel::kUnknown) {
-    new_submap->setClassID(it->second.category_id);
+
+  // Take all available information from the ground truth instance ids.
+  new_submap->setInstanceID(instance_id);
+  new_submap->setLabel(label);
+  if (label != PanopticLabel::kUnknown) {
+    new_submap->setClassID(label_handler_->getClassID(instance_id));
+    new_submap->setName(label_handler_->getName(instance_id));
   }
-  // new_submap->setInstanceID(new_instance);
-  // new_submap->setName(label_handler_->getName(new_instance));
   return new_submap->getID();
 }
 

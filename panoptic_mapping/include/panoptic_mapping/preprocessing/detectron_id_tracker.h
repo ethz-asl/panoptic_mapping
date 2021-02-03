@@ -24,6 +24,10 @@
 
 namespace panoptic_mapping {
 
+// TODO(schmluk): This does not run atm. Replace this tracker with the
+// projective
+// one and refactor the label readout.
+
 /**
  * This id tracker tries to match prdictions of the detectron2 panoptic
  * semgentation (https://github.com/facebookresearch/detectron2) against the

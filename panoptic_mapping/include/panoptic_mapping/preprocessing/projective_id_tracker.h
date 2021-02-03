@@ -36,7 +36,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
     // Tracking
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
-    std::string tracking_metric = "IoU";  // iou, overlap
+    std::string tracking_metric = "IoU";  // IoU, overlap
     float match_acceptance_threshold = 0.5;
 
     // Camera and renderer settings.
@@ -46,6 +46,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();
+    bool input_is_mesh_id = false;  // lookup by instance_id or mesh_id
 
     Config() { setConfigName("ProjectiveIDTracker"); }
 
@@ -60,9 +61,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
- private:
-  int allocateSubmap(int detectron_id, SubmapCollection* submaps,
-                     const DetectronLabels& labels);
+ protected:
+  int allocateSubmap(int instance_id, SubmapCollection* submaps);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
 
   TrackingInfo renderTrackingInfo(const Submap& submap,
@@ -78,10 +78,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
   // Members
   const Config config_;
   Camera camera_;
-  MapRenderer renderer_;
-
-  // TEST
-  std::unordered_map<int, int> instance_to_id_;  // track active maps
+  MapRenderer renderer_;  // The renderer is only used if visualization is on.
 };
 
 }  // namespace panoptic_mapping

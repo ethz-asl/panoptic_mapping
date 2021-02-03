@@ -20,7 +20,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
     bool input_is_mesh_id =
-        true;  // If true look up the instance id in the label handler.
+        false;  // If true look up the instance id in the label handler.
     float instance_voxel_size = 0.05;
     float background_voxel_size = 0.1;
     float unknown_voxel_size = 0.1;
@@ -40,7 +40,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
- private:
+ protected:
   void allocateSubmap(int instance, SubmapCollection* submaps);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
   void printAndResetWarnings();
