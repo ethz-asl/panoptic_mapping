@@ -11,9 +11,9 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
-#include "panoptic_mapping/preprocessing/detectron_tracking_info.h"
 #include "panoptic_mapping/preprocessing/id_tracker_base.h"
 #include "panoptic_mapping/preprocessing/label_handler.h"
+#include "panoptic_mapping/preprocessing/tracking_info.h"
 #include "panoptic_mapping/tools/map_renderer.h"
 
 // TEST

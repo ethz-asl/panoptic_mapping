@@ -34,7 +34,7 @@ cs_add_library(${PROJECT_NAME}
         src/preprocessing/ground_truth_id_tracker.cpp
         src/preprocessing/projective_id_tracker.cpp
         src/preprocessing/detectron_id_tracker.cpp
-        src/preprocessing/detectron_tracking_info.cpp
+        src/preprocessing/tracking_info.cpp
         src/integrator/projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
         src/registration/tsdf_registrator.cpp

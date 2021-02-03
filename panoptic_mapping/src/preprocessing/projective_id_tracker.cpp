@@ -37,6 +37,7 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
+  setupParam("min_allocation_size", &min_allocation_size);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("camera_namespace", &camera_namespace);
   setupParam("camera", &camera, camera_namespace);
@@ -104,54 +105,70 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   for (const int input_id : tracking_data.getInputIDs()) {
     int submap_id;
     bool matched = false;
+    float value;
+    bool any_overlap;
+    std::stringstream logging_details;
+
     if (config_.verbosity < 4) {
-      float value;
-      bool any_overlap = tracking_data.getHighestMetric(
-          input_id, &submap_id, &value, config_.tracking_metric);
+      any_overlap = tracking_data.getHighestMetric(input_id, &submap_id, &value,
+                                                   config_.tracking_metric);
       if (any_overlap) {
         if (value > config_.match_acceptance_threshold) {
           matched = true;
-        }
-      }  // Logging data.
-      if (config_.verbosity >= 2) {
-        if (matched) {
-          info << "\n  " << input_id << "->" << submap_id << " (" << std::fixed
-               << std::setprecision(2) << value << ")";
-        } else if (any_overlap) {
-          info << "\n  " << input_id << "->new (" << std::fixed
-               << std::setprecision(2) << value << ")";
-        } else {
-          info << "\n  " << input_id << "->new";
         }
       }
     } else {
       // Print the matching statistics for al submaps.
       std::vector<std::pair<int, float>> ids_values;
-      if (tracking_data.getAllMetrics(input_id, &ids_values,
-                                      config_.tracking_metric)) {
+      any_overlap = tracking_data.getAllMetrics(input_id, &ids_values,
+                                                config_.tracking_metric);
+      if (any_overlap) {
         if (ids_values.front().second > config_.match_acceptance_threshold) {
           matched = true;
           submap_id = ids_values.front().first;
+          value = ids_values.front().second;
         }
-        info << "\n  " << input_id << ": ";
+        logging_details << ". Overlap: ";
         for (const auto& id_value : ids_values) {
-          info << " " << id_value.first << "(" << std::fixed
-               << std::setprecision(2) << id_value.second << ")";
+          logging_details << " " << id_value.first << "(" << std::fixed
+                          << std::setprecision(2) << id_value.second << ")";
         }
       } else {
-        info << "\n  " << input_id << ": no matches found.";
+        logging_details << ". No overlap found.";
       }
-      info << " [" << input_id << "->"
-           << (matched ? std::to_string(submap_id) : "new") << "]";
     }
 
     // Allocate new submap if necessary and store tracking info.
+    bool allocate_new_submap = tracking_data.getNumberOfInputPixels(input_id) >=
+                               config_.min_allocation_size;
     if (matched) {
       n_matched++;
       input_to_output[input_id] = submap_id;
-    } else {
+    } else if (allocate_new_submap) {
       n_new++;
       input_to_output[input_id] = allocateSubmap(input_id, submaps);
+    } else {
+      // Ignore these
+      input_to_output[input_id] = -1;
+    }
+
+    // Logging.
+    if (config_.verbosity >= 2) {
+      if (matched) {
+        info << "\n  " << input_id << "->" << submap_id << " (" << std::fixed
+             << std::setprecision(2) << value << ")";
+      } else {
+        if (allocate_new_submap) {
+          info << "\n  " << input_id << "->" << input_to_output[input_id]
+               << " [new]";
+        } else {
+          info << "\n  " << input_id << " [ignored]";
+        }
+        if (any_overlap) {
+          info << " (" << std::fixed << std::setprecision(2) << value << ")";
+        }
+      }
+      info << logging_details.str();
     }
   }
 

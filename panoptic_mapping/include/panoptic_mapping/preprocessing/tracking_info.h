@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_TRACKING_INFO_H_
-#define PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_TRACKING_INFO_H_
+#ifndef PANOPTIC_MAPPING_PREPROCESSING_TRACKING_INFO_H_
+#define PANOPTIC_MAPPING_PREPROCESSING_TRACKING_INFO_H_
 
 #include <functional>
 #include <memory>
@@ -26,7 +26,7 @@ class TrackingInfoAggregator;
 
 class TrackingInfo {
  public:
-  explicit TrackingInfo(int submap_id, const Camera::Config& camera);
+  explicit TrackingInfo(int submap_id, Camera::Config camera);
   ~TrackingInfo() = default;
 
   void insertRenderedPoint(int u, int v, int size_x, int size_y);
@@ -56,13 +56,18 @@ class TrackingInfoAggregator {
   // Get results. Requires that all input data is already set.
   std::vector<int> getInputIDs() const;
   bool getHighestMetric(int input_id, int* submap_id, float* value,
-                        const std::string& metric = "iou");
+                        const std::string& metric = "iou") const;
   bool getAllMetrics(int input_id, std::vector<std::pair<int, float>>* id_value,
-                     const std::string& metric = "iou");
+                     const std::string& metric = "iou") const;
+
+  // Get data.
+  int getNumberOfInputPixels(int input_id) const;
+  int getNumberOfSubmapPixels(int submap_id) const;
+  int getNumberOfOverlappingPixels(int input_id, int submap_id) const;
 
  private:
   std::function<float(int, int)> getComputeValueFunction(
-      const std::string& metric);
+      const std::string& metric) const;
   float computIoU(int input_id, int submap_id) const;
   float computOverlap(int input_id, int submap_id) const;
 
@@ -75,4 +80,4 @@ class TrackingInfoAggregator {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_PREPROCESSING_DETECTRON_TRACKING_INFO_H_
+#endif  // PANOPTIC_MAPPING_PREPROCESSING_TRACKING_INFO_H_

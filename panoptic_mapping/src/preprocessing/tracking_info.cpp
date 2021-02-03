@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/detectron_tracking_info.h"
+#include "panoptic_mapping/preprocessing/tracking_info.h"
 
 #include <algorithm>
 #include <iostream>
@@ -21,8 +21,8 @@ void incrementMap(std::unordered_map<int, int>* map, int id, int value = 1) {
   }
 }
 
-TrackingInfo::TrackingInfo(int submap_id, const Camera::Config& camera)
-    : submap_id_(submap_id), camera_(camera) {
+TrackingInfo::TrackingInfo(int submap_id, Camera::Config camera)
+    : submap_id_(submap_id), camera_(std::move(camera)) {
   image_ =
       cv::Mat(cv::Size(camera_.width, camera_.height), CV_32SC1, cv::Scalar(0));
   u_min_ = camera_.width;
@@ -127,7 +127,7 @@ float TrackingInfoAggregator::computOverlap(int input_id, int submap_id) const {
 }
 
 std::function<float(int, int)> TrackingInfoAggregator::getComputeValueFunction(
-    const std::string& metric) {
+    const std::string& metric) const {
   if (metric == "overlap") {
     return [=](int input_id, int submap_id) {
       return this->computOverlap(input_id, submap_id);
@@ -144,7 +144,7 @@ std::function<float(int, int)> TrackingInfoAggregator::getComputeValueFunction(
 
 bool TrackingInfoAggregator::getHighestMetric(int input_id, int* submap_id,
                                               float* value,
-                                              const std::string& metric) {
+                                              const std::string& metric) const {
   CHECK_NOTNULL(submap_id);
   CHECK_NOTNULL(value);
   if (overlap_.find(input_id) == overlap_.end()) {
@@ -154,7 +154,7 @@ bool TrackingInfoAggregator::getHighestMetric(int input_id, int* submap_id,
   auto value_function = getComputeValueFunction(metric);
   int id = 0;
   float best_value = -1.f;
-  for (const auto& id_count_pair : overlap_[input_id]) {
+  for (const auto& id_count_pair : overlap_.at(input_id)) {
     const float current_value = value_function(input_id, id_count_pair.first);
     if (current_value > best_value) {
       best_value = current_value;
@@ -171,7 +171,7 @@ bool TrackingInfoAggregator::getHighestMetric(int input_id, int* submap_id,
 
 bool TrackingInfoAggregator::getAllMetrics(
     int input_id, std::vector<std::pair<int, float>>* id_value,
-    const std::string& metric) {
+    const std::string& metric) const {
   CHECK_NOTNULL(id_value);
   // Return all overlapping submap ids ordered by IoU.
   if (overlap_.find(input_id) == overlap_.end()) {
@@ -179,8 +179,8 @@ bool TrackingInfoAggregator::getAllMetrics(
   }
   auto value_function = getComputeValueFunction(metric);
   id_value->clear();
-  id_value->reserve(overlap_[input_id].size());
-  for (const auto& id_count_pair : overlap_[input_id]) {
+  id_value->reserve(overlap_.at(input_id).size());
+  for (const auto& id_count_pair : overlap_.at(input_id)) {
     id_value->emplace_back(id_count_pair.first,
                            value_function(input_id, id_count_pair.first));
   }
@@ -192,6 +192,35 @@ bool TrackingInfoAggregator::getAllMetrics(
               return lhs.second > rhs.second;
             });
   return true;
+}
+
+int TrackingInfoAggregator::getNumberOfInputPixels(int input_id) const {
+  auto it = total_input_count_.find(input_id);
+  if (it == total_input_count_.end()) {
+    return 0;
+  }
+  return it->second;
+}
+
+int TrackingInfoAggregator::getNumberOfSubmapPixels(int submap_id) const {
+  auto it = total_rendered_count_.find(submap_id);
+  if (it == total_input_count_.end()) {
+    return 0;
+  }
+  return it->second;
+}
+
+int TrackingInfoAggregator::getNumberOfOverlappingPixels(int input_id,
+                                                         int submap_id) const {
+  auto it = overlap_.find(input_id);
+  if (it == overlap_.end()) {
+    return 0;
+  }
+  auto it2 = it->second.find(submap_id);
+  if (it2 == it->second.end()) {
+    return 0;
+  }
+  return it2->second;
 }
 
 }  // namespace panoptic_mapping

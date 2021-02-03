@@ -29,23 +29,7 @@ tsdf_integrator:
   sparsity_compensation_factor: 1.0
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
-  foreign_rays_clear: false
-  
-  # naive args
-  voxblox_integrator_type: fast # projective, fast
-  sensor_vertical_field_of_view_degrees: 73.7397952
-  use_const_weight: true  
-  max_ray_length_m: 5
-  voxel_carving_enabled: true
-  use_weight_dropoff: true
-  sparsity_compensation_factor: 1.0
-
-#  truncation_distance: 0.2
-#  max_ray_length_m: 5.0
-#  use_const_weight: false
-#  use_sparsity_compensation_factor: true
-#  sparsity_compensation_factor: 20.0
-#  integration_order_mode: "sorted"
+  foreign_rays_clear: true
 
 id_tracker:
   type: projective # ground_truth, projective, detectron
@@ -62,6 +46,7 @@ id_tracker:
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1
+  min_allocation_size: 2000 # px, for submap allocation.
   
   impaint_voxel_size: true
   debug: true

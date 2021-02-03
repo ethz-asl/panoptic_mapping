@@ -289,11 +289,14 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      Submap* submap = submaps->getSubmapPtr(id_image.at<int>(v, u));
-      const Point p_S = submap->getT_S_M() * T_M_C *
-                        Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
-      submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
-      touched_submaps.insert(submap);
+      int id = id_image.at<int>(v, u);
+      if (submaps->submapIdExists(id)) {
+        Submap* submap = submaps->getSubmapPtr(id);
+        const Point p_S = submap->getT_S_M() * T_M_C *
+                          Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
+        submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+        touched_submaps.insert(submap);
+      }
     }
   }
 

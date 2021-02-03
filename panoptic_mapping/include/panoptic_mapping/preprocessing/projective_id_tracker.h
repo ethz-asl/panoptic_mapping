@@ -11,9 +11,9 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
-#include "panoptic_mapping/preprocessing/detectron_tracking_info.h"
 #include "panoptic_mapping/preprocessing/id_tracker_base.h"
 #include "panoptic_mapping/preprocessing/label_handler.h"
+#include "panoptic_mapping/preprocessing/tracking_info.h"
 #include "panoptic_mapping/tools/map_renderer.h"
 
 namespace panoptic_mapping {
@@ -38,6 +38,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
     std::string tracking_metric = "IoU";  // IoU, overlap
     float match_acceptance_threshold = 0.5;
+
+    int min_allocation_size = 0;  // #px required to allocate new submap.
 
     // Camera and renderer settings.
     std::string camera_namespace = "";

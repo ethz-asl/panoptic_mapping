@@ -12,6 +12,7 @@ void Camera::Config::checkParams() const {
   checkParamGT(vy, 0.f, "vy");
   checkParamGT(fx, 0.f, "fx");
   checkParamGT(fy, 0.f, "fy");
+  checkParamGT(min_range, 0.f, "min_range");
   checkParamCond(max_range > min_range,
                  "'max_range' is expected > 'min_range'.");
   checkParamCond(vx <= width, "'vx' is expected <= 'width'.");
