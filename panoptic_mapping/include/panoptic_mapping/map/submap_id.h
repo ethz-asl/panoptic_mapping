@@ -15,10 +15,9 @@ class SubmapID {
   ~SubmapID();
 
   SubmapID(const SubmapID&) = delete;
-  void operator=(const SubmapID&) = delete;
+  SubmapID& operator=(const SubmapID&) = delete;
 
-  explicit operator int() const { return id_; }
-  int toInt() const { return id_; }
+  operator int() const { return id_; }
 
  private:
   const int id_;
@@ -46,7 +45,7 @@ class SubmapIDManager {
  private:
   SubmapIDManager();
 
-  const bool kAllowIDReuse = false;
+  static const bool kAllowIDReuse = true;
 
   int current_id_;
   std::queue<int> vacant_ids_;

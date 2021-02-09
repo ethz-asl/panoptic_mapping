@@ -28,6 +28,7 @@ cs_add_library(${PROJECT_NAME}
         src/common/input_data_user.cpp
         src/map/submap.cpp
         src/map/submap_id.cpp
+        src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
         src/map/submap_collection.cpp
         src/preprocessing/label_handler.cpp

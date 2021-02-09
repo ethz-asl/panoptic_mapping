@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <unordered_set>
 
 namespace panoptic_mapping {
 
@@ -11,7 +12,8 @@ void DataWriter::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("output_directory", &output_directory);
   setupParam("file_name", &file_name);
-  setupParam("log_number_of_submaps", &log_number_of_submaps);
+  setupParam("evaluate_number_of_submaps", &evaluate_number_of_submaps);
+  setupParam("evaluate_numer_of_objects", &evaluate_numer_of_objects);
 }
 
 void DataWriter::Config::checkParams() const {
@@ -59,9 +61,13 @@ void DataWriter::setupEvaluations() {
   outfile_ << "Timestamp [s]";
 
   // Setup all data headers [with units] and evaluation functions to be used.
-  if (config_.log_number_of_submaps) {
+  if (config_.evaluate_number_of_submaps) {
     writeEntry("NoSubmaps [1]");
     evaluations_.emplace_back(&DataWriter::evaluateNumberOfSubmaps);
+  }
+  if (config_.evaluate_numer_of_objects) {
+    writeEntry("NoObjects [1]");
+    evaluations_.emplace_back(&DataWriter::evaluateNumberOfObjects);
   }
 
   outfile_ << std::endl;
@@ -89,6 +95,24 @@ void DataWriter::writeData(double time_stamp, const SubmapCollection& submaps) {
 
 void DataWriter::evaluateNumberOfSubmaps(const SubmapCollection& submaps) {
   writeEntry(std::to_string(submaps.size()));
+}
+void DataWriter::evaluateNumberOfObjects(const SubmapCollection& submaps) {
+  std::unordered_set<int> instance_ids;
+  for (const auto& submap_ptr : submaps) {
+    // Only count ids > 0 since -1 and similar is used for invalid or other
+    // instances. Only count submaps that are observed present.
+    if (submap_ptr->getInstanceID() < 0) {
+      continue;
+    }
+    const ChangeDetectionData& change_data =
+        submap_ptr->getChangeDetectionData();
+    if (change_data.state == ChangeDetectionData::State::kAbsent ||
+        change_data.state == ChangeDetectionData::State::kUnobserved) {
+      continue;
+    }
+    instance_ids.insert(submap_ptr->getInstanceID());
+  }
+  writeEntry(std::to_string(instance_ids.size()));
 }
 
 }  // namespace panoptic_mapping

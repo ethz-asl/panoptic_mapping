@@ -26,7 +26,8 @@ class DataWriter {
     std::string file_name = "panoptic_mapping_data";  // Filename without suffix
 
     // Evaluation Fields.
-    bool log_number_of_submaps = true;
+    bool evaluate_number_of_submaps = true;
+    bool evaluate_numer_of_objects = true;
 
     Config() { setConfigName("DataWriter"); }
 
@@ -53,6 +54,7 @@ class DataWriter {
 
   // Evaluations. The data are always preceded by a separating comma.
   void evaluateNumberOfSubmaps(const SubmapCollection& submaps);
+  void evaluateNumberOfObjects(const SubmapCollection& submaps);
 };
 
 }  // namespace panoptic_mapping

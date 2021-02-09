@@ -12,6 +12,7 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/map/instance_id.h"
 #include "panoptic_mapping/map/submap_bounding_volume.h"
 #include "panoptic_mapping/map/submap_id.h"
 
@@ -41,7 +42,7 @@ class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
     double voxel_size = 0.1;
-    double voxels_per_side = 16;
+    int voxels_per_side = 16;  // Needs to be a multiple of 2.
 
    protected:
     void setupParamsAndPrinting() override;
@@ -58,7 +59,7 @@ class Submap {
                                                 uint64_t* tmp_byte_offset_ptr);
 
   // Const accessors.
-  int getID() const { return id_.toInt(); }
+  int getID() const { return id_; }
   int getInstanceID() const { return instance_id_; }
   int getClassID() const { return class_id_; }
   const std::string& getFrameName() const { return frame_name_; }
@@ -109,7 +110,7 @@ class Submap {
 
   // Labels.
   const SubmapID id_;  // UUID
-  int instance_id_ = -1;
+  InstanceID instance_id_;  // Per default sets up a new unique ID.
   int class_id_ = -1;
   PanopticLabel label_ = PanopticLabel::kUnknown;
   std::string name_;
