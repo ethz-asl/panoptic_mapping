@@ -1,7 +1,10 @@
 #include "panoptic_mapping/tools/planning_interface.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
+
+#include <voxblox/interpolator/interpolator.h>
 
 namespace panoptic_mapping {
 
@@ -96,6 +99,37 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     return VoxelState::kExpectedFree;
   }
   return VoxelState::kUnknown;
+}
+
+bool PlanningInterface::getDistance(const Point& position, float* distance,
+                                    bool include_inactive_maps) const {
+  // Get the Tsdf distance from the highest resolution submap covering the
+  // target position. Return whether the point was observed.
+  CHECK_NOTNULL(distance);
+  float current_voxel_size = std::numeric_limits<float>::max();
+
+  for (const auto& submap : *submaps_) {
+    // Check activity.
+    if (!submap->isActive() && !include_inactive_maps) {
+      continue;
+    }
+
+    // Check resolution.
+    if (submap->getTsdfLayer().voxel_size() >= current_voxel_size) {
+      continue;
+    }
+
+    // Look up the voxel if it is observed.
+    const Point position_S = submap->getT_S_M() * position;
+    if (submap->getBoundingVolume().contains_S(position_S)) {
+      voxblox::Interpolator<TsdfVoxel> interpolator(
+          submap->getTsdfLayerPtr().get());
+      if (interpolator.getDistance(position_S, distance, true)) {
+        current_voxel_size = submap->getTsdfLayer().voxel_size();
+      }
+    }
+  }
+  return current_voxel_size < std::numeric_limits<float>::max();
 }
 
 }  // namespace panoptic_mapping
