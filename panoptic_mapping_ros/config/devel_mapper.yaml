@@ -2,7 +2,7 @@
 verbosity: 3
 global_frame_name: world
 sensor_frame_name: airsim_drone/Depth_cam
-label_path: /home/lukas/Documents/datasets/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 data_logging_interval: -1.0
