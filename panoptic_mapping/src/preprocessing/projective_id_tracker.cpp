@@ -252,7 +252,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
 
 int ProjectiveIDTracker::allocateSubmap(int instance_id,
                                         SubmapCollection* submaps) {
-  // Lookup the labels associated with the input_id
+  // Lookup the labels associated with the input_id.
   PanopticLabel label = PanopticLabel::kUnknown;
   if (config_.input_is_mesh_id) {
     instance_id = label_handler_->getSegmentationIdFromMeshId(instance_id);
@@ -286,7 +286,6 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
   Submap* new_submap = submaps->createSubmap(cfg);
 
   // Take all available information from the ground truth instance ids.
-  new_submap->setInstanceID(instance_id);
   new_submap->setLabel(label);
   if (label != PanopticLabel::kUnknown) {
     new_submap->setClassID(label_handler_->getClassID(instance_id));

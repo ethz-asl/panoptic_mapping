@@ -64,7 +64,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
-  int allocateSubmap(int instance_id, SubmapCollection* submaps);
+  virtual int allocateSubmap(int instance_id, SubmapCollection* submaps);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
 
   TrackingInfo renderTrackingInfo(const Submap& submap,
