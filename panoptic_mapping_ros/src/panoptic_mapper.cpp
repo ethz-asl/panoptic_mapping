@@ -6,8 +6,6 @@
 #include <string>
 #include <utility>
 
-#include <panoptic_mapping/SubmapCollection.pb.h>
-
 namespace panoptic_mapping {
 
 void PanopticMapper::Config::checkParams() const {
@@ -238,73 +236,23 @@ bool PanopticMapper::loadMapCallback(
   return response.success;
 }
 
-// Save load functionality was heavily adapted from cblox.
 bool PanopticMapper::saveMap(const std::string& file_path) {
-  CHECK(!file_path.empty());
-  std::fstream outfile;
-  outfile.open(file_path, std::fstream::out | std::fstream::binary);
-  if (!outfile.is_open()) {
-    LOG(ERROR) << "Could not open file for writing: " << file_path;
-    return false;
-  }
-  // Saving the submap collection header object.
-  SubmapCollectionProto submap_collection_proto;
-  submap_collection_proto.set_num_submaps(submaps_->size());
-  if (!voxblox::utils::writeProtoMsgToStream(submap_collection_proto,
-                                             &outfile)) {
-    LOG(ERROR) << "Could not write submap collection header message.";
-    outfile.close();
-    return false;
-  }
-  // Saving the submaps.
-  int saved_submaps = 0;
-  for (const auto& submap : *submaps_) {
-    bool success = submap->saveToStream(&outfile);
-    if (success) {
-      saved_submaps++;
-    } else {
-      LOG(WARNING) << "Failed to save submap with ID '" << submap->getID()
-                   << "'.";
-    }
-  }
-  LOG(INFO) << "Successfully saved " << saved_submaps << "/" << submaps_->size()
-            << " submaps.";
-  outfile.close();
-  return true;
+  bool success = submaps_->saveToFile(file_path);
+  LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
+                        << " submaps to '" << file_path << "'.";
+  return success;
 }
 
 bool PanopticMapper::loadMap(const std::string& file_path) {
-  // Clear the current maps.
-  submaps_->clear();
+  auto loaded_map = std::make_shared<SubmapCollection>();
 
-  // Open and check the file.
-  std::ifstream proto_file;
-  proto_file.open(file_path, std::fstream::in);
-  if (!proto_file.is_open()) {
-    LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";
-    return false;
-  }
-  // Unused byte offset result.
-  uint64_t tmp_byte_offset = 0u;
-  SubmapCollectionProto submap_collection_proto;
-  if (!voxblox::utils::readProtoMsgFromStream(
-          &proto_file, &submap_collection_proto, &tmp_byte_offset)) {
-    LOG(ERROR) << "Could not read the protobuf message.";
+  // Load the map.
+  if (!loaded_map->loadFromFile(file_path)) {
     return false;
   }
 
-  // Loading each of the submaps.
-  for (size_t sub_map_index = 0u;
-       sub_map_index < submap_collection_proto.num_submaps(); ++sub_map_index) {
-    std::unique_ptr<Submap> submap_ptr =
-        Submap::loadFromStream(&proto_file, &tmp_byte_offset);
-    if (submap_ptr == nullptr) {
-      LOG(ERROR) << "Failed to load submap '" << sub_map_index
-                 << "' from stream.";
-      return false;
-    }
-
-    // Re-compute cached data and set the relevant flags.
+  // Re-compute cached data and set the relevant flags.
+  for (auto& submap_ptr : *loaded_map) {
     tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
     submap_ptr->finishActivePeriod();
     if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
@@ -312,18 +260,16 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
       submap_ptr->setName("FreeSpace");
     }
-
-    // Add to the collection.
-    submaps_->addSubmap(std::move(submap_ptr));
   }
-  proto_file.close();
+
+  // Set the map.
+  submaps_ = loaded_map;
 
   // Reproduce the mesh and visualization.
   submap_visualizer_->reset();
   submap_visualizer_->visualizeAll(submaps_.get());
 
-  LOG(INFO) << "Successfully loaded " << submaps_->size() << "/"
-            << submap_collection_proto.num_submaps() << " submaps.";
+  LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;
 }
 

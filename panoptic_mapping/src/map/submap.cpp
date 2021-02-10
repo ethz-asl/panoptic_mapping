@@ -11,7 +11,7 @@ namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
   checkParamGT(voxel_size, 0.0, "voxel_size");
-  checkParamGT(voxels_per_side, 0.0, "voxels_per_side");
+  checkParamGT(voxels_per_side, 0, "voxels_per_side");
 }
 
 void Submap::Config::setupParamsAndPrinting() {
@@ -24,7 +24,7 @@ Submap::Submap(const Config& config)
       bounding_volume_(*this) {
   // Default values.
   std::stringstream ss;
-  ss << "submap_" << id_.toInt();
+  ss << "submap_" << static_cast<int>(id_);
   frame_name_ = ss.str();
 
   // Setup layers.

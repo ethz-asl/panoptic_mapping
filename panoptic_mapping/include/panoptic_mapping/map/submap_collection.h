@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_MAP_SUBMAP_COLLECTION_H_
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -26,6 +27,10 @@ class SubmapCollection {
   std::vector<std::unique_ptr<Submap>>::const_iterator end() const {
     return submaps_.end();
   }
+
+  // IO.
+  bool saveToFile(const std::string& file_path) const;
+  bool loadFromFile(const std::string& file_path);
 
   // Modify the collection.
   void addSubmap(std::unique_ptr<Submap> submap);
