@@ -72,8 +72,8 @@ void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
       CHECK_LE(voxel.distance, 1e-2 * voxel_size);
 
       // Store the isosurface vertex.
-      submap->getIsoSurfacePointsPtr()->emplace_back(IsoSurfacePoint{
-          mesh_vertex_coordinates, voxel.distance, voxel.weight});
+      submap->getIsoSurfacePointsPtr()->emplace_back(mesh_vertex_coordinates,
+                                                     voxel.weight);
     }
   }
 }
@@ -88,64 +88,67 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     // NOTE(Schmluk): At the moment objects can't move so they stay absent
     // forever. Need to change this once PGO is supported.
     if (submap->getLabel() == PanopticLabel::kFreeSpace || submap->isActive() ||
-        submap->getChangeDetectionData().state ==
-            ChangeDetectionData::State::kAbsent) {
+        submap->getChangeState() == ChangeState::kAbsent) {
       continue;
     }
 
     // Check overlapping submaps for conflicts or matches and store best match.
-    ChangeDetectionData* change = submap->getChangeDetectionDataPtr();
-    int best_matching_id;
-    float best_matching_points = -1.f;
-    for (const auto& other : submaps) {
-      if (!other->isActive() ||
-          !submap->getBoundingVolume().intersects(other->getBoundingVolume()) ||
-          change->matched_submap_id == other->getID()) {
-        continue;
-      }
-      float matching_points;
-      if (submapsConflict(*submap, *other, &matching_points)) {
-        // No conflicts allowed, update also the matched submap if it exists.
-        info << "\nSubmap " << submap->getID() << " (" << submap->getName()
-             << ") conflicts with submap " << other->getID() << " ("
-             << other->getName() << ")";
-        if (change->state == ChangeDetectionData::State::kPersistent) {
-          Submap* matched = submaps.getSubmapPtr(change->matched_submap_id);
-          matched->getChangeDetectionDataPtr()->state =
-              ChangeDetectionData::State::kNew;
-          matched->getChangeDetectionDataPtr()->matched_submap_id = -1;
-          change->matched_submap_id = -1;
-          info << ", was matched with submap " << matched->getID() << " ("
-               << matched->getName() << ")";
-        }
-        change->state = ChangeDetectionData::State::kAbsent;
-        info << ".";
-        break;
-      } else if (submap->getClassID() == other->getClassID() &&
-                 matching_points > best_matching_points) {
-        // Semantically match, so could be a candidate.
-        best_matching_id = other->getID();
-        best_matching_points = matching_points;
-      }
-    }
-
-    // Check for sufficient alignment and match the most suitable candidate.
-    const float acceptance_count =
-        std::min(static_cast<float>(config_.match_acceptance_points),
-                 config_.match_acceptance_percentage *
-                     submap->getIsoSurfacePoints().size());
-    if (best_matching_points > acceptance_count) {
-      Submap* other = submaps.getSubmapPtr(best_matching_id);
-      // Geometry and semantic class match.
-      change->state = ChangeDetectionData::State::kPersistent;
-      change->matched_submap_id = other->getID();
-      other->getChangeDetectionDataPtr()->state =
-          ChangeDetectionData::State::kMatched;
-      other->getChangeDetectionDataPtr()->matched_submap_id = submap->getID();
-      info << "\nSubmap " << submap->getID() << " (" << submap->getName()
-           << ") was matched with submap " << other->getID() << " ("
-           << other->getName() << ").";
-    }
+    // TODO(schmluk): refactor this to work with Instance IDs.
+    //    ChangeState state = submap->getChangeState();
+    //    int best_matching_id;
+    //    float best_matching_points = -1.f;
+    //    for (const auto& other : submaps) {
+    //      if (!other->isActive() ||
+    //          !submap->getBoundingVolume().intersects(other->getBoundingVolume())
+    //          || change->matched_submap_id == other->getID()) {
+    //        continue;
+    //      }
+    //      float matching_points;
+    //      if (submapsConflict(*submap, *other, &matching_points)) {
+    //        // No conflicts allowed, update also the matched submap if it
+    //        exists. info << "\nSubmap " << submap->getID() << " (" <<
+    //        submap->getName()
+    //             << ") conflicts with submap " << other->getID() << " ("
+    //             << other->getName() << ")";
+    //        if (change->state == ChangeDetectionData::State::kPersistent) {
+    //          Submap* matched =
+    //          submaps.getSubmapPtr(change->matched_submap_id);
+    //          matched->getChangeDetectionDataPtr()->state =
+    //              ChangeDetectionData::State::kNew;
+    //          matched->getChangeDetectionDataPtr()->matched_submap_id = -1;
+    //          change->matched_submap_id = -1;
+    //          info << ", was matched with submap " << matched->getID() << " ("
+    //               << matched->getName() << ")";
+    //        }
+    //        change->state = ChangeDetectionData::State::kAbsent;
+    //        info << ".";
+    //        break;
+    //      } else if (submap->getClassID() == other->getClassID() &&
+    //                 matching_points > best_matching_points) {
+    //        // Semantically match, so could be a candidate.
+    //        best_matching_id = other->getID();
+    //        best_matching_points = matching_points;
+    //      }
+    //    }
+    //
+    //    // Check for sufficient alignment and match the most suitable
+    //    candidate. const float acceptance_count =
+    //        std::min(static_cast<float>(config_.match_acceptance_points),
+    //                 config_.match_acceptance_percentage *
+    //                     submap->getIsoSurfacePoints().size());
+    //    if (best_matching_points > acceptance_count) {
+    //      Submap* other = submaps.getSubmapPtr(best_matching_id);
+    //      // Geometry and semantic class match.
+    //      change->state = ChangeDetectionData::State::kPersistent;
+    //      change->matched_submap_id = other->getID();
+    //      other->getChangeDetectionDataPtr()->state =
+    //          ChangeDetectionData::State::kMatched;
+    //      other->getChangeDetectionDataPtr()->matched_submap_id =
+    //      submap->getID(); info << "\nSubmap " << submap->getID() << " (" <<
+    //      submap->getName()
+    //           << ") was matched with submap " << other->getID() << " ("
+    //           << other->getName() << ").";
+    //    }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
 

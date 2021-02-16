@@ -33,7 +33,6 @@
 
   <depend>panoptic_mapping</depend>
   <depend>panoptic_mapping_msgs</depend>
-  <depend>panoptic_mapping_tools</depend>
 
   <export>
   </export>

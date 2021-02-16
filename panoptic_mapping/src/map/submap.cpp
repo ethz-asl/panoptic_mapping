@@ -11,12 +11,19 @@ namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
   checkParamGT(voxel_size, 0.0, "voxel_size");
+  checkParamGT(truncation_distance, 0.0, "truncation_distance");
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
 }
 
 void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
+}
+
+void Submap::Config::initializeDependentVariableDefaults() {
+  if (truncation_distance == 0.0) {
+    truncation_distance = 2 * voxel_size;
+  }
 }
 
 Submap::Submap(const Config& config)
@@ -48,7 +55,7 @@ void Submap::finishActivePeriod() {
   // TODO(schmluk): at the moment these things are specifically set when loading
   // submaps, need to update automatically once submaps can go out of scope.
   is_active_ = false;
-  change_detection_data_.state = ChangeDetectionData::State::kUnobserved;
+  change_state_ = ChangeState::kUnobserved;
   bounding_volume_.update();
 }
 
@@ -64,8 +71,9 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_class_id(class_id_);
   proto->set_panoptic_label(static_cast<int>(label_));
   proto->set_num_blocks(num_tsdf_blocks);
-  proto->set_voxel_size(tsdf_layer_->voxel_size());
-  proto->set_voxels_per_side(tsdf_layer_->voxels_per_side());
+  proto->set_voxel_size(config_.voxel_size);
+  proto->set_voxels_per_side(config_.voxels_per_side);
+  proto->set_voxel_size(config_.truncation_distance);
   proto->set_allocated_transform(transformation_proto_ptr);
 }
 
@@ -109,6 +117,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   Config cfg;
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
+  cfg.truncation_distance = submap_proto.truncation_distance();
   auto submap = std::make_unique<Submap>(cfg);
 
   // Getting the tsdf blocks for this submap (the tsdf layer).
@@ -131,8 +140,6 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
 
-  // Recompute required data.
-  submap->finishActivePeriod();
   return submap;
 }
 

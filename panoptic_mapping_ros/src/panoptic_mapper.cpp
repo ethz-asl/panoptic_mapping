@@ -191,8 +191,9 @@ void PanopticMapper::publishVisualization() {
 bool PanopticMapper::setVisualizationModeCallback(
     panoptic_mapping_msgs::SetVisualizationMode::Request& request,
     panoptic_mapping_msgs::SetVisualizationMode::Response& response) {
-  response.visualization_mode_set = true;
-  response.color_mode_set = true;
+  response.visualization_mode_set = false;
+  response.color_mode_set = false;
+  bool success = true;
 
   // Set the visualization mode if requested.
   if (!request.visualization_mode.empty()) {
@@ -206,6 +207,9 @@ bool PanopticMapper::setVisualizationModeCallback(
         << "Set visualization mode to '" << visualization_mode_is << "'.";
     response.visualization_mode_set =
         visualization_mode_is == request.visualization_mode;
+    if (!response.visualization_mode_set) {
+      success = false;
+    }
   }
 
   // Set the color mode if requested.
@@ -217,9 +221,14 @@ bool PanopticMapper::setVisualizationModeCallback(
     LOG_IF(INFO, config_.verbosity >= 2)
         << "Set color mode to '" << color_mode_is << "'.";
     response.color_mode_set = color_mode_is == request.color_mode;
+    if (!response.color_mode_set) {
+      success = false;
+    }
   }
 
-  return response.visualization_mode_set && response.color_mode_set;
+  // Republish the visualization.
+  submap_visualizer_->visualizeAll(submaps_.get());
+  return success;
 }
 
 bool PanopticMapper::saveMapCallback(

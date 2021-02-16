@@ -39,8 +39,7 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
   bool is_expected_occupied = false;
   for (const auto& submap : *submaps_) {
     // Filter out irrelevant submaps.
-    if (submap->getChangeDetectionData().state ==
-        ChangeDetectionData::State::kAbsent) {
+    if (submap->getChangeState() == ChangeState::kAbsent) {
       continue;
     }
     if (submap->getLabel() == PanopticLabel::kFreeSpace) {

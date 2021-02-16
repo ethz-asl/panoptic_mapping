@@ -12,6 +12,7 @@ message SubmapProto {
   optional uint32 num_blocks = 2;
   optional float voxel_size = 3;
   optional uint32 voxels_per_side = 4;
+  optional float truncation_distance = 8;
 
   optional cblox.QuatTransformationProto transform = 5;
 }

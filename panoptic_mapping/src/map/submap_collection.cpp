@@ -10,7 +10,6 @@
 namespace panoptic_mapping {
 
 void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
-  std::cout << submap->getID();
   id_to_index_[submap->getID()] = submaps_.size();
   submaps_.emplace_back(std::move(submap));
 }

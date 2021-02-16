@@ -41,6 +41,7 @@ class SubmapVisualizer {
    protected:
     void setupParamsAndPrinting() override;
     void fromRosParam() override;
+    void printFields() const override;
     void checkParams() const override;
   };
 
@@ -108,8 +109,8 @@ class SubmapVisualizer {
     float alpha = 1.0;
 
     // Tracking.
-    ChangeDetectionData::State previous_change_state;  // kChange
-    bool was_active;                                   // kActive
+    ChangeState previous_change_state;  // kChange
+    bool was_active;                    // kActive
   };
 
   void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);

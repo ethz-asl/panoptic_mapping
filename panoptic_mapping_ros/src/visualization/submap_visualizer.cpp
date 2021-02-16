@@ -33,6 +33,10 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("mesh_min_weight", &mesh_min_weight);
 }
 
+void SubmapVisualizer::Config::printFields() const {
+  printField("ros_namespace", ros_namespace);
+}
+
 void SubmapVisualizer::Config::fromRosParam() {
   ros_namespace = rosParamNameSpace();
 }
@@ -90,7 +94,6 @@ void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
   visualizeTsdfBlocks(*submaps);
   visualizeFreeSpace(*submaps);
   visualizeBoundingVolume(*submaps);
-  publishTfTransforms(*submaps);
   vis_infos_are_updated_ = false;
 }
 
@@ -426,33 +429,32 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         break;
       }
       case ColorMode::kChange: {
-        if (info->previous_change_state !=
-                submap.getChangeDetectionData().state ||
+        if (info->previous_change_state != submap.getChangeState() ||
             info->change_color) {
-          switch (submap.getChangeDetectionData().state) {
-            case ChangeDetectionData::State::kNew: {
+          switch (submap.getChangeState()) {
+            case ChangeState::kNew: {
               info->color = Color(0, 200, 0);
               break;
             }
-            case ChangeDetectionData::State::kMatched: {
+            case ChangeState::kMatched: {
               info->color = Color(0, 0, 255);
               break;
             }
-            case ChangeDetectionData::State::kAbsent: {
+            case ChangeState::kAbsent: {
               info->color = Color(255, 0, 0);
               break;
             }
-            case ChangeDetectionData::State::kPersistent: {
+            case ChangeState::kPersistent: {
               info->color = Color(0, 0, 255);
               break;
             }
-            case ChangeDetectionData::State::kUnobserved: {
+            case ChangeState::kUnobserved: {
               info->color = Color(150, 150, 150);
               break;
             }
           }
           info->republish_everything = true;
-          info->previous_change_state = submap.getChangeDetectionData().state;
+          info->previous_change_state = submap.getChangeState();
         }
         break;
       }

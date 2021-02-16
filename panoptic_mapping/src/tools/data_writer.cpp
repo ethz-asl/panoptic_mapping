@@ -104,10 +104,8 @@ void DataWriter::evaluateNumberOfObjects(const SubmapCollection& submaps) {
     if (submap_ptr->getInstanceID() < 0) {
       continue;
     }
-    const ChangeDetectionData& change_data =
-        submap_ptr->getChangeDetectionData();
-    if (change_data.state == ChangeDetectionData::State::kAbsent ||
-        change_data.state == ChangeDetectionData::State::kUnobserved) {
+    if (submap_ptr->getChangeState() == ChangeState::kAbsent ||
+        submap_ptr->getChangeState() == ChangeState::kUnobserved) {
       continue;
     }
     instance_ids.insert(submap_ptr->getInstanceID());
