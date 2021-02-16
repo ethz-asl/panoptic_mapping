@@ -28,6 +28,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
     // Allocation TODO(schmluk): Clean submap creation away from id tracking.
+    float truncation_distance = 0.0;
     float instance_voxel_size = 0.05;
     float background_voxel_size = 0.1;
     float unknown_voxel_size = 0.1;

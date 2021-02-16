@@ -10,13 +10,14 @@
 namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
-  checkParamGT(voxel_size, 0.0, "voxel_size");
-  checkParamGT(truncation_distance, 0.0, "truncation_distance");
+  checkParamGT(voxel_size, 0.f, "voxel_size");
+  checkParamGT(truncation_distance, 0.f, "truncation_distance");
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
 }
 
 void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
+  setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
 }
 
@@ -37,9 +38,8 @@ Submap::Submap(const Config& config)
   // Setup layers.
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
       config_.voxel_size, config_.voxels_per_side);
-  double block_size =
-      config_.voxel_size * static_cast<double>(config_.voxels_per_side);
-  mesh_layer_ = std::make_shared<voxblox::MeshLayer>(block_size);
+  mesh_layer_ = std::make_shared<voxblox::MeshLayer>(config_.voxel_size *
+                                                     config_.voxels_per_side);
 
   // Initialize with identity transformation.
   T_M_S_.setIdentity();

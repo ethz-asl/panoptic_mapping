@@ -18,6 +18,7 @@ config_utilities::Factory::RegistrationRos<IntegratorBase, ProjectiveIntegrator>
 
 void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(integration_threads, 0, "integration_threads");
+  checkParamGT(max_weight, 0.f, "max_weight");
   checkParamConfig(camera);
 }
 
@@ -26,7 +27,6 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("use_weight_dropoff", &use_weight_dropoff);
   setupParam("use_constant_weight", &use_constant_weight);
   setupParam("foreign_rays_clear", &foreign_rays_clear);
-  setupParam("sparsity_compensation_factor", &sparsity_compensation_factor);
   setupParam("max_weight", &max_weight);
   setupParam("interpolation_method", &interpolation_method);
   setupParam("integration_threads", &integration_threads);
@@ -137,8 +137,7 @@ void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
   Transformation T_C_S =
       T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const float voxel_size = block.voxel_size();
-  const float truncation_distance =
-      voxel_size * 2.f;  // 2vs is used as an adaptive heuristic.
+  const float truncation_distance = submap->getConfig().truncation_distance;
   const int id = submap->getID();
 
   // update all voxels
@@ -251,14 +250,6 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     }
   }
 
-  // Apply sparsity compensation if appropriate
-  if (config_.sparsity_compensation_factor != 1.f &&
-      *point_belongs_to_this_submap) {
-    if (std::abs(new_sdf) < truncation_distance) {
-      observation_weight *= config_.sparsity_compensation_factor;
-    }
-  }
-
   // results (point belongs to this submap is already updated)
   *sdf = new_sdf;
   *weight = observation_weight;
@@ -301,24 +292,29 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   }
 
   // Allocate all potential free space blocks.
-  Submap* space = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
-  const float block_size = space->getTsdfLayer().block_size();
-  const float block_diag_half = std::sqrt(3.f) * block_size / 2.f;
-  const Transformation T_C_S = T_M_C.inverse() * space->getT_M_S();
-  const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
-  const int max_steps = std::floor((max_range_in_image_ + block_diag_half) /
-                                   space->getTsdfLayer().block_size());
-  for (int x = -max_steps; x <= max_steps; ++x) {
-    for (int y = -max_steps; y <= max_steps; ++y) {
-      for (int z = -max_steps; z <= max_steps; ++z) {
-        const Point offset(x, y, z);
-        const Point candidate_S = camera_S + offset * block_size;
-        if (camera_.pointIsInViewFrustum(T_C_S * candidate_S,
-                                         block_diag_half)) {
-          space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+  if (submaps->submapIdExists(submaps->getActiveFreeSpaceSubmapID())) {
+    Submap* space =
+        submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+    const float block_size = space->getTsdfLayer().block_size();
+    const float block_diag_half = std::sqrt(3.f) * block_size / 2.f;
+    const Transformation T_C_S = T_M_C.inverse() * space->getT_M_S();
+    const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
+    const int max_steps = std::floor((max_range_in_image_ + block_diag_half) /
+                                     space->getTsdfLayer().block_size());
+    for (int x = -max_steps; x <= max_steps; ++x) {
+      for (int y = -max_steps; y <= max_steps; ++y) {
+        for (int z = -max_steps; z <= max_steps; ++z) {
+          const Point offset(x, y, z);
+          const Point candidate_S = camera_S + offset * block_size;
+          if (camera_.pointIsInViewFrustum(T_C_S * candidate_S,
+                                           block_diag_half)) {
+            space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(
+                candidate_S);
+          }
         }
       }
     }
+    space->getBoundingVolumePtr()->update();
   }
 
   // Update all bounding volumes. This is currently done in every integration
@@ -327,7 +323,6 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   for (auto& submap : touched_submaps) {
     submap->getBoundingVolumePtr()->update();
   }
-  space->getBoundingVolumePtr()->update();
 }
 
 }  // namespace panoptic_mapping

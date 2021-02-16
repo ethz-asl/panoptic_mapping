@@ -27,6 +27,7 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
+  setupParam("truncation_distance", &truncation_distance);
 }
 
 GroundTruthIDTracker::GroundTruthIDTracker(

@@ -21,6 +21,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
     int verbosity = 4;
     bool input_is_mesh_id =
         false;  // If true look up the instance id in the label handler.
+    float truncation_distance = 0.0;
     float instance_voxel_size = 0.05;
     float background_voxel_size = 0.1;
     float unknown_voxel_size = 0.1;

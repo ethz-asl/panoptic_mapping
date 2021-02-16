@@ -33,6 +33,7 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("truncation_distance", &truncation_distance);
   setupParam("rendering_threads", &rendering_threads);
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);

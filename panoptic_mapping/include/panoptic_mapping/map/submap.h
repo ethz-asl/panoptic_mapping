@@ -4,6 +4,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <voxblox/core/layer.h>
@@ -21,8 +22,8 @@ namespace panoptic_mapping {
 // Iso-surface-points are used to check alignment and represent the surface
 // of finished submaps.
 struct IsoSurfacePoint {
-  IsoSurfacePoint(const Point& _position, FloatingPoint _weight)
-      : position(_position), weight(_weight) {}
+  IsoSurfacePoint(Point _position, FloatingPoint _weight)
+      : position(std::move(_position)), weight(_weight) {}
   Point position;
   FloatingPoint weight;
 };
@@ -39,8 +40,8 @@ enum class ChangeState {
 class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
-    double voxel_size = 0.1;
-    double truncation_distance = 0.0;  // Defaults to 2x voxel size.
+    float voxel_size = 0.1;
+    float truncation_distance = 0.0;  // Defaults to 2x voxel size.
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
 
    protected:

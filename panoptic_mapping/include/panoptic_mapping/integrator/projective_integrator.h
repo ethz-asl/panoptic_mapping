@@ -28,7 +28,6 @@ class ProjectiveIntegrator : public IntegratorBase {
     bool use_constant_weight = false;
     bool foreign_rays_clear = true;  // observations of object B can clear
     // spcae in object A
-    float sparsity_compensation_factor = 1.0;
     float max_weight = 1e5;
     std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
 
