@@ -44,10 +44,13 @@ class Submap {
     float truncation_distance = 0.0;  // Defaults to 2x voxel size.
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
 
+    void initializeDependentVariableDefaults() override;
+    
+    Config() { setConfigName("Submap"); }
+
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;
-    void initializeDependentVariableDefaults() override;
   };
 
   explicit Submap(const Config& config);

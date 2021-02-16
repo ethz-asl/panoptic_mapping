@@ -50,6 +50,7 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   cfg.voxels_per_side = config_.voxels_per_side;
   cfg.voxel_size = config_.voxels_per_side;
   cfg.truncation_distance = config_.truncation_distance;
+  cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
   map_id_ = new_submap->getID();
   is_setup_ = true;

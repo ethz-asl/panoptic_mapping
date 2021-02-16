@@ -6,7 +6,7 @@ label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 data_logging_interval: -1.0
-max_input_queue_length: 10
+max_input_queue_length: 100
 
 camera:
   verbosity: 0
@@ -19,26 +19,15 @@ camera:
   max_range: 5  # m
   min_range: 0.1
 
-tsdf_integrator:  
-  type: projective # naive, projective
-  verbosity: 1
-  
-  # projective args
-  camera_namespace: ~/camera
-  use_weight_dropoff: true
-  sparsity_compensation_factor: 1.0
-  max_weight: 10000
-  interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
-  foreign_rays_clear: true
-
 id_tracker:
-  type: projective # ground_truth, projective, detectron
+  type: single_tsdf  # single_tsdf, ground_truth, projective, detectron
   verbosity: 3
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
   unknown_voxel_size: 0.1
   freespace_voxel_size: 0.3
   voxels_per_side: 16
+  truncation_distance: 0
   input_is_mesh_id: true
   
   # Projective ID tracker
@@ -50,6 +39,18 @@ id_tracker:
   
   impaint_voxel_size: true
   debug: true
+  
+  # Single ID Tracker
+  voxel_size: 0.01
+  
+tsdf_integrator:  
+  type: projective # projective
+  verbosity: 1
+  camera_namespace: ~/camera
+  use_weight_dropoff: true
+  max_weight: 10000
+  interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
+  foreign_rays_clear: true
   
 tsdf_registrator:
   verbosity: 1
@@ -66,13 +67,13 @@ visualization:
   
   # Submaps
   color_mode: submaps # submaps, instances, color, normals, classes, change
-  visualization_mode: active  # all, active 
+  visualization_mode: all  # all, active 
   submap_color_discretization: 50
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true
   visualize_bounding_volumes: true
-  include_free_space: true
+  include_free_space: false
   mesh_min_weight: 0.000001
   
   # Planning

@@ -284,6 +284,8 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
       break;
     }
   }
+  cfg.truncation_distance = config_.truncation_distance;
+  cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
 
   // Take all available information from the ground truth instance ids.
@@ -305,6 +307,8 @@ void ProjectiveIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   Submap::Config config;
   config.voxels_per_side = config_.voxels_per_side;
   config.voxel_size = config_.freespace_voxel_size;
+  config.truncation_distance = config_.truncation_distance;
+  config.initializeDependentVariableDefaults();
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.

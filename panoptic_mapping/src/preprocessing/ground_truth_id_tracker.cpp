@@ -112,6 +112,8 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
       break;
     }
   }
+  cfg.truncation_distance = config_.truncation_distance;
+  cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
   instance_to_id_[new_instance] = new_submap->getID();
   new_submap->setInstanceID(new_instance);
@@ -130,6 +132,8 @@ void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   Submap::Config config;
   config.voxels_per_side = config_.voxels_per_side;
   config.voxel_size = config_.freespace_voxel_size;
+  config.truncation_distance = config_.truncation_distance;
+  config.initializeDependentVariableDefaults();
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.
