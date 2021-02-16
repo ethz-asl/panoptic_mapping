@@ -73,7 +73,7 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_num_blocks(num_tsdf_blocks);
   proto->set_voxel_size(config_.voxel_size);
   proto->set_voxels_per_side(config_.voxels_per_side);
-  proto->set_voxel_size(config_.truncation_distance);
+  proto->set_truncation_distance(config_.truncation_distance);
   proto->set_allocated_transform(transformation_proto_ptr);
 }
 

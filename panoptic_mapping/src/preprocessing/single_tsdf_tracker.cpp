@@ -3,7 +3,6 @@
 #include <memory>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
 namespace panoptic_mapping {
 
@@ -27,6 +26,8 @@ SingleTSDFTracker::SingleTSDFTracker(
     const Config& config, std::shared_ptr<LabelHandler> label_handler)
     : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  setRequiredInputs(
+      {InputData::InputType::kColorImage, InputData::InputType::kDepthImage});
 }
 
 void SingleTSDFTracker::processInput(SubmapCollection* submaps,
@@ -41,17 +42,19 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   }
 
   // Set the id data.
-  input->idImage()->setTo(map_id_);
+  input->setIdImage(cv::Mat(input->depthImage().rows, input->depthImage().cols,
+                            CV_16SC1, map_id_));
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Allocate the single map.
   Submap::Config cfg;
   cfg.voxels_per_side = config_.voxels_per_side;
-  cfg.voxel_size = config_.voxels_per_side;
+  cfg.voxel_size = config_.voxel_size;
   cfg.truncation_distance = config_.truncation_distance;
   cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
+  new_submap->setLabel(PanopticLabel::kBackground);
   map_id_ = new_submap->getID();
   is_setup_ = true;
 }

@@ -84,7 +84,7 @@ void InterpolatorAdaptive::computeWeights(float u, float v, int id,
   v_ = std::floor(v);
   use_bilinear_ = true;
 
-  // check all labels match
+  // Check all labels match.
   for (size_t i = 0; i < 4; ++i) {
     if (static_cast<int>(
             id_image.at<uchar>(v_ + v_offset_[i], u_ + u_offset_[i])) != id) {
@@ -93,7 +93,7 @@ void InterpolatorAdaptive::computeWeights(float u, float v, int id,
     }
   }
 
-  // check max depth difference
+  // Check max depth difference.
   if (use_bilinear_) {
     float min = std::numeric_limits<float>::max();
     float max = std::numeric_limits<float>::min();

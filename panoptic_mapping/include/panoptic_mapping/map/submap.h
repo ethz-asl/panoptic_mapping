@@ -45,7 +45,7 @@ class Submap {
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
 
     void initializeDependentVariableDefaults() override;
-    
+
     Config() { setConfigName("Submap"); }
 
    protected:
