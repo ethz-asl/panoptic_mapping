@@ -34,50 +34,6 @@ TsdfRegistrator::TsdfRegistrator(const Config& config)
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void TsdfRegistrator::computeIsoSurfacePoints(Submap* submap) const {
-  // NOTE(schmluk): Currently all surface points are computed from scratch every
-  // time, but since they are currently only computed when a submap is finished
-  // it should be fine.
-  CHECK_NOTNULL(submap);
-  submap->getIsoSurfacePointsPtr()->clear();
-
-  // Initialize the mesh layer with new points.
-  const float voxel_size = submap->getTsdfLayer().voxel_size();
-  const float block_size = submap->getTsdfLayer().block_size();
-  voxblox::MeshLayer mesh_layer(block_size);
-
-  // Setup the mesh integrator.
-  voxblox::MeshIntegratorConfig mesh_integrator_config;
-  mesh_integrator_config.use_color = false;
-  mesh_integrator_config.min_weight =
-      static_cast<float>(config_.min_voxel_weight);
-  voxblox::MeshIntegrator<voxblox::TsdfVoxel> mesh_integrator(
-      mesh_integrator_config, submap->getTsdfLayer(), &mesh_layer);
-  mesh_integrator.generateMesh(false, false);
-
-  // Convert it into a connected mesh.
-  Point origin{0, 0, 0};
-  voxblox::Mesh connected_mesh(block_size, origin);
-  mesh_layer.getConnectedMesh(&connected_mesh, 0.5 * voxel_size);
-
-  // Create an interpolator to interpolate the vertex weights from the TSDF.
-  voxblox::Interpolator<TsdfVoxel> interpolator(
-      submap->getTsdfLayerPtr().get());
-
-  // Extract the vertices.
-  for (const auto& mesh_vertex_coordinates : connected_mesh.vertices) {
-    // Try to interpolate the voxel weight.
-    TsdfVoxel voxel;
-    if (interpolator.getVoxel(mesh_vertex_coordinates, &voxel, true)) {
-      CHECK_LE(voxel.distance, 1e-2 * voxel_size);
-
-      // Store the isosurface vertex.
-      submap->getIsoSurfacePointsPtr()->emplace_back(mesh_vertex_coordinates,
-                                                     voxel.weight);
-    }
-  }
-}
-
 void TsdfRegistrator::checkSubmapCollectionForChange(
     const SubmapCollection& submaps) const {
   auto t_start = std::chrono::high_resolution_clock::now();

@@ -2,10 +2,12 @@
 
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include <cblox/QuatTransformation.pb.h>
 #include <cblox/utils/quat_transformation_protobuf_utils.h>
 #include <voxblox/io/layer_io.h>
+#include <voxblox/mesh/mesh_integrator.h>
 
 namespace panoptic_mapping {
 
@@ -142,5 +144,42 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
 
   return submap;
 }
+
+void Submap::updateMesh(bool only_updated_blocks) {
+  // Use the default integrator config to have color always available.
+  voxblox::MeshIntegrator<TsdfVoxel> mesh_int(
+      voxblox::MeshIntegratorConfig(), tsdf_layer_.get(), mesh_layer_.get());
+  mesh_int.generateMesh(only_updated_blocks, true);
+}
+
+void Submap::computeIsoSurfacePoints() {
+  // NOTE(schmluk): Currently all surface points are computed from scratch every
+  // time, but since they are currently only computed when a submap is finished
+  // it should be fine.
+  // This function utilizes the stored mesh so make sure updateMesh is called
+  // earlier.
+  iso_surface_points_ = std::vector<IsoSurfacePoint>();
+
+  // Create an interpolator to interpolate the vertex weights from the TSDF.
+  voxblox::Interpolator<TsdfVoxel> interpolator(tsdf_layer_.get());
+
+  // Extract the vertices and verify.
+  voxblox::BlockIndexList index_list;
+  mesh_layer_->getAllAllocatedMeshes(&index_list);
+  for (const voxblox::BlockIndex& index : index_list) {
+    const Pointcloud& vertices = mesh_layer_->getMeshByIndex(index).vertices;
+    iso_surface_points_.reserve(iso_surface_points_.size() + vertices.size());
+    for (const Point& vertex : vertices) {
+      // Try to interpolate the voxel weight and verify the distance.
+      TsdfVoxel voxel;
+      if (interpolator.getVoxel(vertex, &voxel, true)) {
+        CHECK_LE(voxel.distance, 1e-2 * config_.voxel_size);
+        iso_surface_points_.emplace_back(vertex, voxel.weight);
+      }
+    }
+  }
+}
+
+void Submap::updateBoundingVolume() { bounding_volume_.update(); }
 
 }  // namespace panoptic_mapping

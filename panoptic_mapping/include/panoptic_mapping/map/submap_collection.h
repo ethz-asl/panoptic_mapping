@@ -30,7 +30,7 @@ class SubmapCollection {
 
   // IO.
   bool saveToFile(const std::string& file_path) const;
-  bool loadFromFile(const std::string& file_path);
+  bool loadFromFile(const std::string& file_path, bool recompute_data = true);
 
   // Modify the collection.
   void addSubmap(std::unique_ptr<Submap> submap);

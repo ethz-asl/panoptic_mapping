@@ -42,7 +42,6 @@ class TsdfRegistrator {
   virtual ~TsdfRegistrator() = default;
 
   // Check whether there is significant difference between the two submaps.
-  void computeIsoSurfacePoints(Submap* submap) const;
   void checkSubmapCollectionForChange(const SubmapCollection& submaps) const;
   bool submapsConflict(const Submap& reference, const Submap& other,
                        float* matching_points = nullptr) const;

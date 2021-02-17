@@ -104,6 +104,9 @@ class Submap {
 
   // Processing.
   void finishActivePeriod();
+  void updateMesh(bool only_updated_blocks = true);
+  void computeIsoSurfacePoints();
+  void updateBoundingVolume();
 
  private:
   friend class SubmapCollection;

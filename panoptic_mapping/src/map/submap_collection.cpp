@@ -112,7 +112,8 @@ bool SubmapCollection::saveToFile(const std::string& file_path) const {
   return true;
 }
 
-bool SubmapCollection::loadFromFile(const std::string& file_path) {
+bool SubmapCollection::loadFromFile(const std::string& file_path,
+                                    bool recompute_data) {
   CHECK(!file_path.empty());
   // Clear the current maps.
   submaps_.clear();
@@ -149,8 +150,16 @@ bool SubmapCollection::loadFromFile(const std::string& file_path) {
     // Add to the collection.
     addSubmap(std::move(submap_ptr));
   }
-
   proto_file.close();
+
+  // Recompute data that is not stored with the submap.
+  if (recompute_data) {
+    for (const auto& submap_ptr : submaps_) {
+      submap_ptr->updateBoundingVolume();
+      submap_ptr->updateMesh(false);
+      submap_ptr->computeIsoSurfacePoints();
+    }
+  }
   return true;
 }
 
