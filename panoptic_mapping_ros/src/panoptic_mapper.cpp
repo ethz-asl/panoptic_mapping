@@ -184,7 +184,11 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualization() {
-  submap_visualizer_->visualizeAll(submaps_.get());
+  // Update the submaps meshes.
+  for (const auto& submap_ptr : *submaps_) {
+    submap_ptr->updateMesh();
+  }
+  submap_visualizer_->visualizeAll(*submaps_);
   planning_visualizer_->visualizeAll();
 }
 
@@ -227,7 +231,7 @@ bool PanopticMapper::setVisualizationModeCallback(
   }
 
   // Republish the visualization.
-  submap_visualizer_->visualizeAll(submaps_.get());
+  submap_visualizer_->visualizeAll(*submaps_);
   return success;
 }
 
@@ -262,7 +266,6 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   // Re-compute cached data and set the relevant flags.
   for (auto& submap_ptr : *loaded_map) {
-    tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
     submap_ptr->finishActivePeriod();
     if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
       submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
@@ -275,8 +278,8 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   submaps_ = loaded_map;
 
   // Reproduce the mesh and visualization.
-  submap_visualizer_->reset();
-  submap_visualizer_->visualizeAll(submaps_.get());
+  submap_visualizer_->clearMesh();
+  submap_visualizer_->visualizeAll(*submaps_);
 
   LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;

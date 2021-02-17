@@ -43,10 +43,7 @@ void SubmapVisualizer::Config::fromRosParam() {
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
                                    std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()),
-      label_handler_(std::move(label_handler)),
-      global_frame_name_("mission"),
-      vis_infos_are_updated_(false) {
+    : config_(config.checkValid()), label_handler_(std::move(label_handler)) {
   visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
   color_mode_ = colorModeFromString(config_.color_mode);
   id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
@@ -73,8 +70,15 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
 }
 
 void SubmapVisualizer::reset() {
-  // Reset all mesh visuals.
-  // TODO(Schmluk): Reset other visualizations too?
+  // Erase all current tracking / cached data.
+  vis_infos_.clear();
+  previous_submaps_ = nullptr;
+}
+
+void SubmapVisualizer::clearMesh() {
+  // Clear the current mesh from the rviz plugin.
+  // NOTE(schmluk): Other visuals could also be cleared but since they are
+  // non-incremental they will anyways be overwritten.
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     for (auto& info : vis_infos_) {
       voxblox_msgs::MultiMesh msg;
@@ -83,21 +87,20 @@ void SubmapVisualizer::reset() {
       mesh_pub_.publish(msg);
     }
   }
-  vis_infos_.clear();
 }
 
-void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
-  publishTfTransforms(*submaps);
-  updateVisInfos(*submaps);
+void SubmapVisualizer::visualizeAll(const SubmapCollection& submaps) {
+  publishTfTransforms(submaps);
+  updateVisInfos(submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.
   visualizeMeshes(submaps);
-  visualizeTsdfBlocks(*submaps);
-  visualizeFreeSpace(*submaps);
-  visualizeBoundingVolume(*submaps);
+  visualizeTsdfBlocks(submaps);
+  visualizeFreeSpace(submaps);
+  visualizeBoundingVolume(submaps);
   vis_infos_are_updated_ = false;
 }
 
-void SubmapVisualizer::visualizeMeshes(SubmapCollection* submaps) {
+void SubmapVisualizer::visualizeMeshes(const SubmapCollection& submaps) {
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     std::vector<voxblox_msgs::MultiMesh> msgs = generateMeshMsgs(submaps);
     for (auto& msg : msgs) {
@@ -133,17 +136,16 @@ void SubmapVisualizer::visualizeBoundingVolume(
 }
 
 std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
-    SubmapCollection* submaps) {
-  CHECK_NOTNULL(submaps);
+    const SubmapCollection& submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
 
   // Update the visualization infos.
   if (!vis_infos_are_updated_) {
-    updateVisInfos(*submaps);
+    updateVisInfos(submaps);
   }
 
   // Process all submaps based on their visualization info.
-  for (const auto& submap : *submaps) {
+  for (const auto& submap : submaps) {
     if (submap->getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
@@ -159,6 +161,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     // Setup message.
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
+    msg.header.frame_id = submap->getFrameName();
     msg.name_space = std::to_string(info.id);
 
     // If the submap was deleted we send an empty message to delete the visual.
@@ -167,11 +170,6 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
       vis_infos_.erase(it);
       continue;
     }
-
-    // Update the mesh.
-    msg.header.frame_id = submap->getFrameName();
-    updateSubmapMesh(submap.get(), info.remesh_everything);
-    info.remesh_everything = false;
 
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
@@ -343,6 +341,12 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
 }
 
 void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
+  // Check whether the same submap collection is being visualized (cached data).
+  if (previous_submaps_ != &submaps) {
+    reset();
+    previous_submaps_ = &submaps;
+  }
+
   // Update submap ids.
   std::vector<int> ids;
   std::vector<int> new_ids;
@@ -358,7 +362,6 @@ void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
     auto it = vis_infos_.emplace(std::make_pair(id, SubmapVisInfo())).first;
     SubmapVisInfo& info = it->second;
     info.id = id;
-    info.remesh_everything = true;  // Could be a loaded submap.
     info.republish_everything = true;
     setSubmapVisColor(submaps.getSubmap(id), &info);
   }
@@ -484,18 +487,6 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
   }
 
   info->change_color = false;
-}
-
-void SubmapVisualizer::updateSubmapMesh(Submap* submap,
-                                        bool update_all_blocks) {
-  CHECK_NOTNULL(submap);
-  constexpr bool clear_updated_flag = true;
-  // Use the default integrator config to have color always available.
-  voxblox::MeshIntegratorConfig config;
-  config.min_weight = config_.mesh_min_weight;
-  mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
-      config, submap->getTsdfLayerPtr().get(), submap->getMeshLayerPtr().get());
-  mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
 }
 
 void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {

@@ -41,7 +41,7 @@ id_tracker:
   debug: true
   
   # Single ID Tracker
-  voxel_size: 0.01
+  voxel_size: 0.1
   
 tsdf_integrator:  
   type: projective # projective
