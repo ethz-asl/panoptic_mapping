@@ -15,7 +15,6 @@ const Color SubmapVisualizer::kUnknownColor_(50, 50, 50);
 
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
-  checkParamGT(mesh_min_weight, 0.f, "mesh_min_weight");
   // NOTE(schmluk): if the visualization or color mode is not valid it will be
   // defaulted to 'all' or 'color' and a warning will be raised.
 }
@@ -30,7 +29,6 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_free_space", &visualize_free_space);
   setupParam("visualize_bounding_volumes", &visualize_bounding_volumes);
   setupParam("include_free_space", &include_free_space);
-  setupParam("mesh_min_weight", &mesh_min_weight);
 }
 
 void SubmapVisualizer::Config::printFields() const {
@@ -57,15 +55,15 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
         nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("free_space_tsdf", 100);
   }
   if (config_.visualize_mesh) {
-    mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000, true);
+    mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000);
   }
   if (config_.visualize_tsdf_blocks) {
-    tsdf_blocks_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
-        "tsdf_blocks", 100, true);
+    tsdf_blocks_pub_ =
+        nh_.advertise<visualization_msgs::MarkerArray>("tsdf_blocks", 100);
   }
   if (config_.visualize_bounding_volumes) {
-    bounding_volume_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
-        "bounding_volumes", 100, true);
+    bounding_volume_pub_ =
+        nh_.advertise<visualization_msgs::MarkerArray>("bounding_volumes", 100);
   }
 }
 

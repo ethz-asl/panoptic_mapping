@@ -1,8 +1,8 @@
 #ifndef PANOPTIC_MAPPING_UTILS_EVALUATION_MAP_EVALUATOR_H_
 #define PANOPTIC_MAPPING_UTILS_EVALUATION_MAP_EVALUATOR_H_
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <pcl/point_cloud.h>

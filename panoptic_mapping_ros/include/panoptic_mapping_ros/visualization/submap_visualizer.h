@@ -33,7 +33,6 @@ class SubmapVisualizer {
     bool visualize_free_space = true;
     bool visualize_bounding_volumes = true;
     bool include_free_space = false;
-    float mesh_min_weight = 1e-4;
     std::string ros_namespace;
 
     Config() { setConfigName("SubmapVisualizer"); }

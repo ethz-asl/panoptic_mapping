@@ -1,10 +1,10 @@
 #include "panoptic_mapping_utils/evaluation/map_evaluator.h"
 
-#include <cmath>
-#include <string>
-#include <memory>
-#include <vector>
 #include <algorithm>
+#include <cmath>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include <pcl/io/ply_io.h>
 #include <ros/ros.h>
@@ -61,29 +61,28 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
       return false;
     }
   }
-  if (request.visualize || request.evaluate || request.compute_coloring) {
-    // Load the map to evaluate.
-    if (!request.map_file.empty()) {
-      submaps_ = std::make_shared<SubmapCollection>();
-      if (!submaps_->loadFromFile(request.map_file)) {
-        LOG(ERROR) << "Could not load ground truth point cloud from '"
-                   << request.ground_truth_pointcloud_file << "'.";
-        submaps_.reset();
-        return false;
-      }
 
-      // Setup related tools.
-      planning_ = std::make_unique<PlanningInterface>(submaps_);
-      size_t separator = request.map_file.find_last_of('/');
-      target_directory_ = request.map_file.substr(0, separator);
-      target_map_name_ = request.map_file.substr(
-          separator + 1, request.map_file.length() - separator - 8);
-      LOG_IF(INFO, request.verbosity >= 2) << "Loaded the target panoptic map.";
-    }
-    if (!submaps_) {
-      LOG(ERROR) << "No panoptic map loaded.";
+  // Load the map to evaluate.
+  if (!request.map_file.empty()) {
+    submaps_ = std::make_shared<SubmapCollection>();
+    if (!submaps_->loadFromFile(request.map_file)) {
+      LOG(ERROR) << "Could not load ground truth point cloud from '"
+                 << request.ground_truth_pointcloud_file << "'.";
+      submaps_.reset();
       return false;
     }
+
+    // Setup related tools.
+    planning_ = std::make_unique<PlanningInterface>(submaps_);
+    size_t separator = request.map_file.find_last_of('/');
+    target_directory_ = request.map_file.substr(0, separator);
+    target_map_name_ = request.map_file.substr(
+        separator + 1, request.map_file.length() - separator - 8);
+    LOG_IF(INFO, request.verbosity >= 2) << "Loaded the target panoptic map.";
+  }
+  if (!submaps_) {
+    LOG(ERROR) << "No panoptic map loaded.";
+    return false;
   }
 
   // Setup output file
@@ -125,14 +124,14 @@ void MapEvaluator::computeReconstructionError(
   std::unique_ptr<Bounds> bounds = std::make_unique<FlatBounds>();
 
   // Setup.
-  const uint64_t total_points = gt_ptcloud_->size();
+  uint64_t total_points = 0;
   uint64_t unknown_points = 0;
   uint64_t truncated_points = 0;
   std::vector<float> abserror;
-  abserror.reserve(total_points);  // Just reserve the worst case.
+  abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
 
   // Setup progress bar.
-  const uint64_t interval = total_points / 100;
+  const uint64_t interval = gt_ptcloud_->size() / 100;
   uint64_t count = 0;
   ProgressBar bar;
 
@@ -142,8 +141,9 @@ void MapEvaluator::computeReconstructionError(
     if (!bounds->pointIsValid(point)) {
       continue;
     }
-    float distance;
+    total_points++;
 
+    float distance;
     if (planning_->getDistance(point, &distance)) {
       if (std::abs(distance) > request.maximum_distance) {
         distance = request.maximum_distance;
@@ -156,11 +156,11 @@ void MapEvaluator::computeReconstructionError(
 
     // Progress bar.
     if (count % interval == 0) {
-      bar.display(static_cast<float>(count) / total_points);
+      bar.display(static_cast<float>(count) / gt_ptcloud_->size());
     }
     count++;
   }
-  bar.display(100.f);
+  bar.display(1.f);
 
   // Report summary.
   float mean = 0.0;
@@ -212,8 +212,9 @@ void MapEvaluator::visualizeReconstructionError(
   // Coloring: grey -> unknown, green -> 0 error, red -> maximum error,
   // purple -> truncated to max error.
 
-  constexpr int max_number_of_neighbors =
-      100;  // max eval points for faster lookup.
+  constexpr int max_number_of_neighbors_factor = 25000;  // points per cubic
+  // metre depending on voxel size for faster nn search.
+
   std::unique_ptr<Bounds> bounds = std::make_unique<FlatBounds>();
 
   // Build a Kd tree for point lookup.
@@ -237,17 +238,23 @@ void MapEvaluator::visualizeReconstructionError(
 
   // Parse all submaps
   for (auto& submap : *submaps_) {
+    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+      continue;
+    }
     const size_t num_voxels_per_block =
         std::pow(submap->getTsdfLayer().voxels_per_side(), 3);
     const float voxel_size = submap->getTsdfLayer().voxel_size();
     const float voxel_size_sqr = voxel_size * voxel_size;
     const float truncation_distance = submap->getConfig().truncation_distance;
+    const int max_number_of_neighbors =
+        max_number_of_neighbors_factor / std::pow(1.f / voxel_size, 2.f);
     voxblox::Interpolator<TsdfVoxel> interpolator(
         submap->getTsdfLayerPtr().get());
 
     // Parse all voxels.
     voxblox::BlockIndexList block_list;
     submap->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    int block = 0;
     for (auto& block_index : block_list) {
       voxblox::Block<TsdfVoxel>& block =
           submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
@@ -284,8 +291,10 @@ void MapEvaluator::visualizeReconstructionError(
         // Get average error.
         float total_error = 0.f;
         int counted_voxels = 0;
+        float min_dist_sqr = 1000.f;
         for (int i = 0; i < num_results; ++i) {
-          if (i != 0 && out_dist_sqr[i] > voxel_size_sqr) {
+          min_dist_sqr = std::min(min_dist_sqr, out_dist_sqr[i]);
+          if (out_dist_sqr[i] > voxel_size_sqr) {
             continue;
           }
           voxblox::FloatingPoint distance;
@@ -297,18 +306,18 @@ void MapEvaluator::visualizeReconstructionError(
         }
         // Coloring.
         if (counted_voxels == 0) {
-          voxel.color = Color(128, 128, 128);
-        } else {
-          float frac =
-              std::min(total_error / counted_voxels, request.maximum_distance) /
-              request.maximum_distance;
-          float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
-          float g = (1.f - frac) * 2.f * 255.f;
-          if (frac <= 0.5f) {
-            g = 190.f + 130.f * frac;
-          }
-          voxel.color = voxblox::Color(r, g, 0);
+          counted_voxels = 1;
+          total_error += std::sqrt(min_dist_sqr);
         }
+        float frac =
+            std::min(total_error / counted_voxels, request.maximum_distance) /
+            request.maximum_distance;
+        float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
+        float g = (1.f - frac) * 2.f * 255.f;
+        if (frac <= 0.5f) {
+          g = 190.f + 130.f * frac;
+        }
+        voxel.color = voxblox::Color(r, g, 0);
       }
 
       // Show progress.

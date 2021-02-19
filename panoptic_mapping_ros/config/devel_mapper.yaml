@@ -20,7 +20,7 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: single_tsdf  # single_tsdf, ground_truth, projective, detectron
+  type: ground_truth  # single_tsdf, ground_truth, projective, detectron
   verbosity: 3
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
@@ -41,7 +41,7 @@ id_tracker:
   debug: true
   
   # Single ID Tracker
-  voxel_size: 0.1
+  voxel_size: 0.05
   
 tsdf_integrator:  
   type: projective # projective

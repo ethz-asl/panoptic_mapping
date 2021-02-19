@@ -1,9 +1,9 @@
 #ifndef PANOPTIC_MAPPING_UTILS_EVALUATION_PROGRESS_BAR_H_
 #define PANOPTIC_MAPPING_UTILS_EVALUATION_PROGRESS_BAR_H_
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
-#include <algorithm>
 
 namespace panoptic_mapping {
 

@@ -25,9 +25,11 @@ int main(int argc, char** argv) {
   evaluator.evaluate(request);
 
   // Visualize.
-  while (ros::ok()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    evaluator.publishVisualization();
+  if (request.visualize) {
+    while (ros::ok()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      evaluator.publishVisualization();
+    }
   }
   return 0;
 }
