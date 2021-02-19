@@ -16,7 +16,7 @@ class DetectronPlayer(object):
         """  Initialize ros node and read params """
         # params
         self.data_path = rospy.get_param(
-            '~data_path', '/home/lukas/Documents/datasets/flat_dataset/run1')
+            '~data_path', '/home/lukas/Documents/Datasets/flat_dataset/run1')
 
         # ROS
         self.img_pub = rospy.Publisher("~predicted_image",

@@ -1,6 +1,7 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="bag_name" default="/home/lukas/Documents/datasets/flat_dataset/run1.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/>
+  <arg name="detectron_data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>  
   <arg name="bag_play_rate" default="1"/>
   <arg name="use_sim_time" default="false"/>
   <arg name="start_at" default="1"/>
@@ -22,7 +23,8 @@
     <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_detectron)"/>
   </node>
   
-   <node pkg="panoptic_mapping_tools" type="detectron_player.py" name="detectron_player" if="$(arg use_detectron)" output="screen">
+   <node pkg="panoptic_mapping_utils" type="detectron_player.py" name="detectron_player" if="$(arg use_detectron)" output="screen">
+     <param name="data_path" value="$(arg detectron_data_path)" /> 
      <remap from="~id_image_in" to="$(arg namespace)/segmentation_groundtruth" />  
      <remap from="~predicted_image" to="$(arg namespace)/segmentation_image" />  
      <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  

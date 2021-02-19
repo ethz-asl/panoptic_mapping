@@ -1,7 +1,7 @@
 <launch>
   <!-- Arguments -->
   <arg name="target" default=""/> <!-- Defaults to ~/Documents/AirSim/settings.json -->
-  <arg name="source" default="/home/lukas/Documents/PanopticMapping/Data/flat_dataset/airsim.yaml"/>
+  <arg name="source" default="/home/lukas/Documents/Datasets/flat_dataset/airsim.yaml"/>
 
   
 

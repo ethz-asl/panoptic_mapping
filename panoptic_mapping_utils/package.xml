@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>panoptic_mapping_tools</name>
+  <name>panoptic_mapping_utils</name>
   <version>0.0.0</version>
-  <description>Utilities to setup and run data for panoptic mapping. </description>
+  <description>Utilities to setup, run, and evaluate data for panoptic mapping. </description>
   
   <author email="schmluk@mavt.ethz.ch">Lukas Schmid</author>
   <maintainer email="schmluk@mavt.ethz.ch">Lukas Schmid</maintainer>
@@ -15,12 +15,17 @@
   <depend>rospy</depend>
   <depend>roscpp</depend>
 
-  <depend>panoptic_mapping_msgs</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>rosgraph_msgs</depend>
+  <depend>panoptic_mapping_msgs</depend>
   <depend>tf2_ros</depend>
+
+  <depend>panoptic_mapping</depend>
+  <depend>panoptic_mapping_ros</depend>
+  <depend>voxblox</depend>
+  <depend>voxblox_ros</depend>
 
   <export>
   </export>

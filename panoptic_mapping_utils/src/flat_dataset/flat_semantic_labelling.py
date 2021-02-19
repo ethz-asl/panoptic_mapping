@@ -126,10 +126,10 @@ def apply_labels(labels):
         key = label["Name"]
         if client.simSetSegmentationObjectID(key, label["MeshID"], False):
             success = success + 1
-            print "Successfully set label for '%s'." % key
+            print("Successfully set label for '%s'." % key)
         else:
-            print "Failed to set label for '%s'." % key
-    print "Applied %i/%i labels." % (success, len(labels))
+            print("Failed to set label for '%s'." % key)
+    print("Applied %i/%i labels." % (success, len(labels)))
 
 
 def get_available_meshes(comparison_labels=None):
@@ -143,18 +143,18 @@ def get_available_meshes(comparison_labels=None):
     names = client.simListSceneObjects(r"[\w]*")
     names = [str(name) for name in names]
     counts = []
-    print "Available mesh names: "
+    print("Available mesh names: ")
     for name in sorted(names):
-        print str(name)
+        print(str(name))
     if comparison_labels is not None:
         for label in comparison_labels:
             matches = [name == label["Name"] for name in names]
             counts.append(np.sum(np.array(matches)))
         # TODO(schmluk): These last parts are not cleaned up, change these if
         #                the function is needed.
-        print "Comparison Label names found in the scene: ", counts
-        print "Unique labels matched: %.1f percent" \
-              % (np.mean(np.array(counts) == 1) * 100)
+        print("Comparison Label names found in the scene: ", counts)
+        print("Unique labels matched: %.1f percent" \
+              % (np.mean(np.array(counts) == 1) * 100))
 
 
 def get_infrared_correction(target_file):
@@ -165,7 +165,7 @@ def get_infrared_correction(target_file):
     client = airsim.MultirotorClient()
     client.confirmConnection()
     counter = 0
-    print "Computing infrared corrections ..."
+    print("Computing infrared corrections ...")
     with open(target_file, 'w') as csvfile:
         writer = csv.writer(csvfile,
                             delimiter=',',
@@ -183,8 +183,8 @@ def get_infrared_correction(target_file):
             writer.writerow([i, img1d[0]])
             if i * 100 / 256 > counter:
                 counter = counter + 5
-                print "%i percent done ..." % counter
-    print "Saved infrared corrections in '%s'." % target_file
+                print("%i percent done ..." % counter)
+    print("Saved infrared corrections in '%s'." % target_file)
 
 
 def export_labels(labels, out_file_name):
@@ -219,18 +219,18 @@ def export_labels(labels, out_file_name):
                 color_palette[0, label["MeshID"] * 4, 2], label["Name"]
             ])
         writer.writerow([255, 255, 1, 255, 255, 80, 80, 80, "Unknown"])
-    print "Saved labels in '%s'." % out_file_name
+    print("Saved labels in '%s'." % out_file_name)
 
 
 if __name__ == "__main__":
     # Args.
     get_ir_corrections = False
     apply_mesh_labels = True
-    export_mesh_labels = True
+    export_mesh_labels = False
 
-    ir_file = "/home/lukas/Documents/PanopticMapping/Data/" \
+    ir_file = "/home/lukas/Documents/Datasets/flat_dataset/" \
               "infrared_corrections.csv"
-    label_file = "/home/lukas/Documents/PanopticMapping/Data/labels.csv"
+    label_file = "/home/lukas/Documents/Datasets/flat_dataset/labels.csv"
 
     # Run.
     if get_ir_corrections:
@@ -242,4 +242,5 @@ if __name__ == "__main__":
         export_labels(f_labels, label_file)
 
     # Tools.
-    # get_available_meshes(f_labels)
+    if False:
+        get_available_meshes(f_labels)
