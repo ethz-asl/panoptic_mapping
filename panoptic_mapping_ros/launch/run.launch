@@ -17,11 +17,12 @@
     
   <!-- Mapper -->
   <arg name="config" default="devel_mapper"/>
-  
+
   <!-- Load maps -->
   <arg name="load_map" default = "true"/>
 <!--  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>-->
  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>
+
 
 
 
