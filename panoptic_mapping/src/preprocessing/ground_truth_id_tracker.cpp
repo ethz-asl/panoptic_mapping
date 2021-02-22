@@ -27,6 +27,7 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
+  setupParam("use_ground_truth_instance_ids", &use_ground_truth_instance_ids);
   setupParam("truncation_distance", &truncation_distance);
 }
 
@@ -43,12 +44,17 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
   // NOTE: The id_image is always provided as CV_32SC1 (int) image
   // Look for new instances.
-  // TODO(schmluk): Update to use only valid pixels.
+  // TODO(schmluk): take a proper sensor model for all trackers.
+  const float max_depth = 5.f;
+  const float min_depth = 0.1;
   std::unordered_set<int> instances;
-  const cv::MatIterator_<int> begin = input->idImage()->begin<int>();
-  const cv::MatIterator_<int> end = input->idImage()->end<int>();
-  for (auto it = begin; it != end; ++it) {
-    instances.insert(*it);
+  for (int u = 0; u < input->idImage()->cols; ++u) {
+    for (int v = 0; v < input->idImage()->rows; ++v) {
+      const float depth = input->depthImage().at<float>(v, u);
+      if (depth < max_depth && depth > min_depth) {
+        instances.insert(input->idImage()->at<int>(v, u));
+      }
+    }
   }
 
   // Allocate new submaps if necessary.
@@ -63,7 +69,8 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   printAndResetWarnings();
 
   // Set segmentation image to submap ids.
-  for (auto it = begin; it != end; ++it) {
+  for (auto it = input->idImage()->begin<int>();
+       it != input->idImage()->end<int>(); ++it) {
     *it = instance_to_id_[*it];
   }
 
@@ -116,7 +123,9 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
   instance_to_id_[new_instance] = new_submap->getID();
-  new_submap->setInstanceID(new_instance);
+  if (config_.use_ground_truth_instance_ids) {
+    new_submap->setInstanceID(new_instance);
+  }
   new_submap->setClassID(label_handler_->getClassID(new_instance));
   new_submap->setLabel(label);
   new_submap->setName(label_handler_->getName(new_instance));

@@ -321,7 +321,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   // step since it's not too expensive and won't do anything if no new block
   // was allocated.
   for (auto& submap : touched_submaps) {
-    submap->getBoundingVolumePtr()->update();
+    submap->updateBoundingVolume();
   }
 }
 

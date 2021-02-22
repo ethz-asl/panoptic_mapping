@@ -28,6 +28,9 @@ id_tracker:
   freespace_voxel_size: 0.3
   voxels_per_side: 16
   truncation_distance: 0
+  
+  # Ground Truth
+  use_ground_truth_instance_ids: false
   input_is_mesh_id: true
   
   # Projective ID tracker
@@ -40,7 +43,7 @@ id_tracker:
   impaint_voxel_size: true
   debug: true
   
-  # Single ID Tracker
+  # Single TSDF Tracker
   voxel_size: 0.05
   
 tsdf_integrator:  
@@ -53,20 +56,21 @@ tsdf_integrator:
   foreign_rays_clear: true
   
 tsdf_registrator:
-  verbosity: 1
+  verbosity: 3
   min_voxel_weight: 0.000001
-  error_threshold: -2 # m, negative = #voxel_sizes
+  error_threshold: -2 # m, negative = #vs
   match_rejection_points: 50
   match_rejection_percentage: 0.1
   match_acceptance_points: 50
   match_acceptance_percentage: 0.1
   normalize_by_voxel_weight: true
+  allow_multiple_matches: false
   
 visualization:
   verbosity: 1
   
   # Submaps
-  color_mode: color # submaps, instances, color, normals, classes, change
+  color_mode: change # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active, active_only
   submap_color_discretization: 50
   visualize_mesh: true

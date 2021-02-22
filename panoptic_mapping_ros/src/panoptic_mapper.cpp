@@ -140,6 +140,8 @@ void PanopticMapper::processInput(InputData* input) {
   tsdf_integrator_->processInput(submaps_.get(), input);
   ros::WallTime t2 = ros::WallTime::now();
 
+  // Update the submap
+
   // If requested perform change detection and visualization.
   ros::TimerEvent event;
   if (config_.change_detection_interval < 0.f) {
@@ -260,13 +262,15 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   auto loaded_map = std::make_shared<SubmapCollection>();
 
   // Load the map.
-  if (!loaded_map->loadFromFile(file_path)) {
+  if (!loaded_map->loadFromFile(file_path, true)) {
     return false;
   }
 
-  // Re-compute cached data and set the relevant flags.
+  // Loaded submaps are 'from the past' so set them to inactive.
   for (auto& submap_ptr : *loaded_map) {
     submap_ptr->finishActivePeriod();
+
+    // TODO(schmluk): The names only hold for the ground truth atm, update this.
     if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
       submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
     } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
