@@ -1,40 +1,28 @@
 #include "panoptic_mapping_ros/panoptic_mapper.h"
 
-#include <algorithm>
 #include <deque>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
-
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/point_cloud2_iterator.h>
-#include <voxblox/core/color.h>
-#include <voxblox/integrator/merge_integration.h>
-#include <voxblox_msgs/MultiMesh.h>
-
-#include <panoptic_mapping/SubmapCollection.pb.h>
-
-#include "panoptic_mapping_ros/conversions/ros_component_factory.h"
-#include "panoptic_mapping_ros/conversions/ros_params.h"
 
 namespace panoptic_mapping {
 
 void PanopticMapper::Config::checkParams() const {
-  checkParamGT(max_image_queue_length, 0, "max_image_queue_length");
+  checkParamCond(!global_frame_name.empty(),
+                 "'global_frame_name' may not be empty.");
 }
 
 void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("max_image_queue_length", &max_image_queue_length);
   setupParam("global_frame_name", &global_frame_name);
   setupParam("visualization_interval", &visualization_interval);
   setupParam("change_detection_interval", &change_detection_interval);
+  setupParam("data_logging_interval", &data_logging_interval);
 }
 
-PanopticMapper::PanopticMapper(const ::ros::NodeHandle& nh,
-                               const ::ros::NodeHandle& nh_private)
+PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
+                               const ros::NodeHandle& nh_private)
     : nh_(nh),
       nh_private_(nh_private),
       config_(
@@ -55,16 +43,17 @@ void PanopticMapper::setupMembers() {
   label_handler_ = std::make_shared<LabelHandler>();
   label_handler_->readLabelsFromFile(label_path);
 
-  // Tsdf-integrator.
-  ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
-  tsdf_integrator_ = ComponentFactoryROS::createIntegrator(integrator_nh);
-
-  // Id tracking.
+  // Id Tracking.
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
       id_tracker_nh, label_handler_);
 
-  // Tsdf-registrator.
+  // Tsdf Integrator.
+  ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
+  tsdf_integrator_ =
+      config_utilities::FactoryRos::create<IntegratorBase>(integrator_nh);
+
+  // Tsdf Registrator.
   ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
   tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
       config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
@@ -75,32 +64,44 @@ void PanopticMapper::setupMembers() {
 
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
+  // Submaps.
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
           visualization_nh),
       label_handler_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
+
+  // Planning.
   planning_visualizer_ = std::make_unique<PlanningVisualizer>(
       config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
           visualization_nh),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+
+  // Tracking.
+  tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
+      config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
+          visualization_nh));
+  tracking_visualizer_->registerIDTracker(id_tracker_.get());
+
+  // Data Logging.
+  ros::NodeHandle data_nh(nh_private_, "data_writer");
+  data_logger_ = std::make_unique<DataWriter>(
+      config_utilities::getConfigFromRos<DataWriter::Config>(data_nh));
+
+  // Setup all input topics.
+  input_synchronizer_ = std::make_unique<InputSynchronizer>(
+      config_utilities::getConfigFromRos<InputSynchronizer::Config>(
+          nh_private_),
+      nh_);
+  input_synchronizer_->requestInputs(id_tracker_->getRequiredInputs());
+  input_synchronizer_->requestInputs(tsdf_integrator_->getRequiredInputs());
+  input_synchronizer_->setInputCallback(
+      [this](InputData* data) { this->processInput(data); });
+  input_synchronizer_->advertiseInputTopics();
 }
 
 void PanopticMapper::setupRos() {
-  // Subscribers.
-  pointcloud_sub_ = nh_.subscribe("pointcloud_in", 10,
-                                  &PanopticMapper::pointcloudCallback, this);
-  depth_image_sub_ =
-      nh_.subscribe("depth_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::depthImageCallback, this);
-  color_image_sub_ =
-      nh_.subscribe("color_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::colorImageCallback, this);
-  segmentation_image_sub_ =
-      nh_.subscribe("segmentation_image_in", config_.max_image_queue_length,
-                    &PanopticMapper::segmentationImageCallback, this);
-
   // Services.
   save_map_srv_ = nh_private_.advertiseService(
       "save_map", &PanopticMapper::saveMapCallback, this);
@@ -109,8 +110,6 @@ void PanopticMapper::setupRos() {
   set_visualization_mode_srv_ = nh_private_.advertiseService(
       "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
       this);
-  set_color_mode_srv_ = nh_private_.advertiseService(
-      "set_color_mode", &PanopticMapper::setColorModeCallback, this);
 
   // Timers.
   if (config_.visualization_interval > 0.0) {
@@ -123,138 +122,61 @@ void PanopticMapper::setupRos() {
         ros::Duration(config_.change_detection_interval),
         &PanopticMapper::changeDetectionCallback, this);
   }
+  if (config_.data_logging_interval > 0.0) {
+    data_logging_timer_ =
+        nh_private_.createTimer(ros::Duration(config_.data_logging_interval),
+                                &PanopticMapper::dataLoggingCallback, this);
+  }
 }
 
-void PanopticMapper::processImages(
-    const sensor_msgs::ImagePtr& depth_img,
-    const sensor_msgs::ImagePtr& color_img,
-    const sensor_msgs::ImagePtr& segmentation_img) {
+void PanopticMapper::processInput(InputData* input) {
   ros::WallTime t0 = ros::WallTime::now();
 
-  // Look up transform.
-  voxblox::Transformation T_M_C;
-  if (!tf_transformer_.lookupTransform(config_.global_frame_name,
-                                       depth_img->header.frame_id,
-                                       depth_img->header.stamp, &T_M_C)) {
-    LOG(WARNING) << "Unable to look up transform from '"
-                 << depth_img->header.frame_id << " ' to '"
-                 << config_.global_frame_name << "', ignoring images.";
-    return;
-  }
-
-  // Read images, segmentation is mutable (copied) for the id tracker.
-  cv_bridge::CvImageConstPtr depth =
-      cv_bridge::toCvShare(depth_img, depth_img->encoding);
-  cv_bridge::CvImageConstPtr color =
-      cv_bridge::toCvShare(color_img, color_img->encoding);
-  cv_bridge::CvImagePtr segmentation =
-      cv_bridge::toCvCopy(segmentation_img, segmentation_img->encoding);
+  // Preprocess the segmentation images and allocate new submaps.
+  id_tracker_->processInput(submaps_.get(), input);
   ros::WallTime t1 = ros::WallTime::now();
 
-  // Allocate new submaps.
-  id_tracker_->processImages(submaps_.get(), T_M_C, depth->image, color->image,
-                             &segmentation->image);
+  // Integrate the images.
+  tsdf_integrator_->processInput(submaps_.get(), input);
   ros::WallTime t2 = ros::WallTime::now();
 
-  // Integrate the images.
-  tsdf_integrator_->processImages(submaps_.get(), T_M_C, depth->image,
-                                  color->image, segmentation->image);
-  ros::WallTime t3 = ros::WallTime::now();
-
   // If requested perform change detection and visualization.
-  if (config_.change_detection_interval <= 0.f) {
-    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  ros::TimerEvent event;
+  if (config_.change_detection_interval < 0.f) {
+    changeDetectionCallback(event);
+  }
+  ros::WallTime t3 = ros::WallTime::now();
+  if (config_.visualization_interval < 0.f) {
+    publishVisualizationCallback(event);
   }
   ros::WallTime t4 = ros::WallTime::now();
-  if (config_.visualization_interval <= 0.f) {
-    publishVisualization();
+  if (config_.data_logging_interval < 0.f) {
+    dataLoggingCallback(event);
   }
-  ros::WallTime t5 = ros::WallTime::now();
 
-  // Log if requested.
+  // Logging.
   std::stringstream info;
-  info << "Integrated images.";
+  info << "Processed input data.";
   if (config_.verbosity >= 3) {
-    info << "\n(id tracking: " << int((t2 - t1).toSec() * 1000)
-         << " + integration: " << int((t3 - t2).toSec() * 1000);
+    info << "\n(tracking: " << int((t1 - t0).toSec() * 1000)
+         << " + integration: " << int((t2 - t1).toSec() * 1000);
     if (config_.change_detection_interval <= 0.f) {
-      info << " + change: " << int((t4 - t3).toSec() * 1000);
+      info << " + change: " << int((t3 - t2).toSec() * 1000);
     }
     if (config_.visualization_interval <= 0.f) {
-      info << " + visual: " << int((t5 - t4).toSec() * 1000);
+      info << " + visual: " << int((t4 - t3).toSec() * 1000);
     }
-    info << " = " << int((t5 - t0).toSec() * 1000) << "ms)";
+    info << " = " << int((t4 - t0).toSec() * 1000) << "ms)";
   }
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
 }
 
-void PanopticMapper::pointcloudCallback(
-    const sensor_msgs::PointCloud2::Ptr& pointcloud_msg) {
-  ros::WallTime t0 = ros::WallTime::now();
-
-  // look up the transform
-  voxblox::Transformation T_S_C;
-  if (!tf_transformer_.lookupTransform(config_.global_frame_name,
-                                       pointcloud_msg->header.frame_id,
-                                       pointcloud_msg->header.stamp, &T_S_C)) {
-    LOG(WARNING) << "Unable to look up transform from '"
-                 << pointcloud_msg->header.frame_id << " ' to '"
-                 << config_.global_frame_name << "', ignoring pointcloud.";
-    return;
-  }
-
-  // Convert the pointcloud msg into a voxblox::Pointcloud, color, and ID
-  // currently just assume prepared pointcloud message with matching fields
-  voxblox::Pointcloud pointcloud;
-  voxblox::Colors colors;
-  std::vector<int> ids;  // IDs reflect the submap ID a point is associated with
-  size_t n_points = pointcloud_msg->height * pointcloud_msg->width;
-  pointcloud.reserve(n_points);
-  colors.reserve(n_points);
-  ids.reserve(n_points);
-
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_id(*pointcloud_msg, "id");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_msg, "x");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_rgb(*pointcloud_msg,
-                                                          "rgb");
-  while (iter_id != iter_id.end()) {
-    ids.push_back(iter_id[0]);
-    pointcloud.push_back(voxblox::Point(iter_x[0], iter_x[1], iter_x[2]));
-    colors.push_back(voxblox::Color(iter_rgb[2], iter_rgb[1],
-                                    iter_rgb[0]));  // bgr encoding
-    ++iter_id;
-    ++iter_x;
-    ++iter_rgb;
-  }
-  ros::WallTime t1 = ros::WallTime::now();
-
-  // allocate new submaps
-  id_tracker_->processPointcloud(submaps_.get(), T_S_C, pointcloud, colors,
-                                 &ids);
-  ros::WallTime t2 = ros::WallTime::now();
-
-  // integrate pointcloud
-  tsdf_integrator_->processPointcloud(submaps_.get(), T_S_C, pointcloud, colors,
-                                      ids);
-  ros::WallTime t3 = ros::WallTime::now();
-  LOG_IF(INFO, config_.verbosity >= 2) << "Integrated point cloud.";
-  LOG_IF(INFO, config_.verbosity >= 3)
-      << "(conversion: " << int((t1 - t0).toSec() * 1000)
-      << " + id tracking: " << int((t2 - t1).toSec() * 1000)
-      << " + integration: " << int((t3 - t2).toSec() * 1000) << " = "
-      << int((t3 - t0).toSec() * 1000) << "ms)";
-
-  // If requested perform change detection and visualization.
-  if (config_.change_detection_interval <= 0.f) {
-    tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
-  }
-  if (config_.visualization_interval <= 0.f) {
-    publishVisualization();
-  }
-}
-
 void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
   tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+}
+
+void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {
+  data_logger_->writeData(ros::Time::now().toSec(), *submaps_);
 }
 
 void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
@@ -262,198 +184,104 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 }
 
 void PanopticMapper::publishVisualization() {
-  submap_visualizer_->visualizeAll(submaps_.get());
+  // Update the submaps meshes.
+  for (const auto& submap_ptr : *submaps_) {
+    submap_ptr->updateMesh();
+  }
+  submap_visualizer_->visualizeAll(*submaps_);
   planning_visualizer_->visualizeAll();
 }
 
-void PanopticMapper::depthImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // Store depth img in queue.
-  depth_queue_.push_back(msg);
-  if (depth_queue_.size() > config_.max_image_queue_length) {
-    depth_queue_.pop_front();
-  }
-  findMatchingMessagesToPublish(msg);
-}
-
-void PanopticMapper::colorImageCallback(const sensor_msgs::ImagePtr& msg) {
-  // Store color img in queue.
-  color_queue_.push_back(msg);
-  if (color_queue_.size() > config_.max_image_queue_length) {
-    color_queue_.pop_front();
-  }
-  findMatchingMessagesToPublish(msg);
-}
-
-void PanopticMapper::segmentationImageCallback(
-    const sensor_msgs::ImagePtr& msg) {
-  // store segmentation img in queue.
-  segmentation_queue_.push_back(msg);
-  if (segmentation_queue_.size() > config_.max_image_queue_length) {
-    segmentation_queue_.pop_front();
-  }
-  findMatchingMessagesToPublish(msg);
-}
-
-void PanopticMapper::findMatchingMessagesToPublish(
-    const sensor_msgs::ImagePtr& reference_msg) {
-  // Check whether there exist 3 images with matching timestamp.
-  std::deque<sensor_msgs::ImagePtr>::iterator depth_it, color_it,
-      segmentation_it;
-
-  depth_it =
-      std::find_if(depth_queue_.begin(), depth_queue_.end(),
-                   [reference_msg](const sensor_msgs::ImagePtr& s) {
-                     return s->header.stamp == reference_msg->header.stamp;
-                   });
-  if (depth_it == depth_queue_.end()) {
-    return;
-  }
-  color_it =
-      std::find_if(color_queue_.begin(), color_queue_.end(),
-                   [reference_msg](const sensor_msgs::ImagePtr& s) {
-                     return s->header.stamp == reference_msg->header.stamp;
-                   });
-  if (color_it == color_queue_.end()) {
-    return;
-  }
-
-  segmentation_it =
-      std::find_if(segmentation_queue_.begin(), segmentation_queue_.end(),
-                   [reference_msg](const sensor_msgs::ImagePtr& s) {
-                     return s->header.stamp == reference_msg->header.stamp;
-                   });
-  if (segmentation_it == segmentation_queue_.end()) {
-    return;
-  }
-
-  // A matching set was found.
-  processImages(*depth_it, *color_it, *segmentation_it);
-  depth_queue_.erase(depth_it);
-  color_queue_.erase(color_it);
-  segmentation_queue_.erase(segmentation_it);
-}
-
 bool PanopticMapper::setVisualizationModeCallback(
-    voxblox_msgs::FilePath::Request& request,
-    voxblox_msgs::FilePath::Response& response) {
-  SubmapVisualizer::VisualizationMode visualization_mode =
-      SubmapVisualizer::visualizationModeFromString(request.file_path);
-  submap_visualizer_->setVisualizationMode(visualization_mode);
-  LOG(INFO) << "Set visualization mode to '"
-            << SubmapVisualizer::visualizationModeToString(visualization_mode)
-            << "'.";
-  return true;
-}
+    panoptic_mapping_msgs::SetVisualizationMode::Request& request,
+    panoptic_mapping_msgs::SetVisualizationMode::Response& response) {
+  response.visualization_mode_set = false;
+  response.color_mode_set = false;
+  bool success = true;
 
-bool PanopticMapper::setColorModeCallback(
-    voxblox_msgs::FilePath::Request& request,
-    voxblox_msgs::FilePath::Response& response) {
-  SubmapVisualizer::ColorMode color_mode =
-      SubmapVisualizer::colorModeFromString(request.file_path);
-  submap_visualizer_->setColorMode(color_mode);
-  LOG(INFO) << "Set visualization mode to '"
-            << SubmapVisualizer::colorModeToString(color_mode) << "'.";
-  return true;
+  // Set the visualization mode if requested.
+  if (!request.visualization_mode.empty()) {
+    SubmapVisualizer::VisualizationMode visualization_mode =
+        SubmapVisualizer::visualizationModeFromString(
+            request.visualization_mode);
+    submap_visualizer_->setVisualizationMode(visualization_mode);
+    std::string visualization_mode_is =
+        SubmapVisualizer::visualizationModeToString(visualization_mode);
+    LOG_IF(INFO, config_.verbosity >= 2)
+        << "Set visualization mode to '" << visualization_mode_is << "'.";
+    response.visualization_mode_set =
+        visualization_mode_is == request.visualization_mode;
+    if (!response.visualization_mode_set) {
+      success = false;
+    }
+  }
+
+  // Set the color mode if requested.
+  if (!request.color_mode.empty()) {
+    SubmapVisualizer::ColorMode color_mode =
+        SubmapVisualizer::colorModeFromString(request.color_mode);
+    submap_visualizer_->setColorMode(color_mode);
+    std::string color_mode_is = SubmapVisualizer::colorModeToString(color_mode);
+    LOG_IF(INFO, config_.verbosity >= 2)
+        << "Set color mode to '" << color_mode_is << "'.";
+    response.color_mode_set = color_mode_is == request.color_mode;
+    if (!response.color_mode_set) {
+      success = false;
+    }
+  }
+
+  // Republish the visualization.
+  submap_visualizer_->visualizeAll(*submaps_);
+  return success;
 }
 
 bool PanopticMapper::saveMapCallback(
-    voxblox_msgs::FilePath::Request& request,
-    voxblox_msgs::FilePath::Response& response) {
-  return saveMap(request.file_path);
+    panoptic_mapping_msgs::SaveLoadMap::Request& request,
+    panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+  response.success = saveMap(request.file_path);
+  return response.success;
 }
 
 bool PanopticMapper::loadMapCallback(
-    voxblox_msgs::FilePath::Request& request,
-    voxblox_msgs::FilePath::Response& response) {
-  return loadMap(request.file_path);
+    panoptic_mapping_msgs::SaveLoadMap::Request& request,
+    panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+  response.success = loadMap(request.file_path);
+  return response.success;
 }
 
-// Save load functionality was heavily adapted from cblox.
 bool PanopticMapper::saveMap(const std::string& file_path) {
-  CHECK(!file_path.empty());
-  std::fstream outfile;
-  outfile.open(file_path, std::fstream::out | std::fstream::binary);
-  if (!outfile.is_open()) {
-    LOG(ERROR) << "Could not open file for writing: " << file_path;
-    return false;
-  }
-  // Saving the submap collection header object.
-  SubmapCollectionProto submap_collection_proto;
-  submap_collection_proto.set_num_submaps(submaps_->size());
-  if (!voxblox::utils::writeProtoMsgToStream(submap_collection_proto,
-                                             &outfile)) {
-    LOG(ERROR) << "Could not write submap collection header message.";
-    outfile.close();
-    return false;
-  }
-  // Saving the submaps.
-  int saved_submaps = 0;
-  for (const auto& submap : *submaps_) {
-    bool success = submap->saveToStream(&outfile);
-    if (success) {
-      saved_submaps++;
-    } else {
-      LOG(WARNING) << "Failed to save submap with ID '" << submap->getID()
-                   << "'.";
-    }
-  }
-  LOG(INFO) << "Successfully saved " << saved_submaps << "/" << submaps_->size()
-            << " submaps.";
-  outfile.close();
-  return true;
+  bool success = submaps_->saveToFile(file_path);
+  LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
+                        << " submaps to '" << file_path << "'.";
+  return success;
 }
 
 bool PanopticMapper::loadMap(const std::string& file_path) {
-  // Clear the current maps.
-  submaps_->clear();
+  auto loaded_map = std::make_shared<SubmapCollection>();
 
-  // Open and check the file.
-  std::ifstream proto_file;
-  proto_file.open(file_path, std::fstream::in);
-  if (!proto_file.is_open()) {
-    LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";
-    return false;
-  }
-  // Unused byte offset result.
-  uint64_t tmp_byte_offset = 0u;
-  SubmapCollectionProto submap_collection_proto;
-  if (!voxblox::utils::readProtoMsgFromStream(
-          &proto_file, &submap_collection_proto, &tmp_byte_offset)) {
-    LOG(ERROR) << "Could not read the protobuf message.";
+  // Load the map.
+  if (!loaded_map->loadFromFile(file_path)) {
     return false;
   }
 
-  // Loading each of the submaps.
-  for (size_t sub_map_index = 0u;
-       sub_map_index < submap_collection_proto.num_submaps(); ++sub_map_index) {
-    std::unique_ptr<Submap> submap_ptr =
-        Submap::loadFromStream(&proto_file, &tmp_byte_offset);
-    if (submap_ptr == nullptr) {
-      LOG(ERROR) << "Failed to load submap '" << sub_map_index
-                 << "' from stream.";
-      return false;
-    }
-
-    // Re-compute cached data and set the relevant flags.
-    tsdf_registrator_->computeIsoSurfacePoints(submap_ptr.get());
+  // Re-compute cached data and set the relevant flags.
+  for (auto& submap_ptr : *loaded_map) {
     submap_ptr->finishActivePeriod();
     if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
       submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
     } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
       submap_ptr->setName("FreeSpace");
     }
-
-    // Add to the collection.
-    submaps_->addSubmap(std::move(submap_ptr));
   }
-  proto_file.close();
+
+  // Set the map.
+  submaps_ = loaded_map;
 
   // Reproduce the mesh and visualization.
-  submap_visualizer_->reset();
-  submap_visualizer_->visualizeAll(submaps_.get());
+  submap_visualizer_->clearMesh();
+  submap_visualizer_->visualizeAll(*submaps_);
 
-  LOG(INFO) << "Successfully loaded " << submaps_->size() << "/"
-            << submap_collection_proto.num_submaps() << " submaps.";
+  LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;
 }
 

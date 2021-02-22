@@ -1,0 +1,5 @@
+string visualization_mode
+string color_mode
+---
+bool visualization_mode_set
+bool color_mode_set

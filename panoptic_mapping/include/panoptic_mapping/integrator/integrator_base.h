@@ -5,32 +5,26 @@
 
 #include <opencv2/core/mat.hpp>
 
-#include "panoptic_mapping/core/common.h"
-#include "panoptic_mapping/core/submap_collection.h"
+#include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/common/input_data_user.h"
+#include "panoptic_mapping/map/submap_collection.h"
 
 namespace panoptic_mapping {
 
 /**
- * Interface for pointcloud integrators.
+ * Interface for TSDF integrators.
  */
-class IntegratorBase {
+class IntegratorBase : public InputDataUser {
  public:
-  IntegratorBase() = default;
-  virtual ~IntegratorBase() = default;
+  IntegratorBase() {
+    // Per default require all three images.
+    addRequiredInput(InputData::InputType::kDepthImage);
+    addRequiredInput(InputData::InputType::kColorImage);
+    addRequiredInput(InputData::InputType::kSegmentationImage);
+  }
+  ~IntegratorBase() override = default;
 
-  // process a and integrate a pointcloud
-  virtual void processPointcloud(SubmapCollection* submaps,
-                                 const Transformation& T_M_C,
-                                 const Pointcloud& pointcloud,
-                                 const Colors& colors,
-                                 const std::vector<int>& ids);
-
-  // process a and integrate a set of images
-  virtual void processImages(SubmapCollection* submaps,
-                             const Transformation& T_M_C,
-                             const cv::Mat& depth_image,
-                             const cv::Mat& color_image,
-                             const cv::Mat& id_image);
+  virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 };
 
 }  // namespace panoptic_mapping

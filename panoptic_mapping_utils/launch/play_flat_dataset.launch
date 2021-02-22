@@ -1,0 +1,33 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/>
+  <arg name="detectron_data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>  
+  <arg name="bag_play_rate" default="1"/>
+  <arg name="use_sim_time" default="false"/>
+  <arg name="start_at" default="1"/>
+  <arg name="wait_time" default="2"/>
+  <arg name="namespace" default=""/>
+  <arg name="use_detectron" default="false"/>
+    
+   
+<!-- ============ Play Data ============ -->
+  <arg name="sim_time_string" value="" unless="$(arg use_sim_time)"/>
+  <arg name="sim_time_string" value="--clock" if="$(arg use_sim_time)"/>
+  
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) $(arg sim_time_string) -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)">
+    <remap from="/airsim_drone/ground_truth/pose" to="$(arg namespace)/pose" />
+    <remap from="/airsim_drone/Pointcloud" to="$(arg namespace)/pointcloud" />  
+    <remap from="/airsim_drone/Scene_cam" to="$(arg namespace)/color_image" />
+    <remap from="/airsim_drone/Depth_cam" to="$(arg namespace)/depth_image" />
+    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_image" unless="$(arg use_detectron)"/>
+    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_detectron)"/>
+  </node>
+  
+   <node pkg="panoptic_mapping_utils" type="detectron_player.py" name="detectron_player" if="$(arg use_detectron)" output="screen">
+     <param name="data_path" value="$(arg detectron_data_path)" /> 
+     <remap from="~id_image_in" to="$(arg namespace)/segmentation_groundtruth" />  
+     <remap from="~predicted_image" to="$(arg namespace)/segmentation_image" />  
+     <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  
+  </node>
+  
+</launch>

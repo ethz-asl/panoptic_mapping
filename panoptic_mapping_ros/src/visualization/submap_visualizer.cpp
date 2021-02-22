@@ -15,7 +15,6 @@ const Color SubmapVisualizer::kUnknownColor_(50, 50, 50);
 
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
-  checkParamGT(mesh_min_weight, 0.f, "mesh_min_weight");
   // NOTE(schmluk): if the visualization or color mode is not valid it will be
   // defaulted to 'all' or 'color' and a warning will be raised.
 }
@@ -30,7 +29,10 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_free_space", &visualize_free_space);
   setupParam("visualize_bounding_volumes", &visualize_bounding_volumes);
   setupParam("include_free_space", &include_free_space);
-  setupParam("mesh_min_weight", &mesh_min_weight);
+}
+
+void SubmapVisualizer::Config::printFields() const {
+  printField("ros_namespace", ros_namespace);
 }
 
 void SubmapVisualizer::Config::fromRosParam() {
@@ -39,10 +41,7 @@ void SubmapVisualizer::Config::fromRosParam() {
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
                                    std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()),
-      label_handler_(std::move(label_handler)),
-      global_frame_name_("mission"),
-      vis_infos_are_updated_(false) {
+    : config_(config.checkValid()), label_handler_(std::move(label_handler)) {
   visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
   color_mode_ = colorModeFromString(config_.color_mode);
   id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
@@ -56,21 +55,28 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
         nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("free_space_tsdf", 100);
   }
   if (config_.visualize_mesh) {
-    mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000, true);
+    mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000);
   }
   if (config_.visualize_tsdf_blocks) {
-    tsdf_blocks_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
-        "tsdf_blocks", 100, true);
+    tsdf_blocks_pub_ =
+        nh_.advertise<visualization_msgs::MarkerArray>("tsdf_blocks", 100);
   }
   if (config_.visualize_bounding_volumes) {
-    bounding_volume_pub_ = nh_.advertise<visualization_msgs::MarkerArray>(
-        "bounding_volumes", 100, true);
+    bounding_volume_pub_ =
+        nh_.advertise<visualization_msgs::MarkerArray>("bounding_volumes", 100);
   }
 }
 
 void SubmapVisualizer::reset() {
-  // Reset all mesh visuals.
-  // TODO(Schmluk): Reset other visualizations too?
+  // Erase all current tracking / cached data.
+  vis_infos_.clear();
+  previous_submaps_ = nullptr;
+}
+
+void SubmapVisualizer::clearMesh() {
+  // Clear the current mesh from the rviz plugin.
+  // NOTE(schmluk): Other visuals could also be cleared but since they are
+  // non-incremental they will anyways be overwritten.
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     for (auto& info : vis_infos_) {
       voxblox_msgs::MultiMesh msg;
@@ -79,22 +85,20 @@ void SubmapVisualizer::reset() {
       mesh_pub_.publish(msg);
     }
   }
-  vis_infos_.clear();
 }
 
-void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
-  publishTfTransforms(*submaps);
-  updateVisInfos(*submaps);
+void SubmapVisualizer::visualizeAll(const SubmapCollection& submaps) {
+  publishTfTransforms(submaps);
+  updateVisInfos(submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.
   visualizeMeshes(submaps);
-  visualizeTsdfBlocks(*submaps);
-  visualizeFreeSpace(*submaps);
-  visualizeBoundingVolume(*submaps);
-  publishTfTransforms(*submaps);
+  visualizeTsdfBlocks(submaps);
+  visualizeFreeSpace(submaps);
+  visualizeBoundingVolume(submaps);
   vis_infos_are_updated_ = false;
 }
 
-void SubmapVisualizer::visualizeMeshes(SubmapCollection* submaps) {
+void SubmapVisualizer::visualizeMeshes(const SubmapCollection& submaps) {
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     std::vector<voxblox_msgs::MultiMesh> msgs = generateMeshMsgs(submaps);
     for (auto& msg : msgs) {
@@ -130,17 +134,16 @@ void SubmapVisualizer::visualizeBoundingVolume(
 }
 
 std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
-    SubmapCollection* submaps) {
-  CHECK_NOTNULL(submaps);
+    const SubmapCollection& submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
 
   // Update the visualization infos.
   if (!vis_infos_are_updated_) {
-    updateVisInfos(*submaps);
+    updateVisInfos(submaps);
   }
 
   // Process all submaps based on their visualization info.
-  for (const auto& submap : *submaps) {
+  for (const auto& submap : submaps) {
     if (submap->getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
@@ -156,6 +159,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     // Setup message.
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
+    msg.header.frame_id = submap->getFrameName();
     msg.name_space = std::to_string(info.id);
 
     // If the submap was deleted we send an empty message to delete the visual.
@@ -164,11 +168,6 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
       vis_infos_.erase(it);
       continue;
     }
-
-    // Update the mesh.
-    msg.header.frame_id = submap->getFrameName();
-    updateSubmapMesh(submap.get(), info.remesh_everything);
-    info.remesh_everything = false;
 
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
@@ -192,7 +191,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
                                     color_mode_voxblox, &msg.mesh);
 
     if (msg.mesh.mesh_blocks.empty()) {
-      // Nothing changed, don't sent an empty msg which would reset the mesh.
+      // Nothing changed, don't send an empty msg which would reset the mesh.
       continue;
     }
 
@@ -340,6 +339,12 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
 }
 
 void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
+  // Check whether the same submap collection is being visualized (cached data).
+  if (previous_submaps_ != &submaps) {
+    reset();
+    previous_submaps_ = &submaps;
+  }
+
   // Update submap ids.
   std::vector<int> ids;
   std::vector<int> new_ids;
@@ -355,7 +360,6 @@ void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
     auto it = vis_infos_.emplace(std::make_pair(id, SubmapVisInfo())).first;
     SubmapVisInfo& info = it->second;
     info.id = id;
-    info.remesh_everything = true;  // Could be a loaded submap.
     info.republish_everything = true;
     setSubmapVisColor(submaps.getSubmap(id), &info);
   }
@@ -418,37 +422,40 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         break;
       }
       case ColorMode::kClasses: {
-        LOG(WARNING) << "Class coloring is not yet implemented.";
+        if (submap.getLabel() == PanopticLabel::kUnknown) {
+          info->color = kUnknownColor_;
+        } else {
+          info->color = id_color_map_.colorLookup(submap.getClassID());
+        }
         break;
       }
       case ColorMode::kChange: {
-        if (info->previous_change_state !=
-                submap.getChangeDetectionData().state ||
+        if (info->previous_change_state != submap.getChangeState() ||
             info->change_color) {
-          switch (submap.getChangeDetectionData().state) {
-            case ChangeDetectionData::State::kNew: {
+          switch (submap.getChangeState()) {
+            case ChangeState::kNew: {
               info->color = Color(0, 200, 0);
               break;
             }
-            case ChangeDetectionData::State::kMatched: {
+            case ChangeState::kMatched: {
               info->color = Color(0, 0, 255);
               break;
             }
-            case ChangeDetectionData::State::kAbsent: {
+            case ChangeState::kAbsent: {
               info->color = Color(255, 0, 0);
               break;
             }
-            case ChangeDetectionData::State::kPersistent: {
+            case ChangeState::kPersistent: {
               info->color = Color(0, 0, 255);
               break;
             }
-            case ChangeDetectionData::State::kUnobserved: {
+            case ChangeState::kUnobserved: {
               info->color = Color(150, 150, 150);
               break;
             }
           }
           info->republish_everything = true;
-          info->previous_change_state = submap.getChangeDetectionData().state;
+          info->previous_change_state = submap.getChangeState();
         }
         break;
       }
@@ -478,18 +485,6 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
   }
 
   info->change_color = false;
-}
-
-void SubmapVisualizer::updateSubmapMesh(Submap* submap,
-                                        bool update_all_blocks) {
-  CHECK_NOTNULL(submap);
-  constexpr bool clear_updated_flag = true;
-  // Use the default integrator config to have color always available.
-  voxblox::MeshIntegratorConfig config;
-  config.min_weight = config_.mesh_min_weight;
-  mesh_integrator_ = std::make_unique<voxblox::MeshIntegrator<TsdfVoxel>>(
-      config, submap->getTsdfLayerPtr().get(), submap->getMeshLayerPtr().get());
-  mesh_integrator_->generateMesh(!update_all_blocks, clear_updated_flag);
 }
 
 void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {
@@ -549,6 +544,8 @@ SubmapVisualizer::visualizationModeFromString(
     return VisualizationMode::kAll;
   } else if (visualization_mode == "active") {
     return VisualizationMode::kActive;
+  } else if (visualization_mode == "active_only") {
+    return VisualizationMode::kActiveOnly;
   } else {
     LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
                  << "', using 'all' instead.";
@@ -563,6 +560,8 @@ std::string SubmapVisualizer::visualizationModeToString(
       return "all";
     case VisualizationMode::kActive:
       return "active";
+    case VisualizationMode::kActiveOnly:
+      return "active_only";
   }
   return "unknown";
 }

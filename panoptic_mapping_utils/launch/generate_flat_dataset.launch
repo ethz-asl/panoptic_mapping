@@ -1,0 +1,48 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="waypoints" default="/home/lukas/Documents/Datasets/flat_dataset/waypoints1.yaml"/>
+  <arg name="airsim_cfg" default="/home/lukas/Documents/Datasets/flat_dataset/airsim.yaml"/>
+  <arg name="output_dir" default="/home/lukas/Documents/Datasets/flat_dataset/"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="record_data" default="true"/>
+
+  <!-- NOTE: to get the correct labels use 'compute_infrared_correction.py'-->
+  <!-- NOTE: to label the scene consistently use panoptic_mapping_utils 'flat_semantic_labelling.py'-->
+
+  <!-- ========== Execute ========== -->
+  <param name="use_sim_time" value="$(arg use_sim_time)" />
+  
+  <!-- World transform -->
+  <node pkg="tf" type="static_transform_publisher" name="static_world_tf" args="0 0 0 0 0 0 1 /world /odom 100"/>
+
+  <!-- airsim client -->
+  <node name="airsim_simulator" pkg="unreal_airsim" type="airsim_simulator_node" required="true" output="screen" args="-alsologtostderr">
+     <rosparam file="$(arg airsim_cfg)"/>
+  </node>
+  
+  <!-- waypoints -->
+  <node name="waypoint_publisher" pkg="panoptic_mapping_utils" type="waypoint_dataset_generator.py" output="screen">
+    <param name="waypoint_path" value="$(arg waypoints)" />
+    <param name="replan_pos_threshold" value="0.2" />
+    <param name="replan_yaw_threshold" value="10" />
+    <remap from="~pose_in" to="/airsim_drone/ground_truth/pose" />
+    <remap from="~simulation_ready" to="/simulation_is_ready" />
+    <remap from="~waypoints_out" to="/airsim_drone/command/pose" />
+  </node>
+  
+    <!-- Path visualization -->
+  <node name="path_visualizer" pkg="panoptic_mapping_utils" type="path_visualizer.py" output="screen">
+    <remap from="~pose_in" to="/airsim_drone/ground_truth/pose" />
+    <param name="use_arrow" value="false" /> 
+    <param name="length" value="0.5" />
+  </node>
+  
+   <!-- Record a rosbag of the visualization-->
+  <node pkg="rosbag" type="record" name="rosbag" if="$(arg record_data)"
+       args="record -o $(arg output_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected "/>  
+<!--  /airsim_drone/Pointcloud     -->
+
+  <!-- RVIZ Visualization -->
+  <node type="rviz" name="rviz_voxblox" pkg="rviz" args="-d /home/lukas/Documents/Datasets/flat_dataset/visualization.rviz"/>
+  
+</launch>

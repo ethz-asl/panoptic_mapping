@@ -14,8 +14,8 @@
 #include <voxblox_msgs/MultiMesh.h>
 #include <voxblox_ros/mesh_vis.h>
 
-#include <panoptic_mapping/core/common.h>
-#include <panoptic_mapping/core/submap_collection.h>
+#include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
 
 namespace panoptic_mapping {
@@ -33,7 +33,6 @@ class SubmapVisualizer {
     bool visualize_free_space = true;
     bool visualize_bounding_volumes = true;
     bool include_free_space = false;
-    float mesh_min_weight = 1e-4;
     std::string ros_namespace;
 
     Config() { setConfigName("SubmapVisualizer"); }
@@ -41,6 +40,7 @@ class SubmapVisualizer {
    protected:
     void setupParamsAndPrinting() override;
     void fromRosParam() override;
+    void printFields() const override;
     void checkParams() const override;
   };
 
@@ -58,7 +58,7 @@ class SubmapVisualizer {
     kClasses,
     kChange
   };
-  enum class VisualizationMode { kAll = 0, kActive };
+  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);
@@ -70,7 +70,7 @@ class SubmapVisualizer {
 
   // Visualization message creation.
   std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
-      SubmapCollection* submaps);
+      const SubmapCollection& submaps);
   visualization_msgs::MarkerArray generateBlockMsgs(
       const SubmapCollection& submaps);
   pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
@@ -79,8 +79,8 @@ class SubmapVisualizer {
       const SubmapCollection& submaps);
 
   // Publish visualization requests.
-  void visualizeAll(SubmapCollection* submaps);
-  void visualizeMeshes(SubmapCollection* submaps);
+  void visualizeAll(const SubmapCollection& submaps);
+  void visualizeMeshes(const SubmapCollection& submaps);
   void visualizeTsdfBlocks(const SubmapCollection& submaps);
   void visualizeFreeSpace(const SubmapCollection& submaps);
   void visualizeBoundingVolume(const SubmapCollection& submaps);
@@ -88,6 +88,7 @@ class SubmapVisualizer {
 
   // Interaction.
   void reset();
+  void clearMesh();
   void setVisualizationMode(VisualizationMode visualization_mode);
   void setColorMode(ColorMode color_mode);
   void setGlobalFrameName(const std::string& frame_name) {
@@ -100,7 +101,6 @@ class SubmapVisualizer {
   struct SubmapVisInfo {
     // General.
     int id = 0;  // Corresponding submap id.
-    bool remesh_everything = false;
     bool republish_everything = false;
     bool was_deleted = false;
     bool change_color = true;
@@ -108,11 +108,10 @@ class SubmapVisualizer {
     float alpha = 1.0;
 
     // Tracking.
-    ChangeDetectionData::State previous_change_state;  // kChange
-    bool was_active;                                   // kActive
+    ChangeState previous_change_state;  // kChange
+    bool was_active;                    // kActive
   };
 
-  void updateSubmapMesh(Submap* submap, bool update_all_blocks = false);
   void updateVisInfos(const SubmapCollection& submaps);
   void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
 
@@ -122,19 +121,20 @@ class SubmapVisualizer {
   // Settings.
   VisualizationMode visualization_mode_;
   ColorMode color_mode_;
-  std::string global_frame_name_;
+  std::string global_frame_name_ = "mission";
 
   // Members.
   std::shared_ptr<LabelHandler> label_handler_;
-  std::unique_ptr<voxblox::MeshIntegrator<TsdfVoxel>> mesh_integrator_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
   voxblox::ExponentialOffsetIdColorMap id_color_map_;
 
-  // Data.
+  // Cached / tracked data.
   std::unordered_map<int, SubmapVisInfo> vis_infos_;
-  bool vis_infos_are_updated_;
+  bool vis_infos_are_updated_ = false;
+  const SubmapCollection* previous_submaps_ =
+      nullptr;  // Only for tracking, not for use!
 
-  // Publishers.
+  // ROS.
   ros::NodeHandle nh_;
   ros::Publisher freespace_pub_;
   ros::Publisher mesh_pub_;

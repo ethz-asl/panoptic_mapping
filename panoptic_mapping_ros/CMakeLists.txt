@@ -12,9 +12,11 @@ catkin_package()
 
 cs_add_library(${PROJECT_NAME}
         src/panoptic_mapper.cpp
+        src/input/input_synchronizer.cpp
         src/visualization/submap_visualizer.cpp
         src/visualization/planning_visualizer.cpp
-        src/conversions/ros_component_factory.cpp
+        src/visualization/tracking_visualizer.cpp
+        src/conversions/conversions.cpp
         )
 
 ###############
@@ -25,4 +27,11 @@ cs_add_executable(panoptic_mapper_node
         app/panoptic_mapper_node.cpp
         )
 target_link_libraries(panoptic_mapper_node ${PROJECT_NAME})
+
+###########
+# Export #
+###########
+
+cs_install()
+cs_export()
 

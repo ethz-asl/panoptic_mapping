@@ -27,6 +27,7 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
+  setupParam("truncation_distance", &truncation_distance);
 }
 
 GroundTruthIDTracker::GroundTruthIDTracker(
@@ -35,23 +36,23 @@ GroundTruthIDTracker::GroundTruthIDTracker(
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
-                                         const Transformation& T_M_C,
-                                         const cv::Mat& depth_image,
-                                         const cv::Mat& color_image,
-                                         cv::Mat* id_image) {
+void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
+                                        InputData* input) {
+  CHECK_NOTNULL(submaps);
+  CHECK_NOTNULL(input);
+  CHECK(inputIsValid(*input));
+  // NOTE: The id_image is always provided as CV_32SC1 (int) image
   // Look for new instances.
+  // TODO(schmluk): Update to use only valid pixels.
   std::unordered_set<int> instances;
-
-  CV_Assert(id_image->depth() == CV_8U);
-  const cv::MatIterator_<uchar> begin = id_image->begin<uchar>();
-  const cv::MatIterator_<uchar> end = id_image->end<uchar>();
+  const cv::MatIterator_<int> begin = input->idImage()->begin<int>();
+  const cv::MatIterator_<int> end = input->idImage()->end<int>();
   for (auto it = begin; it != end; ++it) {
-    instances.insert(static_cast<int>(*it));
+    instances.insert(*it);
   }
 
   // Allocate new submaps if necessary.
-  for (const auto& instance : instances) {
+  for (const int instance : instances) {
     if (config_.input_is_mesh_id) {
       allocateSubmap(label_handler_->getSegmentationIdFromMeshId(instance),
                      submaps);
@@ -63,27 +64,8 @@ void GroundTruthIDTracker::processImages(SubmapCollection* submaps,
 
   // Set segmentation image to submap ids.
   for (auto it = begin; it != end; ++it) {
-    *it = static_cast<uchar>(instance_to_id_[static_cast<int>(*it)]);
+    *it = instance_to_id_[*it];
   }
-
-  // Allocate free space map if required.
-  allocateFreeSpaceSubmap(submaps);
-}
-
-void GroundTruthIDTracker::processPointcloud(SubmapCollection* submaps,
-                                             const Transformation& T_M_C,
-                                             const Pointcloud& pointcloud,
-                                             const Colors& colors,
-                                             std::vector<int>* ids) {
-  // Iterate through point cloud and replace labels.
-  for (int& id : *ids) {
-    if (config_.input_is_mesh_id) {
-      id = label_handler_->getSegmentationIdFromMeshId(id);
-    }
-    allocateSubmap(id, submaps);
-    id = instance_to_id_[id];
-  }
-  printAndResetWarnings();
 
   // Allocate free space map if required.
   allocateFreeSpaceSubmap(submaps);
@@ -130,6 +112,8 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
       break;
     }
   }
+  cfg.truncation_distance = config_.truncation_distance;
+  cfg.initializeDependentVariableDefaults();
   Submap* new_submap = submaps->createSubmap(cfg);
   instance_to_id_[new_instance] = new_submap->getID();
   new_submap->setInstanceID(new_instance);
@@ -148,6 +132,8 @@ void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   Submap::Config config;
   config.voxels_per_side = config_.voxels_per_side;
   config.voxel_size = config_.freespace_voxel_size;
+  config.truncation_distance = config_.truncation_distance;
+  config.initializeDependentVariableDefaults();
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.

@@ -24,18 +24,25 @@ cs_add_library(${PROJECT_NAME}_proto ${PROTO_SRCS})
 target_link_libraries(${PROJECT_NAME}_proto ${PROTOBUF_LIBRARIES})
 
 cs_add_library(${PROJECT_NAME}
-        src/core/submap.cpp
-        src/core/submap_id.cpp
-        src/core/submap_bounding_volume.cpp
-        src/core/submap_collection.cpp
+        src/common/camera.cpp
+        src/common/input_data_user.cpp
+        src/map/submap.cpp
+        src/map/submap_id.cpp
+        src/map/instance_id.cpp
+        src/map/submap_bounding_volume.cpp
+        src/map/submap_collection.cpp
         src/preprocessing/label_handler.cpp
+        src/preprocessing/tracking_info.cpp
+        src/preprocessing/single_tsdf_tracker.cpp
         src/preprocessing/ground_truth_id_tracker.cpp
-        src/integrator/integrator_base.cpp
-        src/integrator/naive_integrator.cpp
+        src/preprocessing/projective_id_tracker.cpp
+        src/preprocessing/detectron_id_tracker.cpp
         src/integrator/projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
         src/registration/tsdf_registrator.cpp
-        src/planning/planning_interface.cpp
+        src/tools/planning_interface.cpp
+        src/tools/map_renderer.cpp
+        src/tools/data_writer.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
 

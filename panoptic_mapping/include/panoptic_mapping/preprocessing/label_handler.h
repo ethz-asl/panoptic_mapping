@@ -7,8 +7,8 @@
 
 #include <voxblox/core/color.h>
 
-#include "panoptic_mapping/core/common.h"
-#include "panoptic_mapping/core/submap.h"
+#include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
 

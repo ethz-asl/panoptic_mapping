@@ -1,60 +1,56 @@
-#T_base_sensor:
-# - [1, 0, 0, 0.3]
-# - [ 0, 1, 0, 0]
-# - [ 0,  0, 1, 0]
-# - [ 0.0, 0.0, 0.0, 1.0]
-
- 
 # General Params
 verbosity: 3
 global_frame_name: world
-label_path: /home/lukas/Documents/datasets/flat_dataset/labels.csv
+sensor_frame_name: airsim_drone/Depth_cam
+label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
+data_logging_interval: -1.0
+max_input_queue_length: 100
 
-tsdf_integrator:  
-  type: projective # naive, projective, projective_multi_tsdf
-  verbosity: 1
-  
-  # projective args
-  width: 640
+camera:
+  verbosity: 0
+  width: 640  # Px
   height: 480
   vx: 320
   vy: 240
-  focal_length: 320
-  
+  fx: 320
+  fy: 320
   max_range: 5  # m
   min_range: 0.1
+
+id_tracker:
+  type: ground_truth  # single_tsdf, ground_truth, projective, detectron
+  verbosity: 3
+  instance_voxel_size: 0.03
+  background_voxel_size: 0.08
+  unknown_voxel_size: 0.1
+  freespace_voxel_size: 0.3
+  voxels_per_side: 16
+  truncation_distance: 0
+  input_is_mesh_id: true
+  
+  # Projective ID tracker
+  camera_namespace: ~/camera
+  depth_tolerance: -1  # m, negative = #vs
+  tracking_metric: IoU  # IoU, overlap
+  match_acceptance_threshold: 0.1
+  min_allocation_size: 2000 # px, for submap allocation.
+  
+  impaint_voxel_size: true
+  debug: true
+  
+  # Single ID Tracker
+  voxel_size: 0.05
+  
+tsdf_integrator:  
+  type: projective # projective
+  verbosity: 1
+  camera_namespace: ~/camera
   use_weight_dropoff: true
-  sparsity_compensation_factor: 1.0
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
   foreign_rays_clear: true
-  
-  # naive args
-  voxblox_integrator_type: fast # projective, fast
-  sensor_vertical_field_of_view_degrees: 73.7397952
-  use_const_weight: true  
-  max_ray_length_m: 5
-  voxel_carving_enabled: true
-  use_weight_dropoff: true
-  sparsity_compensation_factor: 1.0
-
-#  truncation_distance: 0.2
-#  max_ray_length_m: 5.0
-#  use_const_weight: false
-#  use_sparsity_compensation_factor: true
-#  sparsity_compensation_factor: 20.0
-#  integration_order_mode: "sorted"
-
-id_tracker:
-  type: ground_truth
-  verbosity: 2
-  instance_voxel_size: 0.03
-  background_voxel_size: 0.08
-  unknown_voxel_size: 0.08
-  freespace_voxel_size: 0.3
-  voxels_per_side: 16
   
 tsdf_registrator:
   verbosity: 1
@@ -71,20 +67,27 @@ visualization:
   
   # Submaps
   color_mode: color # submaps, instances, color, normals, classes, change
-  visualization_mode: active  # all, active 
+  visualization_mode: active  # all, active, active_only
   submap_color_discretization: 50
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true
   visualize_bounding_volumes: true
-  include_free_space: true
+  include_free_space: false
   mesh_min_weight: 0.000001
   
   # Planning
   visualize_slice: true
   planning_slice_resolution: 0.1
   planning_slice_height: -0.5
-
+  
+  # Tracking
+  visualize_tracking: true
+  
+data_writer:
+  verbosity: 1
+  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
+  file_name: ""
 
   
 
