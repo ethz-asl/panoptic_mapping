@@ -9,7 +9,7 @@
   <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run2.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
-  <arg name="use_detectron" default="true"/>
+  <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
   <arg name="scan_id" default="1"/>
@@ -21,7 +21,8 @@
   <!-- Load maps -->
   <arg name="load_map" default = "true"/>
 <!--  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>-->
- <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>
+<!-- <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>-->
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/flat/run1_gt.panmap"/>
 
 
 

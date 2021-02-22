@@ -22,6 +22,8 @@ class TsdfRegistrator {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
+
+    // Change detection.
     float min_voxel_weight = 1e-6;
     float error_threshold = -1;  // m, negative values are multiples of
     // the voxel_size.
@@ -30,6 +32,9 @@ class TsdfRegistrator {
     int match_acceptance_points = 50;
     float match_acceptance_percentage = 0.1;
     bool normalize_by_voxel_weight = true;
+
+    // Behavior.
+    bool allow_multiple_matches = true;  // False: only 1-1 associations
 
     Config() { setConfigName("TsdfRegistrator"); }
 
