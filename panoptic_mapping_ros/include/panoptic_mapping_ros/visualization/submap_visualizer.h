@@ -58,7 +58,7 @@ class SubmapVisualizer {
     kClasses,
     kChange
   };
-  enum class VisualizationMode { kAll = 0, kActive };
+  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);

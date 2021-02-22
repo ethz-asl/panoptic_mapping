@@ -3,7 +3,7 @@
 Simply tells the mapper to load a .panmap file as soon as possible.
 """
 import rospy
-from voxblox_msgs.srv import FilePath
+from panoptic_mapping_msgs.srv import SaveLoadMap
 
 if __name__ == '__main__':
     rospy.init_node('map_loader', anonymous=True)
@@ -13,6 +13,6 @@ if __name__ == '__main__':
     rospy.loginfo("map_loader: Waiting for service '%s'." % srv_name)
     rospy.wait_for_service(srv_name)
     rospy.sleep(delay)
-    srv = rospy.ServiceProxy(srv_name, FilePath)
+    srv = rospy.ServiceProxy(srv_name, SaveLoadMap)
     srv(path)
     rospy.loginfo("map_loader: Finished after calling service.")

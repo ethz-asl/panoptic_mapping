@@ -101,6 +101,7 @@ class Submap {
   void setLabel(PanopticLabel label) { label_ = label; }
   void setName(const std::string& name) { name_ = name; }
   void setChangeState(ChangeState state) { change_state_ = state; }
+  void setIsActive(bool is_active) { is_active_ = is_active; }
 
   // Processing.
   void finishActivePeriod();

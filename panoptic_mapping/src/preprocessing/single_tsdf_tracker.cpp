@@ -47,15 +47,22 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
-  // Allocate the single map.
-  Submap::Config cfg;
-  cfg.voxels_per_side = config_.voxels_per_side;
-  cfg.voxel_size = config_.voxel_size;
-  cfg.truncation_distance = config_.truncation_distance;
-  cfg.initializeDependentVariableDefaults();
-  Submap* new_submap = submaps->createSubmap(cfg);
-  new_submap->setLabel(PanopticLabel::kBackground);
-  map_id_ = new_submap->getID();
+  // Check if there is a loaded map.
+  if (submaps->size() > 0) {
+    Submap* map = submaps->begin()->get();
+    map->setIsActive(true);
+    map_id_ = map->getID();
+  } else {
+    // Allocate the single map.
+    Submap::Config cfg;
+    cfg.voxels_per_side = config_.voxels_per_side;
+    cfg.voxel_size = config_.voxel_size;
+    cfg.truncation_distance = config_.truncation_distance;
+    cfg.initializeDependentVariableDefaults();
+    Submap* new_submap = submaps->createSubmap(cfg);
+    new_submap->setLabel(PanopticLabel::kBackground);
+    map_id_ = new_submap->getID();
+  }
   is_setup_ = true;
 }
 

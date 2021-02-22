@@ -544,6 +544,8 @@ SubmapVisualizer::visualizationModeFromString(
     return VisualizationMode::kAll;
   } else if (visualization_mode == "active") {
     return VisualizationMode::kActive;
+  } else if (visualization_mode == "active_only") {
+    return VisualizationMode::kActiveOnly;
   } else {
     LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
                  << "', using 'all' instead.";
@@ -558,6 +560,8 @@ std::string SubmapVisualizer::visualizationModeToString(
       return "all";
     case VisualizationMode::kActive:
       return "active";
+    case VisualizationMode::kActiveOnly:
+      return "active_only";
   }
   return "unknown";
 }

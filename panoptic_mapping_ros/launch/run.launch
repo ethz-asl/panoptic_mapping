@@ -6,7 +6,7 @@
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
-  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/> 
+  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run2.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
   <arg name="use_detectron" default="true"/>
@@ -17,11 +17,11 @@
     
   <!-- Mapper -->
   <arg name="config" default="devel_mapper"/>
-  <arg name="use_image_input" default = "true"/>
   
   <!-- Load maps -->
-  <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>
+  <arg name="load_map" default = "true"/>
+<!--  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>-->
+ <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>
 
 
 
@@ -38,11 +38,10 @@
     <rosparam file="$(find panoptic_mapping_ros)/config/$(arg config).yaml"/>
 
     <!-- Input -->
-    <remap from="pointcloud_in" to="$(arg namespace)/pointcloud" unless="$(arg use_image_input)"/>
-    <remap from="color_image_in" to="$(arg namespace)/color_image" if="$(arg use_image_input)"/>
-    <remap from="depth_image_in" to="$(arg namespace)/depth_image" if="$(arg use_image_input)"/>
-<!--    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image" if="$(arg use_image_input)"/>-->
-<remap from="segmentation_image_in" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_image_input)"/>
+    <remap from="color_image_in" to="$(arg namespace)/color_image"/>
+    <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
+<!--    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>-->
+<remap from="segmentation_image_in" to="$(arg namespace)/segmentation_groundtruth"/>
     <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
   </node>  
   

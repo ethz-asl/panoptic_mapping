@@ -1,15 +1,15 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- Groundtruth -->
-  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>
+  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run2/flat_2_gt_10000.ply"/>
   
   <!-- Source map -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run2_multi_evaluated.panmap"/>
   
   <!-- Params -->
   <arg name="maximum_distance" default="0.1"/>
   <arg name="evaluate" default="false"/>
-  <arg name="compute_coloring" default="true"/>
+  <arg name="compute_coloring" default="false"/>
   <arg name="visualize" default="true"/>
 
 
