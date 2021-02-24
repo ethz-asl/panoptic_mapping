@@ -1,7 +1,10 @@
 #include "panoptic_mapping/registration/tsdf_registrator.h"
 
 #include <algorithm>
+#include <utility>
+#include <vector>
 
+#include <voxblox/integrator/merge_integration.h>
 #include <voxblox/mesh/mesh_integrator.h>
 
 #include "panoptic_mapping/map/submap.h"
@@ -197,6 +200,35 @@ bool TsdfRegistrator::getDistanceAndWeightAtPoint(
   *distance = voxel.distance;
   *weight = voxel.weight;
   return true;
+}
+
+void TsdfRegistrator::mergeMatchingSubmaps(SubmapCollection* submaps) {
+  // Merge all submaps of identical Instance ID into one.
+  submaps->updateInstanceToSubmapIDTable();
+  int merged_maps = 0;
+  for (const auto& instance_submaps : submaps->getInstanceToSubmapIDTable()) {
+    const auto& ids = instance_submaps.second;
+    Submap* target;
+    for (auto it = ids.begin(); it != ids.end(); ++it) {
+      if (it == ids.begin()) {
+        target = submaps->getSubmapPtr(*it);
+        continue;
+      }
+      // Merging.
+      merged_maps++;
+      voxblox::mergeLayerAintoLayerB(submaps->getSubmap(*it).getTsdfLayer(),
+                                     target->getTsdfLayerPtr().get());
+      submaps->removeSubmap(*it);
+    }
+    // Set the updated flags of the changed layer.
+    voxblox::BlockIndexList block_list;
+    target->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    for (auto& index : block_list) {
+      target->getTsdfLayerPtr()->getBlockByIndex(index).updated().set();
+    }
+  }
+  LOG_IF(INFO, config_.verbosity >= 2)
+      << "Merged " << merged_maps << " submaps.";
 }
 
 }  // namespace panoptic_mapping

@@ -51,10 +51,10 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   std::unordered_set<int> instances;
   for (int u = 0; u < input->idImage()->cols; ++u) {
     for (int v = 0; v < input->idImage()->rows; ++v) {
-      const float depth = input->depthImage().at<float>(v, u);
-      if (depth < max_depth && depth > min_depth) {
-        instances.insert(input->idImage()->at<int>(v, u));
-      }
+      //      const float depth = input->depthImage().at<float>(v, u);
+      //      if (depth < max_depth && depth > min_depth) {
+      instances.insert(input->idImage()->at<int>(v, u));
+      //      }
     }
   }
 

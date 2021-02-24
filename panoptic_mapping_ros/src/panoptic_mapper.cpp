@@ -253,6 +253,14 @@ bool PanopticMapper::loadMapCallback(
 
 bool PanopticMapper::saveMap(const std::string& file_path) {
   // TEST: merge maps
+  tsdf_registrator_->mergeMatchingSubmaps(submaps_.get());
+  for (const auto& submap_ptr : *submaps_) {
+    if (submap_ptr->getChangeState() == ChangeState::kAbsent) {
+      submap_ptr->setInstanceID(1);
+    } else {
+      submap_ptr->setInstanceID(0);
+    }
+  }
 
   bool success = submaps_->saveToFile(file_path);
   LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()

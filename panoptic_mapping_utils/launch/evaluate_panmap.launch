@@ -4,7 +4,7 @@
   <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run2/flat_2_gt_10000.ply"/>
   
   <!-- Source map -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run2_multi_evaluated.panmap"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run2_2cm_evaluated.panmap"/>
   
   <!-- Params -->
   <arg name="maximum_distance" default="0.1"/>

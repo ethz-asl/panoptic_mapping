@@ -50,6 +50,8 @@ class TsdfRegistrator {
   void checkSubmapCollectionForChange(const SubmapCollection& submaps) const;
   bool submapsConflict(const Submap& reference, const Submap& other,
                        float* matching_points = nullptr) const;
+  void mergeMatchingSubmaps(SubmapCollection* submaps);
+  void mergeSubmapAintoSubmapB(const Submap& A, Submap* B) {}
 
  private:
   const Config config_;

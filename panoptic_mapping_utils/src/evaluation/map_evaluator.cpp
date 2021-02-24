@@ -31,9 +31,10 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
                            const ros::NodeHandle& nh_private)
     : nh_(nh), nh_private_(nh_private) {
+  auto config =
+      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(nh_private_);
   visualizer_ = std::make_unique<SubmapVisualizer>(
-      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(nh_private_),
-      std::make_shared<LabelHandler>());
+      config, std::make_shared<LabelHandler>());
 }
 
 bool MapEvaluator::evaluate(const EvaluationRequest& request) {
@@ -130,6 +131,18 @@ void MapEvaluator::computeReconstructionError(
   std::vector<float> abserror;
   abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
 
+  // TEST
+  std::vector<int> inactive_ids;
+  for (auto& s : *submaps_) {
+    s->setIsActive(s->getInstanceID() == 0);
+    if (!s->isActive()) {
+      inactive_ids.push_back(s->getID());
+    }
+  }
+  for (int id : inactive_ids) {
+    submaps_->removeSubmap(id);
+  }
+
   // Setup progress bar.
   const uint64_t interval = gt_ptcloud_->size() / 100;
   uint64_t count = 0;
@@ -144,7 +157,7 @@ void MapEvaluator::computeReconstructionError(
     total_points++;
 
     float distance;
-    if (planning_->getDistance(point, &distance)) {
+    if (planning_->getDistance(point, &distance, false)) {
       if (std::abs(distance) > request.maximum_distance) {
         distance = request.maximum_distance;
         truncated_points++;
