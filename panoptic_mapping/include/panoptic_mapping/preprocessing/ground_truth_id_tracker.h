@@ -22,7 +22,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
     bool input_is_mesh_id =
         false;  // If true look up the instance id in the label handler.
     bool use_ground_truth_instance_ids = true;
-    float truncation_distance = 0.0;
+    float truncation_distance = -2;  // negative = # voxel sizes
     float instance_voxel_size = 0.05;
     float background_voxel_size = 0.1;
     float unknown_voxel_size = 0.1;

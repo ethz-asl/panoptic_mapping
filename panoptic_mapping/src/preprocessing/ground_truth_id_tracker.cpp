@@ -17,6 +17,7 @@ void GroundTruthIDTracker::Config::checkParams() const {
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
+  checkParamNE(truncation_distance, 0.f, "truncation_distance");
 }
 
 void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
@@ -98,30 +99,32 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   }
 
   // Allocate new submap.
-  Submap::Config cfg;
-  cfg.voxels_per_side = config_.voxels_per_side;
+  Submap::Config config;
+  config.voxels_per_side = config_.voxels_per_side;
   PanopticLabel label = label_handler_->getPanopticLabel(new_instance);
   switch (label) {
     case PanopticLabel::kInstance: {
-      cfg.voxel_size = config_.instance_voxel_size;
+      config.voxel_size = config_.instance_voxel_size;
       break;
     }
     case PanopticLabel::kBackground: {
-      cfg.voxel_size = config_.background_voxel_size;
+      config.voxel_size = config_.background_voxel_size;
       break;
     }
     case PanopticLabel::kFreeSpace: {
-      cfg.voxel_size = config_.freespace_voxel_size;
+      config.voxel_size = config_.freespace_voxel_size;
       break;
     }
     case PanopticLabel::kUnknown: {
-      cfg.voxel_size = config_.unknown_voxel_size;
+      config.voxel_size = config_.unknown_voxel_size;
       break;
     }
   }
-  cfg.truncation_distance = config_.truncation_distance;
-  cfg.initializeDependentVariableDefaults();
-  Submap* new_submap = submaps->createSubmap(cfg);
+  config.truncation_distance = config_.truncation_distance;
+  if (config.truncation_distance < 0.f) {
+    config.truncation_distance *= -config.voxel_size;
+  }
+  Submap* new_submap = submaps->createSubmap(config);
   instance_to_id_[new_instance] = new_submap->getID();
   if (config_.use_ground_truth_instance_ids) {
     new_submap->setInstanceID(new_instance);
@@ -142,7 +145,9 @@ void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   config.voxels_per_side = config_.voxels_per_side;
   config.voxel_size = config_.freespace_voxel_size;
   config.truncation_distance = config_.truncation_distance;
-  config.initializeDependentVariableDefaults();
+  if (config.truncation_distance < 0.f) {
+    config.truncation_distance *= -config.voxel_size;
+  }
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.

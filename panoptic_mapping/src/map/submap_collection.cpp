@@ -78,6 +78,15 @@ void SubmapCollection::updateIDList(const std::vector<int>& id_list,
   }
 }
 
+void SubmapCollection::updateInstanceToSubmapIDTable() {
+  // Clear the table and add all new elements.
+  instance_to_submap_ids_ = std::unordered_map<int, std::unordered_set<int>>();
+  for (const auto& submap_ptr : submaps_) {
+    instance_to_submap_ids_[submap_ptr->getInstanceID()].emplace(
+        submap_ptr->getID());
+  }
+}
+
 // Save load functionality was heavily adapted from cblox.
 bool SubmapCollection::saveToFile(const std::string& file_path) const {
   CHECK(!file_path.empty());

@@ -252,6 +252,8 @@ bool PanopticMapper::loadMapCallback(
 }
 
 bool PanopticMapper::saveMap(const std::string& file_path) {
+  // TEST: merge maps
+
   bool success = submaps_->saveToFile(file_path);
   LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
                         << " submaps to '" << file_path << "'.";

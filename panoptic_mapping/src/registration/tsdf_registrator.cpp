@@ -40,73 +40,78 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
   auto t_start = std::chrono::high_resolution_clock::now();
   std::stringstream info;
 
-  // Check all unobserved and persistent maps for changes.
+  // Check all inactive maps for alignment with the currently active ones.
   for (const auto& submap : submaps) {
-    // NOTE(Schmluk): At the moment objects can't move so they stay absent
-    // forever. Need to change this once PGO is supported.
-    if (submap->isActive() || submap->getLabel() == PanopticLabel::kFreeSpace ||
-        submap->getChangeState() == ChangeState::kAbsent) {
+    if (submap->isActive() || submap->getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
 
     // Check overlapping submaps for conflicts or matches and store best match.
+    std::vector<std::pair<int, float>> matching_ids_points;
     if (!config_.allow_multiple_matches) {
-      ChangeState state = submap->getChangeState();
-      int best_matching_id;
-      float best_matching_points = -1.f;
-      for (const auto& other : submaps) {
-        if (!other->isActive() ||
-            !submap->getBoundingVolume().intersects(
-                other->getBoundingVolume()) ||
-            submap->getInstanceID() == other->getInstanceID()) {
-          continue;
-        }
-        float matching_points;
-        if (submapsConflict(*submap, *other, &matching_points)) {
-          // No conflicts allowed, update also the matched submap if it
-          // exists.
+      matching_ids_points = {{0, -1.f}};  // empty initializer.
+    }
+    for (const auto& other : submaps) {
+      if (!other->isActive() ||
+          !submap->getBoundingVolume().intersects(other->getBoundingVolume())) {
+        continue;
+      }
+
+      float matching_points;
+      if (submapsConflict(*submap, *other, &matching_points)) {
+        // No conflicts allowed, update also the matched submap if it
+        // exists.
+        if (submap->getChangeState() != ChangeState::kAbsent) {
           info << "\nSubmap " << submap->getID() << " (" << submap->getName()
                << ") conflicts with submap " << other->getID() << " ("
                << other->getName() << ")";
-          if (state == ChangeState::kPersistent) {
-            for (const auto& matched : submaps) {
-              InstanceID new_id;
-              if (matched->isActive() &&
-                  matched->getInstanceID() == submap->getInstanceID()) {
-                matched->setChangeState(ChangeState::kNew);
-                matched->setInstanceID(new_id);
-                info << ", was matched with submap " << matched->getID() << " ("
-                     << matched->getName() << ")";
-                break;
+          if (submap->getChangeState() == ChangeState::kPersistent) {
+            if (!config_.allow_multiple_matches) {
+              for (const auto& matched : submaps) {
+                if (matched->isActive() &&
+                    matched->getInstanceID() == submap->getInstanceID()) {
+                  matched->setChangeState(ChangeState::kNew);
+                  info << ", was matched with submap " << matched->getID()
+                       << " (" << matched->getName() << ")";
+                  break;
+                }
               }
+              // Get a new instance id.
+              submap->setInstanceID(InstanceID());
             }
           }
           submap->setChangeState(ChangeState::kAbsent);
           info << ".";
-          break;
-        } else if (submap->getClassID() == other->getClassID() &&
-                   matching_points > best_matching_points) {
-          // Semantically match, so could be a candidate.
-          best_matching_id = other->getID();
-          best_matching_points = matching_points;
+        }
+        break;
+      } else if (submap->getClassID() == other->getClassID()) {
+        // Semantically match, so could be a candidate.
+        if (config_.allow_multiple_matches) {
+          matching_ids_points.emplace_back(other->getID(), matching_points);
+        } else if (matching_ids_points[0].second < matching_points) {
+          matching_ids_points[0] = {other->getID(), matching_points};
         }
       }
+    }
 
-      // Check for sufficient alignment and match the most suitable
-      // candidate.
-      const float acceptance_count =
-          std::min(static_cast<float>(config_.match_acceptance_points),
-                   config_.match_acceptance_percentage *
-                       submap->getIsoSurfacePoints().size());
-      if (best_matching_points > acceptance_count) {
-        Submap* other = submaps.getSubmapPtr(best_matching_id);
-        // Geometry and semantic class match.
-        submap->setChangeState(ChangeState::kPersistent);
-        submap->setInstanceID(other->getInstanceID());
-        other->setChangeState(ChangeState::kMatched);
-        info << "\nSubmap " << submap->getID() << " (" << submap->getName()
-             << ") was matched with submap " << other->getID() << " ("
-             << other->getName() << ").";
+    // Check for sufficient alignment and match the most suitable
+    // candidate.
+    const float acceptance_count =
+        std::min(static_cast<float>(config_.match_acceptance_points),
+                 config_.match_acceptance_percentage *
+                     submap->getIsoSurfacePoints().size());
+    if (!config_.allow_multiple_matches) {
+      if (matching_ids_points[0].second > acceptance_count) {
+        Submap* other = submaps.getSubmapPtr(matching_ids_points[0].first);
+        if (other->getInstanceID() != submap->getInstanceID()) {
+          // Geometry and semantic class match, it's a new match.
+          submap->setChangeState(ChangeState::kPersistent);
+          submap->setInstanceID(other->getInstanceID());
+          other->setChangeState(ChangeState::kMatched);
+          info << "\nSubmap " << submap->getID() << " (" << submap->getName()
+               << ") was matched with submap " << other->getID() << " ("
+               << other->getName() << ").";
+        }
       }
     } else {
       LOG_FIRST_N(WARNING, 1) << "Multiple matches not yet supported.";
@@ -145,13 +150,20 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
   for (const auto& point : reference.getIsoSurfacePoints()) {
     if (getDistanceAndWeightAtPoint(&distance, &weight, point, T_O_R,
                                     interpolator)) {
-      if (std::abs(distance) > rejection_distance) {
-        conflicting_points += 1.f;
-        if (conflicting_points >= rejection_count) {
-          return true;
+      if (other.getLabel() == PanopticLabel::kFreeSpace) {
+        if (distance >= rejection_distance) {
+          conflicting_points += 1.f;
         }
       } else {
-        matched_points += 1.f;
+        if (distance <= -rejection_distance) {
+          conflicting_points += 1.f;
+        } else if (distance <= rejection_distance) {
+          matched_points += 1.f;
+        }
+      }
+
+      if (conflicting_points >= rejection_count) {
+        return true;
       }
     }
   }

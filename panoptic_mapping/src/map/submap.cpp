@@ -23,12 +23,6 @@ void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxels_per_side", &voxels_per_side);
 }
 
-void Submap::Config::initializeDependentVariableDefaults() {
-  if (truncation_distance == 0.0) {
-    truncation_distance = 2 * voxel_size;
-  }
-}
-
 Submap::Submap(const Config& config)
     : config_(config.checkValid()),
       bounding_volume_(*this) {

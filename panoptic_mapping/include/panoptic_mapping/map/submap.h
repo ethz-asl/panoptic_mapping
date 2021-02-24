@@ -41,10 +41,8 @@ class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;
-    float truncation_distance = 0.0;  // Defaults to 2x voxel size.
+    float truncation_distance = 0.2;
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
-
-    void initializeDependentVariableDefaults() override;
 
     Config() { setConfigName("Submap"); }
 

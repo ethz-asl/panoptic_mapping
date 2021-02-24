@@ -51,10 +51,19 @@ class SubmapCollection {
   // Tools.
   void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
                     std::vector<int>* deleted_ids) const;
+  const std::unordered_map<int, std::unordered_set<int>>&
+  getInstanceToSubmapIDTable() const {
+    return instance_to_submap_ids_;
+  }
+  void updateInstanceToSubmapIDTable();
 
  private:
+  // The map.
   std::vector<std::unique_ptr<Submap>> submaps_;
+
+  // Bookkeeping.
   std::unordered_map<int, size_t> id_to_index_;
+  std::unordered_map<int, std::unordered_set<int>> instance_to_submap_ids_;
   int active_freespace_submap_id_ = -1;
 };
 
