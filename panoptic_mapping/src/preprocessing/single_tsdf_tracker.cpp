@@ -65,6 +65,7 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
     new_submap->setLabel(PanopticLabel::kBackground);
     map_id_ = new_submap->getID();
   }
+  submaps->setActiveFreeSpaceSubmapID(map_id_);
   is_setup_ = true;
 }
 
