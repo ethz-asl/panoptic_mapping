@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/submap_bounding_volume.h"
+#include "panoptic_mapping/map/utils/submap_bounding_volume.h"
 
 #include <algorithm>
 #include <limits>

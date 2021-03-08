@@ -27,9 +27,9 @@ cs_add_library(${PROJECT_NAME}
         src/common/camera.cpp
         src/common/input_data_user.cpp
         src/map/submap.cpp
-        src/map/submap_id.cpp
-        src/map/instance_id.cpp
-        src/map/submap_bounding_volume.cpp
+        src/map/utils/submap_id.cpp
+        src/map/utils/instance_id.cpp
+        src/map/utils/submap_bounding_volume.cpp
         src/map/submap_collection.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/tracking_info.cpp

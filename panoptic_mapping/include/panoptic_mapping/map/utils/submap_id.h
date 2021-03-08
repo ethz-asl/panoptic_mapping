@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_MAP_SUBMAP_ID_H_
-#define PANOPTIC_MAPPING_MAP_SUBMAP_ID_H_
+#ifndef PANOPTIC_MAPPING_MAP_UTILS_SUBMAP_ID_H_
+#define PANOPTIC_MAPPING_MAP_UTILS_SUBMAP_ID_H_
 
 #include <queue>
 
@@ -53,4 +53,4 @@ class SubmapIDManager {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_MAP_SUBMAP_ID_H_
+#endif  // PANOPTIC_MAPPING_MAP_UTILS_SUBMAP_ID_H_

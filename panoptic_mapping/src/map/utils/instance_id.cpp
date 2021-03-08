@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/instance_id.h"
+#include "panoptic_mapping/map/utils/instance_id.h"
 
 namespace panoptic_mapping {
 
