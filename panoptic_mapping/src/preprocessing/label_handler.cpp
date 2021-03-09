@@ -1,11 +1,21 @@
 #include "panoptic_mapping/preprocessing/label_handler.h"
 
-#include <fstream>
+#include <sstream>
 #include <string>
 
 #include "panoptic_mapping/3rd_party/csv.h"
 
 namespace panoptic_mapping {
+
+std::string LabelHandler::LabelEntry::toString() const {
+  std::stringstream ss;
+  ss << "InstanceID: " << segmentation_id << ", ClassID: " << class_id
+     << ", PanopticID: " << panopticLabelToString(label)
+     << ", Color: " << static_cast<int>(color.r) << " "
+     << static_cast<int>(color.g) << " " << static_cast<int>(color.b)
+     << ", Name: " << name << ", SuperCategory: " << supercategory;
+  return ss.str();
+}
 
 void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   // Currently assumes fixed header names in the target file. Reading
@@ -13,36 +23,53 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   mesh_to_instance_id_.clear();
   labels_.clear();
 
-  // Read data.
-  io::CSVReader<8> in(source_file);
-  in.read_header(io::ignore_extra_column, "InstanceID", "ClassID", "PanopticID",
-                 "MeshID", "R", "G", "B", "Name");
-  std::string name;
-  int inst, cls, pan, mesh, r, g, b;
-  while (in.read_row(inst, cls, pan, mesh, r, g, b, name)) {
+  // Read all possible columns and write the present ones.
+  io::CSVReader<9> in(source_file);
+  in.read_header(io::ignore_missing_column, "InstanceID", "ClassID",
+                 "PanopticID", "MeshID", "R", "G", "B", "Name",
+                 "SuperCategory");
+
+  bool read_row = true;
+  while (read_row) {
+    std::string name, supercat;
+    int inst = -1, cls = -1, pan = -1, mesh = -1, r = -1, g = -1, b = -1;
+    read_row = in.read_row(inst, cls, pan, mesh, r, g, b, name, supercat);
     // Label.
     LabelEntry label;
-    label.segmentation_id = inst;
-    label.class_id = cls;
-    label.label = pan ? PanopticLabel::kInstance : PanopticLabel::kBackground;
-    label.name = name;
-    label.color = voxblox::Color(r, g, b);
+    if (inst != -1) {
+      label.segmentation_id = inst;
+    } else {
+      continue;
+    }
+    if (cls != -1) {
+      label.class_id = cls;
+    }
+    if (pan != -1) {
+      label.label = pan ? PanopticLabel::kInstance : PanopticLabel::kBackground;
+    }
+    if (!name.empty()) {
+      label.name = name;
+    }
+    if (!supercat.empty()) {
+      label.supercategory = supercat;
+    }
+    if (r != -1 && g != -1 && b != -1) {
+      label.color = voxblox::Color(r, g, b);
+    }
     labels_[inst] = label;
 
     // Mesh.
-    mesh_to_instance_id_[mesh] = inst;
+    if (mesh != -1) {
+      mesh_to_instance_id_[mesh] = inst;
+    }
   }
   LOG(INFO) << "Read " << labels_.size() << " labels from '" << source_file
             << "'.";
+  // TEST
+  std::cout << labels_.find(1)->second.toString() << std::endl;
 
-  // 255 is reserved for unknown labels.
-  LabelEntry label;
-  label.segmentation_id = 255;
-  label.class_id = 0;
-  label.label = PanopticLabel::kUnknown;
-  label.name = "Unknown";
-  label.color = voxblox::Color(80, 80, 80);
-  labels_[255] = label;
+  // Unknown labels are referred to -1.
+  labels_[-1] = LabelEntry();
 }
 
 bool LabelHandler::segmentationIdExists(int segmentation_id) const {
@@ -70,7 +97,7 @@ bool LabelHandler::isInstanceClass(int segmentation_id) const {
   return labels_.at(segmentation_id).label == PanopticLabel::kInstance;
 }
 
-bool LabelHandler::isUknownClass(int segmentation_id) const {
+bool LabelHandler::isUnknownClass(int segmentation_id) const {
   return labels_.at(segmentation_id).label == PanopticLabel::kUnknown;
 }
 
@@ -88,6 +115,10 @@ const voxblox::Color& LabelHandler::getColor(int segmentation_id) const {
 
 const std::string& LabelHandler::getName(int segmentation_id) const {
   return labels_.at(segmentation_id).name;
+}
+
+const std::string& LabelHandler::getSuperCategory(int segmentation_id) const {
+  return labels_.at(segmentation_id).supercategory;
 }
 
 const LabelHandler::LabelEntry& LabelHandler::getLabelEntry(

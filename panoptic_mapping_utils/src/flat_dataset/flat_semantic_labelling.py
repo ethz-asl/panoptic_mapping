@@ -218,8 +218,7 @@ def export_labels(labels, out_file_name):
                               0], color_palette[0, label["MeshID"] * 4, 1],
                 color_palette[0, label["MeshID"] * 4, 2], label["Name"]
             ])
-        writer.writerow([255, 255, 1, 255, 255, 80, 80, 80, "Unknown"])
-    print("Saved labels in '%s'." % out_file_name)
+    print("Saved %i labels in '%s'." % (len(labels), out_file_name))
 
 
 if __name__ == "__main__":

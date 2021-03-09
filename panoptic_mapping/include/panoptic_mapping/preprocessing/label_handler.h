@@ -18,8 +18,11 @@ class LabelHandler {
     int segmentation_id = 0;
     int class_id = 0;
     PanopticLabel label = PanopticLabel::kUnknown;
-    std::string name = "UnInitializedName";
-    voxblox::Color color;
+    std::string name = "UninitializedName";
+    std::string supercategory = "UninitializedSupercategory";
+    Color color = Color(80, 80, 80);
+
+    std::string toString() const;
   };
 
   LabelHandler() = default;
@@ -35,11 +38,12 @@ class LabelHandler {
   int getClassID(int segmentation_id) const;
   bool isBackgroundClass(int segmentation_id) const;
   bool isInstanceClass(int segmentation_id) const;
-  bool isUknownClass(int segmentation_id) const;
+  bool isUnknownClass(int segmentation_id) const;
   bool isSpaceClass(int segmentation_id) const;
   PanopticLabel getPanopticLabel(int segmentation_id) const;
   const voxblox::Color& getColor(int segmentation_id) const;
   const std::string& getName(int segmentation_id) const;
+  const std::string& getSuperCategory(int segmentation_id) const;
   const LabelEntry& getLabelEntry(int segmentation_id) const;
 
  private:
