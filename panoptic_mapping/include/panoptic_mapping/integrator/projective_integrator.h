@@ -26,10 +26,12 @@ class ProjectiveIntegrator : public IntegratorBase {
     // Integration params.
     bool use_weight_dropoff = true;
     bool use_constant_weight = false;
-    bool foreign_rays_clear = true;  // observations of object B can clear
-    // spcae in object A
     float max_weight = 1e5;
     std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
+
+    // Behavior
+    bool foreign_rays_clear = true;  // observations of object B can clear
+    // spcae in object A
 
     // System params.
     int integration_threads = std::thread::hardware_concurrency();
@@ -50,7 +52,7 @@ class ProjectiveIntegrator : public IntegratorBase {
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
- private:
+ protected:
   void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
                          const cv::Mat& depth_image, const cv::Mat& id_image);
 
@@ -59,10 +61,11 @@ class ProjectiveIntegrator : public IntegratorBase {
                     const Transformation& T_M_C, const cv::Mat& color_image,
                     const cv::Mat& id_image) const;
 
-  void updateTsdfBlock(Submap* submap, InterpolatorBase* interpolator,
-                       const voxblox::BlockIndex& block_index,
-                       const Transformation& T_M_C, const cv::Mat& color_image,
-                       const cv::Mat& id_image) const;
+  virtual void updateBlock(Submap* submap, InterpolatorBase* interpolator,
+                           const voxblox::BlockIndex& block_index,
+                           const Transformation& T_C_S,
+                           const cv::Mat& color_image,
+                           const cv::Mat& id_image) const;
 
   bool computeVoxelDistanceAndWeight(
       float* sdf, float* weight, bool* point_belongs_to_this_submap,

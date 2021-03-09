@@ -13,6 +13,7 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/integrator/mesh_integrator.h"
 #include "panoptic_mapping/map/utils/instance_id.h"
 #include "panoptic_mapping/map/utils/submap_bounding_volume.h"
 #include "panoptic_mapping/map/utils/submap_id.h"
@@ -68,6 +69,7 @@ class Submap {
   const std::string& getFrameName() const { return frame_name_; }
   const std::string& getName() const { return name_; }
   const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
+  const ClassLayer& getClassLayer() const { return *class_layer_; }
   const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
   const Transformation& getT_M_S() const { return T_M_S_; }
   const Transformation& getT_S_M() const { return T_M_S_inv_; }
@@ -85,6 +87,7 @@ class Submap {
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() {
     return tsdf_layer_;
   }
+  std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
     return &iso_surface_points_;
@@ -129,9 +132,14 @@ class Submap {
 
   // Map.
   std::shared_ptr<TsdfLayer> tsdf_layer_;
+  std::shared_ptr<ClassLayer> class_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
   std::vector<IsoSurfacePoint> iso_surface_points_;
   SubmapBoundingVolume bounding_volume_;
+
+  // Processing.
+  // TODO(schmluk): move this out of the submaps? Could be more efficient here.
+  std::unique_ptr<MeshIntegrator> mesh_integrator_;
 };
 
 }  // namespace panoptic_mapping

@@ -38,7 +38,9 @@ cs_add_library(${PROJECT_NAME}
         src/preprocessing/projective_id_tracker.cpp
         src/preprocessing/detectron_id_tracker.cpp
         src/integrator/projective_integrator.cpp
+        src/integrator/class_projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
+        src/integrator/mesh_integrator.cpp
         src/registration/tsdf_registrator.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp

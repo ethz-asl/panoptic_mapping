@@ -113,17 +113,19 @@ void ProjectiveIntegrator::updateSubmap(
     const cv::Mat& color_image, const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
   // Update.
+  Transformation T_C_S =
+      T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   for (const auto& index : block_indices) {
-    updateTsdfBlock(submap, interpolator, index, T_M_C, color_image, id_image);
+    updateBlock(submap, interpolator, index, T_C_S, color_image, id_image);
   }
 }
 
-void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
-                                           InterpolatorBase* interpolator,
-                                           const voxblox::BlockIndex& index,
-                                           const Transformation& T_M_C,
-                                           const cv::Mat& color_image,
-                                           const cv::Mat& id_image) const {
+void ProjectiveIntegrator::updateBlock(Submap* submap,
+                                       InterpolatorBase* interpolator,
+                                       const voxblox::BlockIndex& index,
+                                       const Transformation& T_C_S,
+                                       const cv::Mat& color_image,
+                                       const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
   // set up preliminaries
   if (!submap->getTsdfLayer().hasBlock(index)) {
@@ -134,8 +136,6 @@ void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
   voxblox::Block<TsdfVoxel>& block =
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
   block.updated().set();
-  Transformation T_C_S =
-      T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int id = submap->getID();
@@ -165,6 +165,7 @@ void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
                                  -1.f * truncation_distance) *
                             weight) /
                        (voxel.weight + weight);
+      voxel.weight = std::min(voxel.weight + weight, config_.max_weight);
       // only merge color near the surface and if point belongs to the submap.
       if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
         voxel.color = Color::blendTwoColors(
@@ -178,9 +179,9 @@ void ProjectiveIntegrator::updateTsdfBlock(Submap* submap,
         voxel.distance =
             (voxel.distance * voxel.weight + truncation_distance * weight) /
             (voxel.weight + weight);
+        voxel.weight = std::min(voxel.weight + weight, config_.max_weight);
       }
     }
-    voxel.weight = std::min(voxel.weight + weight, config_.max_weight);
   }
 }
 
