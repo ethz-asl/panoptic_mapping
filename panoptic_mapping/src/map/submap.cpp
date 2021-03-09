@@ -15,12 +15,14 @@ void Submap::Config::checkParams() const {
   checkParamGT(voxel_size, 0.f, "voxel_size");
   checkParamGT(truncation_distance, 0.f, "truncation_distance");
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
+  checkParamConfig(mesh_config);
 }
 
 void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("mesh_config", &mesh_config);
 }
 
 Submap::Submap(const Config& config)
@@ -45,7 +47,7 @@ Submap::Submap(const Config& config)
 
   // Setup tools.
   mesh_integrator_ = std::make_unique<MeshIntegrator>(
-      MeshIntegrator::Config(), tsdf_layer_, mesh_layer_, class_layer_,
+      config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
       config_.truncation_distance);
 }
 

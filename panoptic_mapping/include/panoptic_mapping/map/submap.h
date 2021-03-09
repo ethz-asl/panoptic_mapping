@@ -45,6 +45,8 @@ class Submap {
     float truncation_distance = 0.2;
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
 
+    MeshIntegrator::Config mesh_config;
+
     Config() { setConfigName("Submap"); }
 
    protected:

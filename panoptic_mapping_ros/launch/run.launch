@@ -43,7 +43,6 @@
     <remap from="color_image_in" to="$(arg namespace)/color_image"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
     <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>
-<!--<remap from="segmentation_image_in" to="$(arg namespace)/segmentation_groundtruth"/>-->
     <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
   </node>  
   

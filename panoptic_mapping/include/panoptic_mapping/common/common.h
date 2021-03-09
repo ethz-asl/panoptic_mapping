@@ -58,12 +58,12 @@ inline std::string panopticLabelToString(const PanopticLabel& label) {
  */
 
 // Timing.
-#define PANOTPIC_MAPPING_TIMING_ENABLED  // Unset to disable all timers.
-#ifdef PANOTPIC_MAPPING_TIMING_ENABLED
+#define PANOPTIC_MAPPING_TIMING_ENABLED  // Unset to disable all timers.
+#ifdef PANOPTIC_MAPPING_TIMING_ENABLED
 using Timer = voxblox::timing::Timer;
 #else
 using Timer = voxblox::timing::DummyTimer;
-#endif  // PANOTPIC_MAPPING_TIMING_ENABLED
+#endif  // PANOPTIC_MAPPING_TIMING_ENABLED
 using Timing = voxblox::timing::Timing;
 
 }  // namespace panoptic_mapping

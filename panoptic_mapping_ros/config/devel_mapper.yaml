@@ -47,7 +47,7 @@ id_tracker:
   voxel_size: 0.05
   
 tsdf_integrator:  
-  type: projective # projective, class_projective
+  type: class_projective # projective, class_projective
   verbosity: 1
   camera_namespace: ~/camera
   use_weight_dropoff: true
@@ -72,7 +72,7 @@ visualization:
   # Submaps
   color_mode: submaps # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active, active_only
-  submap_color_discretization: 50
+  submap_color_discretization: 20
   visualize_mesh: true
   visualize_tsdf_blocks: true
   visualize_free_space: true

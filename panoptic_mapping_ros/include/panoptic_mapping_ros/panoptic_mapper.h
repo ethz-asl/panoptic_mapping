@@ -36,6 +36,7 @@ class PanopticMapper {
     double visualization_interval = 1.0;     // s, use -1 for always, 0 never.
     double change_detection_interval = 1.0;  // s, use -1 for always, 0 never.
     double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
+    int timing_verbosity = 2;
 
     Config() { setConfigName("PanopticMapper"); }
 

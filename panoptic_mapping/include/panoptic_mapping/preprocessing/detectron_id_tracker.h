@@ -41,9 +41,11 @@ class DetectronIDTracker : public ProjectiveIDTracker {
       IDTrackerBase, DetectronIDTracker, std::shared_ptr<LabelHandler>>
       registration_;
 
-  // Members
+  // Members.
   const Config config_;
-  const DetectronLabels* labels_;  // cached labels.
+
+  // Cached labels.
+  const DetectronLabels* labels_;
 };
 
 }  // namespace panoptic_mapping

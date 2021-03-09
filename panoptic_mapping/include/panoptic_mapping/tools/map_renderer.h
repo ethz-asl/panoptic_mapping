@@ -39,7 +39,7 @@ class MapRenderer {
                                 const Transformation& T_M_C);
   cv::Mat renderActiveSubmapClasses(const SubmapCollection& submaps,
                                     const Transformation& T_M_C);
-  cv::Mat colorIdImage(const cv::Mat& id_image, int colors_per_revolution = 10);
+  cv::Mat colorIdImage(const cv::Mat& id_image, int colors_per_revolution = 20);
 
  private:
   const Config config_;
