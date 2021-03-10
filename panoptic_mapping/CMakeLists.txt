@@ -27,16 +27,17 @@ cs_add_library(${PROJECT_NAME}
         src/common/camera.cpp
         src/common/input_data_user.cpp
         src/map/submap.cpp
+        src/map/submap_collection.cpp
         src/map/utils/submap_id.cpp
         src/map/utils/instance_id.cpp
         src/map/utils/submap_bounding_volume.cpp
-        src/map/submap_collection.cpp
         src/preprocessing/label_handler.cpp
         src/preprocessing/tracking_info.cpp
         src/preprocessing/single_tsdf_tracker.cpp
         src/preprocessing/ground_truth_id_tracker.cpp
         src/preprocessing/projective_id_tracker.cpp
         src/preprocessing/detectron_id_tracker.cpp
+        src/preprocessing/geometric_edge_refiner.cpp
         src/integrator/projective_integrator.cpp
         src/integrator/class_projective_integrator.cpp
         src/integrator/projection_interpolators.cpp
