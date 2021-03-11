@@ -46,7 +46,7 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
   }
   voxblox::Block<TsdfVoxel>& block =
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
-  block.updated().set();
+  block.setUpdatedAll();
   // Allocate if not yet existent the class block
   voxblox::Block<ClassVoxel>::Ptr class_block =
       submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);

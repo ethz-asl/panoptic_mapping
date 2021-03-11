@@ -135,7 +135,7 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
   }
   voxblox::Block<TsdfVoxel>& block =
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
-  block.updated().set();
+  block.setUpdatedAll();
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int id = submap->getID();

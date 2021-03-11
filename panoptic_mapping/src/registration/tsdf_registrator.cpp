@@ -224,7 +224,7 @@ void TsdfRegistrator::mergeMatchingSubmaps(SubmapCollection* submaps) {
     voxblox::BlockIndexList block_list;
     target->getTsdfLayer().getAllAllocatedBlocks(&block_list);
     for (auto& index : block_list) {
-      target->getTsdfLayerPtr()->getBlockByIndex(index).updated().set();
+      target->getTsdfLayerPtr()->getBlockByIndex(index).setUpdatedAll();
     }
   }
   LOG_IF(INFO, config_.verbosity >= 2)
