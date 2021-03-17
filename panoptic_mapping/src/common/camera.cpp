@@ -198,4 +198,20 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
   return result;
 }
 
+cv::Mat Camera::computeVertexMap(const cv::Mat& depth_image) const {
+  // Compute the 3D pointcloud from a depth image.
+  cv::Mat vertices(depth_image.size(), CV_32FC3);
+  const float fx_inv = 1.f / config_.fx;
+  const float fy_inv = 1.f / config_.fy;
+  for (int v = 0; v < depth_image.rows; v++) {
+    for (int u = 0; u < depth_image.cols; u++) {
+      cv::Vec3f& vertex = vertices.at<cv::Vec3f>(v, u);  // x, y, z
+      vertex[2] = depth_image.at<float>(v, u);
+      vertex[0] = (static_cast<float>(u) - config_.vx) * vertex[2] * fx_inv;
+      vertex[1] = (static_cast<float>(v) - config_.vy) * vertex[2] * fy_inv;
+    }
+  }
+  return vertices;
+}
+
 }  // namespace panoptic_mapping

@@ -58,8 +58,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
 
   // Allocate all blocks in corresponding submaps.
   auto t1 = std::chrono::high_resolution_clock::now();
-  allocateNewBlocks(submaps, input->T_M_C(), input->depthImage(),
-                    (*input->idImage()));
+  allocateNewBlocks(submaps, input);
   auto t2 = std::chrono::high_resolution_clock::now();
 
   // Find all active blocks that are in the field of view.
@@ -258,34 +257,29 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 }
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
-                                             const Transformation& T_M_C,
-                                             const cv::Mat& depth_image,
-                                             const cv::Mat& id_image) {
+                                             InputData* input) {
   // This method also resets the depth image.
   range_image_.setZero();
   max_range_in_image_ = 0.f;
 
   // Parse through each point to allocate instance + background blocks.
   std::unordered_set<Submap*> touched_submaps;
-  for (int v = 0; v < depth_image.rows; v++) {
-    for (int u = 0; u < depth_image.cols; u++) {
-      float z = depth_image.at<float>(v, u);
-      float x = (static_cast<float>(u) - camera_.getConfig().vx) * z /
-                camera_.getConfig().fx;
-      float y = (static_cast<float>(v) - camera_.getConfig().vy) * z /
-                camera_.getConfig().fy;
-      float ray_distance = std::sqrt(x * x + y * y + z * z);
+  for (int v = 0; v < input->depthImage().rows; v++) {
+    for (int u = 0; u < input->depthImage().cols; u++) {
+      const cv::Vec3f& vertex = input->vertexMap().at<cv::Vec3f>(v, u);
+      Point p_C(vertex[0], vertex[1], vertex[2]);
+      const float ray_distance = p_C.norm();
       range_image_(v, u) = ray_distance;
       if (ray_distance > camera_.getConfig().max_range ||
           ray_distance < camera_.getConfig().min_range) {
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      int id = id_image.at<int>(v, u);
+      int id = input->idImage()->at<int>(v, u);
       if (submaps->submapIdExists(id)) {
         Submap* submap = submaps->getSubmapPtr(id);
-        const Point p_S = submap->getT_S_M() * T_M_C *
-                          Point(x, y, z);  // p_S = T_S_M * T_M_C * p_C
+        const Point p_S = submap->getT_S_M() * input->T_M_C() *
+                          p_C;  // p_S = T_S_M * T_M_C * p_C
         submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
         touched_submaps.insert(submap);
       }
@@ -298,7 +292,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
     const float block_size = space->getTsdfLayer().block_size();
     const float block_diag_half = std::sqrt(3.f) * block_size / 2.f;
-    const Transformation T_C_S = T_M_C.inverse() * space->getT_M_S();
+    const Transformation T_C_S = input->T_M_C().inverse() * space->getT_M_S();
     const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
     const int max_steps = std::floor((max_range_in_image_ + block_diag_half) /
                                      space->getTsdfLayer().block_size());

@@ -10,6 +10,7 @@
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
 
+#include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
@@ -105,8 +106,9 @@ class PanopticMapper {
   std::shared_ptr<SubmapCollection> submaps_;
 
   // Mapping.
-  std::unique_ptr<IntegratorBase> tsdf_integrator_;
+  std::shared_ptr<Camera> camera_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
+  std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
 
   // Tools.

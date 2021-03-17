@@ -53,8 +53,7 @@ class ProjectiveIntegrator : public IntegratorBase {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
-  void allocateNewBlocks(SubmapCollection* submaps, const Transformation& T_M_C,
-                         const cv::Mat& depth_image, const cv::Mat& id_image);
+  void allocateNewBlocks(SubmapCollection* submaps, InputData* input);
 
   void updateSubmap(Submap* submap, InterpolatorBase* interpolator,
                     const voxblox::BlockIndexList& block_indices,

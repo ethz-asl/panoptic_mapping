@@ -19,6 +19,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("visualization_interval", &visualization_interval);
   setupParam("change_detection_interval", &change_detection_interval);
   setupParam("data_logging_interval", &data_logging_interval);
+  setupParam("timing_verbosity", &timing_verbosity);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -36,6 +37,11 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 void PanopticMapper::setupMembers() {
   // Map.
   submaps_ = std::make_shared<SubmapCollection>();
+
+  // Camera.
+  ros::NodeHandle camera_nh(nh_private_, "camera");
+  camera_ = std::make_shared<Camera>(
+      config_utilities::getConfigFromRos<Camera::Config>(camera_nh));
 
   // Labels.
   std::string label_path;
@@ -130,7 +136,11 @@ void PanopticMapper::setupRos() {
 }
 
 void PanopticMapper::processInput(InputData* input) {
+  CHECK_NOTNULL(input);
   ros::WallTime t0 = ros::WallTime::now();
+
+  // Compute and store the vertex map.
+  input->setVertexMap(camera_->computeVertexMap(input->depthImage()));
 
   // Preprocess the segmentation images and allocate new submaps.
   id_tracker_->processInput(submaps_.get(), input);
@@ -171,6 +181,8 @@ void PanopticMapper::processInput(InputData* input) {
     info << " = " << int((t4 - t0).toSec() * 1000) << "ms)";
   }
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
+
+  LOG_IF(INFO, config_.timing_verbosity >= 2) << "\n" << Timing::Print();
 }
 
 void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
