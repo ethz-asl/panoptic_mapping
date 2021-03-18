@@ -1,10 +1,8 @@
 #include "panoptic_mapping_ros/panoptic_mapper.h"
 
-#include <deque>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <utility>
 
 namespace panoptic_mapping {
 
