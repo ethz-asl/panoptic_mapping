@@ -1,7 +1,7 @@
 #ifndef PANOPTIC_MAPPING_PREPROCESSING_GEOMETRIC_EDGE_REFINER_H_
 #define PANOPTIC_MAPPING_PREPROCESSING_GEOMETRIC_EDGE_REFINER_H_
 
-#include <opencv2/core/mat.hpp>
+#include <opencv2/rgbd.hpp>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
@@ -29,15 +29,17 @@ class GeomtricEdgeRefiner {
   explicit GeomtricEdgeRefiner(const Config& config);
   ~GeomtricEdgeRefiner() = default;
 
-  void refinePrediction(const cv::Mat& depth_image, const Camera& camera,
+  void refinePrediction(const cv::Mat& depth_image, const cv::Mat& vertex_map,
                         cv::Mat* id_image);
   const cv::Mat& getNormalMap() const { return normals_; }
   const cv::Mat& getEdginessMap() const { return edginess_map_; }
+  void setup(const Camera::Config& camera);
 
  private:
   const Config config_;
 
   // Cached data
+  cv::rgbd::RgbdNormals normal_computer_;
   cv::Mat normals_;
   cv::Mat edginess_map_;
 };

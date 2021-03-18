@@ -80,6 +80,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
   // Members
   const Config config_;
+
+ protected:
   Camera camera_;
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
 };

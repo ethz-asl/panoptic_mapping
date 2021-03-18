@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/preprocessing/geometric_edge_refiner.h"
 #include "panoptic_mapping/preprocessing/projective_id_tracker.h"
 
 namespace panoptic_mapping {
@@ -18,7 +19,9 @@ class DetectronIDTracker : public ProjectiveIDTracker {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    ProjectiveIDTracker::Config projective_id_tracker_config;
+    bool use_edge_refinement = false;
+    ProjectiveIDTracker::Config projective_id_tracker;
+    GeomtricEdgeRefiner::Config edge_refiner;
 
     Config() { setConfigName("DetectronIDTracker"); }
 
@@ -43,6 +46,7 @@ class DetectronIDTracker : public ProjectiveIDTracker {
 
   // Members.
   const Config config_;
+  GeomtricEdgeRefiner edge_refiner_;
 
   // Cached labels.
   const DetectronLabels* labels_;

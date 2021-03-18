@@ -13,21 +13,28 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, DetectronIDTracker,
     DetectronIDTracker::registration_("detectron");
 
 void DetectronIDTracker::Config::checkParams() const {
-  checkParamConfig(projective_id_tracker_config);
+  checkParamConfig(projective_id_tracker);
+  checkParamConfig(edge_refiner);
 }
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("projective_id_tracker_config", &projective_id_tracker_config);
+  setupParam("use_edge_refinement", &use_edge_refinement);
+  setupParam("projective_id_tracker", &projective_id_tracker);
+  setupParam("edge_refiner", &edge_refiner);
 }
 
 DetectronIDTracker::DetectronIDTracker(
     const Config& config, std::shared_ptr<LabelHandler> label_handler)
     : config_(config.checkValid()),
-      ProjectiveIDTracker(config.projective_id_tracker_config,
-                          std::move(label_handler)) {
+      ProjectiveIDTracker(config.projective_id_tracker,
+                          std::move(label_handler)),
+      edge_refiner_(config_.edge_refiner) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   addRequiredInput(InputData::InputType::kDetectronLabels);
+  if (config_.use_edge_refinement) {
+    edge_refiner_.setup(camera_.getConfig());
+  }
 }
 
 void DetectronIDTracker::processInput(SubmapCollection* submaps,
@@ -37,6 +44,22 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
   // Cache the input labels for submap allocation.
   labels_ = &(input->detectronLabels());
+
+  // If requested refine the edges of the predictions.
+  if (config_.use_edge_refinement) {
+    if (visualizationIsOn()) {
+      visualize(renderer_.colorIdImage(*(input->idImage())), "unrefined_input");
+    }
+    edge_refiner_.refinePrediction(input->depthImage(), input->vertexMap(),
+                                   input->idImage());
+    if (visualizationIsOn()) {
+      cv::Mat normals;
+      edge_refiner_.getNormalMap().convertTo(normals, CV_8UC3, 127.5f, 127.5f);
+      visualize(normals, "normals");
+    }
+  }
+
+  // Track the predicted (and refined) ids.
   ProjectiveIDTracker::processInput(submaps, input);
 }
 
@@ -57,15 +80,14 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
 
   // Allocate new submap.
   Submap::Config cfg;
-  cfg.voxels_per_side = config_.projective_id_tracker_config.voxels_per_side;
+  cfg.voxels_per_side = config_.projective_id_tracker.voxels_per_side;
   switch (pan_label) {
     case PanopticLabel::kInstance: {
-      cfg.voxel_size = config_.projective_id_tracker_config.instance_voxel_size;
+      cfg.voxel_size = config_.projective_id_tracker.instance_voxel_size;
       break;
     }
     case PanopticLabel::kBackground: {
-      cfg.voxel_size =
-          config_.projective_id_tracker_config.background_voxel_size;
+      cfg.voxel_size = config_.projective_id_tracker.background_voxel_size;
       break;
     }
   }
