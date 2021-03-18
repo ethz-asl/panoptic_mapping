@@ -6,10 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <panoptic_mapping_msgs/SaveLoadMap.h>
-#include <panoptic_mapping_msgs/SetVisualizationMode.h>
-#include <ros/ros.h>
-
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
 #include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
@@ -20,7 +17,9 @@
 #include <panoptic_mapping/registration/tsdf_registrator.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
-#include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping_msgs/SaveLoadMap.h>
+#include <panoptic_mapping_msgs/SetVisualizationMode.h>
+#include <ros/ros.h>
 
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"

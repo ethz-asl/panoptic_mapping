@@ -1,6 +1,7 @@
 #include "panoptic_mapping/tools/data_writer.h"
 
 #include <sys/stat.h>
+
 #include <fstream>
 #include <iomanip>
 #include <string>

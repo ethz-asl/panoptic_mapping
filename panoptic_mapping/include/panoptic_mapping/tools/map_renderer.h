@@ -1,8 +1,8 @@
 #ifndef PANOPTIC_MAPPING_TOOLS_MAP_RENDERER_H_
 #define PANOPTIC_MAPPING_TOOLS_MAP_RENDERER_H_
 
-#include <voxblox/utils/color_maps.h>
 #include <opencv2/core/mat.hpp>
+#include <voxblox/utils/color_maps.h>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"

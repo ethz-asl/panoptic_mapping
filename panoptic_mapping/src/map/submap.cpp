@@ -26,8 +26,7 @@ void Submap::Config::setupParamsAndPrinting() {
 }
 
 Submap::Submap(const Config& config)
-    : config_(config.checkValid()),
-      bounding_volume_(*this) {
+    : config_(config.checkValid()), bounding_volume_(*this) {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << static_cast<int>(id_);

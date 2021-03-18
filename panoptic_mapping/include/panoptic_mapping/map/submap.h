@@ -86,9 +86,7 @@ class Submap {
   }
 
   // Modifying accessors.
-  std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() {
-    return tsdf_layer_;
-  }
+  std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
@@ -117,7 +115,7 @@ class Submap {
   const Config config_;
 
   // Labels.
-  const SubmapID id_;  // UUID
+  const SubmapID id_;       // UUID
   InstanceID instance_id_;  // Per default sets up a new unique ID.
   int class_id_ = -1;
   PanopticLabel label_ = PanopticLabel::kUnknown;

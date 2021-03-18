@@ -20,6 +20,7 @@
   <depend>glog_catkin</depend>
   <depend>gflags_catkin</depend>
   <depend>protobuf_catkin</depend>
+  <depend>opencv3_catkin</depend>
 
   <export>
   </export>

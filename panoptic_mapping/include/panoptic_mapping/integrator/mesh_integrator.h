@@ -32,9 +32,8 @@
 #include <thread>
 #include <vector>
 
-#include <glog/logging.h>
 #include <Eigen/Core>
-
+#include <glog/logging.h>
 #include <voxblox/core/layer.h>
 #include <voxblox/core/voxel.h>
 #include <voxblox/integrator/integrator_utils.h>

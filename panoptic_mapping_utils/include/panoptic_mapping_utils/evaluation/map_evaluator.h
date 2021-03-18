@@ -5,16 +5,15 @@
 #include <string>
 #include <vector>
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <ros/ros.h>
-
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping/3rd_party/nanoflann.hpp>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping_ros/visualization/submap_visualizer.h>
-#include <panoptic_mapping/3rd_party/config_utilities.hpp>
-#include <panoptic_mapping/3rd_party/nanoflann.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <ros/ros.h>
 
 namespace panoptic_mapping {
 

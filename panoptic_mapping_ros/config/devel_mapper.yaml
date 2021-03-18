@@ -20,8 +20,8 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: ground_truth  # single_tsdf, ground_truth, projective, detectron
-  verbosity: 3
+  type: detectron  # single_tsdf, ground_truth, projective, detectron
+  verbosity: 1
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
   unknown_voxel_size: 0.1
@@ -39,12 +39,14 @@ id_tracker:
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1
   min_allocation_size: 2000 # px, for submap allocation.
-  
   impaint_voxel_size: true
   debug: true
   
   # Single TSDF Tracker
   voxel_size: 0.05
+  
+  # Detectron
+  use_edge_refinement: true
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective

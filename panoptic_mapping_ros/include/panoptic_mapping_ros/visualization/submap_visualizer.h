@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/map/submap_collection.h>
+#include <panoptic_mapping/preprocessing/label_handler.h>
 #include <ros/node_handle.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -13,10 +16,6 @@
 #include <voxblox/utils/color_maps.h>
 #include <voxblox_msgs/MultiMesh.h>
 #include <voxblox_ros/mesh_vis.h>
-
-#include <panoptic_mapping/common/common.h>
-#include <panoptic_mapping/map/submap_collection.h>
-#include <panoptic_mapping/preprocessing/label_handler.h>
 
 namespace panoptic_mapping {
 

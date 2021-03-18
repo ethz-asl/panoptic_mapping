@@ -4,12 +4,11 @@
 #include <memory>
 #include <string>
 
-#include <ros/node_handle.h>
-#include <visualization_msgs/MarkerArray.h>
-
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <ros/node_handle.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace panoptic_mapping {
 

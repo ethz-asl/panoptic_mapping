@@ -16,7 +16,7 @@
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="devel_mapper_detectron"/> <!-- _rio, _detectron -->
+  <arg name="config" default="devel_mapper"/> <!-- _rio, _detectron -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>

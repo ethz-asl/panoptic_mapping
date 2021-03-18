@@ -41,7 +41,7 @@ class SubmapCollection {
 
   // Accessors.
   size_t size() const { return submaps_.size(); }
-  bool submapIdExists(int id) const;  // Check whether id exists.
+  bool submapIdExists(int id) const;      // Check whether id exists.
   const Submap& getSubmap(int id) const;  // This assumes that the id exists.
   Submap* getSubmapPtr(int id) const;     // This assumes that the id exists.
   int getActiveFreeSpaceSubmapID() const { return active_freespace_submap_id_; }
