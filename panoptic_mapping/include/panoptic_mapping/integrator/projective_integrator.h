@@ -27,7 +27,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     bool use_weight_dropoff = true;
     bool use_constant_weight = false;
     float max_weight = 1e5;
-    std::string interpolation_method;  // nearest, bilinear, adaptive, semantic
+    std::string interpolation_method;  // nearest, bilinear, adaptive
 
     // Behavior
     bool foreign_rays_clear = true;  // observations of object B can clear
@@ -67,10 +67,9 @@ class ProjectiveIntegrator : public IntegratorBase {
                            const cv::Mat& id_image) const;
 
   bool computeVoxelDistanceAndWeight(
-      float* sdf, float* weight, bool* point_belongs_to_this_submap,
-      InterpolatorBase* interpolator, const Point& p_C,
-      const cv::Mat& color_image, const cv::Mat& id_image, int submap_id,
-      float truncation_distance, float voxel_size,
+      float* sdf, float* weight, int* id, InterpolatorBase* interpolator,
+      const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
+      int submap_id, float truncation_distance, float voxel_size,
       bool is_free_space_submap) const;
 
  private:

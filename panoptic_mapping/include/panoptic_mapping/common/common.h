@@ -28,8 +28,13 @@ using MeshLayer = voxblox::MeshLayer;
 // Classification Maps.
 struct ClassVoxel {
   bool belongsToSubmap() const { return belongs_count > foreign_count; }
+
+  // Binary classification
   uint belongs_count = 0u;
   uint foreign_count = 0u;
+
+  // Class-wise classification
+  size_t current_best = 0;
 };
 using ClassBlock = voxblox::Block<ClassVoxel>;
 using ClassLayer = voxblox::Layer<ClassVoxel>;

@@ -2,7 +2,7 @@
 verbosity: 3
 global_frame_name: world
 sensor_frame_name: airsim_drone/Depth_cam
-label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 change_detection_interval: 2.0
 visualization_interval: -1.0
 data_logging_interval: -1.0
@@ -27,7 +27,7 @@ id_tracker:
   unknown_voxel_size: 0.1
   freespace_voxel_size: 0.3
   voxels_per_side: 16
-  truncation_distance: -2 # negative = #va
+  truncation_distance: -2 # negative = #vs
   
   # Ground Truth
   use_ground_truth_instance_ids: false
@@ -46,7 +46,8 @@ id_tracker:
   voxel_size: 0.05
   
   # Detectron
-  use_edge_refinement: true
+  use_edge_refinement: false
+  use_class_layer: true
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective
@@ -56,6 +57,9 @@ tsdf_integrator:
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
   foreign_rays_clear: true
+  
+  # Class integrator
+  use_accurate_classification: true
   
 tsdf_registrator:
   verbosity: 3

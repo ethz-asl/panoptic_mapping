@@ -23,6 +23,7 @@ void Submap::Config::setupParamsAndPrinting() {
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("mesh_config", &mesh_config);
+  setupParam("use_class_layer", &use_class_layer);
 }
 
 Submap::Submap(const Config& config)
@@ -39,15 +40,22 @@ Submap::Submap(const Config& config)
   // Setup layers.
   tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
       config_.voxel_size, config_.voxels_per_side);
-  class_layer_ = std::make_shared<voxblox::Layer<ClassVoxel>>(
-      config_.voxel_size, config_.voxels_per_side);
   mesh_layer_ = std::make_shared<voxblox::MeshLayer>(config_.voxel_size *
                                                      config_.voxels_per_side);
+  if (config_.use_class_layer) {
+    class_layer_ = std::make_shared<voxblox::Layer<ClassVoxel>>(
+        config_.voxel_size, config_.voxels_per_side);
+  }
 
   // Setup tools.
-  mesh_integrator_ = std::make_unique<MeshIntegrator>(
-      config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
-      config_.truncation_distance);
+  if (config_.use_class_layer) {
+    mesh_integrator_ = std::make_unique<MeshIntegrator>(
+        config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
+        config_.truncation_distance);
+  } else {
+    mesh_integrator_ = std::make_unique<MeshIntegrator>(
+        config_.mesh_config, tsdf_layer_, mesh_layer_);
+  }
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {

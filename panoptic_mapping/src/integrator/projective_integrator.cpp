@@ -137,7 +137,7 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
   block.setUpdatedAll();
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
-  const int id = submap->getID();
+  const int submap_id = submap->getID();
 
   // update all voxels
   for (size_t i = 0; i < block.num_voxels(); ++i) {
@@ -145,19 +145,19 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // voxel center in camera frame
     // Compute distance and weight.
-    bool point_belongs_to_this_submap;
+    int id;
     float sdf;
     float weight;
     const bool is_free_space_submap =
         submap->getLabel() == PanopticLabel::kFreeSpace;
     if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &point_belongs_to_this_submap, interpolator, p_C,
-            color_image, id_image, id, truncation_distance, voxel_size,
-            is_free_space_submap)) {
+            &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
+            submap_id, truncation_distance, voxel_size, is_free_space_submap)) {
       continue;
     }
 
     // Apply distance, color, and weight.
+    const bool point_belongs_to_this_submap = id == submap_id;
     if (point_belongs_to_this_submap || is_free_space_submap) {
       voxel.distance = (voxel.distance * voxel.weight +
                         std::max(std::min(truncation_distance, sdf),
@@ -185,10 +185,9 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
 }
 
 bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
-    float* sdf, float* weight, bool* point_belongs_to_this_submap,
-    InterpolatorBase* interpolator, const Point& p_C,
-    const cv::Mat& color_image, const cv::Mat& id_image, int submap_id,
-    float truncation_distance, float voxel_size,
+    float* sdf, float* weight, int* id, InterpolatorBase* interpolator,
+    const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
+    int submap_id, float truncation_distance, float voxel_size,
     bool is_free_space_submap) const {
   // Skip voxels that are too far or too close.
   if (p_C.z() < 0.0) {
@@ -210,9 +209,9 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Set up the interpolator and check whether this is a clearing or an updating
   // measurement.
-  interpolator->computeWeights(u, v, submap_id, point_belongs_to_this_submap,
-                               range_image_, id_image);
-  if (!(*point_belongs_to_this_submap) &&
+  *id = interpolator->computeWeights(u, v, range_image_, id_image);
+  const bool point_belongs_to_this_submap = *id == submap_id;
+  if (!point_belongs_to_this_submap &&
       !(config_.foreign_rays_clear || is_free_space_submap)) {
     return false;
   }
@@ -239,8 +238,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     observation_weight /= std::pow(p_C.z(), 2.f);
   }
 
-  // Apply weight drop-off if appropriate
-  if (config_.use_weight_dropoff && *point_belongs_to_this_submap) {
+  // Apply weight drop-off if appropriate.
+  if (config_.use_weight_dropoff && point_belongs_to_this_submap) {
     const voxblox::FloatingPoint dropoff_epsilon = voxel_size;
     if (new_sdf < -dropoff_epsilon) {
       observation_weight = observation_weight *
@@ -250,7 +249,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     }
   }
 
-  // results (point belongs to this submap is already updated)
+  // Results (id is already updated).
   *sdf = new_sdf;
   *weight = observation_weight;
   return true;
@@ -267,7 +266,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
   for (int v = 0; v < input->depthImage().rows; v++) {
     for (int u = 0; u < input->depthImage().cols; u++) {
       const cv::Vec3f& vertex = input->vertexMap().at<cv::Vec3f>(v, u);
-      Point p_C(vertex[0], vertex[1], vertex[2]);
+      const Point p_C(vertex[0], vertex[1], vertex[2]);
       const float ray_distance = p_C.norm();
       range_image_(v, u) = ray_distance;
       if (ray_distance > camera_.getConfig().max_range ||
@@ -275,7 +274,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      int id = input->idImage()->at<int>(v, u);
+      const int id = input->idImage()->at<int>(v, u);
       if (submaps->submapIdExists(id)) {
         Submap* submap = submaps->getSubmapPtr(id);
         const Point p_S = submap->getT_S_M() * input->T_M_C() *

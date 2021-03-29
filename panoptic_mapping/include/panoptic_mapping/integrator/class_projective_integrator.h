@@ -24,6 +24,8 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
+    bool use_accurate_classification = false;  // false: use binary
+
     // Integration params.
     ProjectiveIntegrator::Config pi_config;
 

@@ -41,9 +41,10 @@ enum class ChangeState {
 class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
-    float voxel_size = 0.1;
-    float truncation_distance = 0.2;
+    float voxel_size = 0.1;           // m
+    float truncation_distance = 0.2;  // m
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
+    bool use_class_layer = false;  // TODO(schmluk): move this out of the map.
 
     MeshIntegrator::Config mesh_config;
 

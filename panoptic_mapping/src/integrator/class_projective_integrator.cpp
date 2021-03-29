@@ -2,9 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <future>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include <voxblox/integrator/merge_integration.h>
@@ -23,6 +21,7 @@ void ClassProjectiveIntegrator::Config::checkParams() const {
 
 void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
+  setupParam("use_accurate_classification", &use_accurate_classification);
   setupParam("projective_integrator_config", &pi_config);
 }
 
@@ -48,12 +47,13 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
   block.setUpdatedAll();
   // Allocate if not yet existent the class block
+  // TODO(schmluk): Make classification more clean and efficient once settled.
   voxblox::Block<ClassVoxel>::Ptr class_block =
       submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);
 
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
-  const int id = submap->getID();
+  const int submap_id = submap->getID();
 
   // update all voxels
   for (size_t i = 0; i < block.num_voxels(); ++i) {
@@ -62,19 +62,19 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // voxel center in camera frame
     // Compute distance and weight.
-    bool point_belongs_to_this_submap;
+    int id;
     float sdf;
     float weight;
     const bool is_free_space_submap =
         submap->getLabel() == PanopticLabel::kFreeSpace;
     if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &point_belongs_to_this_submap, interpolator, p_C,
-            color_image, id_image, id, truncation_distance, voxel_size,
-            is_free_space_submap)) {
+            &sdf, &weight, &id, interpolator, p_C, color_image, id_image, id,
+            truncation_distance, voxel_size, is_free_space_submap)) {
       continue;
     }
 
     // Apply distance and weight.
+    const bool point_belongs_to_this_submap = id == submap_id;
     voxel.distance =
         (voxel.distance * voxel.weight +
          std::max(std::min(truncation_distance, sdf), -truncation_distance) *
@@ -91,10 +91,13 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     }
 
     // Update class tracking.
-    if (point_belongs_to_this_submap) {
-      class_voxel.belongs_count++;
+    if (config_.use_accurate_classification) {
     } else {
-      class_voxel.foreign_count++;
+      if (point_belongs_to_this_submap) {
+        class_voxel.belongs_count++;
+      } else {
+        class_voxel.foreign_count++;
+      }
     }
   }
 }
