@@ -99,6 +99,17 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     if (!is_free_space_submap) {
       ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
       if (config_.use_accurate_classification) {
+        // The id 0 is reserved for the belonging submap.
+        if (point_belongs_to_this_submap) {
+          id = 0;
+        } else {
+          id++;
+        }
+        const int counts = ++class_voxel.counts[id];
+        if (counts > class_voxel.current_count) {
+          class_voxel.current_count = counts;
+          class_voxel.current_index = id;
+        }
       } else {
         if (point_belongs_to_this_submap) {
           class_voxel.belongs_count++;

@@ -20,10 +20,10 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: projective  # single_tsdf, ground_truth, projective, detectron
+  type: detectron  # single_tsdf, ground_truth, projective, detectron
   verbosity: 1
-  instance_voxel_size: 0.03
-  background_voxel_size: 0.08
+  instance_voxel_size: 0.05
+  background_voxel_size: 0.1
   unknown_voxel_size: 0.1
   freespace_voxel_size: 0.3
   voxels_per_side: 16
@@ -34,7 +34,6 @@ id_tracker:
   input_is_mesh_id: true
   
   # Projective ID tracker
-  camera_namespace: ~/camera
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1
@@ -50,9 +49,8 @@ id_tracker:
   use_class_layer: true
   
 tsdf_integrator:  
-  type: projective # projective, class_projective
+  type: class_projective # projective, class_projective
   verbosity: 1
-  camera_namespace: ~/camera
   use_weight_dropoff: true
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic

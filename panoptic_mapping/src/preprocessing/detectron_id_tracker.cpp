@@ -71,7 +71,9 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   if (it == labels_->end()) {
     return -1;
   } else {
-    if (it->second.is_thing) {
+    if (!globals_->labelHandler()->segmentationIdExists(detectron_id)) {
+      pan_label = PanopticLabel::kUnknown;
+    } else if (it->second.is_thing) {
       pan_label = PanopticLabel::kInstance;
     } else {
       pan_label = PanopticLabel::kBackground;
@@ -79,24 +81,26 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   }
 
   // Allocate new submap.
-  Submap::Config cfg;
-  cfg.voxels_per_side = config_.projective_id_tracker.voxels_per_side;
+  Submap::Config config;
+
+  config.voxels_per_side = config_.projective_id_tracker.voxels_per_side;
   switch (pan_label) {
     case PanopticLabel::kInstance: {
-      cfg.voxel_size = config_.projective_id_tracker.instance_voxel_size;
+      config.voxel_size = config_.projective_id_tracker.instance_voxel_size;
       break;
     }
     case PanopticLabel::kBackground: {
-      cfg.voxel_size = config_.projective_id_tracker.background_voxel_size;
+      config.voxel_size = config_.projective_id_tracker.background_voxel_size;
       break;
     }
   }
-  Submap* new_submap = submaps->createSubmap(cfg);
+  config.use_class_layer = config_.use_class_layer;
+  Submap* new_submap = submaps->createSubmap(config);
   new_submap->setLabel(pan_label);
   new_submap->setClassID(it->second.category_id);
-  new_submap->getClassLayerPtr() =
-      std::make_shared<ClassLayer>(cfg.voxel_size, cfg.voxels_per_side);
-  new_submap->setName(globals_->labelHandler()->getName(detectron_id));
+  if (pan_label != PanopticLabel::kUnknown) {
+    new_submap->setName(globals_->labelHandler()->getName(detectron_id));
+  }
   return new_submap->getID();
 }
 

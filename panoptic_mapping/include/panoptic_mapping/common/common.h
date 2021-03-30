@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_COMMON_COMMON_H_
 
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <glog/logging.h>
@@ -28,14 +29,22 @@ using MeshLayer = voxblox::MeshLayer;
 
 // Classification Maps.
 struct ClassVoxel {
-  bool belongsToSubmap() const { return belongs_count > foreign_count; }
+  bool belongsToSubmap() const {
+    if (current_index < 0) {
+      return belongs_count > foreign_count;
+    } else {
+      return current_index == 0;
+    }
+  }
 
-  // Binary classification
+  // Binary classification.
   uint belongs_count = 0u;
   uint foreign_count = 0u;
 
-  // Class-wise classification
-  size_t current_best = 0;
+  // Class-wise classification (index 0 is reserved for the beloning submap).
+  std::unordered_map<int, int> counts;
+  int current_count = -1;
+  int current_index = -1;
 };
 using ClassBlock = voxblox::Block<ClassVoxel>;
 using ClassLayer = voxblox::Layer<ClassVoxel>;
