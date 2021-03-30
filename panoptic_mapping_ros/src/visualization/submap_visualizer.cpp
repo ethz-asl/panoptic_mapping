@@ -40,8 +40,8 @@ void SubmapVisualizer::Config::fromRosParam() {
 }
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
-                                   std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()), label_handler_(std::move(label_handler)) {
+                                   std::shared_ptr<Globals> globals)
+    : config_(config.checkValid()), globals_(std::move(globals)) {
   visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
   color_mode_ = colorModeFromString(config_.color_mode);
   id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
@@ -410,8 +410,10 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
     // so no need to set here.
     switch (color_mode_) {
       case ColorMode::kInstances: {
-        if (label_handler_->segmentationIdExists(submap.getInstanceID())) {
-          info->color = label_handler_->getColor(submap.getInstanceID());
+        if (globals_->labelHandler()->segmentationIdExists(
+                submap.getInstanceID())) {
+          info->color =
+              globals_->labelHandler()->getColor(submap.getInstanceID());
         } else {
           info->color = kUnknownColor_;
         }

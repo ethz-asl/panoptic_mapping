@@ -38,24 +38,19 @@ Submap::Submap(const Config& config)
   T_M_S_inv_.setIdentity();
 
   // Setup layers.
-  tsdf_layer_ = std::make_shared<voxblox::Layer<voxblox::TsdfVoxel>>(
-      config_.voxel_size, config_.voxels_per_side);
-  mesh_layer_ = std::make_shared<voxblox::MeshLayer>(config_.voxel_size *
-                                                     config_.voxels_per_side);
+  tsdf_layer_ =
+      std::make_shared<TsdfLayer>(config_.voxel_size, config_.voxels_per_side);
+  mesh_layer_ =
+      std::make_shared<MeshLayer>(config_.voxel_size * config_.voxels_per_side);
   if (config_.use_class_layer) {
-    class_layer_ = std::make_shared<voxblox::Layer<ClassVoxel>>(
-        config_.voxel_size, config_.voxels_per_side);
+    class_layer_ = std::make_shared<ClassLayer>(config_.voxel_size,
+                                                config_.voxels_per_side);
   }
 
   // Setup tools.
-  if (config_.use_class_layer) {
     mesh_integrator_ = std::make_unique<MeshIntegrator>(
         config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
         config_.truncation_distance);
-  } else {
-    mesh_integrator_ = std::make_unique<MeshIntegrator>(
-        config_.mesh_config, tsdf_layer_, mesh_layer_);
-  }
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {
@@ -157,7 +152,8 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
 
 void Submap::updateMesh(bool only_updated_blocks) {
   // Use the default integrator config to have color always available.
-  mesh_integrator_->generateMesh(only_updated_blocks, true);
+  mesh_integrator_->generateMesh(only_updated_blocks, true,
+                                 config_.use_class_layer);
 }
 
 void Submap::computeIsoSurfacePoints() {

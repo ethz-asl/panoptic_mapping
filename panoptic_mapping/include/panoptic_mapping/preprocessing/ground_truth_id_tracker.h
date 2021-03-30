@@ -36,8 +36,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  GroundTruthIDTracker(const Config& config,
-                       std::shared_ptr<LabelHandler> label_handler);
+  GroundTruthIDTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~GroundTruthIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
@@ -49,7 +48,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
 
  private:
   static config_utilities::Factory::RegistrationRos<
-      IDTrackerBase, GroundTruthIDTracker, std::shared_ptr<LabelHandler>>
+      IDTrackerBase, GroundTruthIDTracker, std::shared_ptr<Globals>>
       registration_;
   const Config config_;
   std::unordered_map<int, int> instance_to_id_;  // track active maps

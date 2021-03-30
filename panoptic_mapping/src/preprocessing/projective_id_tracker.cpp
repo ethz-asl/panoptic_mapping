@@ -11,7 +11,7 @@
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<IDTrackerBase, ProjectiveIDTracker,
-                                           std::shared_ptr<LabelHandler>>
+                                           std::shared_ptr<Globals>>
     ProjectiveIDTracker::registration_("projective");
 
 void ProjectiveIDTracker::Config::checkParams() const {
@@ -22,7 +22,6 @@ void ProjectiveIDTracker::Config::checkParams() const {
   checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
   checkParamGT(rendering_threads, 0, "rendering_threads");
   checkParamNE(depth_tolerance, 0.f, "depth_tolerance");
-  checkParamConfig(camera);
   checkParamConfig(renderer);
 }
 
@@ -40,18 +39,14 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
   setupParam("min_allocation_size", &min_allocation_size);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
-  setupParam("camera_namespace", &camera_namespace);
-  setupParam("camera", &camera, camera_namespace);
   setupParam("renderer", &renderer);
-  renderer.camera = camera;
 }
 
-ProjectiveIDTracker::ProjectiveIDTracker(
-    const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()),
-      IDTrackerBase(std::move(label_handler)),
-      camera_(config.camera.checkValid()),
-      renderer_(config.renderer.checkValid()) {
+ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
+                                         std::shared_ptr<Globals> globals)
+    : IDTrackerBase(std::move(globals)),
+      config_(config.checkValid()),
+      renderer_(config.renderer, globals_->camera()->getConfig()) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
@@ -69,7 +64,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   // Render each active submap in parallel to collect overlap statistics.
   auto t0 = std::chrono::high_resolution_clock::now();
   SubmapIndexGetter index_getter(
-      camera_.findVisibleSubmapIDs(*submaps, input->T_M_C()));
+      globals_->camera()->findVisibleSubmapIDs(*submaps, input->T_M_C()));
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
   for (int i = 0; i < config_.rendering_threads; ++i) {
@@ -79,8 +74,9 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
          input]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(
-                *(input->idImage()), input->depthImage(), camera_.getConfig());
+            tracking_data.insertInputImage(*(input->idImage()),
+                                           input->depthImage(),
+                                           globals_->camera()->getConfig());
           }
           std::vector<TrackingInfo> result;
           int index;
@@ -208,12 +204,12 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
     const Submap& submap, const Transformation& T_M_C,
     const cv::Mat& depth_image, const cv::Mat& input_ids) const {
   // Setup.
-  TrackingInfo result(submap.getID(), camera_.getConfig());
+  TrackingInfo result(submap.getID(), globals_->camera()->getConfig());
   const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();
-  const float size_factor_x =
-      camera_.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
-  const float size_factor_y =
-      camera_.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_x = globals_->camera()->getConfig().fx *
+                              submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_y = globals_->camera()->getConfig().fy *
+                              submap.getTsdfLayer().voxel_size() / 2.f;
   const float block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
   const float depth_tolerance =
@@ -225,8 +221,8 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
   voxblox::BlockIndexList index_list;
   submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
   for (const voxblox::BlockIndex& index : index_list) {
-    if (!camera_.blockIsInViewFrustum(submap, index, T_C_S, block_size,
-                                      block_diag_half)) {
+    if (!globals_->camera()->blockIsInViewFrustum(
+            submap, index, T_C_S, block_size, block_diag_half)) {
       continue;
     }
     for (const Point& vertex :
@@ -234,7 +230,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
       // Project vertex and check depth value.
       const Point p_C = T_C_S * vertex;
       int u, v;
-      if (!camera_.projectPointToImagePlane(p_C, &u, &v)) {
+      if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
         continue;
       }
       if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >= depth_tolerance) {
@@ -256,11 +252,12 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
   // Lookup the labels associated with the input_id.
   PanopticLabel label = PanopticLabel::kUnknown;
   if (config_.input_is_mesh_id) {
-    instance_id = label_handler_->getSegmentationIdFromMeshId(instance_id);
+    instance_id =
+        globals_->labelHandler()->getSegmentationIdFromMeshId(instance_id);
     // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
   }
-  if (label_handler_->segmentationIdExists(instance_id)) {
-    label = label_handler_->getPanopticLabel(instance_id);
+  if (globals_->labelHandler()->segmentationIdExists(instance_id)) {
+    label = globals_->labelHandler()->getPanopticLabel(instance_id);
   }
 
   // Allocate new submap.
@@ -293,8 +290,8 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
   // Take all available information from the ground truth instance ids.
   new_submap->setLabel(label);
   if (label != PanopticLabel::kUnknown) {
-    new_submap->setClassID(label_handler_->getClassID(instance_id));
-    new_submap->setName(label_handler_->getName(instance_id));
+    new_submap->setClassID(globals_->labelHandler()->getClassID(instance_id));
+    new_submap->setName(globals_->labelHandler()->getName(instance_id));
   }
   return new_submap->getID();
 }

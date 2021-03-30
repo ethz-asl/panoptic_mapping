@@ -20,31 +20,13 @@
 
 namespace panoptic_mapping {
 
-// Iso-surface-points are used to check alignment and represent the surface
-// of finished submaps.
-struct IsoSurfacePoint {
-  IsoSurfacePoint(Point _position, FloatingPoint _weight)
-      : position(std::move(_position)), weight(_weight) {}
-  Point position;
-  FloatingPoint weight;
-};
-
-// Change detection data stores relevant information for associating submaps.
-enum class ChangeState {
-  kNew = 0,
-  kMatched,
-  kUnobserved,
-  kAbsent,
-  kPersistent
-};
-
 class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
     float truncation_distance = 0.2;  // m
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
-    bool use_class_layer = false;  // TODO(schmluk): move this out of the map.
+    bool use_class_layer = false;
 
     MeshIntegrator::Config mesh_config;
 

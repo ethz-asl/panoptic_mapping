@@ -30,15 +30,14 @@ class SingleTSDFTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  SingleTSDFTracker(const Config& config,
-                    std::shared_ptr<LabelHandler> label_handler);
+  SingleTSDFTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~SingleTSDFTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  private:
   static config_utilities::Factory::RegistrationRos<
-      IDTrackerBase, SingleTSDFTracker, std::shared_ptr<LabelHandler>>
+      IDTrackerBase, SingleTSDFTracker, std::shared_ptr<Globals>>
       registration_;
   const Config config_;
 

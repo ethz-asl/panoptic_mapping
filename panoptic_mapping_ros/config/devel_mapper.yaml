@@ -20,7 +20,7 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: detectron  # single_tsdf, ground_truth, projective, detectron
+  type: projective  # single_tsdf, ground_truth, projective, detectron
   verbosity: 1
   instance_voxel_size: 0.03
   background_voxel_size: 0.08
@@ -50,13 +50,14 @@ id_tracker:
   use_class_layer: true
   
 tsdf_integrator:  
-  type: class_projective # projective, class_projective
+  type: projective # projective, class_projective
   verbosity: 1
   camera_namespace: ~/camera
   use_weight_dropoff: true
   max_weight: 10000
   interpolation_method: bilinear  # nearest, bilinear, adaptive, semantic
   foreign_rays_clear: true
+  integration_threads: 1
   
   # Class integrator
   use_accurate_classification: true

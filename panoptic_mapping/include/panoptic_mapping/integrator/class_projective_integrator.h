@@ -36,7 +36,8 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
     void checkParams() const override;
   };
 
-  explicit ClassProjectiveIntegrator(const Config& config);
+  ClassProjectiveIntegrator(const Config& config,
+                            std::shared_ptr<Globals> globals);
   ~ClassProjectiveIntegrator() override = default;
 
  protected:
@@ -47,8 +48,8 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
 
  private:
   const Config config_;
-  static config_utilities::Factory::RegistrationRos<IntegratorBase,
-                                                    ClassProjectiveIntegrator>
+  static config_utilities::Factory::RegistrationRos<
+      IntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
 };
 

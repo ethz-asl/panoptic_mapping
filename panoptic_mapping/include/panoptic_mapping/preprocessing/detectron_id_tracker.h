@@ -31,8 +31,7 @@ class DetectronIDTracker : public ProjectiveIDTracker {
     void checkParams() const override;
   };
 
-  DetectronIDTracker(const Config& config,
-                     std::shared_ptr<LabelHandler> label_handler);
+  DetectronIDTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~DetectronIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
@@ -42,7 +41,7 @@ class DetectronIDTracker : public ProjectiveIDTracker {
 
  private:
   static config_utilities::Factory::RegistrationRos<
-      IDTrackerBase, DetectronIDTracker, std::shared_ptr<LabelHandler>>
+      IDTrackerBase, DetectronIDTracker, std::shared_ptr<Globals>>
       registration_;
 
   // Members.

@@ -36,10 +36,6 @@ class ProjectiveIntegrator : public IntegratorBase {
     // System params.
     int integration_threads = std::thread::hardware_concurrency();
 
-    // Camera settings.
-    Camera::Config camera;
-    std::string camera_namespace = "";
-
     Config() { setConfigName("ProjectiveIntegrator"); }
 
    protected:
@@ -47,7 +43,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     void checkParams() const override;
   };
 
-  explicit ProjectiveIntegrator(const Config& config);
+  ProjectiveIntegrator(const Config& config, std::shared_ptr<Globals> globals);
   ~ProjectiveIntegrator() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
@@ -74,17 +70,17 @@ class ProjectiveIntegrator : public IntegratorBase {
 
  private:
   const Config config_;
-  static config_utilities::Factory::RegistrationRos<IntegratorBase,
-                                                    ProjectiveIntegrator>
+  static config_utilities::Factory::RegistrationRos<
+      IntegratorBase, ProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
 
   std::vector<std::unique_ptr<InterpolatorBase>>
       interpolators_;  // one for each thread.
-  Camera camera_;
 
   // Cached data.
   Eigen::MatrixXf range_image_;
   float max_range_in_image_ = 0.f;
+  const Camera::Config* cam_config_;
 };
 
 }  // namespace panoptic_mapping

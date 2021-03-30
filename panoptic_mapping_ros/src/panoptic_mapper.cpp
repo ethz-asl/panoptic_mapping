@@ -38,24 +38,27 @@ void PanopticMapper::setupMembers() {
 
   // Camera.
   ros::NodeHandle camera_nh(nh_private_, "camera");
-  camera_ = std::make_shared<Camera>(
+  auto camera = std::make_shared<Camera>(
       config_utilities::getConfigFromRos<Camera::Config>(camera_nh));
 
   // Labels.
   std::string label_path;
   nh_private_.param("label_path", label_path, std::string(""));
-  label_handler_ = std::make_shared<LabelHandler>();
-  label_handler_->readLabelsFromFile(label_path);
+  auto label_handler = std::make_shared<LabelHandler>();
+  label_handler->readLabelsFromFile(label_path);
+
+  // Globals.
+  globals_ = std::make_shared<Globals>(camera, label_handler);
 
   // Id Tracking.
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
-      id_tracker_nh, label_handler_);
+      id_tracker_nh, globals_);
 
   // Tsdf Integrator.
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
-  tsdf_integrator_ =
-      config_utilities::FactoryRos::create<IntegratorBase>(integrator_nh);
+  tsdf_integrator_ = config_utilities::FactoryRos::create<IntegratorBase>(
+      integrator_nh, globals_);
 
   // Tsdf Registrator.
   ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
@@ -72,7 +75,7 @@ void PanopticMapper::setupMembers() {
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
           visualization_nh),
-      label_handler_);
+      globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Planning.
@@ -138,7 +141,8 @@ void PanopticMapper::processInput(InputData* input) {
   ros::WallTime t0 = ros::WallTime::now();
 
   // Compute and store the vertex map.
-  input->setVertexMap(camera_->computeVertexMap(input->depthImage()));
+  input->setVertexMap(
+      globals_->camera()->computeVertexMap(input->depthImage()));
 
   // Preprocess the segmentation images and allocate new submaps.
   id_tracker_->processInput(submaps_.get(), input);
@@ -291,8 +295,10 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     submap_ptr->finishActivePeriod();
 
     // TODO(schmluk): The names only hold for the ground truth atm, update this.
-    if (label_handler_->segmentationIdExists(submap_ptr->getInstanceID())) {
-      submap_ptr->setName(label_handler_->getName(submap_ptr->getInstanceID()));
+    if (globals_->labelHandler()->segmentationIdExists(
+            submap_ptr->getInstanceID())) {
+      submap_ptr->setName(
+          globals_->labelHandler()->getName(submap_ptr->getInstanceID()));
     } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
       submap_ptr->setName("FreeSpace");
     }

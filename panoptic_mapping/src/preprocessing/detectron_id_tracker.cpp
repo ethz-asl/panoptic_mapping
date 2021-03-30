@@ -9,7 +9,7 @@
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<IDTrackerBase, DetectronIDTracker,
-                                           std::shared_ptr<LabelHandler>>
+                                           std::shared_ptr<Globals>>
     DetectronIDTracker::registration_("detectron");
 
 void DetectronIDTracker::Config::checkParams() const {
@@ -25,16 +25,15 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("edge_refiner", &edge_refiner);
 }
 
-DetectronIDTracker::DetectronIDTracker(
-    const Config& config, std::shared_ptr<LabelHandler> label_handler)
+DetectronIDTracker::DetectronIDTracker(const Config& config,
+                                       std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIDTracker(config.projective_id_tracker,
-                          std::move(label_handler)),
+      ProjectiveIDTracker(config.projective_id_tracker, std::move(globals)),
       edge_refiner_(config_.edge_refiner) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   addRequiredInput(InputData::InputType::kDetectronLabels);
   if (config_.use_edge_refinement) {
-    edge_refiner_.setup(camera_.getConfig());
+    edge_refiner_.setup(globals_->camera()->getConfig());
   }
 }
 
@@ -82,7 +81,6 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   // Allocate new submap.
   Submap::Config cfg;
   cfg.voxels_per_side = config_.projective_id_tracker.voxels_per_side;
-  cfg.use_class_layer = true;
   switch (pan_label) {
     case PanopticLabel::kInstance: {
       cfg.voxel_size = config_.projective_id_tracker.instance_voxel_size;
@@ -96,8 +94,9 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   Submap* new_submap = submaps->createSubmap(cfg);
   new_submap->setLabel(pan_label);
   new_submap->setClassID(it->second.category_id);
-  // TODO(schmluk): add proper data from COCO labels via labelhandler.
-  // new_submap->setName(label_handler_->getName(new_instance));
+  new_submap->getClassLayerPtr() =
+      std::make_shared<ClassLayer>(cfg.voxel_size, cfg.voxels_per_side);
+  new_submap->setName(globals_->labelHandler()->getName(detectron_id));
   return new_submap->getID();
 }
 

@@ -21,7 +21,6 @@ class MapRenderer {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    Camera::Config camera;
     bool impaint_voxel_size = false;
 
     Config() { setConfigName("MapRenderer"); }
@@ -31,7 +30,7 @@ class MapRenderer {
     void checkParams() const override;
   };
 
-  explicit MapRenderer(const Config& config);
+  MapRenderer(const Config& config, const Camera::Config& camera);
   virtual ~MapRenderer() = default;
 
   // Tools.
@@ -43,7 +42,7 @@ class MapRenderer {
 
  private:
   const Config config_;
-  const Camera camera_;
+  Camera camera_;
 
   //
   Eigen::MatrixXf range_image_;

@@ -9,6 +9,7 @@
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 #include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/common/globals.h>
 #include <panoptic_mapping/integrator/integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
 #include <panoptic_mapping/map/submap_collection.h>
@@ -105,14 +106,13 @@ class PanopticMapper {
   std::shared_ptr<SubmapCollection> submaps_;
 
   // Mapping.
-  std::shared_ptr<Camera> camera_;
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<IntegratorBase> tsdf_integrator_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
 
   // Tools.
+  std::shared_ptr<Globals> globals_;
   std::unique_ptr<InputSynchronizer> input_synchronizer_;
-  std::shared_ptr<LabelHandler> label_handler_;
   std::unique_ptr<DataWriter> data_logger_;
   std::shared_ptr<PlanningInterface> planning_interface_;
 

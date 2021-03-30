@@ -5,20 +5,19 @@
 
 namespace panoptic_mapping {
 
-void MapRenderer::Config::checkParams() const { checkParamConfig(camera); }
+void MapRenderer::Config::checkParams() const {}
 
 void MapRenderer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("impaint_voxel_size", &impaint_voxel_size);
-  setupParam("camera", &camera);
 }
 
-MapRenderer::MapRenderer(const Config& config)
-    : config_(config.checkValid()), camera_(config.camera.checkValid()) {
+MapRenderer::MapRenderer(const Config& config, const Camera::Config& camera)
+    : config_(config.checkValid()), camera_(camera) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Allocate range image.
-  range_image_ = Eigen::MatrixXf(config_.camera.height, config_.camera.width);
+  range_image_ = Eigen::MatrixXf(camera.height, camera.width);
 }
 
 cv::Mat MapRenderer::render(const SubmapCollection& submaps,

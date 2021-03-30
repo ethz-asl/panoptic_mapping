@@ -20,7 +20,7 @@ namespace panoptic_mapping {
 
 /**
  * Uses ground truth segmentation and compares them against the rendered map to
- * track aasociations.
+ * track associations.
  */
 
 class ProjectiveIDTracker : public IDTrackerBase {
@@ -43,8 +43,6 @@ class ProjectiveIDTracker : public IDTrackerBase {
     int min_allocation_size = 0;  // #px required to allocate new submap.
 
     // Camera and renderer settings.
-    std::string camera_namespace = "";
-    Camera::Config camera;
     MapRenderer::Config renderer;
 
     // System params.
@@ -58,8 +56,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  ProjectiveIDTracker(const Config& config,
-                      std::shared_ptr<LabelHandler> label_handler);
+  ProjectiveIDTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~ProjectiveIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
@@ -75,14 +72,13 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
  private:
   static config_utilities::Factory::RegistrationRos<
-      IDTrackerBase, ProjectiveIDTracker, std::shared_ptr<LabelHandler>>
+      IDTrackerBase, ProjectiveIDTracker, std::shared_ptr<Globals>>
       registration_;
 
   // Members
   const Config config_;
 
  protected:
-  Camera camera_;
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
 };
 

@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <voxblox/integrator/merge_integration.h>
@@ -13,13 +15,13 @@
 
 namespace panoptic_mapping {
 
-config_utilities::Factory::RegistrationRos<IntegratorBase, ProjectiveIntegrator>
+config_utilities::Factory::RegistrationRos<IntegratorBase, ProjectiveIntegrator,
+                                           std::shared_ptr<Globals>>
     ProjectiveIntegrator::registration_("projective");
 
 void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(integration_threads, 0, "integration_threads");
   checkParamGT(max_weight, 0.f, "max_weight");
-  checkParamConfig(camera);
 }
 
 void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
@@ -30,12 +32,11 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("max_weight", &max_weight);
   setupParam("interpolation_method", &interpolation_method);
   setupParam("integration_threads", &integration_threads);
-  setupParam("camera_namespace", &camera_namespace);
-  setupParam("camera", &camera, camera_namespace);
 }
 
-ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
-    : config_(config.checkValid()), camera_(config.camera.checkValid()) {
+ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
+                                           std::shared_ptr<Globals> globals)
+    : config_(config.checkValid()), IntegratorBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Setup the interpolators (one for each thread).
@@ -46,17 +47,19 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config)
   }
 
   // Allocate range image.
-  range_image_ =
-      Eigen::MatrixXf(camera_.getConfig().height, camera_.getConfig().width);
+  range_image_ = Eigen::MatrixXf(globals_->camera()->getConfig().height,
+                                 globals_->camera()->getConfig().width);
 }
 
 void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
                                         InputData* input) {
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
+  CHECK_NOTNULL(globals_->camera().get());
   CHECK(inputIsValid(*input));
 
   // Allocate all blocks in corresponding submaps.
+  cam_config_ = &(globals_->camera()->getConfig());
   auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(submaps, input);
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -65,7 +68,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // Note(schmluk): This could potentially also be included in the parallel part
   // but is already almost instantaneous.
   std::unordered_map<int, voxblox::BlockIndexList> block_lists =
-      camera_.findVisibleBlocks(*submaps, input->T_M_C(), true);
+      globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(), true);
   std::vector<int> id_list;
   id_list.reserve(block_lists.size());
   for (const auto& id_blocklist_pair : block_lists) {
@@ -194,8 +197,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
     return false;
   }
   const float distance_to_voxel = p_C.norm();
-  if (distance_to_voxel < camera_.getConfig().min_range ||
-      distance_to_voxel > camera_.getConfig().max_range) {
+  if (distance_to_voxel < cam_config_->min_range ||
+      distance_to_voxel > cam_config_->max_range) {
     return false;
   }
 
@@ -203,7 +206,7 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   // fully into the image.
   float u;
   float v;
-  if (!camera_.projectPointToImagePlane(p_C, &u, &v)) {
+  if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
     return false;
   }
 
@@ -219,8 +222,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
   //  Compute the signed distance.
   const float distance_to_surface =
       interpolator->interpolateDepth(range_image_);
-  if (distance_to_surface > camera_.getConfig().max_range ||
-      distance_to_surface < camera_.getConfig().min_range) {
+  if (distance_to_surface > cam_config_->max_range ||
+      distance_to_surface < cam_config_->min_range) {
     return false;
   }
   const float new_sdf = distance_to_surface - distance_to_voxel;
@@ -230,8 +233,8 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Compute the weight of the measurement.
   // This approximates the number of rays that would hit this voxel.
-  float observation_weight = camera_.getConfig().fx * camera_.getConfig().fy *
-                             std::pow(voxel_size / p_C.z(), 2.f);
+  float observation_weight =
+      cam_config_->fx * cam_config_->fy * std::pow(voxel_size / p_C.z(), 2.f);
 
   // Weight reduction with distance squared (according to sensor noise models).
   if (!config_.use_constant_weight) {
@@ -269,8 +272,8 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const Point p_C(vertex[0], vertex[1], vertex[2]);
       const float ray_distance = p_C.norm();
       range_image_(v, u) = ray_distance;
-      if (ray_distance > camera_.getConfig().max_range ||
-          ray_distance < camera_.getConfig().min_range) {
+      if (ray_distance > cam_config_->max_range ||
+          ray_distance < cam_config_->min_range) {
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
@@ -300,8 +303,8 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         for (int z = -max_steps; z <= max_steps; ++z) {
           const Point offset(x, y, z);
           const Point candidate_S = camera_S + offset * block_size;
-          if (camera_.pointIsInViewFrustum(T_C_S * candidate_S,
-                                           block_diag_half)) {
+          if (globals_->camera()->pointIsInViewFrustum(T_C_S * candidate_S,
+                                                       block_diag_half)) {
             space->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(
                 candidate_S);
           }

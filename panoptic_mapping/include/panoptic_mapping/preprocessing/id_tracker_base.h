@@ -10,9 +10,9 @@
 #include <opencv2/core/mat.hpp>
 
 #include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/common/globals.h"
 #include "panoptic_mapping/common/input_data_user.h"
 #include "panoptic_mapping/map/submap_collection.h"
-#include "panoptic_mapping/preprocessing/label_handler.h"
 
 namespace panoptic_mapping {
 
@@ -22,8 +22,8 @@ namespace panoptic_mapping {
  */
 class IDTrackerBase : public InputDataUser {
  public:
-  explicit IDTrackerBase(std::shared_ptr<LabelHandler> label_handler)
-      : label_handler_(std::move(label_handler)) {
+  explicit IDTrackerBase(std::shared_ptr<Globals> globals)
+      : globals_(std::move(globals)) {
     // Per default require all three images.
     addRequiredInput(InputData::InputType::kDepthImage);
     addRequiredInput(InputData::InputType::kColorImage);
@@ -42,7 +42,7 @@ class IDTrackerBase : public InputDataUser {
   }
 
  protected:
-  std::shared_ptr<LabelHandler> label_handler_;
+  std::shared_ptr<Globals> globals_;
 
   // Visualization
   bool visualizationIsOn() const { return visualize_; }

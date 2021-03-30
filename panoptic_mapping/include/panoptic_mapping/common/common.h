@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_COMMON_COMMON_H_
 
 #include <string>
+#include <utility>
 
 #include <glog/logging.h>
 #include <voxblox/core/common.h>
@@ -55,6 +56,24 @@ inline std::string panopticLabelToString(const PanopticLabel& label) {
       return "FreeSpace";
   }
 }
+
+// Iso-surface-points are used to check alignment and represent the surface
+// of finished submaps.
+struct IsoSurfacePoint {
+  IsoSurfacePoint(Point _position, FloatingPoint _weight)
+      : position(std::move(_position)), weight(_weight) {}
+  Point position;
+  FloatingPoint weight;
+};
+
+// Change detection data stores relevant information for associating submaps.
+enum class ChangeState {
+  kNew = 0,
+  kMatched,
+  kUnobserved,
+  kAbsent,
+  kPersistent
+};
 
 // Frame names are abbreviated consistently:
 /* S - Submap

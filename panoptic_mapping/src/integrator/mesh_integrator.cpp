@@ -31,11 +31,15 @@ void MeshIntegrator::Config::setupParamsAndPrinting() {
 
 MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
                                std::shared_ptr<TsdfLayer> tsdf_layer,
-                               std::shared_ptr<MeshLayer> mesh_layer)
+                               std::shared_ptr<MeshLayer> mesh_layer,
+                               std::shared_ptr<ClassLayer> class_layer,
+                               float truncation_distance)
     : config_(config.checkValid()),
       tsdf_layer_(std::move(tsdf_layer)),
-      mesh_layer_(std::move(mesh_layer)) {
-  // Check input is valid.
+      mesh_layer_(std::move(mesh_layer)),
+      class_layer_(std::move(class_layer)),
+      truncation_distance_(truncation_distance) {
+  // Check input is valid (class layer can be null).
   if (!tsdf_layer_) {
     LOG(ERROR) << "The TSDF layer may not be uninitialized!";
     return;
@@ -43,49 +47,30 @@ MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
     LOG(ERROR) << "The mesh layer may not be uninitialized!";
     return;
   }
+  if (class_layer_) {
+    if (truncation_distance_ <= 0.f) {
+      LOG(ERROR) << "The truncation distance must be > 0.0!";
+      return;
+    }
+    if (class_layer_->voxel_size() != tsdf_layer_->voxel_size() ||
+        class_layer_->voxels_per_side() != tsdf_layer_->voxels_per_side()) {
+      LOG(ERROR) << "TSDF and Class layers have different layouts!";
+      return;
+    }
+  }
 
   // Cache input data.
   voxel_size_ = tsdf_layer_->voxel_size();
-  block_size_ = tsdf_layer_->block_size();
   voxels_per_side_ = tsdf_layer_->voxels_per_side();
-  voxel_size_inv_ = 1.0 / voxel_size_;
-  block_size_inv_ = 1.0 / block_size_;
-  voxels_per_side_inv_ = 1.0 / voxels_per_side_;
   cube_index_offsets_ << 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0,
       0, 0, 1, 1, 1, 1;
-}
-
-MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
-                               std::shared_ptr<TsdfLayer> tsdf_layer,
-                               std::shared_ptr<MeshLayer> mesh_layer,
-                               std::shared_ptr<ClassLayer> class_layer,
-                               float truncation_distance)
-    : MeshIntegrator(config, std::move(tsdf_layer), std::move(mesh_layer)) {
-  // Set the class data;
-  class_layer_ = std::move(class_layer);
-  truncation_distance_ = truncation_distance;
-  use_class_layer_ = true;
-
-  // Check input is valid.
-  if (!class_layer_) {
-    LOG(ERROR) << "The class layer may not be uninitialized!";
-    return;
-  } else if (class_layer_->voxel_size() != tsdf_layer_->voxel_size() ||
-             class_layer_->voxels_per_side() !=
-                 tsdf_layer_->voxels_per_side()) {
-    LOG(ERROR) << "TSDF and Class layers have different layouts!";
-    return;
-  } else if (truncation_distance_ <= 0.f) {
-    LOG(ERROR) << "The truncation distance must be > 0.0!";
-    return;
-  }
 }
 
 void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
                                   bool clear_updated_flag,
                                   bool use_class_data) {
   use_class_layer_ = use_class_data;
-  if (!class_layer_) {
+  if (!class_layer_ && use_class_layer_) {
     use_class_layer_ = false;
     LOG(WARNING) << "Tried to use un-initialized class layer, will be ignored.";
   }
@@ -150,14 +135,16 @@ void MeshIntegrator::updateMeshForBlock(
   const TsdfBlock& tsdf_block = tsdf_layer_->getBlockByIndex(block_index);
   // The class is accessed by pointer since it's just a nullptr if the class
   // info is not used.
-  const ClassBlock::ConstPtr class_block =
-      class_layer_->getBlockPtrByIndex(block_index);
+  const ClassBlock* class_block = nullptr;
+  if (use_class_layer_) {
+    class_block = class_layer_->getBlockPtrByIndex(block_index).get();
+  }
 
-  extractBlockMesh(tsdf_block, class_block.get(), mesh.get());
+  extractBlockMesh(tsdf_block, class_block, mesh.get());
 
   // Update colors if needed.
   if (config_.use_color) {
-    updateMeshColor(tsdf_block, class_block.get(), mesh.get());
+    updateMeshColor(tsdf_block, class_block, mesh.get());
   }
 
   mesh->updated = true;

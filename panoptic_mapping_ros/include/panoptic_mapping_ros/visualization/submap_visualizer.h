@@ -7,8 +7,8 @@
 #include <vector>
 
 #include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/common/globals.h>
 #include <panoptic_mapping/map/submap_collection.h>
-#include <panoptic_mapping/preprocessing/label_handler.h>
 #include <ros/node_handle.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -45,7 +45,7 @@ class SubmapVisualizer {
 
   // constructors
   explicit SubmapVisualizer(const Config& config,
-                            std::shared_ptr<LabelHandler> label_handler);
+                            std::shared_ptr<Globals> globals);
   virtual ~SubmapVisualizer() = default;
 
   // Visualization modes.
@@ -123,7 +123,7 @@ class SubmapVisualizer {
   std::string global_frame_name_ = "mission";
 
   // Members.
-  std::shared_ptr<LabelHandler> label_handler_;
+  std::shared_ptr<Globals> globals_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
   voxblox::ExponentialOffsetIdColorMap id_color_map_;
 

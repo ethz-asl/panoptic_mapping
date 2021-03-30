@@ -8,7 +8,7 @@
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<IDTrackerBase, GroundTruthIDTracker,
-                                           std::shared_ptr<LabelHandler>>
+                                           std::shared_ptr<Globals>>
     GroundTruthIDTracker::registration_("ground_truth");
 
 void GroundTruthIDTracker::Config::checkParams() const {
@@ -32,9 +32,9 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("truncation_distance", &truncation_distance);
 }
 
-GroundTruthIDTracker::GroundTruthIDTracker(
-    const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {
+GroundTruthIDTracker::GroundTruthIDTracker(const Config& config,
+                                           std::shared_ptr<Globals> globals)
+    : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
@@ -61,8 +61,9 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   // Allocate new submaps if necessary.
   for (const int instance : instances) {
     if (config_.input_is_mesh_id) {
-      allocateSubmap(label_handler_->getSegmentationIdFromMeshId(instance),
-                     submaps);
+      allocateSubmap(
+          globals_->labelHandler()->getSegmentationIdFromMeshId(instance),
+          submaps);
     } else {
       allocateSubmap(instance, submaps);
     }
@@ -88,7 +89,7 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
 
   // Check whether the instance code is known.
   int new_instance = instance;
-  if (!label_handler_->segmentationIdExists(instance)) {
+  if (!globals_->labelHandler()->segmentationIdExists(instance)) {
     new_instance = 255;  // reserved code for unknown objects
     auto error_it = unknown_ids.find(instance);
     if (error_it == unknown_ids.end()) {
@@ -101,7 +102,8 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   // Allocate new submap.
   Submap::Config config;
   config.voxels_per_side = config_.voxels_per_side;
-  PanopticLabel label = label_handler_->getPanopticLabel(new_instance);
+  PanopticLabel label =
+      globals_->labelHandler()->getPanopticLabel(new_instance);
   switch (label) {
     case PanopticLabel::kInstance: {
       config.voxel_size = config_.instance_voxel_size;
@@ -129,9 +131,9 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
   if (config_.use_ground_truth_instance_ids) {
     new_submap->setInstanceID(new_instance);
   }
-  new_submap->setClassID(label_handler_->getClassID(new_instance));
+  new_submap->setClassID(globals_->labelHandler()->getClassID(new_instance));
   new_submap->setLabel(label);
-  new_submap->setName(label_handler_->getName(new_instance));
+  new_submap->setName(globals_->labelHandler()->getName(new_instance));
 }
 
 void GroundTruthIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {

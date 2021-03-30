@@ -70,16 +70,13 @@ class MeshIntegrator {
   MeshIntegrator(const MeshIntegrator::Config& config,
                  std::shared_ptr<TsdfLayer> tsdf_layer,
                  std::shared_ptr<MeshLayer> mesh_layer,
-                 std::shared_ptr<ClassLayer> class_layer,
+                 std::shared_ptr<ClassLayer> class_layer = nullptr,
                  float truncation_distance = 0.f);
 
-  MeshIntegrator(const MeshIntegrator::Config& config,
-                 std::shared_ptr<TsdfLayer> tsdf_layer,
-                 std::shared_ptr<MeshLayer> mesh_layer);
-
-  /// Generates mesh from the tsdf layer.
-  void generateMesh(bool only_mesh_updated_blocks, bool clear_updated_flag,
-                    bool use_class_data = true);
+  // Generates the mesh from the tsdf layer.
+  void generateMesh(bool only_mesh_updated_blocks = true,
+                    bool clear_updated_flag = true,
+                    bool use_class_data = false);
 
  protected:
   void generateMeshBlocksFunction(
@@ -119,20 +116,14 @@ class MeshIntegrator {
    */
   std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<MeshLayer> mesh_layer_;
-  std::shared_ptr<ClassLayer> class_layer_ = nullptr;
+  std::shared_ptr<ClassLayer> class_layer_;
 
   // Cached map config.
   FloatingPoint voxel_size_;
   size_t voxels_per_side_;
-  FloatingPoint block_size_;
   bool use_class_layer_;
   FloatingPoint truncation_distance_;  // This only needs to be set if the class
   // layer is used, specifies distance assumed for foreign voxels.
-
-  // Derived types.
-  FloatingPoint voxel_size_inv_;
-  FloatingPoint voxels_per_side_inv_;
-  FloatingPoint block_size_inv_;
 
   // Cached index map.
   Eigen::Matrix<int, 3, 8> cube_index_offsets_;

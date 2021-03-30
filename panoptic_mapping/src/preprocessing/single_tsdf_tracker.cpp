@@ -7,7 +7,7 @@
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<IDTrackerBase, SingleTSDFTracker,
-                                           std::shared_ptr<LabelHandler>>
+                                           std::shared_ptr<Globals>>
     SingleTSDFTracker::registration_("single_tsdf");
 
 void SingleTSDFTracker::Config::checkParams() const {
@@ -22,9 +22,9 @@ void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("voxels_per_side", &voxels_per_side);
 }
 
-SingleTSDFTracker::SingleTSDFTracker(
-    const Config& config, std::shared_ptr<LabelHandler> label_handler)
-    : config_(config.checkValid()), IDTrackerBase(std::move(label_handler)) {
+SingleTSDFTracker::SingleTSDFTracker(const Config& config,
+                                     std::shared_ptr<Globals> globals)
+    : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   setRequiredInputs(
       {InputData::InputType::kColorImage, InputData::InputType::kDepthImage});
