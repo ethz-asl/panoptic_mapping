@@ -160,7 +160,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = submap->getFrameName();
-    msg.name_space = std::to_string(info.id);
+    msg.name_space = std::to_string(info.id) + "_" + submap->getName();
 
     // If the submap was deleted we send an empty message to delete the visual.
     if (info.was_deleted) {
@@ -182,13 +182,19 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
 
     // Set the voxblox internal color mode. Gray will be used for overwriting.
     voxblox::ColorMode color_mode_voxblox = voxblox::ColorMode::kGray;
-    if (color_mode_ == ColorMode::kColor) {
+    if (color_mode_ == ColorMode::kColor ||
+        color_mode_ == ColorMode::kClassification) {
       color_mode_voxblox = voxblox::ColorMode::kColor;
     } else if (color_mode_ == ColorMode::kNormals) {
       color_mode_voxblox = voxblox::ColorMode::kNormals;
     }
-    voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
-                                    color_mode_voxblox, &msg.mesh);
+
+    if (color_mode_ == ColorMode::kClassification) {
+      generateClassificationMesh(submap.get(), &msg.mesh);
+    } else {
+      voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
+                                      color_mode_voxblox, &msg.mesh);
+    }
 
     if (msg.mesh.mesh_blocks.empty()) {
       // Nothing changed, don't send an empty msg which would reset the mesh.
@@ -215,6 +221,73 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     result.emplace_back(std::move(msg));
   }
   return result;
+}
+
+void SubmapVisualizer::generateClassificationMesh(Submap* submap,
+                                                  voxblox_msgs::Mesh* mesh) {
+  // NOTE(schmluk): For classification visualization the layer needs to be
+  // copied and re-colored. Currently quite inefficient but easier to use.
+  TsdfLayer tsdf_layer(submap->getTsdfLayer());
+  MeshLayer mesh_layer(submap->getConfig().voxel_size *
+                       submap->getConfig().voxels_per_side);
+
+  // Get all changed blocks.
+  const int voxels_per_block = std::pow(submap->getConfig().voxels_per_side, 3);
+  voxblox::BlockIndexList updated_blocks;
+  tsdf_layer.getAllAllocatedBlocks(&updated_blocks);
+  for (const auto& index : updated_blocks) {
+    TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(index);
+    // NOTE(schmluk): we abuse the esdf flag here to mesh only updated blocks.
+    // TODO(schmluk): clean this up (maybe custom bit or so)
+    tsdf_layer.getBlockByIndex(index).setUpdated(
+        voxblox::Update::kMesh, block.updated(voxblox::Update::kEsdf));
+    block.setUpdated(voxblox::Update::kEsdf, false);
+  }
+  tsdf_layer.getAllUpdatedBlocks(voxblox::Update::kMesh, &updated_blocks);
+
+  // Do the coloring.
+  for (const auto& block_index : updated_blocks) {
+    TsdfBlock& tsdf_block = tsdf_layer.getBlockByIndex(block_index);
+    const ClassBlock& class_block =
+        submap->getClassLayer().getBlockByIndex(block_index);
+    for (size_t linear_index = 0; linear_index < voxels_per_block;
+         ++linear_index) {
+      TsdfVoxel& tsdf_voxel = tsdf_block.getVoxelByLinearIndex(linear_index);
+      const ClassVoxel& class_voxel =
+          class_block.getVoxelByLinearIndex(linear_index);
+
+      // Compute belonging probability in [0, 1].
+      float probability;
+      if (class_voxel.current_index < 0) {
+        probability = static_cast<float>(class_voxel.belongs_count) /
+                      (class_voxel.foreign_count + class_voxel.belongs_count);
+      } else {
+        int total_count = 0;
+        for (const auto& count : class_voxel.counts) {
+          total_count += count.second;
+        }
+        probability =
+            static_cast<float>(class_voxel.counts.at(0)) / total_count;
+      }
+
+      // Coloring.
+      tsdf_voxel.color.b = 0;
+      if (probability > 0.5) {
+        tsdf_voxel.color.r = (1.f - probability) * 2.f * 255.f;
+        tsdf_voxel.color.g = 255;
+      } else {
+        tsdf_voxel.color.r = 255;
+        tsdf_voxel.color.g = (probability)*2.f * 255.f;
+      }
+    }
+  }
+
+  // Create the mesh.
+  voxblox::MeshIntegrator<TsdfVoxel> integrator(voxblox::MeshIntegratorConfig(),
+                                                tsdf_layer, &mesh_layer);
+  integrator.generateMesh(true, false);
+  voxblox::generateVoxbloxMeshMsg(&mesh_layer, voxblox::ColorMode::kColor,
+                                  mesh);
 }
 
 visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
@@ -512,8 +585,8 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kInstances;
   } else if (color_mode == "classes") {
     return ColorMode::kClasses;
-  } else if (color_mode == "change") {
-    return ColorMode::kChange;
+  } else if (color_mode == "classification") {
+    return ColorMode::kClassification;
   } else {
     LOG(WARNING) << "Unknown ColorMode '" << color_mode
                  << "', using 'color' instead.";
@@ -535,6 +608,8 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
       return "classes";
     case ColorMode::kChange:
       return "change";
+    case ColorMode::kClassification:
+      return "classification";
   }
   return "unknown";
 }

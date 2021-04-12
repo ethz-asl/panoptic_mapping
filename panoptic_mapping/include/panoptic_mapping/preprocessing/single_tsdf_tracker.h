@@ -12,8 +12,8 @@
 namespace panoptic_mapping {
 
 /**
- * Allocates a single submap and matches the id of each measurement to that
- * submap. This emulates running a single TSDF grid as map representation.
+ * Allocates a single submap to emulate running a single TSDF grid as map
+ * representation.
  */
 class SingleTSDFTracker : public IDTrackerBase {
  public:

@@ -68,19 +68,18 @@ class ProjectiveIntegrator : public IntegratorBase {
       int submap_id, float truncation_distance, float voxel_size,
       bool is_free_space_submap) const;
 
+  // Cached data.
+  Eigen::MatrixXf range_image_;
+  float max_range_in_image_ = 0.f;
+  const Camera::Config* cam_config_;
+  std::vector<std::unique_ptr<InterpolatorBase>>
+      interpolators_;  // one for each thread.
+
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
       IntegratorBase, ProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
-
-  std::vector<std::unique_ptr<InterpolatorBase>>
-      interpolators_;  // one for each thread.
-
-  // Cached data.
-  Eigen::MatrixXf range_image_;
-  float max_range_in_image_ = 0.f;
-  const Camera::Config* cam_config_;
 };
 
 }  // namespace panoptic_mapping

@@ -55,7 +55,8 @@ class SubmapVisualizer {
     kSubmaps,
     kInstances,
     kClasses,
-    kChange
+    kChange,
+    kClassification
   };
   enum class VisualizationMode { kAll = 0, kActive, kActiveOnly };
 
@@ -113,6 +114,7 @@ class SubmapVisualizer {
 
   void updateVisInfos(const SubmapCollection& submaps);
   void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
+  void generateClassificationMesh(Submap* submap, voxblox_msgs::Mesh* mesh);
 
  private:
   const Config config_;

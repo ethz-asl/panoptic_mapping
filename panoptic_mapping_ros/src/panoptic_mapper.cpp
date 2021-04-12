@@ -139,7 +139,7 @@ void PanopticMapper::setupRos() {
 void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   ros::WallTime t0 = ros::WallTime::now();
-
+  Timer timer("input");
   // Compute and store the vertex map.
   input->setVertexMap(
       globals_->camera()->computeVertexMap(input->depthImage()));
@@ -184,6 +184,7 @@ void PanopticMapper::processInput(InputData* input) {
   }
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
 
+  timer.Stop();
   LOG_IF(INFO, config_.timing_verbosity >= 2) << "\n" << Timing::Print();
 }
 

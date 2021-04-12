@@ -1,0 +1,102 @@
+# General Params
+verbosity: 3
+global_frame_name: world
+sensor_frame_name: airsim_drone/Depth_cam
+label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
+change_detection_interval: 2.0
+visualization_interval: -1.0
+data_logging_interval: -1.0
+max_input_queue_length: 100
+
+camera:
+  verbosity: 0
+  width: 640  # Px
+  height: 480
+  vx: 320
+  vy: 240
+  fx: 320
+  fy: 320
+  max_range: 5  # m
+  min_range: 0.1
+
+id_tracker:
+  type: single_tsdf  # single_tsdf, ground_truth, projective, detectron
+  verbosity: 1
+  instance_voxel_size: 0.05
+  background_voxel_size: 0.1
+  unknown_voxel_size: 0.1
+  freespace_voxel_size: 0.3
+  voxels_per_side: 16
+  truncation_distance: -2 # negative = #vs
+  
+  # Ground Truth
+  use_ground_truth_instance_ids: false
+  input_is_mesh_id: true
+  
+  # Projective ID tracker
+  depth_tolerance: -1  # m, negative = #vs
+  tracking_metric: IoU  # IoU, overlap
+  match_acceptance_threshold: 0.1
+  min_allocation_size: 2000 # px, for submap allocation.
+  impaint_voxel_size: true
+  debug: true
+  
+  # Single TSDF Tracker
+  voxel_size: 0.05
+  
+  # Detectron
+  use_edge_refinement: false
+  use_class_layer: true
+  
+tsdf_integrator:  
+  type: single_tsdf # projective, class_projective, single_tsdf
+  verbosity: 1
+  use_weight_dropoff: true
+  max_weight: 10000
+  interpolation_method: bilinear  # nearest, bilinear, adaptive
+  foreign_rays_clear: true
+  integration_threads: 1
+  
+  # Class integrator
+  use_accurate_classification: false
+  
+tsdf_registrator:
+  verbosity: 3
+  min_voxel_weight: 0.000001
+  error_threshold: -1 # m, negative = #vs
+  match_rejection_points: 100  
+  match_rejection_percentage: 0.2
+  match_acceptance_points: 100
+  match_acceptance_percentage: 0.2
+  normalize_by_voxel_weight: true
+  allow_multiple_matches: false
+  
+visualization:
+  verbosity: 1
+  
+  # Submaps
+  color_mode: classification # submaps, instances, color, normals, classes, change, classification
+  visualization_mode: active  # all, active, active_only
+  submap_color_discretization: 20
+  visualize_mesh: true
+  visualize_tsdf_blocks: true
+  visualize_free_space: true
+  visualize_bounding_volumes: true
+  include_free_space: false
+  mesh_min_weight: 0.000001
+  
+  # Planning
+  visualize_slice: true
+  planning_slice_resolution: 0.1
+  planning_slice_height: -0.5
+  
+  # Tracking
+  visualize_tracking: true
+  
+data_writer:
+  verbosity: 1
+  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
+  file_name: ""
+
+  
+

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
 #include <pcl/io/ply_io.h>
 #include <ros/ros.h>
 #include <voxblox/interpolator/interpolator.h>
@@ -26,6 +27,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("evaluate", &evaluate);
   setupParam("visualize", &visualize);
   setupParam("compute_coloring", &compute_coloring);
+  setupParam("color_by_max_error", &color_by_max_error);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -33,8 +35,7 @@ MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
     : nh_(nh), nh_private_(nh_private) {
   auto config =
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(nh_private_);
-  visualizer_ = std::make_unique<SubmapVisualizer>(
-      config, std::make_shared<LabelHandler>());
+  visualizer_ = std::make_unique<SubmapVisualizer>(config, nullptr);
 }
 
 bool MapEvaluator::evaluate(const EvaluationRequest& request) {
@@ -67,8 +68,8 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   if (!request.map_file.empty()) {
     submaps_ = std::make_shared<SubmapCollection>();
     if (!submaps_->loadFromFile(request.map_file)) {
-      LOG(ERROR) << "Could not load ground truth point cloud from '"
-                 << request.ground_truth_pointcloud_file << "'.";
+      LOG(ERROR) << "Could not load panoptic map from '" << request.map_file
+                 << "'.";
       submaps_.reset();
       return false;
     }
@@ -157,7 +158,7 @@ void MapEvaluator::computeReconstructionError(
     total_points++;
 
     float distance;
-    if (planning_->getDistance(point, &distance, false)) {
+    if (planning_->getDistance(point, &distance, false, false)) {
       if (std::abs(distance) > request.maximum_distance) {
         distance = request.maximum_distance;
         truncated_points++;
@@ -303,6 +304,7 @@ void MapEvaluator::visualizeReconstructionError(
 
         // Get average error.
         float total_error = 0.f;
+        float max_error = 0.f;
         int counted_voxels = 0;
         float min_dist_sqr = 1000.f;
         for (int i = 0; i < num_results; ++i) {
@@ -313,7 +315,9 @@ void MapEvaluator::visualizeReconstructionError(
           voxblox::FloatingPoint distance;
           if (interpolator.getDistance(kdtree_data.points[ret_index[i]],
                                        &distance, true)) {
-            total_error += std::abs(distance);
+            const float error = std::abs(distance);
+            total_error += error;
+            max_error = std::max(max_error, error);
             counted_voxels++;
           }
         }
@@ -322,9 +326,16 @@ void MapEvaluator::visualizeReconstructionError(
           counted_voxels = 1;
           total_error += std::sqrt(min_dist_sqr);
         }
-        float frac =
-            std::min(total_error / counted_voxels, request.maximum_distance) /
-            request.maximum_distance;
+        float frac;
+        if (request.color_by_max_error) {
+          frac = std::min(max_error, request.maximum_distance) /
+                 request.maximum_distance;
+        } else {
+          frac =
+              std::min(total_error / counted_voxels, request.maximum_distance) /
+              request.maximum_distance;
+        }
+
         float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
         float g = (1.f - frac) * 2.f * 255.f;
         if (frac <= 0.5f) {
@@ -341,8 +352,10 @@ void MapEvaluator::visualizeReconstructionError(
   }
 
   // Store colored submaps.
-  submaps_->saveToFile(target_directory_ + "/" + target_map_name_ +
-                       "_evaluated.panmap");
+  std::string output_name =
+      target_directory_ + "/" + target_map_name_ + "_evaluated_" +
+      (request.color_by_max_error ? "max" : "mean") + ".panmap";
+  submaps_->saveToFile(output_name);
 }
 
 void MapEvaluator::publishVisualization() {

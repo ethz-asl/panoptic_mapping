@@ -97,9 +97,10 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   config.use_class_layer = config_.use_class_layer;
   Submap* new_submap = submaps->createSubmap(config);
   new_submap->setLabel(pan_label);
-  new_submap->setClassID(it->second.category_id);
-  if (pan_label != PanopticLabel::kUnknown) {
-    new_submap->setName(globals_->labelHandler()->getName(detectron_id));
+  int class_id = it->second.category_id;
+  new_submap->setClassID(class_id);
+  if (globals_->labelHandler()->segmentationIdExists(class_id)) {
+    new_submap->setName(globals_->labelHandler()->getName(class_id));
   }
   return new_submap->getID();
 }

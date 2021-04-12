@@ -42,8 +42,9 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   }
 
   // Set the id data.
-  input->setIdImage(cv::Mat(input->depthImage().rows, input->depthImage().cols,
-                            CV_16SC1, map_id_));
+  //  input->setIdImage(cv::Mat(input->depthImage().rows,
+  //  input->depthImage().cols,
+  //                            CV_16SC1, map_id_));
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {

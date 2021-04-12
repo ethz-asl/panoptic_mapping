@@ -40,6 +40,7 @@ cs_add_library(${PROJECT_NAME}
         src/preprocessing/geometric_edge_refiner.cpp
         src/integrator/projective_integrator.cpp
         src/integrator/class_projective_integrator.cpp
+        src/integrator/single_tsdf_integrator.cpp
         src/integrator/projection_interpolators.cpp
         src/integrator/mesh_integrator.cpp
         src/registration/tsdf_registrator.cpp
