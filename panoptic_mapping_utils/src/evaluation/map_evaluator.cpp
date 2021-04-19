@@ -133,16 +133,16 @@ void MapEvaluator::computeReconstructionError(
   abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
 
   // TEST
-  std::vector<int> inactive_ids;
-  for (auto& s : *submaps_) {
-    s->setIsActive(s->getInstanceID() == 0);
-    if (!s->isActive()) {
-      inactive_ids.push_back(s->getID());
-    }
-  }
-  for (int id : inactive_ids) {
-    submaps_->removeSubmap(id);
-  }
+  //  std::vector<int> inactive_ids;
+  //  for (auto& s : *submaps_) {
+  //    s->setIsActive(s->getInstanceID() == 0);
+  //    if (!s->isActive()) {
+  //      inactive_ids.push_back(s->getID());
+  //    }
+  //  }
+  //  for (int id : inactive_ids) {
+  //    submaps_->removeSubmap(id);
+  //  }
 
   // Setup progress bar.
   const uint64_t interval = gt_ptcloud_->size() / 100;
