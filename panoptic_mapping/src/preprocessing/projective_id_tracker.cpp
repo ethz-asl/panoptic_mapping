@@ -3,6 +3,7 @@
 #include <future>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -15,7 +16,6 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, ProjectiveIDTracker,
     ProjectiveIDTracker::registration_("projective");
 
 void ProjectiveIDTracker::Config::checkParams() const {
-  checkParamGT(voxels_per_side, 0, "voxels_per_side");
   checkParamGT(instance_voxel_size, 0.f, "instance_voxel_size");
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
@@ -23,6 +23,7 @@ void ProjectiveIDTracker::Config::checkParams() const {
   checkParamGT(rendering_threads, 0, "rendering_threads");
   checkParamNE(depth_tolerance, 0.f, "depth_tolerance");
   checkParamConfig(renderer);
+  checkParamConfig(submap_creation);
 }
 
 void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
@@ -31,13 +32,13 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("background_voxel_size", &background_voxel_size);
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
-  setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("truncation_distance", &truncation_distance);
+  setupParam("submap_creation", &submap_creation);
   setupParam("rendering_threads", &rendering_threads);
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
   setupParam("min_allocation_size", &min_allocation_size);
+  setupParam("min_reobservations", &min_reobservations);
   setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("renderer", &renderer);
 }
@@ -96,9 +97,11 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 
   // Assign the input ids to tracks or allocate new maps.
   std::unordered_map<int, int> input_to_output;
+  std::unordered_set<int> tracked_submap_ids;  // Check re-detections.
   std::stringstream info;
   int n_matched = 0;
   int n_new = 0;
+  int n_deleted = 0;
   for (const int input_id : tracking_data.getInputIDs()) {
     int submap_id;
     bool matched = false;
@@ -141,16 +144,20 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     if (matched) {
       n_matched++;
       input_to_output[input_id] = submap_id;
+      tracked_submap_ids.insert(submap_id);
     } else if (allocate_new_submap) {
       n_new++;
-      input_to_output[input_id] = allocateSubmap(input_id, submaps);
+      int out_id = allocateSubmap(input_id, submaps);
+      input_to_output[input_id] = out_id;
+      submap_redetection_counts_[out_id] = config_.min_reobservations;
+      tracked_submap_ids.insert(out_id);
     } else {
       // Ignore these
       input_to_output[input_id] = -1;
     }
 
     // Logging.
-    if (config_.verbosity >= 2) {
+    if (config_.verbosity >= 3) {
       if (matched) {
         info << "\n  " << input_id << "->" << submap_id << " (" << std::fixed
              << std::setprecision(2) << value << ")";
@@ -166,6 +173,26 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
         }
       }
       info << logging_details.str();
+    }
+  }
+
+  // Check for re-detections of submaps.
+  for (auto it = submap_redetection_counts_.begin();
+       it != submap_redetection_counts_.end();) {
+    if (it->second <= 1) {
+      // Was detected often enough, can be removed.
+      it = submap_redetection_counts_.erase(it);
+    } else {
+      if (tracked_submap_ids.find(it->first) != tracked_submap_ids.end()) {
+        // Re-detected at this timestep.
+        it->second--;
+        ++it;
+      } else {
+        // Not detected, remove the submap.
+        submaps->removeSubmap(it->first);
+        it = submap_redetection_counts_.erase(it);
+        n_deleted++;
+      }
     }
   }
 
@@ -185,7 +212,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
               << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
                      .count()
               << "ms, " << n_matched << " matched, " << n_new
-              << " newly allocated." << info.str();
+              << " newly allocated, " << n_deleted << " deleted." << info.str();
   }
 
   // Publish Visualization if requested.
@@ -261,8 +288,7 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
   }
 
   // Allocate new submap.
-  Submap::Config config;
-  config.voxels_per_side = config_.voxels_per_side;
+  Submap::Config config = config_.submap_creation;
   switch (label) {
     case PanopticLabel::kInstance: {
       config.voxel_size = config_.instance_voxel_size;
@@ -280,10 +306,6 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
       config.voxel_size = config_.unknown_voxel_size;
       break;
     }
-  }
-  config.truncation_distance = config_.truncation_distance;
-  if (config.truncation_distance < 0.f) {
-    config.truncation_distance *= -config.voxel_size;
   }
   Submap* new_submap = submaps->createSubmap(config);
 
@@ -303,13 +325,9 @@ void ProjectiveIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
   }
 
   // Create a new freespace submap.
-  Submap::Config config;
-  config.voxels_per_side = config_.voxels_per_side;
+  Submap::Config config = config_.submap_creation;
   config.voxel_size = config_.freespace_voxel_size;
-  config.truncation_distance = config_.truncation_distance;
-  if (config.truncation_distance < 0.f) {
-    config.truncation_distance *= -config.voxel_size;
-  }
+  config.use_class_layer = false;
   Submap* space_submap = submaps->createSubmap(config);
   space_submap->setLabel(PanopticLabel::kFreeSpace);
   space_submap->setInstanceID(-1);  // Will never appear in a seg image.

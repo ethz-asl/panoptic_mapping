@@ -38,6 +38,7 @@ id_tracker:
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1
   min_allocation_size: 2000 # px, for submap allocation.
+  min_reobservations: 1 # Consecutive observations to keep submaps.
   impaint_voxel_size: true
   debug: true
   

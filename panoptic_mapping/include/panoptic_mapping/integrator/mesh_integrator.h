@@ -107,12 +107,6 @@ class MeshIntegrator {
  protected:
   const MeshIntegrator::Config config_;
 
-  /**
-   * Having both a const and a mutable pointer to the layer allows this
-   * integrator to work both with a const layer (in case you don't want to clear
-   * the updated flag) and mutable layer (in case you do want to clear the
-   * updated flag).
-   */
   std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<MeshLayer> mesh_layer_;
   std::shared_ptr<ClassLayer> class_layer_;

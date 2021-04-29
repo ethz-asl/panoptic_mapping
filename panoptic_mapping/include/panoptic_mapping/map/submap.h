@@ -24,7 +24,7 @@ class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
-    float truncation_distance = 0.2;  // m
+    float truncation_distance = 0.2;  // m, negative values = #vs
     int voxels_per_side = 16;  // Needs to be a multiple of 2.
     bool use_class_layer = false;
 
@@ -35,6 +35,7 @@ class Submap {
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;
+    void initializeDependentVariableDefaults() override;
   };
 
   explicit Submap(const Config& config);
@@ -51,8 +52,9 @@ class Submap {
   int getID() const { return id_; }
   int getInstanceID() const { return instance_id_; }
   int getClassID() const { return class_id_; }
-  const std::string& getFrameName() const { return frame_name_; }
+  PanopticLabel getLabel() const { return label_; }
   const std::string& getName() const { return name_; }
+  const std::string& getFrameName() const { return frame_name_; }
   const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
   const ClassLayer& getClassLayer() const { return *class_layer_; }
   const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
@@ -63,7 +65,6 @@ class Submap {
     return iso_surface_points_;
   }
   ChangeState getChangeState() const { return change_state_; }
-  PanopticLabel getLabel() const { return label_; }
   const SubmapBoundingVolume& getBoundingVolume() const {
     return bounding_volume_;
   }
@@ -81,9 +82,9 @@ class Submap {
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
-  void setFrameName(const std::string& name) { frame_name_ = name; }
   void setLabel(PanopticLabel label) { label_ = label; }
   void setName(const std::string& name) { name_ = name; }
+  void setFrameName(const std::string& name) { frame_name_ = name; }
   void setChangeState(ChangeState state) { change_state_ = state; }
   void setIsActive(bool is_active) { is_active_ = is_active; }
 
@@ -102,7 +103,7 @@ class Submap {
   InstanceID instance_id_;  // Per default sets up a new unique ID.
   int class_id_ = -1;
   PanopticLabel label_ = PanopticLabel::kUnknown;
-  std::string name_;
+  std::string name_ = "Unknown";
 
   // State.
   bool is_active_ = true;

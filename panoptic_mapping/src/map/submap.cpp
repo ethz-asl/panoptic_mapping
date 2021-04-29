@@ -7,23 +7,30 @@
 #include <cblox/QuatTransformation.pb.h>
 #include <cblox/utils/quat_transformation_protobuf_utils.h>
 #include <voxblox/io/layer_io.h>
-#include <voxblox/mesh/mesh_integrator.h>
 
 namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
   checkParamGT(voxel_size, 0.f, "voxel_size");
-  checkParamGT(truncation_distance, 0.f, "truncation_distance");
+  checkParamNE(truncation_distance, 0.f, "truncation_distance");
+  checkParamCond(voxels_per_side % 2 == 0,
+                 "voxels_per_side is required to be a multiple of 2.");
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
   checkParamConfig(mesh_config);
+}
+
+void Submap::Config::initializeDependentVariableDefaults() {
+  if (truncation_distance < 0.f) {
+    truncation_distance *= -voxel_size;
+  }
 }
 
 void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("mesh_config", &mesh_config);
   setupParam("use_class_layer", &use_class_layer);
+  setupParam("mesh_config", &mesh_config);
 }
 
 Submap::Submap(const Config& config)

@@ -47,15 +47,15 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
                  << "' in submap " << submap->getID() << ".";
     return;
   }
+  const bool use_class_layer = submap->getConfig().use_class_layer;
   const bool is_free_space_submap =
       submap->getLabel() == PanopticLabel::kFreeSpace;
   voxblox::Block<TsdfVoxel>& block =
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
   block.setUpdatedAll();
   // Allocate if not yet existent the class block
-  // TODO(schmluk): Make classification more clean and efficient once settled.
   ClassBlock::Ptr class_block;
-  if (!is_free_space_submap) {
+  if (use_class_layer) {
     class_block = submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);
   }
 
@@ -96,7 +96,7 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     }
 
     // Update class tracking.
-    if (!is_free_space_submap) {
+    if (use_class_layer) {
       ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
       if (config_.use_accurate_classification) {
         // The id 0 is reserved for the belonging submap.

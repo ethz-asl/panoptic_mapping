@@ -20,7 +20,6 @@ class DetectronIDTracker : public ProjectiveIDTracker {
     int verbosity = 4;
 
     bool use_edge_refinement = false;
-    bool use_class_layer = false;
     ProjectiveIDTracker::Config projective_id_tracker;
     GeomtricEdgeRefiner::Config edge_refiner;
 

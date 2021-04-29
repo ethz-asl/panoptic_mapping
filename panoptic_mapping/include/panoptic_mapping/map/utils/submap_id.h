@@ -45,7 +45,8 @@ class SubmapIDManager {
  private:
   SubmapIDManager();
 
-  static const bool kAllowIDReuse = true;
+  // Currently submap IDs are assumed to be unique over the lifetime of a run.
+  static const bool kAllowIDReuse = false;
 
   int current_id_;
   std::queue<int> vacant_ids_;

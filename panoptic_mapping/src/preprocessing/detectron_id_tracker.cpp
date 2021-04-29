@@ -20,7 +20,6 @@ void DetectronIDTracker::Config::checkParams() const {
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("use_edge_refinement", &use_edge_refinement);
-  setupParam("use_class_layer", &use_class_layer);
   setupParam("projective_id_tracker", &projective_id_tracker);
   setupParam("edge_refiner", &edge_refiner);
 }
@@ -81,9 +80,7 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   }
 
   // Allocate new submap.
-  Submap::Config config;
-
-  config.voxels_per_side = config_.projective_id_tracker.voxels_per_side;
+  Submap::Config config = config_.projective_id_tracker.submap_creation;
   switch (pan_label) {
     case PanopticLabel::kInstance: {
       config.voxel_size = config_.projective_id_tracker.instance_voxel_size;
@@ -94,7 +91,7 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
       break;
     }
   }
-  config.use_class_layer = config_.use_class_layer;
+  config.use_class_layer = true;
   Submap* new_submap = submaps->createSubmap(config);
   new_submap->setLabel(pan_label);
   int class_id = it->second.category_id;

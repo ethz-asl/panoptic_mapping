@@ -27,27 +27,29 @@ class ProjectiveIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    // Allocation TODO(schmluk): Clean submap creation away from id tracking.
-    float truncation_distance = 0.0;
+    // Submap params.
+    // TODO(schmluk): Clean submap creation away from id tracking.
     float instance_voxel_size = 0.05;
     float background_voxel_size = 0.1;
     float unknown_voxel_size = 0.1;
     float freespace_voxel_size = 0.3;
-    int voxels_per_side = 16;
+    Submap::Config submap_creation;
 
-    // Tracking
+    // Tracking.
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
     std::string tracking_metric = "IoU";  // IoU, overlap
     float match_acceptance_threshold = 0.5;
 
+    // Allocation .
     int min_allocation_size = 0;  // #px required to allocate new submap.
-
-    // Camera and renderer settings.
-    MapRenderer::Config renderer;
+    int min_reobservations = 0;  // #consecutive detections to keep new submaps.
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();
     bool input_is_mesh_id = false;  // lookup by instance_id or mesh_id
+
+    // Camera and renderer settings.
+    MapRenderer::Config renderer;
 
     Config() { setConfigName("ProjectiveIDTracker"); }
 
@@ -62,9 +64,9 @@ class ProjectiveIDTracker : public IDTrackerBase {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
+  // Internal methods.
   virtual int allocateSubmap(int instance_id, SubmapCollection* submaps);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
-
   TrackingInfo renderTrackingInfo(const Submap& submap,
                                   const Transformation& T_M_C,
                                   const cv::Mat& depth_image,
@@ -80,6 +82,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
  protected:
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
+
+  std::unordered_map<int, int> submap_redetection_counts_;
 };
 
 }  // namespace panoptic_mapping

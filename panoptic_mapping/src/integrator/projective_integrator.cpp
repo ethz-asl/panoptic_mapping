@@ -282,7 +282,14 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         Submap* submap = submaps->getSubmapPtr(id);
         const Point p_S = submap->getT_S_M() * input->T_M_C() *
                           p_C;  // p_S = T_S_M * T_M_C * p_C
-        submap->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(p_S);
+        const voxblox::BlockIndex index =
+            submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
+        submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(index);
+        if (submap->getConfig().use_class_layer) {
+          // NOTE(schmluk): The projective integrator does not use the class
+          // layer but was added here for simplicity.
+          submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);
+        }
         touched_submaps.insert(submap);
       }
     }

@@ -225,6 +225,9 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
 
 void SubmapVisualizer::generateClassificationMesh(Submap* submap,
                                                   voxblox_msgs::Mesh* mesh) {
+  if (!submap->getConfig().use_class_layer) {
+    return;
+  }
   // NOTE(schmluk): For classification visualization the layer needs to be
   // copied and re-colored. Currently quite inefficient but easier to use.
   TsdfLayer tsdf_layer(submap->getTsdfLayer());
@@ -444,7 +447,9 @@ void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
 
   // Update colors where necessary.
   for (int id : ids) {
-    setSubmapVisColor(submaps.getSubmap(id), &vis_infos_[id]);
+    if (!vis_infos_[id].was_deleted) {
+      setSubmapVisColor(submaps.getSubmap(id), &vis_infos_[id]);
+    }
   }
 }
 

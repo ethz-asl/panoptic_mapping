@@ -1,13 +1,14 @@
 # General Params
 verbosity: 3
+timing_verbosity: 0
 global_frame_name: world
 sensor_frame_name: airsim_drone/Depth_cam
 label_path: /home/lukas/Documents/PanopticMapping/Data/labels/detectron_labels.csv
+#label_path: /home/lukas/Documents/PanopticMapping/Data/labels/labels.csv
 change_detection_interval: 0.0
 visualization_interval: -1.0
 data_logging_interval: -1.0
 max_input_queue_length: 100
-timing_verbosity: 4
 
 camera:
   verbosity: 0
@@ -21,14 +22,14 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: detectron  # single_tsdf, ground_truth, projective, detectron
+  type: projective  # single_tsdf, ground_truth, projective, detectron
   verbosity: 3
-  instance_voxel_size: 0.03
-  background_voxel_size: 0.08
+  instance_voxel_size: 0.05
+  background_voxel_size: 0.1
   unknown_voxel_size: 0.1
   freespace_voxel_size: 0.3
   voxels_per_side: 16
-  truncation_distance: -2 # negative = #va
+  truncation_distance: -3 # negative = #vs
   
   # Ground Truth
   use_ground_truth_instance_ids: false
@@ -39,13 +40,16 @@ id_tracker:
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1
-  min_allocation_size: 2000 # px, for submap allocation.
+  
+  min_allocation_size: 100 # px, for submap allocation. 2000
+  min_reobservations: 2 # Consecutive observations to keep submaps.
   
   impaint_voxel_size: true
   debug: true
   
-  # Single TSDF Tracker
-  voxel_size: 0.05
+  # Mesh / submap
+  required_belonging_corners: 8
+  use_class_layer: true
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective
@@ -71,7 +75,7 @@ visualization:
   verbosity: 1
   
   # Submaps
-  color_mode: submaps # submaps, instances, color, normals, classes, change
+  color_mode: submaps # submaps, instances, color, normals, classes, change, classification
   visualization_mode: active  # all, active, active_only
   submap_color_discretization: 20
   visualize_mesh: true

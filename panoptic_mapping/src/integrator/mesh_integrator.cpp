@@ -46,6 +46,11 @@ MeshIntegrator::MeshIntegrator(const MeshIntegrator::Config& config,
   } else if (!mesh_layer_) {
     LOG(ERROR) << "The mesh layer may not be uninitialized!";
     return;
+  } else if (tsdf_layer_->voxel_size() * tsdf_layer_->voxels_per_side() -
+                 mesh_layer_->block_size() >
+             1e-6) {
+    LOG(ERROR) << "TSDF and Mesh layers have different layouts!";
+    return;
   }
   if (class_layer_) {
     if (truncation_distance_ <= 0.f) {
