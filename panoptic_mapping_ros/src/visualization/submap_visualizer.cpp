@@ -102,6 +102,12 @@ void SubmapVisualizer::visualizeMeshes(const SubmapCollection& submaps) {
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     std::vector<voxblox_msgs::MultiMesh> msgs = generateMeshMsgs(submaps);
     for (auto& msg : msgs) {
+      std::stringstream ss;
+      ss << "Sent msg (" << msg.name_space << ")";
+      if (msg.mesh.mesh_blocks.empty()) {
+        ss << " [deleted]";
+      }
+      std::cout << ss.str() << std::endl;
       mesh_pub_.publish(msg);
     }
   }
@@ -142,6 +148,20 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     updateVisInfos(submaps);
   }
 
+  // If the submap was deleted we send an empty message to delete the visual.
+  for (auto it = vis_infos_.begin(); it != vis_infos_.end();) {
+    if (it->second.was_deleted) {
+      voxblox_msgs::MultiMesh msg;
+      msg.header.stamp = ros::Time::now();
+      msg.header.frame_id = global_frame_name_;
+      msg.name_space = it->second.name_space;
+      result.emplace_back(msg);
+      it = vis_infos_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
   // Process all submaps based on their visualization info.
   for (const auto& submap : submaps) {
     if (submap->getLabel() == PanopticLabel::kFreeSpace) {
@@ -160,14 +180,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = submap->getFrameName();
-    msg.name_space = std::to_string(info.id) + "_" + submap->getName();
-
-    // If the submap was deleted we send an empty message to delete the visual.
-    if (info.was_deleted) {
-      result.push_back(msg);
-      vis_infos_.erase(it);
-      continue;
-    }
+    msg.name_space = info.name_space;
 
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
@@ -228,6 +241,7 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
   if (!submap->getConfig().use_class_layer) {
     return;
   }
+
   // NOTE(schmluk): For classification visualization the layer needs to be
   // copied and re-colored. Currently quite inefficient but easier to use.
   TsdfLayer tsdf_layer(submap->getTsdfLayer());
@@ -241,7 +255,7 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
   for (const auto& index : updated_blocks) {
     TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(index);
     // NOTE(schmluk): we abuse the esdf flag here to mesh only updated blocks.
-    // TODO(schmluk): clean this up (maybe custom bit or so)
+    // TODO(schmluk): clean this up (maybe custom bit or so).
     tsdf_layer.getBlockByIndex(index).setUpdated(
         voxblox::Update::kMesh, block.updated(voxblox::Update::kEsdf));
     block.setUpdated(voxblox::Update::kEsdf, false);
@@ -437,6 +451,9 @@ void SubmapVisualizer::updateVisInfos(const SubmapCollection& submaps) {
     SubmapVisInfo& info = it->second;
     info.id = id;
     info.republish_everything = true;
+    const Submap& submap = submaps.getSubmap(info.id);
+    // Note: The frame and submap names don't get updated for the visualization.
+    info.name_space = std::to_string(info.id) + "_" + submap.getName();
     setSubmapVisColor(submaps.getSubmap(id), &info);
   }
 
@@ -568,10 +585,13 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
 }
 
 void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {
+  // Setup common message.
+  geometry_msgs::TransformStamped msg;
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = global_frame_name_;
+
+  // Send transforms of submaps.
   for (const auto& submap : submaps) {
-    geometry_msgs::TransformStamped msg;
-    msg.header.stamp = ros::Time::now();
-    msg.header.frame_id = global_frame_name_;
     msg.child_frame_id = submap->getFrameName();
     tf::transformKindrToMsg(submap->getT_S_M().cast<double>(), &msg.transform);
     tf_broadcaster_.sendTransform(msg);

@@ -101,6 +101,9 @@ class SubmapVisualizer {
   struct SubmapVisInfo {
     // General.
     int id = 0;  // Corresponding submap id.
+    std::string name_space;
+
+    // Visualization data.
     bool republish_everything = false;
     bool was_deleted = false;
     bool change_color = true;
