@@ -102,12 +102,6 @@ void SubmapVisualizer::visualizeMeshes(const SubmapCollection& submaps) {
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     std::vector<voxblox_msgs::MultiMesh> msgs = generateMeshMsgs(submaps);
     for (auto& msg : msgs) {
-      std::stringstream ss;
-      ss << "Sent msg (" << msg.name_space << ")";
-      if (msg.mesh.mesh_blocks.empty()) {
-        ss << " [deleted]";
-      }
-      std::cout << ss.str() << std::endl;
       mesh_pub_.publish(msg);
     }
   }
