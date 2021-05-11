@@ -43,7 +43,7 @@ cs_add_library(${PROJECT_NAME}
         src/integrator/single_tsdf_integrator.cpp
         src/integrator/projection_interpolators.cpp
         src/integrator/mesh_integrator.cpp
-        src/registration/tsdf_registrator.cpp
+        src/map_management/tsdf_registrator.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp

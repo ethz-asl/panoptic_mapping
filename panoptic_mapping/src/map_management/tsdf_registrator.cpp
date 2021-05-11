@@ -1,4 +1,4 @@
-#include "panoptic_mapping/registration/tsdf_registrator.h"
+#include "panoptic_mapping/map_management/tsdf_registrator.h"
 
 #include <algorithm>
 #include <utility>
