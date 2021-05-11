@@ -54,7 +54,7 @@
   </node>  
   
   <!-- RVIZ Visualization-->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/rviz/devel.rviz"/>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/rviz/devel.rviz" output="screen"/>
 
   <!-- Path visualization -->
   <node name="path_visualizer" pkg="panoptic_mapping_utils" type="path_visualizer.py" output="screen">

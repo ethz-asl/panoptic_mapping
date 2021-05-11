@@ -42,7 +42,7 @@ id_tracker:
   match_acceptance_threshold: 0.1
   
   min_allocation_size: 100 # px, for submap allocation. 2000
-  min_reobservations: 2 # Consecutive observations to keep submaps.
+  min_reobservations: 3 # Consecutive observations to keep submaps.
   
   impaint_voxel_size: true
   debug: true
