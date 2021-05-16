@@ -13,9 +13,9 @@
 #include <panoptic_mapping/integrator/integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
 #include <panoptic_mapping/map/submap_collection.h>
+#include <panoptic_mapping/map_management/tsdf_registrator.h>
 #include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/preprocessing/label_handler.h>
-#include <panoptic_mapping/registration/tsdf_registrator.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
