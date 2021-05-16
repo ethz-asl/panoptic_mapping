@@ -22,7 +22,7 @@ camera:
   min_range: 0.1
 
 id_tracker:
-  type: projective  # single_tsdf, ground_truth, projective, detectron
+  type: detectron  # single_tsdf, ground_truth, projective, detectron
   verbosity: 3
   instance_voxel_size: 0.05
   background_voxel_size: 0.1
@@ -43,6 +43,7 @@ id_tracker:
   
   min_allocation_size: 100 # px, for submap allocation. 2000
   min_reobservations: 3 # Consecutive observations to keep submaps.
+  active_observations: 3  # Deactivate submaps when not observed for x frames.
   
   impaint_voxel_size: true
   debug: true
@@ -50,6 +51,10 @@ id_tracker:
   # Mesh / submap
   required_belonging_corners: 8
   use_class_layer: true
+  
+activity_manager:
+  required_reobservations: 3
+  deactivate_after_missed_detections: 3
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective

@@ -44,6 +44,7 @@ cs_add_library(${PROJECT_NAME}
         src/integrator/projection_interpolators.cpp
         src/integrator/mesh_integrator.cpp
         src/map_management/tsdf_registrator.cpp
+        src/map_management/activity_manager.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp

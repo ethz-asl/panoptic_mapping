@@ -28,17 +28,23 @@ void ProjectiveIDTracker::Config::checkParams() const {
 
 void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
+
   setupParam("instance_voxel_size", &instance_voxel_size);
   setupParam("background_voxel_size", &background_voxel_size);
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("submap_creation", &submap_creation);
-  setupParam("rendering_threads", &rendering_threads);
+
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
+
   setupParam("min_allocation_size", &min_allocation_size);
   setupParam("min_reobservations", &min_reobservations);
+  setupParam("active_observations", &active_observations);
+
+  setupParam("rendering_threads", &rendering_threads);
+
   setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("renderer", &renderer);
 }

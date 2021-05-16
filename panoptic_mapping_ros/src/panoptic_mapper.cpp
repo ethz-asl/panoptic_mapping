@@ -50,7 +50,7 @@ void PanopticMapper::setupMembers() {
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);
 
-  // Id Tracking.
+  // ID Tracking.
   ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
       id_tracker_nh, globals_);
@@ -65,6 +65,11 @@ void PanopticMapper::setupMembers() {
   tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
       config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
           registrator_nh));
+
+  // Activity Manager.
+  ros::NodeHandle activity_nh(nh_private_, "activity_manager");
+  activity_manager_ = std::make_unique<ActivityManager>(
+      config_utilities::getConfigFromRos<ActivityManager::Config>(activity_nh));
 
   // Planning Interface.
   planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
@@ -140,6 +145,7 @@ void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   ros::WallTime t0 = ros::WallTime::now();
   Timer timer("input");
+  // TODO(schmluk): update all timers.
   // Compute and store the vertex map.
   input->setVertexMap(
       globals_->camera()->computeVertexMap(input->depthImage()));
@@ -152,17 +158,22 @@ void PanopticMapper::processInput(InputData* input) {
   tsdf_integrator_->processInput(submaps_.get(), input);
   ros::WallTime t2 = ros::WallTime::now();
 
-  // Update the submap
+  // Update other submap data?
 
-  // If requested perform change detection and visualization.
+  // Check activity.
+  activity_manager_->processSubmaps(submaps_.get());
+
+  // If requested perform change detection, visualization, and logging.
   ros::TimerEvent event;
   if (config_.change_detection_interval < 0.f) {
     changeDetectionCallback(event);
   }
+
   ros::WallTime t3 = ros::WallTime::now();
   if (config_.visualization_interval < 0.f) {
     publishVisualizationCallback(event);
   }
+
   ros::WallTime t4 = ros::WallTime::now();
   if (config_.data_logging_interval < 0.f) {
     dataLoggingCallback(event);

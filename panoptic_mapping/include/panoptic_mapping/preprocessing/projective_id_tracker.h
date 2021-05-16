@@ -41,8 +41,14 @@ class ProjectiveIDTracker : public IDTrackerBase {
     float match_acceptance_threshold = 0.5;
 
     // Allocation .
+    // TODO(schmluk): Clean allocation away from tracking.
     int min_allocation_size = 0;  // #px required to allocate new submap.
     int min_reobservations = 0;  // #consecutive detections to keep new submaps.
+
+    // Deactivation.
+    // TODO(schmluk): Clean deactivation away from tracking.
+    int active_observations = 0;  // Deactivate submaps when not observed for x
+                                  // frames. Use 0 to ignore.
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();

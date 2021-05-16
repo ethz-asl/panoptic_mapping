@@ -61,6 +61,7 @@ class Submap {
   const Transformation& getT_M_S() const { return T_M_S_; }
   const Transformation& getT_S_M() const { return T_M_S_inv_; }
   bool isActive() const { return is_active_; }
+  bool wasTracked() const { return was_tracked_; }
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
@@ -87,6 +88,7 @@ class Submap {
   void setFrameName(const std::string& name) { frame_name_ = name; }
   void setChangeState(ChangeState state) { change_state_ = state; }
   void setIsActive(bool is_active) { is_active_ = is_active; }
+  void setWasTracked(bool was_tracked) { was_tracked_ = was_tracked; }
 
   // Processing.
   void finishActivePeriod();
@@ -107,6 +109,7 @@ class Submap {
 
   // State.
   bool is_active_ = true;
+  bool was_tracked_ = true;  // Set to true by the id tracker if matched.
   ChangeState change_state_ = ChangeState::kNew;
 
   // Transformations.
