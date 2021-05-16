@@ -75,20 +75,23 @@ void Submap::finishActivePeriod() {
 
 void Submap::getProto(SubmapProto* proto) const {
   CHECK_NOTNULL(proto);
-  // Getting the relevant data
-  size_t num_tsdf_blocks = tsdf_layer_->getNumberOfAllocatedBlocks();
-  auto transformation_proto_ptr = new cblox::QuatTransformationProto();
-  cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
-
-  // Filling out the description of the submap.
+  // Store Submap data.
   proto->set_instance_id(instance_id_);
   proto->set_class_id(class_id_);
   proto->set_panoptic_label(static_cast<int>(label_));
-  proto->set_num_blocks(num_tsdf_blocks);
+  proto->set_name(name_);
+
+  // Store TSDF data.
+  proto->set_num_blocks(tsdf_layer_->getNumberOfAllocatedBlocks());
   proto->set_voxel_size(config_.voxel_size);
   proto->set_voxels_per_side(config_.voxels_per_side);
   proto->set_truncation_distance(config_.truncation_distance);
+
+  // Store transformation data.
+  auto transformation_proto_ptr = new cblox::QuatTransformationProto();
+  cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
   proto->set_allocated_transform(transformation_proto_ptr);
+  proto->set_frame_name(frame_name_);
 }
 
 bool Submap::saveToStream(std::fstream* outfile_ptr) const {
@@ -134,7 +137,13 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   cfg.truncation_distance = submap_proto.truncation_distance();
   auto submap = std::make_unique<Submap>(cfg);
 
-  // Getting the tsdf blocks for this submap (the tsdf layer).
+  // Load the submap data.
+  submap->setInstanceID(submap_proto.instance_id());
+  submap->setClassID(submap_proto.class_id());
+  submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
+  submap->setName(submap_proto.name());
+
+  // Load the TSDF layer.
   if (!voxblox::io::LoadBlocksFromStream(
           submap_proto.num_blocks(), TsdfLayer::BlockMergingStrategy::kReplace,
           proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
@@ -142,17 +151,13 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
     return nullptr;
   }
 
-  // Getting the transformation.
+  // Load the transformation.
   Transformation T_M_S;
   cblox::QuatTransformationProto transformation_proto =
       submap_proto.transform();
   cblox::conversions::transformProtoToKindr(transformation_proto, &T_M_S);
   submap->setT_M_S(T_M_S);
-
-  // Other data.
-  submap->setInstanceID(submap_proto.instance_id());
-  submap->setClassID(submap_proto.class_id());
-  submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
+  submap->setFrameName(submap_proto.frame_name());
 
   return submap;
 }

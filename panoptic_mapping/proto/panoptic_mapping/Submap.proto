@@ -5,14 +5,19 @@ package panoptic_mapping;
 import public "cblox/QuatTransformation.proto";
 
 message SubmapProto {
+  // Submap data.
   optional int32 instance_id = 1;
   optional int32 class_id = 6;
   optional int32 panoptic_label = 7;
+  optional string name = 9;
 
+  // Tsdf Layer.
   optional uint32 num_blocks = 2;
   optional float voxel_size = 3;
   optional uint32 voxels_per_side = 4;
   optional float truncation_distance = 8;
 
+  // Submap Transformation.
   optional cblox.QuatTransformationProto transform = 5;
+  optional string frame_name = 10;
 }

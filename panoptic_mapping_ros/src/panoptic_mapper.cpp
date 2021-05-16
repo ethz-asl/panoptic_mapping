@@ -258,14 +258,6 @@ bool PanopticMapper::saveMapCallback(
   response.success = saveMap(request.file_path);
   return response.success;
 }
-
-bool PanopticMapper::loadMapCallback(
-    panoptic_mapping_msgs::SaveLoadMap::Request& request,
-    panoptic_mapping_msgs::SaveLoadMap::Response& response) {
-  response.success = loadMap(request.file_path);
-  return response.success;
-}
-
 bool PanopticMapper::saveMap(const std::string& file_path) {
   // TEST: merge maps
   tsdf_registrator_->mergeMatchingSubmaps(submaps_.get());
@@ -283,6 +275,13 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
   return success;
 }
 
+bool PanopticMapper::loadMapCallback(
+    panoptic_mapping_msgs::SaveLoadMap::Request& request,
+    panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+  response.success = loadMap(request.file_path);
+  return response.success;
+}
+
 bool PanopticMapper::loadMap(const std::string& file_path) {
   auto loaded_map = std::make_shared<SubmapCollection>();
 
@@ -294,15 +293,6 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   // Loaded submaps are 'from the past' so set them to inactive.
   for (auto& submap_ptr : *loaded_map) {
     submap_ptr->finishActivePeriod();
-
-    // TODO(schmluk): The names only hold for the ground truth atm, update this.
-    if (globals_->labelHandler()->segmentationIdExists(
-            submap_ptr->getInstanceID())) {
-      submap_ptr->setName(
-          globals_->labelHandler()->getName(submap_ptr->getInstanceID()));
-    } else if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
-      submap_ptr->setName("FreeSpace");
-    }
   }
 
   // Set the map.
