@@ -42,8 +42,6 @@ id_tracker:
   match_acceptance_threshold: 0.1
   
   min_allocation_size: 100 # px, for submap allocation. 2000
-  min_reobservations: 3 # Consecutive observations to keep submaps.
-  active_observations: 3  # Deactivate submaps when not observed for x frames.
   
   impaint_voxel_size: true
   debug: true
@@ -53,8 +51,8 @@ id_tracker:
   use_class_layer: true
   
 activity_manager:
-  required_reobservations: 3
-  deactivate_after_missed_detections: 3
+  required_reobservations: 3 # Consecutive observations to keep new submaps.
+  deactivate_after_missed_detections: 3  # Deactivate submaps when not observed for x frames.
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective

@@ -40,8 +40,6 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
 
   setupParam("min_allocation_size", &min_allocation_size);
-  setupParam("min_reobservations", &min_reobservations);
-  setupParam("active_observations", &active_observations);
 
   setupParam("rendering_threads", &rendering_threads);
 
@@ -103,11 +101,9 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 
   // Assign the input ids to tracks or allocate new maps.
   std::unordered_map<int, int> input_to_output;
-  std::unordered_set<int> tracked_submap_ids;  // Check re-detections.
   std::stringstream info;
   int n_matched = 0;
   int n_new = 0;
-  int n_deleted = 0;
   for (const int input_id : tracking_data.getInputIDs()) {
     int submap_id;
     bool matched = false;
@@ -150,13 +146,11 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     if (matched) {
       n_matched++;
       input_to_output[input_id] = submap_id;
-      tracked_submap_ids.insert(submap_id);
+      submaps->getSubmapPtr(submap_id)->setWasTracked(true);
     } else if (allocate_new_submap) {
       n_new++;
       int out_id = allocateSubmap(input_id, submaps);
       input_to_output[input_id] = out_id;
-      submap_redetection_counts_[out_id] = config_.min_reobservations;
-      tracked_submap_ids.insert(out_id);
     } else {
       // Ignore these
       input_to_output[input_id] = -1;
@@ -182,26 +176,6 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     }
   }
 
-  // Check for re-detections of submaps.
-  for (auto it = submap_redetection_counts_.begin();
-       it != submap_redetection_counts_.end();) {
-    if (it->second <= 1) {
-      // Was detected often enough, can be removed.
-      it = submap_redetection_counts_.erase(it);
-    } else {
-      if (tracked_submap_ids.find(it->first) != tracked_submap_ids.end()) {
-        // Re-detected at this timestep.
-        it->second--;
-        ++it;
-      } else {
-        // Not detected, remove the submap.
-        submaps->removeSubmap(it->first);
-        it = submap_redetection_counts_.erase(it);
-        n_deleted++;
-      }
-    }
-  }
-
   // Translate the id image.
   for (auto it = input->idImage()->begin<int>();
        it != input->idImage()->end<int>(); ++it) {
@@ -218,7 +192,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
               << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
                      .count()
               << "ms, " << n_matched << " matched, " << n_new
-              << " newly allocated, " << n_deleted << " deleted." << info.str();
+              << " newly allocated." << info.str();
   }
 
   // Publish Visualization if requested.

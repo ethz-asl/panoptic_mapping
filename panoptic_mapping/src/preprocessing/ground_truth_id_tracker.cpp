@@ -84,6 +84,7 @@ void GroundTruthIDTracker::allocateSubmap(int instance,
                                           SubmapCollection* submaps) {
   // Known existing submap.
   if (instance_to_id_.find(instance) != instance_to_id_.end()) {
+    submaps->getSubmapPtr(instance_to_id_[instance])->setWasTracked(true);
     return;
   }
 

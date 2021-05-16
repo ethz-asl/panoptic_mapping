@@ -1,7 +1,7 @@
 #ifndef PANOPTIC_MAPPING_MAP_MANAGEMENT_ACTIVITY_MANAGER_H_
 #define PANOPTIC_MAPPING_MAP_MANAGEMENT_ACTIVITY_MANAGER_H_
 
-#include <voxblox/interpolator/interpolator.h>
+#include <unordered_map>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
@@ -42,7 +42,15 @@ class ActivityManager {
   void processSubmaps(SubmapCollection* submaps);
 
  private:
+  bool checkRequiredRedetection(Submap* submap);
+  void checkMissedDetections(Submap* submap);
+
+ private:
   const Config config_;
+
+  // Tracking data.
+  std::unordered_map<int, int> submap_redetection_counts_;
+  std::unordered_map<int, int> submap_missed_detection_counts_;
 };
 
 }  // namespace panoptic_mapping
