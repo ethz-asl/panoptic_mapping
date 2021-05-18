@@ -140,10 +140,15 @@ bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
 
 std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
                                               const Transformation& T_M_C,
-                                              bool only_active_submaps) const {
+                                              bool only_active_submaps,
+                                              bool include_freespace) const {
   std::vector<int> result;
   for (auto& submap_ptr : submaps) {
     if (!submap_ptr->isActive() && only_active_submaps) {
+      continue;
+    }
+    if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace &&
+        !include_freespace) {
       continue;
     }
     if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {

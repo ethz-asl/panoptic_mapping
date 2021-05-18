@@ -65,7 +65,8 @@ class Camera {
   // Visibility search.
   std::vector<int> findVisibleSubmapIDs(const SubmapCollection& submaps,
                                         const Transformation& T_M_C,
-                                        bool only_active_submaps = true) const;
+                                        bool only_active_submaps = true,
+                                        bool include_freespace = false) const;
 
   voxblox::BlockIndexList findVisibleBlocks(const Submap& subamp,
                                             const Transformation& T_M_C) const;
