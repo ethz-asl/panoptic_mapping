@@ -16,7 +16,7 @@ files = [
 exec_times = []
 
 # TEST
-files = files[:10]
+# files = files[:10]
 
 # Setup Network
 cfg = get_cfg()
@@ -48,15 +48,18 @@ print("Prediction times: %.3f +/- %.3f (min: %.3f, max: %.3f)." %
       (np.mean(exec_times), np.std(exec_times), np.min(exec_times),
        np.max(exec_times)))
 
-#print("Seg")
-#print(np.shape(panoptic_seg))
-#print(panoptic_seg)
-#print("Seg_info")
-#print(segments_info[0])
-#v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-#out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
-#cv2.imshow('test', out.get_image()[:, :, ::-1])
-#cv2.waitKey()
+# TEST
+# im = cv2.imread(im_file)
+# panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
+# print("Seg")
+# print(np.shape(panoptic_seg))
+# print(panoptic_seg)
+# print("Seg_info")
+# print(segments_info[0])
+# v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+# out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
+# cv2.imshow('test', out.get_image()[:, :, ::-1])
+# cv2.waitKey()
 
 if __name__ == '__main__':
     test()

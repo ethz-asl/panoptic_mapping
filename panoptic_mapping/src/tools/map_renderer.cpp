@@ -39,6 +39,9 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
     if (!submap_ptr->isActive() && only_active_submaps) {
       continue;
     }
+    if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
+      continue;
+    }
     if (!camera_.submapIsInViewFrustum(*submap_ptr, T_M_C)) {
       continue;
     }
@@ -92,7 +95,9 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
   }
   return result;
 }
+
 int MapRenderer::paintSubmapID(const Submap& submap) { return submap.getID(); }
+
 int MapRenderer::paintClass(const Submap& submap) {
   return submap.getClassID();
 }

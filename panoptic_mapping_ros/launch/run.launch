@@ -1,27 +1,25 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- General -->
-  <arg name="use_rio" value="false"/>
-  <arg name="use_flat" value="true"/>
+  <arg name="use_rio" value="true"/>
+  <arg name="use_flat" value="false"/>
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
   <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
-  <arg name="use_detectron" default="true"/>
+  <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
   <arg name="scan_id" default="1"/>
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="detectron"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="rio"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>
-<!--  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/run0.panmap"/>-->
-<!-- <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/run1_multi.panmap"/>-->
   <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/flat/run1_gt.panmap"/>
 
 

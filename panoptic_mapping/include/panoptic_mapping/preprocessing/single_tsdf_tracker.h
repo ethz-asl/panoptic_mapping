@@ -20,8 +20,9 @@ class SingleTSDFTracker : public IDTrackerBase {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
     float voxel_size = 0.1;
-    float truncation_distance = 0.0;  // Defaults to 2x voxel size.
+    float truncation_distance = 0.2;
     int voxels_per_side = 16;
+    bool use_class_layer = false;
 
     Config() { setConfigName("SingleTSDFTracker"); }
 

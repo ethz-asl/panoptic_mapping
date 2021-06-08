@@ -20,6 +20,7 @@ void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("use_class_layer", &use_class_layer);
 }
 
 SingleTSDFTracker::SingleTSDFTracker(const Config& config,

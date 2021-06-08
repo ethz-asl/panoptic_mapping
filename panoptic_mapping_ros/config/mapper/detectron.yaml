@@ -52,7 +52,7 @@ id_tracker:
   
 activity_manager:
   required_reobservations: 3 # Consecutive observations to keep new submaps.
-  deactivate_after_missed_detections: 3  # Deactivate submaps when not observed for x frames.
+  deactivate_after_missed_detections: 30  # Deactivate submaps when not observed for x frames.
   
 tsdf_integrator:  
   type: class_projective # projective, class_projective
@@ -78,7 +78,7 @@ visualization:
   verbosity: 1
   
   # Submaps
-  color_mode: submaps # submaps, instances, color, normals, classes, change, classification
+  color_mode: classification # submaps, instances, color, normals, classes, change, classification
   visualization_mode: active  # all, active, active_only
   submap_color_discretization: 20
   visualize_mesh: true

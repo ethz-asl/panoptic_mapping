@@ -8,15 +8,15 @@
 # General Params
 verbosity: 3
 global_frame_name: world
-label_path: /home/lukas/Documents/PanopticMapping/Data/3RScan/labels.csv
+sensor_frame_name: rio
+label_path: /home/lukas/Documents/Datasets/3RScan/labels.csv
 change_detection_interval: -1.0
 visualization_interval: -1.0
 
-tsdf_integrator:  
-  type: projective # naive, projective, projective_multi_tsdf
-  verbosity: 1
-  
-  # projective args
+camera:
+  verbosity: 0
+  max_range: 5  # m
+  min_range: 0.1
   # rio rendered
 #  width: 960
 #  height: 540
@@ -32,7 +32,11 @@ tsdf_integrator:
   vy: 85.4004
   fx: 176.523
   fy: 240.667
-    
+
+tsdf_integrator:  
+  type: projective # naive, projective, projective_multi_tsdf
+  verbosity: 1
+  
   max_range: 5  # m
   min_range: 0.1
   use_weight_dropoff: true
@@ -50,6 +54,7 @@ id_tracker:
   unknown_voxel_size: 0.08
   freespace_voxel_size: 0.3
   voxels_per_side: 16
+  use_ground_truth_instance_ids: false
   
 tsdf_registrator:
   verbosity: 1
@@ -65,7 +70,7 @@ visualization:
   verbosity: 3
   
   # Submaps
-  color_mode: change # submaps, instances, color, normals, classes, change
+  color_mode: submaps # submaps, instances, color, normals, classes, change
   visualization_mode: active  # all, active 
   submap_color_discretization: 20
   visualize_mesh: true
@@ -80,6 +85,10 @@ visualization:
   planning_slice_resolution: 0.08
   planning_slice_height: -1.0
 
+data_writer:
+  verbosity: 1
+  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
+  file_name: ""
 
   
 

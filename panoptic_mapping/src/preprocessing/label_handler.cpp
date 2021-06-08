@@ -24,17 +24,18 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   labels_.clear();
 
   // Read all possible columns and write the present ones.
-  io::CSVReader<10> in(source_file);
+  io::CSVReader<11> in(source_file);
   in.read_header(io::ignore_missing_column, "InstanceID", "ClassID",
                  "PanopticID", "MeshID", "R", "G", "B", "Name", "SuperCategory",
-                 "InfraredID");
+                 "InfraredID", "RIOGlobalID");
 
   bool read_row = true;
   while (read_row) {
     std::string name, supercat;
     int inst = -1, cls = -1, pan = -1, mesh = -1, r = -1, g = -1, b = -1,
-        ir = -1;
-    read_row = in.read_row(inst, cls, pan, mesh, r, g, b, name, supercat, ir);
+        ir = -1, rio = -1;
+    read_row =
+        in.read_row(inst, cls, pan, mesh, r, g, b, name, supercat, ir, rio);
     // Label.
     LabelEntry label;
     if (inst != -1) {
