@@ -27,6 +27,7 @@ class DataWriter {
 
     // Evaluation Fields.
     bool evaluate_number_of_submaps = true;
+    bool evaluate_number_of_active_submaps = true;
     bool evaluate_numer_of_objects = true;
 
     Config() { setConfigName("DataWriter"); }
@@ -54,6 +55,7 @@ class DataWriter {
 
   // Evaluations. The data are always preceded by a separating comma.
   void evaluateNumberOfSubmaps(const SubmapCollection& submaps);
+  void evaluateNumberOfActiveSubmaps(const SubmapCollection& submaps);
   void evaluateNumberOfObjects(const SubmapCollection& submaps);
 };
 

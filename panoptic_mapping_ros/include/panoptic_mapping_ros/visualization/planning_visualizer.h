@@ -4,12 +4,11 @@
 #include <memory>
 #include <string>
 
-#include <ros/node_handle.h>
-#include <visualization_msgs/MarkerArray.h>
-
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <ros/node_handle.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace panoptic_mapping {
 
@@ -19,8 +18,8 @@ class PlanningVisualizer {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
     bool visualize_planning_slice = true;
-    float planning_slice_resolution = 0.1;  // m
-    float planning_slice_height = 1.0;      // m
+    float slice_resolution = 0.1;  // m
+    float slice_height = 1.0;      // m
     std::string ros_namespace;
 
     Config() { setConfigName("PlanningVisualizer"); }

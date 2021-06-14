@@ -4,11 +4,10 @@
 #include <string>
 #include <unordered_map>
 
-#include <ros/node_handle.h>
-
-#include <panoptic_mapping/common/common.h>
-#include <panoptic_mapping/preprocessing/id_tracker_base.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping/common/common.h>
+#include <panoptic_mapping/tracking/id_tracker_base.h>
+#include <ros/node_handle.h>
 
 namespace panoptic_mapping {
 

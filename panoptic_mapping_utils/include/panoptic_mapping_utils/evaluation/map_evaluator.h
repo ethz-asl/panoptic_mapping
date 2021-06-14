@@ -5,16 +5,15 @@
 #include <string>
 #include <vector>
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <ros/ros.h>
-
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping/3rd_party/nanoflann.hpp>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping_ros/visualization/submap_visualizer.h>
-#include <panoptic_mapping/3rd_party/config_utilities.hpp>
-#include <panoptic_mapping/3rd_party/nanoflann.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <ros/ros.h>
 
 namespace panoptic_mapping {
 
@@ -35,6 +34,7 @@ class MapEvaluator {
     bool visualize = true;
     bool evaluate = true;
     bool compute_coloring = false;  // Use map_file to load and display.
+    bool color_by_max_error = false;  // false: color by average error
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 

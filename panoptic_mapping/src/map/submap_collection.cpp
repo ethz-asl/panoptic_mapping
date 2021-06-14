@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -48,7 +50,7 @@ const Submap& SubmapCollection::getSubmap(int id) const {
   return *submaps_[id_to_index_.at(id)];
 }
 
-Submap* SubmapCollection::getSubmapPtr(int id) const {
+Submap* SubmapCollection::getSubmapPtr(int id) {
   // This assumes we checked that the id exists.
   return submaps_[id_to_index_.at(id)].get();
 }
@@ -75,6 +77,15 @@ void SubmapCollection::updateIDList(const std::vector<int>& id_list,
     if (it == id_list.end()) {
       new_ids->emplace_back(id_submap_pair.first);
     }
+  }
+}
+
+void SubmapCollection::updateInstanceToSubmapIDTable() {
+  // Clear the table and add all new elements.
+  instance_to_submap_ids_ = std::unordered_map<int, std::unordered_set<int>>();
+  for (const auto& submap_ptr : submaps_) {
+    instance_to_submap_ids_[submap_ptr->getInstanceID()].emplace(
+        submap_ptr->getID());
   }
 }
 

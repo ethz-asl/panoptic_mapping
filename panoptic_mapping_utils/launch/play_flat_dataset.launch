@@ -12,15 +12,15 @@
    
 <!-- ============ Play Data ============ -->
   <arg name="sim_time_string" value="" unless="$(arg use_sim_time)"/>
-  <arg name="sim_time_string" value="--clock" if="$(arg use_sim_time)"/>
+  <arg name="sim_time_string" value=" --clock" if="$(arg use_sim_time)"/>
   
-  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name) $(arg sim_time_string) -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)">
+  <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name)$(arg sim_time_string) -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)">
     <remap from="/airsim_drone/ground_truth/pose" to="$(arg namespace)/pose" />
     <remap from="/airsim_drone/Pointcloud" to="$(arg namespace)/pointcloud" />  
     <remap from="/airsim_drone/Scene_cam" to="$(arg namespace)/color_image" />
     <remap from="/airsim_drone/Depth_cam" to="$(arg namespace)/depth_image" />
     <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_image" unless="$(arg use_detectron)"/>
-    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth"/>
+    <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_detectron)"/>
   </node>
   
    <node pkg="panoptic_mapping_utils" type="detectron_player.py" name="detectron_player" if="$(arg use_detectron)" output="screen">

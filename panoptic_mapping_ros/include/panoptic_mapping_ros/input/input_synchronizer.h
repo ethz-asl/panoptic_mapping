@@ -9,11 +9,10 @@
 #include <utility>
 #include <vector>
 
+#include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping/common/input_data.h>
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
-
-#include <panoptic_mapping/common/input_data.h>
-#include <panoptic_mapping/3rd_party/config_utilities.hpp>
 
 #include "panoptic_mapping_ros/input/input_queue.h"
 

@@ -1,0 +1,58 @@
+#ifndef PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_
+
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/common/camera.h"
+#include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/integration/projection_interpolators.h"
+#include "panoptic_mapping/integration/projective_tsdf_integrator.h"
+#include "panoptic_mapping/integration/tsdf_integrator_base.h"
+
+namespace panoptic_mapping {
+
+/**
+ * Allocate blocks based on the 3D points and project all visible blocks into
+ * the image for updates.
+ */
+class ClassProjectiveIntegrator : public ProjectiveIntegrator {
+ public:
+  struct Config : public config_utilities::Config<Config> {
+    int verbosity = 4;
+
+    bool use_accurate_classification = false;  // false: use binary
+
+    // Integration params.
+    ProjectiveIntegrator::Config pi_config;
+
+    Config() { setConfigName("ClassProjectiveTsdfIntegrator"); }
+
+   protected:
+    void setupParamsAndPrinting() override;
+    void checkParams() const override;
+  };
+
+  ClassProjectiveIntegrator(const Config& config,
+                            std::shared_ptr<Globals> globals);
+  ~ClassProjectiveIntegrator() override = default;
+
+ protected:
+  void updateBlock(Submap* submap, InterpolatorBase* interpolator,
+                   const voxblox::BlockIndex& block_index,
+                   const Transformation& T_C_S, const cv::Mat& color_image,
+                   const cv::Mat& id_image) const override;
+
+ private:
+  const Config config_;
+  static config_utilities::Factory::RegistrationRos<
+      TsdfIntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
+      registration_;
+};
+
+}  // namespace panoptic_mapping
+
+#endif  // PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_

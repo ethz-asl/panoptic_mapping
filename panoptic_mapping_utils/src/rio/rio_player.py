@@ -128,7 +128,7 @@ class RioPlayer(object):
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.frame_no = 0
         rospy.sleep(self.wait_time)
-        self.timer = rospy.Timer(rospy.Duration(1 / self.rate), self.timer_cb)
+        self.timer = rospy.Timer(rospy.Duration(1. / self.rate), self.timer_cb)
 
     def timer_cb(self, _):
         frame_name = "frame-%06d" % self.frame_no

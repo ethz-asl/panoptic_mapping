@@ -2,7 +2,7 @@
 AUTHOR:       Lukas Schmid <schmluk@mavt.ethz.ch>
 AFFILIATION:  Autonomous Systems Lab (ASL), ETH Zürich
 SOURCE:       https://github.com/ethz-asl/config_utilities
-VERSION:      1.1.3
+VERSION:      1.1.4
 LICENSE:      BSD-3-Clause
 
 Copyright 2020 Autonomous Systems Lab (ASL), ETH Zürich.
@@ -34,7 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 // Raises a redefined warning if different versions are used. v=MMmmPP.
-#define CONFIG_UTILITIES_VERSION 010103
+#define CONFIG_UTILITIES_VERSION 010104
 
 /**
  * Depending on which headers are available, ROS dependencies are included in
@@ -191,13 +191,16 @@ inline bool isConfig(const T* candidate) {
 // standards with "/" for global and "~" for private namespaces.
 using ParamMap = std::unordered_map<std::string, XmlRpc::XmlRpcValue>;
 
-// XML casts
+// XML casts. Default is not castable.
 template <typename T>
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, T*) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, T*) {
   return false;
 }
 
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, bool* param = nullptr) {
+// NOTE: the copy of the xml values is required for compatibility with ROS
+// Kinetic, since the cast to value type is a non-const operation.
+
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, bool* param = nullptr) {
   switch (xml.getType()) {
     case XmlRpc::XmlRpcValue::Type::TypeBoolean: {
       if (param) {
@@ -222,7 +225,7 @@ inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, bool* param = nullptr) {
   }
 }
 
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, int* param = nullptr) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, int* param = nullptr) {
   switch (xml.getType()) {
     case XmlRpc::XmlRpcValue::Type::TypeBoolean: {
       if (param) {
@@ -247,7 +250,7 @@ inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, int* param = nullptr) {
   }
 }
 
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, float* param = nullptr) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, float* param = nullptr) {
   switch (xml.getType()) {
     case XmlRpc::XmlRpcValue::Type::TypeBoolean: {
       if (param) {
@@ -272,7 +275,7 @@ inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, float* param = nullptr) {
   }
 }
 
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, double* param = nullptr) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, double* param = nullptr) {
   switch (xml.getType()) {
     case XmlRpc::XmlRpcValue::Type::TypeBoolean: {
       if (param) {
@@ -297,8 +300,7 @@ inline bool xmlCast(const XmlRpc::XmlRpcValue& xml, double* param = nullptr) {
   }
 }
 
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml,
-                    std::string* param = nullptr) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, std::string* param = nullptr) {
   switch (xml.getType()) {
     case XmlRpc::XmlRpcValue::Type::TypeString: {
       if (param) {
@@ -312,8 +314,7 @@ inline bool xmlCast(const XmlRpc::XmlRpcValue& xml,
 }
 
 template <typename T>
-inline bool xmlCast(const XmlRpc::XmlRpcValue& xml,
-                    std::vector<T>* param = nullptr) {
+inline bool xmlCast(XmlRpc::XmlRpcValue xml, std::vector<T>* param = nullptr) {
   if (xml.getType() != XmlRpc::XmlRpcValue::TypeArray) {
     return false;
   }
@@ -1068,7 +1069,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
     if (it == meta_data_->params->end()) {
       return;
     }
-    const XmlRpc::XmlRpcValue& xml = it->second;
+    XmlRpc::XmlRpcValue xml = it->second;
     // NOTE: This code was taken and adapted from minkindr_conversions:
     // https://github.com/ethz-asl/minkindr_ros/blob/master/
     // minkindr_conversions/include/minkindr_conversions/kindr_xml.h

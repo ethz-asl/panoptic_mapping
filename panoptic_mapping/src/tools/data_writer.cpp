@@ -1,6 +1,7 @@
 #include "panoptic_mapping/tools/data_writer.h"
 
 #include <sys/stat.h>
+
 #include <fstream>
 #include <iomanip>
 #include <string>
@@ -65,6 +66,10 @@ void DataWriter::setupEvaluations() {
     writeEntry("NoSubmaps [1]");
     evaluations_.emplace_back(&DataWriter::evaluateNumberOfSubmaps);
   }
+  if (config_.evaluate_number_of_active_submaps) {
+    writeEntry("NoActiveSubmaps [1]");
+    evaluations_.emplace_back(&DataWriter::evaluateNumberOfActiveSubmaps);
+  }
   if (config_.evaluate_numer_of_objects) {
     writeEntry("NoObjects [1]");
     evaluations_.emplace_back(&DataWriter::evaluateNumberOfObjects);
@@ -96,19 +101,31 @@ void DataWriter::writeData(double time_stamp, const SubmapCollection& submaps) {
 void DataWriter::evaluateNumberOfSubmaps(const SubmapCollection& submaps) {
   writeEntry(std::to_string(submaps.size()));
 }
+
+void DataWriter::evaluateNumberOfActiveSubmaps(
+    const SubmapCollection& submaps) {
+  int active_submaps = 0;
+  for (const Submap& submap : submaps) {
+    if (submap.isActive()) {
+      active_submaps++;
+    }
+  }
+  writeEntry(std::to_string(active_submaps));
+}
+
 void DataWriter::evaluateNumberOfObjects(const SubmapCollection& submaps) {
   std::unordered_set<int> instance_ids;
-  for (const auto& submap_ptr : submaps) {
+  for (const Submap& submap : submaps) {
     // Only count ids > 0 since -1 and similar is used for invalid or other
     // instances. Only count submaps that are observed present.
-    if (submap_ptr->getInstanceID() < 0) {
+    if (submap.getInstanceID() < 0) {
       continue;
     }
-    if (submap_ptr->getChangeState() == ChangeState::kAbsent ||
-        submap_ptr->getChangeState() == ChangeState::kUnobserved) {
+    if (submap.getChangeState() == ChangeState::kAbsent ||
+        submap.getChangeState() == ChangeState::kUnobserved) {
       continue;
     }
-    instance_ids.insert(submap_ptr->getInstanceID());
+    instance_ids.insert(submap.getInstanceID());
   }
   writeEntry(std::to_string(instance_ids.size()));
 }

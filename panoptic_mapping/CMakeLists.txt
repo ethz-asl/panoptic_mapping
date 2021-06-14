@@ -27,19 +27,24 @@ cs_add_library(${PROJECT_NAME}
         src/common/camera.cpp
         src/common/input_data_user.cpp
         src/map/submap.cpp
-        src/map/submap_id.cpp
-        src/map/instance_id.cpp
-        src/map/submap_bounding_volume.cpp
         src/map/submap_collection.cpp
-        src/preprocessing/label_handler.cpp
-        src/preprocessing/tracking_info.cpp
-        src/preprocessing/single_tsdf_tracker.cpp
-        src/preprocessing/ground_truth_id_tracker.cpp
-        src/preprocessing/projective_id_tracker.cpp
-        src/preprocessing/detectron_id_tracker.cpp
-        src/integrator/projective_integrator.cpp
-        src/integrator/projection_interpolators.cpp
-        src/registration/tsdf_registrator.cpp
+        src/map/utils/submap_id.cpp
+        src/map/utils/instance_id.cpp
+        src/map/utils/submap_bounding_volume.cpp
+        src/common/label_handler.cpp
+        src/tracking/tracking_info.cpp
+        src/tracking/single_tsdf_tracker.cpp
+        src/tracking/ground_truth_id_tracker.cpp
+        src/tracking/projective_id_tracker.cpp
+        src/tracking/detectron_id_tracker.cpp
+        src/integration/projective_tsdf_integrator.cpp
+        src/integration/class_projective_tsdf_integrator.cpp
+        src/integration/single_tsdf_integrator.cpp
+        src/integration/projection_interpolators.cpp
+        src/integration/mesh_integrator.cpp
+        src/map_management/map_manager.cpp
+        src/map_management/tsdf_registrator.cpp
+        src/map_management/activity_manager.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp

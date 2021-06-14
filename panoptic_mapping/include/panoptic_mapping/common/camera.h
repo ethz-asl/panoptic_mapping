@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opencv2/core/mat.hpp>
+
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap.h"
@@ -44,7 +46,7 @@ class Camera {
   // Access.
   const Config& getConfig() const { return config_; }
 
-  // Tools.
+  // Visibility checks.
   bool pointIsInViewFrustum(const Point& point_C,
                             float inflation_distance = 0.f) const;
 
@@ -60,9 +62,11 @@ class Camera {
                             const Transformation& T_C_S, float block_size,
                             float block_diag_half) const;
 
+  // Visibility search.
   std::vector<int> findVisibleSubmapIDs(const SubmapCollection& submaps,
                                         const Transformation& T_M_C,
-                                        bool only_active_submaps = true) const;
+                                        bool only_active_submaps = true,
+                                        bool include_freespace = false) const;
 
   voxblox::BlockIndexList findVisibleBlocks(const Submap& subamp,
                                             const Transformation& T_M_C) const;
@@ -71,9 +75,12 @@ class Camera {
       const SubmapCollection& submaps, const Transformation& T_M_C,
       bool only_active_submaps = true) const;
 
+  // Projection.
   bool projectPointToImagePlane(const Point& p_C, float* u, float* v) const;
 
   bool projectPointToImagePlane(const Point& p_C, int* u, int* v) const;
+
+  cv::Mat computeVertexMap(const cv::Mat& depth_image) const;
 
  private:
   const Config config_;

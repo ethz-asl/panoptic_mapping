@@ -140,16 +140,20 @@ bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
 
 std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
                                               const Transformation& T_M_C,
-                                              bool only_active_submaps) const {
+                                              bool only_active_submaps,
+                                              bool include_freespace) const {
   std::vector<int> result;
-  for (auto& submap_ptr : submaps) {
-    if (!submap_ptr->isActive() && only_active_submaps) {
+  for (const Submap& submap : submaps) {
+    if (!submap.isActive() && only_active_submaps) {
       continue;
     }
-    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_freespace) {
       continue;
     }
-    result.push_back(submap_ptr->getID());
+    if (!submapIsInViewFrustum(submap, T_M_C)) {
+      continue;
+    }
+    result.push_back(submap.getID());
   }
   return result;
 }
@@ -183,19 +187,35 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
     const SubmapCollection& submaps, const Transformation& T_M_C,
     bool only_active_submaps) const {
   std::unordered_map<int, voxblox::BlockIndexList> result;
-  for (auto& submap_ptr : submaps) {
-    if (!submap_ptr->isActive() && only_active_submaps) {
+  for (const Submap& submap : submaps) {
+    if (!submap.isActive() && only_active_submaps) {
       continue;
     }
-    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+    if (!submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
-    voxblox::BlockIndexList block_list = findVisibleBlocks(*submap_ptr, T_M_C);
+    voxblox::BlockIndexList block_list = findVisibleBlocks(submap, T_M_C);
     if (!block_list.empty()) {
-      result[submap_ptr->getID()] = block_list;
+      result[submap.getID()] = block_list;
     }
   }
   return result;
+}
+
+cv::Mat Camera::computeVertexMap(const cv::Mat& depth_image) const {
+  // Compute the 3D pointcloud from a depth image.
+  cv::Mat vertices(depth_image.size(), CV_32FC3);
+  const float fx_inv = 1.f / config_.fx;
+  const float fy_inv = 1.f / config_.fy;
+  for (int v = 0; v < depth_image.rows; v++) {
+    for (int u = 0; u < depth_image.cols; u++) {
+      cv::Vec3f& vertex = vertices.at<cv::Vec3f>(v, u);  // x, y, z
+      vertex[2] = depth_image.at<float>(v, u);
+      vertex[0] = (static_cast<float>(u) - config_.vx) * vertex[2] * fx_inv;
+      vertex[1] = (static_cast<float>(v) - config_.vy) * vertex[2] * fy_inv;
+    }
+  }
+  return vertices;
 }
 
 }  // namespace panoptic_mapping

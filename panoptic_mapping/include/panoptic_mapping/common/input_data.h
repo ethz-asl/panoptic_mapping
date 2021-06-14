@@ -37,7 +37,8 @@ class InputData {
     kDepthImage,
     kColorImage,
     kSegmentationImage,
-    kDetectronLabels
+    kDetectronLabels,
+    kVertexMap
   };
   static std::string inputTypeToString(InputType type) {
     switch (type) {
@@ -49,6 +50,8 @@ class InputData {
         return "Segmentation Image";
       case InputType::kDetectronLabels:
         return "Detectron Labels";
+      case InputType::kVertexMap:
+        return "Vertex Map";
     }
   }
 
@@ -74,6 +77,10 @@ class InputData {
     detectron_labels_ = labels;
     contained_inputs_.insert(InputType::kDetectronLabels);
   }
+  void setVertexMap(const cv::Mat& vertex_map) {
+    vertex_map_ = vertex_map;
+    contained_inputs_.insert(InputType::kVertexMap);
+  }
 
   // Access.
   const Transformation& T_M_C() const { return T_M_C_; }
@@ -82,6 +89,7 @@ class InputData {
   const cv::Mat& colorImage() const { return color_image_; }
   cv::Mat* idImage() { return &id_image_; }
   const DetectronLabels& detectronLabels() const { return detectron_labels_; }
+  const cv::Mat& vertexMap() const { return vertex_map_; }
 
  private:
   friend InputDataUser;
@@ -94,6 +102,7 @@ class InputData {
   cv::Mat depth_image_;  // Float depth image (CV_32FC1).
   cv::Mat color_image_;  // BGR (CV_8U).
   cv::Mat id_image_;     // Mutable assigned ids as ints (CV_32SC1).
+  cv::Mat vertex_map_;   // XYZ points (CV32FC3), can be compute via camera.
 
   // Optional data.
   DetectronLabels detectron_labels_;

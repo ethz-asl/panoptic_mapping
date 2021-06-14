@@ -1,6 +1,7 @@
-#include "panoptic_mapping_utils/evaluation/map_evaluator.h"
-
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <ros/ros.h>
+
+#include "panoptic_mapping_utils/evaluation/map_evaluator.h"
 
 int main(int argc, char** argv) {
   config_utilities::RequiredArguments ra(

@@ -7,7 +7,7 @@ import csv
 import numpy as np
 import cv2
 
-SOURCE_DIR = '/home/lukas/Documents/PanopticMapping/Data/3RScan'
+SOURCE_DIR = '/home/lukas/Documents/Datasets/3RScan'
 INDEX_FILE = '3RScan.json'
 
 

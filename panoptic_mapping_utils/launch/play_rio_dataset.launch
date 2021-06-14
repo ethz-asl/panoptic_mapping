@@ -1,6 +1,6 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="data_path" default="/home/lukas/Documents/PanopticMapping/Data/3RScan"/>
+  <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/>
   <arg name="scan_id" default="0"/>
   <arg name="rio_play_rate" default="5"/>
   <arg name="namespace" default=""/>

@@ -10,14 +10,14 @@
 namespace panoptic_mapping {
 
 void PlanningVisualizer::Config::checkParams() const {
-  checkParamGT(planning_slice_resolution, 0.f, "planning_slice_resolution");
+  checkParamGT(slice_resolution, 0.f, "slice_resolution");
 }
 
 void PlanningVisualizer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("visualize_planning_slice", &visualize_planning_slice);
-  setupParam("planning_slice_resolution", &planning_slice_resolution);
-  setupParam("planning_slice_height", &planning_slice_height);
+  setupParam("slice_resolution", &slice_resolution);
+  setupParam("slice_height", &slice_height);
 }
 
 void PlanningVisualizer::Config::fromRosParam() {
@@ -52,23 +52,24 @@ void PlanningVisualizer::visualizePlanningSlice() {
 
 visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
   // Compute extent of the current map.
-  Submap* submap_0 = planning_interface_->getSubmapCollection().begin()->get();
+  const Submap& submap_0 =
+      *(planning_interface_->getSubmapCollection().begin());
   Point center_M =
-      submap_0->getT_M_S() * submap_0->getBoundingVolume().getCenter();
+      submap_0.getT_M_S() * submap_0.getBoundingVolume().getCenter();
   float x_min = center_M.x();
   float x_max = center_M.x();
   float y_min = center_M.y();
   float y_max = center_M.y();
   for (const auto& submap : planning_interface_->getSubmapCollection()) {
-    center_M = submap->getT_M_S() * submap->getBoundingVolume().getCenter();
-    const float radius = submap->getBoundingVolume().getRadius();
+    center_M = submap.getT_M_S() * submap.getBoundingVolume().getCenter();
+    const float radius = submap.getBoundingVolume().getRadius();
     x_min = std::min(x_min, center_M.x() - radius);
     x_max = std::max(x_max, center_M.x() + radius);
     y_min = std::min(y_min, center_M.y() - radius);
     y_max = std::max(y_max, center_M.y() + radius);
   }
-  size_t x_steps = (x_max - x_min) / config_.planning_slice_resolution;
-  size_t y_steps = (y_max - y_min) / config_.planning_slice_resolution;
+  size_t x_steps = (x_max - x_min) / config_.slice_resolution;
+  size_t y_steps = (y_max - y_min) / config_.slice_resolution;
 
   // Setup message.
   visualization_msgs::Marker marker;
@@ -77,9 +78,9 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
   marker.action = visualization_msgs::Marker::ADD;
   marker.type = visualization_msgs::Marker::CUBE_LIST;
   marker.id = 0;
-  marker.scale.x = config_.planning_slice_resolution;
-  marker.scale.y = config_.planning_slice_resolution;
-  marker.scale.z = config_.planning_slice_resolution;
+  marker.scale.x = config_.slice_resolution;
+  marker.scale.y = config_.slice_resolution;
+  marker.scale.z = config_.slice_resolution;
   marker.pose.orientation.x = 0.0;
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
@@ -96,10 +97,9 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
   // Generate all points.
   for (size_t x = 0; x < x_steps; ++x) {
     for (size_t y = 0; y < y_steps; ++y) {
-      Point position(
-          x_min + static_cast<float>(x) * config_.planning_slice_resolution,
-          y_min + static_cast<float>(y) * config_.planning_slice_resolution,
-          config_.planning_slice_height);
+      Point position(x_min + static_cast<float>(x) * config_.slice_resolution,
+                     y_min + static_cast<float>(y) * config_.slice_resolution,
+                     config_.slice_height);
       geometry_msgs::Point point;
       point.x = position.x();
       point.y = position.y();
