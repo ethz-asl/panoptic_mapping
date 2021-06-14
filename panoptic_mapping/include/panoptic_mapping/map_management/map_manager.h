@@ -10,6 +10,8 @@
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap.h"
 #include "panoptic_mapping/map/submap_collection.h"
+#include "panoptic_mapping/map_management/activity_manager.h"
+#include "panoptic_mapping/map_management/tsdf_registrator.h"
 
 namespace panoptic_mapping {
 
@@ -24,6 +26,12 @@ class MapManager {
 
     // Perform actions every n ticks, 0 to ignore.
     int prune_active_blocks_frequency = 0;
+    int change_detection_frequency = 0;
+    int activity_management_frequency = 0;
+
+    // Member configs.
+    TsdfRegistrator::Config tsdf_registrator_config;
+    ActivityManager::Config activity_manager_config;
 
     Config() { setConfigName("MapManager"); }
 
@@ -40,6 +48,7 @@ class MapManager {
 
   // Access to specific tasks.
   void pruneActiveBlocks();
+  void performChangeDetection();
 
  protected:
   std::string pruneBlocks(Submap* submap);
@@ -48,6 +57,9 @@ class MapManager {
   // Members.
   const Config config_;
   const std::shared_ptr<SubmapCollection> map_;
+
+  ActivityManager activity_manager_;
+  TsdfRegistrator tsdf_registrator_;
 
   // Action tick counters.
   class Ticker {

@@ -15,9 +15,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("global_frame_name", &global_frame_name);
   setupParam("visualization_interval", &visualization_interval);
-  setupParam("change_detection_interval", &change_detection_interval);
   setupParam("data_logging_interval", &data_logging_interval);
-  setupParam("timing_verbosity", &timing_verbosity);
+  setupParam("print_timing", &print_timing);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -37,9 +36,9 @@ void PanopticMapper::setupMembers() {
   submaps_ = std::make_shared<SubmapCollection>();
 
   // Camera.
-  ros::NodeHandle camera_nh(nh_private_, "camera");
   auto camera = std::make_shared<Camera>(
-      config_utilities::getConfigFromRos<Camera::Config>(camera_nh));
+      config_utilities::getConfigFromRos<Camera::Config>(
+          ros::NodeHandle(nh_private_, "camera")));
 
   // Labels.
   std::string label_path;
@@ -51,30 +50,17 @@ void PanopticMapper::setupMembers() {
   globals_ = std::make_shared<Globals>(camera, label_handler);
 
   // ID Tracking.
-  ros::NodeHandle id_tracker_nh(nh_private_, "id_tracker");
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
-      id_tracker_nh, globals_);
+      ros::NodeHandle(nh_private_, "id_tracker"), globals_);
 
   // Tsdf Integrator.
-  ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
   tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>(
-      integrator_nh, globals_);
-
-  // Tsdf Registrator.
-  ros::NodeHandle registrator_nh(nh_private_, "tsdf_registrator");
-  tsdf_registrator_ = std::make_unique<TsdfRegistrator>(
-      config_utilities::getConfigFromRos<TsdfRegistrator::Config>(
-          registrator_nh));
-
-  // Activity Manager.
-  ros::NodeHandle activity_nh(nh_private_, "activity_manager");
-  activity_manager_ = std::make_unique<ActivityManager>(
-      config_utilities::getConfigFromRos<ActivityManager::Config>(activity_nh));
+      ros::NodeHandle(nh_private_, "tsdf_integrator"), globals_);
 
   // Map Manager.
-  ros::NodeHandle management_nh(nh_private_, "map_management");
   map_manager_ = std::make_unique<MapManager>(
-      config_utilities::getConfigFromRos<MapManager::Config>(management_nh),
+      config_utilities::getConfigFromRos<MapManager::Config>(
+          ros::NodeHandle(nh_private_, "map_management")),
       submaps_);
 
   // Planning Interface.
@@ -85,27 +71,27 @@ void PanopticMapper::setupMembers() {
   // Submaps.
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
-          visualization_nh),
+          ros::NodeHandle(visualization_nh, "submaps")),
       globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Planning.
   planning_visualizer_ = std::make_unique<PlanningVisualizer>(
       config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
-          visualization_nh),
+          ros::NodeHandle(visualization_nh, "planning")),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Tracking.
   tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
       config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
-          visualization_nh));
+          ros::NodeHandle(visualization_nh, "tracking")));
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
 
   // Data Logging.
-  ros::NodeHandle data_nh(nh_private_, "data_writer");
   data_logger_ = std::make_unique<DataWriter>(
-      config_utilities::getConfigFromRos<DataWriter::Config>(data_nh));
+      config_utilities::getConfigFromRos<DataWriter::Config>(
+          ros::NodeHandle(nh_private_, "data_writer")));
 
   // Setup all input topics.
   input_synchronizer_ = std::make_unique<InputSynchronizer>(
@@ -128,17 +114,14 @@ void PanopticMapper::setupRos() {
   set_visualization_mode_srv_ = nh_private_.advertiseService(
       "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
       this);
+  print_timings_srv_ = nh_private_.advertiseService(
+      "print_timings", &PanopticMapper::printTimingsCallback, this);
 
   // Timers.
   if (config_.visualization_interval > 0.0) {
     visualization_timer_ = nh_private_.createTimer(
         ros::Duration(config_.visualization_interval),
         &PanopticMapper::publishVisualizationCallback, this);
-  }
-  if (config_.change_detection_interval > 0.0) {
-    change_detection_timer_ = nh_private_.createTimer(
-        ros::Duration(config_.change_detection_interval),
-        &PanopticMapper::changeDetectionCallback, this);
   }
   if (config_.data_logging_interval > 0.0) {
     data_logging_timer_ =
@@ -149,65 +132,58 @@ void PanopticMapper::setupRos() {
 
 void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
-  ros::WallTime t0 = ros::WallTime::now();
   Timer timer("input");
-  // TODO(schmluk): update all timers.
+
   // Compute and store the vertex map.
+  Timer vertex_timer("input/compute_vertices");
   input->setVertexMap(
       globals_->camera()->computeVertexMap(input->depthImage()));
+  ros::WallTime t0 = ros::WallTime::now();
+  vertex_timer.Stop();
 
-  // Preprocess the segmentation images and allocate new submaps.
+  // Track the segmentation images and allocate new submaps.
+  Timer id_timer("input/id_tracking");
   id_tracker_->processInput(submaps_.get(), input);
   ros::WallTime t1 = ros::WallTime::now();
+  id_timer.Stop();
 
   // Integrate the images.
+  Timer tsdf_timer("input/tsdf_integration");
   tsdf_integrator_->processInput(submaps_.get(), input);
   ros::WallTime t2 = ros::WallTime::now();
+  tsdf_timer.Stop();
 
-  // Update other submap data?
-
-  // Check activity.
+  // Perform all requested map management actions.
+  Timer management_timer("input/map_management");
   map_manager_->tickMapManagement();
-  activity_manager_->processSubmaps(submaps_.get());
-
-  // If requested perform change detection, visualization, and logging.
-  ros::TimerEvent event;
-  if (config_.change_detection_interval < 0.f) {
-    changeDetectionCallback(event);
-  }
-
   ros::WallTime t3 = ros::WallTime::now();
+  management_timer.Stop();
+
+  // If requested perform visualization and logging.
+  ros::TimerEvent event;
   if (config_.visualization_interval < 0.f) {
     publishVisualizationCallback(event);
   }
-
-  ros::WallTime t4 = ros::WallTime::now();
   if (config_.data_logging_interval < 0.f) {
     dataLoggingCallback(event);
   }
+  ros::WallTime t4 = ros::WallTime::now();
+  timer.Stop();
 
   // Logging.
   std::stringstream info;
   info << "Processed input data.";
   if (config_.verbosity >= 3) {
     info << "\n(tracking: " << int((t1 - t0).toSec() * 1000)
-         << " + integration: " << int((t2 - t1).toSec() * 1000);
-    if (config_.change_detection_interval <= 0.f) {
-      info << " + change: " << int((t3 - t2).toSec() * 1000);
-    }
+         << " + integration: " << int((t2 - t1).toSec() * 1000)
+         << " + management: " << int((t3 - t2).toSec() * 1000);
     if (config_.visualization_interval <= 0.f) {
       info << " + visual: " << int((t4 - t3).toSec() * 1000);
     }
     info << " = " << int((t4 - t0).toSec() * 1000) << "ms)";
   }
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
-
-  timer.Stop();
-  LOG_IF(INFO, config_.timing_verbosity >= 2) << "\n" << Timing::Print();
-}
-
-void PanopticMapper::changeDetectionCallback(const ros::TimerEvent&) {
-  tsdf_registrator_->checkSubmapCollectionForChange(*submaps_);
+  LOG_IF(INFO, config_.print_timing) << "\n" << Timing::Print();
 }
 
 void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {
@@ -220,11 +196,13 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 
 void PanopticMapper::publishVisualization() {
   // Update the submaps meshes.
+  Timer timer("visualization");
   for (const auto& submap_ptr : *submaps_) {
     submap_ptr->updateMesh();
   }
   submap_visualizer_->visualizeAll(*submaps_);
   planning_visualizer_->visualizeAll();
+  timer.Stop();
 }
 
 bool PanopticMapper::setVisualizationModeCallback(
@@ -277,16 +255,6 @@ bool PanopticMapper::saveMapCallback(
   return response.success;
 }
 bool PanopticMapper::saveMap(const std::string& file_path) {
-  // TEST: merge maps
-  tsdf_registrator_->mergeMatchingSubmaps(submaps_.get());
-  for (const auto& submap_ptr : *submaps_) {
-    if (submap_ptr->getChangeState() == ChangeState::kAbsent) {
-      submap_ptr->setInstanceID(1);
-    } else {
-      submap_ptr->setInstanceID(0);
-    }
-  }
-
   bool success = submaps_->saveToFile(file_path);
   LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
                         << " submaps to '" << file_path << "'.";
@@ -322,6 +290,11 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;
+}
+
+bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,
+                                          std_srvs::Empty::Response& response) {
+  LOG(INFO) << Timing::Print();
 }
 
 }  // namespace panoptic_mapping

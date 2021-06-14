@@ -14,15 +14,14 @@
 #include <panoptic_mapping/integration/tsdf_integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
 #include <panoptic_mapping/map/submap_collection.h>
-#include <panoptic_mapping/map_management/activity_manager.h>
 #include <panoptic_mapping/map_management/map_manager.h>
-#include <panoptic_mapping/map_management/tsdf_registrator.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping/tracking/id_tracker_base.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
@@ -36,10 +35,9 @@ class PanopticMapper {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     std::string global_frame_name = "mission";
-    double visualization_interval = 1.0;     // s, use -1 for always, 0 never.
-    double change_detection_interval = 1.0;  // s, use -1 for always, 0 never.
+    double visualization_interval = -1.0;    // s, use -1 for always, 0 never.
     double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
-    int timing_verbosity = 2;
+    bool print_timing = false;               // Print timings after every frame.
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -53,7 +51,6 @@ class PanopticMapper {
 
   // ROS callbacks.
   void publishVisualizationCallback(const ros::TimerEvent&);
-  void changeDetectionCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
   bool saveMapCallback(
       panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
@@ -64,7 +61,12 @@ class PanopticMapper {
   bool setVisualizationModeCallback(
       panoptic_mapping_msgs::SetVisualizationMode::Request& request,  // NOLINT
       panoptic_mapping_msgs::SetVisualizationMode::Response&
-          response);  // NOLINT
+          response);                                               // NOLINT
+  bool printTimingsCallback(std_srvs::Empty::Request& request,     // NOLINT
+                            std_srvs::Empty::Response& response);  // NOLINT
+
+  // Processing.
+  void processInput(InputData* input);
 
   // IO.
   bool saveMap(const std::string& file_path);
@@ -78,14 +80,12 @@ class PanopticMapper {
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
   }
+  MapManager& getMapManager() { return *map_manager_; }
 
  private:
   // Setup.
   void setupMembers();
   void setupRos();
-
-  // Processing.
-  void processInput(InputData* input);
 
  private:
   // Node handles.
@@ -97,8 +97,8 @@ class PanopticMapper {
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_visualization_mode_srv_;
   ros::ServiceServer set_color_mode_srv_;
+  ros::ServiceServer print_timings_srv_;
   ros::Timer visualization_timer_;
-  ros::Timer change_detection_timer_;
   ros::Timer data_logging_timer_;
 
   // Members.
@@ -110,8 +110,6 @@ class PanopticMapper {
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<TsdfIntegratorBase> tsdf_integrator_;
-  std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
-  std::unique_ptr<ActivityManager> activity_manager_;
   std::unique_ptr<MapManager> map_manager_;
 
   // Tools.

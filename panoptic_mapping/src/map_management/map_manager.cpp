@@ -8,22 +8,44 @@
 namespace panoptic_mapping {
 
 void MapManager::Config::checkParams() const {
-  //  checkParamNE(error_threshold, 0.f, "error_threshold");
+  checkParamConfig(activity_manager_config);
+  checkParamConfig(tsdf_registrator_config);
 }
 
 void MapManager::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
+
   setupParam("prune_active_blocks_frequency", &prune_active_blocks_frequency);
+  setupParam("activity_management_frequency", &activity_management_frequency);
+  setupParam("change_detection_frequency", &change_detection_frequency);
+
+  setupParam("activity_manager_config", &activity_manager_config,
+             "activity_manager");
+  setupParam("tsdf_registrator_config", &tsdf_registrator_config,
+             "tsdf_registrator");
 }
 
 MapManager::MapManager(const Config& config,
                        std::shared_ptr<SubmapCollection> map)
-    : config_(config.checkValid()), map_(std::move(map)) {
+    : config_(config.checkValid()),
+      map_(std::move(map)),
+      activity_manager_(config_.activity_manager_config),
+      tsdf_registrator_(config_.tsdf_registrator_config) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
   // Add all requested tasks.
   if (config_.prune_active_blocks_frequency > 0) {
     tickers_.emplace_back(config_.prune_active_blocks_frequency,
                           [this] { pruneActiveBlocks(); });
+  }
+  if (config_.activity_management_frequency > 0) {
+    tickers_.emplace_back(config_.activity_management_frequency, [this] {
+      activity_manager_.processSubmaps(map_.get());
+    });
+  }
+  if (config_.change_detection_frequency > 0) {
+    tickers_.emplace_back(config_.change_detection_frequency,
+                          [this] { performChangeDetection(); });
   }
 }
 
@@ -66,6 +88,10 @@ void MapManager::pruneActiveBlocks() {
       << "Pruned active blocks in "
       << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
       << "ms." << info.str();
+}
+
+void MapManager::performChangeDetection() {
+  tsdf_registrator_.checkSubmapCollectionForChange(map_.get());
 }
 
 std::string MapManager::pruneBlocks(Submap* submap) {

@@ -47,7 +47,7 @@ class TsdfRegistrator {
   virtual ~TsdfRegistrator() = default;
 
   // Check whether there is significant difference between the two submaps.
-  void checkSubmapCollectionForChange(const SubmapCollection& submaps) const;
+  void checkSubmapCollectionForChange(SubmapCollection* submaps) const;
   void mergeMatchingSubmaps(SubmapCollection* submaps);
   void matchAndMergeInactiveSubmaps(SubmapCollection* submaps);
 

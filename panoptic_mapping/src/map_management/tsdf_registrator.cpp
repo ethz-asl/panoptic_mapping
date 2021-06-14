@@ -39,12 +39,12 @@ TsdfRegistrator::TsdfRegistrator(const Config& config)
 }
 
 void TsdfRegistrator::checkSubmapCollectionForChange(
-    const SubmapCollection& submaps) const {
+    SubmapCollection* submaps) const {
   auto t_start = std::chrono::high_resolution_clock::now();
   std::stringstream info;
 
   // Check all inactive maps for alignment with the currently active ones.
-  for (const auto& submap : submaps) {
+  for (const auto& submap : *submaps) {
     if (submap->isActive() || submap->getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
@@ -54,7 +54,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     if (!config_.allow_multiple_matches) {
       matching_ids_points = {{0, -1.f}};  // empty initializer.
     }
-    for (const auto& other : submaps) {
+    for (const auto& other : *submaps) {
       if (!other->isActive() ||
           !submap->getBoundingVolume().intersects(other->getBoundingVolume())) {
         continue;
@@ -70,7 +70,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
                << other->getName() << ")";
           if (submap->getChangeState() == ChangeState::kPersistent) {
             if (!config_.allow_multiple_matches) {
-              for (const auto& matched : submaps) {
+              for (const auto& matched : *submaps) {
                 if (matched->isActive() &&
                     matched->getInstanceID() == submap->getInstanceID()) {
                   matched->setChangeState(ChangeState::kNew);
@@ -105,7 +105,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
                      submap->getIsoSurfacePoints().size());
     if (!config_.allow_multiple_matches) {
       if (matching_ids_points[0].second > acceptance_count) {
-        Submap* other = submaps.getSubmapPtr(matching_ids_points[0].first);
+        Submap* other = submaps->getSubmapPtr(matching_ids_points[0].first);
         if (other->getInstanceID() != submap->getInstanceID()) {
           // Geometry and semantic class match, it's a new match.
           submap->setChangeState(ChangeState::kPersistent);
