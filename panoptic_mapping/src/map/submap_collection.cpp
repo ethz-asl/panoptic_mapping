@@ -50,7 +50,7 @@ const Submap& SubmapCollection::getSubmap(int id) const {
   return *submaps_[id_to_index_.at(id)];
 }
 
-Submap* SubmapCollection::getSubmapPtr(int id) const {
+Submap* SubmapCollection::getSubmapPtr(int id) {
   // This assumes we checked that the id exists.
   return submaps_[id_to_index_.at(id)].get();
 }

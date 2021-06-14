@@ -52,16 +52,17 @@ void PlanningVisualizer::visualizePlanningSlice() {
 
 visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
   // Compute extent of the current map.
-  Submap* submap_0 = planning_interface_->getSubmapCollection().begin()->get();
+  const Submap& submap_0 =
+      *(planning_interface_->getSubmapCollection().begin());
   Point center_M =
-      submap_0->getT_M_S() * submap_0->getBoundingVolume().getCenter();
+      submap_0.getT_M_S() * submap_0.getBoundingVolume().getCenter();
   float x_min = center_M.x();
   float x_max = center_M.x();
   float y_min = center_M.y();
   float y_max = center_M.y();
   for (const auto& submap : planning_interface_->getSubmapCollection()) {
-    center_M = submap->getT_M_S() * submap->getBoundingVolume().getCenter();
-    const float radius = submap->getBoundingVolume().getRadius();
+    center_M = submap.getT_M_S() * submap.getBoundingVolume().getCenter();
+    const float radius = submap.getBoundingVolume().getRadius();
     x_min = std::min(x_min, center_M.x() - radius);
     x_max = std::max(x_max, center_M.x() + radius);
     y_min = std::min(y_min, center_M.y() - radius);

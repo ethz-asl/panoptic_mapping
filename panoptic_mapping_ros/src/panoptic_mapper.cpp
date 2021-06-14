@@ -197,10 +197,10 @@ void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
 void PanopticMapper::publishVisualization() {
   // Update the submaps meshes.
   Timer timer("visualization");
-  for (const auto& submap_ptr : *submaps_) {
-    submap_ptr->updateMesh();
+  for (Submap& submap : *submaps_) {
+    submap.updateMesh();
   }
-  submap_visualizer_->visualizeAll(*submaps_);
+  submap_visualizer_->visualizeAll(submaps_.get());
   planning_visualizer_->visualizeAll();
   timer.Stop();
 }
@@ -244,7 +244,7 @@ bool PanopticMapper::setVisualizationModeCallback(
   }
 
   // Republish the visualization.
-  submap_visualizer_->visualizeAll(*submaps_);
+  submap_visualizer_->visualizeAll(submaps_.get());
   return success;
 }
 
@@ -277,8 +277,8 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   }
 
   // Loaded submaps are 'from the past' so set them to inactive.
-  for (auto& submap_ptr : *loaded_map) {
-    submap_ptr->finishActivePeriod();
+  for (Submap& submap : *loaded_map) {
+    submap.finishActivePeriod();
   }
 
   // Set the map.
@@ -286,7 +286,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   // Reproduce the mesh and visualization.
   submap_visualizer_->clearMesh();
-  submap_visualizer_->visualizeAll(*submaps_);
+  submap_visualizer_->visualizeAll(submaps_.get());
 
   LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;

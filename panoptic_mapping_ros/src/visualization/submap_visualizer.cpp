@@ -87,18 +87,18 @@ void SubmapVisualizer::clearMesh() {
   }
 }
 
-void SubmapVisualizer::visualizeAll(const SubmapCollection& submaps) {
-  publishTfTransforms(submaps);
-  updateVisInfos(submaps);
+void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
+  publishTfTransforms(*submaps);
+  updateVisInfos(*submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.
   visualizeMeshes(submaps);
-  visualizeTsdfBlocks(submaps);
-  visualizeFreeSpace(submaps);
-  visualizeBoundingVolume(submaps);
+  visualizeTsdfBlocks(*submaps);
+  visualizeFreeSpace(*submaps);
+  visualizeBoundingVolume(*submaps);
   vis_infos_are_updated_ = false;
 }
 
-void SubmapVisualizer::visualizeMeshes(const SubmapCollection& submaps) {
+void SubmapVisualizer::visualizeMeshes(SubmapCollection* submaps) {
   if (config_.visualize_mesh && mesh_pub_.getNumSubscribers() > 0) {
     std::vector<voxblox_msgs::MultiMesh> msgs = generateMeshMsgs(submaps);
     for (auto& msg : msgs) {
@@ -134,12 +134,12 @@ void SubmapVisualizer::visualizeBoundingVolume(
 }
 
 std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
-    const SubmapCollection& submaps) {
+    SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
 
   // Update the visualization infos.
   if (!vis_infos_are_updated_) {
-    updateVisInfos(submaps);
+    updateVisInfos(*submaps);
   }
 
   // If the submap was deleted we send an empty message to delete the visual.
@@ -157,14 +157,14 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
   }
 
   // Process all submaps based on their visualization info.
-  for (const auto& submap : submaps) {
-    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+  for (Submap& submap : *submaps) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
     // Find the corresponding info.
-    auto it = vis_infos_.find(submap->getID());
+    auto it = vis_infos_.find(submap.getID());
     if (it == vis_infos_.end()) {
-      LOG(WARNING) << "Tried to visualize submap " << submap->getID()
+      LOG(WARNING) << "Tried to visualize submap " << submap.getID()
                    << " without existing SubmapVisInfo.";
       continue;
     }
@@ -173,15 +173,15 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     // Setup message.
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
-    msg.header.frame_id = submap->getFrameName();
+    msg.header.frame_id = submap.getFrameName();
     msg.name_space = info.name_space;
 
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
       voxblox::BlockIndexList mesh_indices;
-      submap->getMeshLayer().getAllAllocatedMeshes(&mesh_indices);
+      submap.getMeshLayer().getAllAllocatedMeshes(&mesh_indices);
       for (const auto& block_index : mesh_indices) {
-        submap->getMeshLayerPtr()->getMeshPtrByIndex(block_index)->updated =
+        submap.getMeshLayerPtr()->getMeshPtrByIndex(block_index)->updated =
             true;
       }
       info.republish_everything = false;
@@ -197,9 +197,9 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     }
 
     if (color_mode_ == ColorMode::kClassification) {
-      generateClassificationMesh(submap.get(), &msg.mesh);
+      generateClassificationMesh(&submap, &msg.mesh);
     } else {
-      voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(),
+      voxblox::generateVoxbloxMeshMsg(submap.getMeshLayerPtr(),
                                       color_mode_voxblox, &msg.mesh);
     }
 
@@ -310,30 +310,30 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
   }
 
   for (const auto& submap : submaps) {
-    if (submap->getLabel() == PanopticLabel::kFreeSpace &&
+    if (submap.getLabel() == PanopticLabel::kFreeSpace &&
         !config_.include_free_space) {
       continue;
     }
 
     // Setup submap.
     voxblox::BlockIndexList blocks;
-    submap->getTsdfLayer().getAllAllocatedBlocks(&blocks);
+    submap.getTsdfLayer().getAllAllocatedBlocks(&blocks);
     float block_size =
-        submap->getTsdfLayer().voxel_size() *
-        static_cast<float>(submap->getTsdfLayer().voxels_per_side());
+        submap.getTsdfLayer().voxel_size() *
+        static_cast<float>(submap.getTsdfLayer().voxels_per_side());
     unsigned int counter = 0;
 
     // Get color.
     Color color = kUnknownColor_;
     const float alpha = 0.2f;
-    auto vis_it = vis_infos_.find(submap->getID());
+    auto vis_it = vis_infos_.find(submap.getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
     }
 
     for (auto& block_index : blocks) {
       visualization_msgs::Marker marker;
-      marker.header.frame_id = submap->getFrameName();
+      marker.header.frame_id = submap.getFrameName();
       marker.header.stamp = ros::Time::now();
       marker.color.r = color.r;
       marker.color.g = color.g;
@@ -342,7 +342,7 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
       marker.action = visualization_msgs::Marker::ADD;
       marker.type = visualization_msgs::Marker::CUBE;
       marker.id = counter++;
-      marker.ns = "tsdf_blocks_" + std::to_string(submap->getID());
+      marker.ns = "tsdf_blocks_" + std::to_string(submap.getID());
       marker.scale.x = block_size;
       marker.scale.y = block_size;
       marker.scale.z = block_size;
@@ -351,7 +351,7 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
       marker.pose.orientation.z = 0.0;
       marker.pose.orientation.w = 1.0;
       Point origin =
-          submap->getTsdfLayer().getBlockByIndex(block_index).origin();
+          submap.getTsdfLayer().getBlockByIndex(block_index).origin();
       marker.pose.position.x = origin.x() + block_size / 2.0;
       marker.pose.position.y = origin.y() + block_size / 2.0;
       marker.pose.position.z = origin.z() + block_size / 2.0;
@@ -382,8 +382,8 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
     updateVisInfos(submaps);
   }
 
-  for (const auto& submap : submaps) {
-    if (submap->getLabel() == PanopticLabel::kFreeSpace &&
+  for (const Submap& submap : submaps) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace &&
         !config_.include_free_space) {
       continue;
     }
@@ -391,13 +391,13 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
     // Get color.
     Color color = kUnknownColor_;
     const float alpha = 0.2f;
-    auto vis_it = vis_infos_.find(submap->getID());
+    auto vis_it = vis_infos_.find(submap.getID());
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
     }
 
     visualization_msgs::Marker marker;
-    marker.header.frame_id = submap->getFrameName();
+    marker.header.frame_id = submap.getFrameName();
     marker.header.stamp = ros::Time::now();
     marker.color.r = color.r;
     marker.color.g = color.g;
@@ -405,15 +405,15 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBoundingVolumeMsgs(
     marker.color.a = alpha;
     marker.action = visualization_msgs::Marker::ADD;
     marker.type = visualization_msgs::Marker::SPHERE;
-    marker.ns = "bounding_volume_" + std::to_string(submap->getID());
-    marker.scale.x = submap->getBoundingVolume().getRadius() * 2.f;
+    marker.ns = "bounding_volume_" + std::to_string(submap.getID());
+    marker.scale.x = submap.getBoundingVolume().getRadius() * 2.f;
     marker.scale.y = marker.scale.x;
     marker.scale.z = marker.scale.x;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    const Point& origin = submap->getBoundingVolume().getCenter();
+    const Point& origin = submap.getBoundingVolume().getCenter();
     marker.pose.position.x = origin.x();
     marker.pose.position.y = origin.y();
     marker.pose.position.z = origin.z();
@@ -585,9 +585,9 @@ void SubmapVisualizer::publishTfTransforms(const SubmapCollection& submaps) {
   msg.header.frame_id = global_frame_name_;
 
   // Send transforms of submaps.
-  for (const auto& submap : submaps) {
-    msg.child_frame_id = submap->getFrameName();
-    tf::transformKindrToMsg(submap->getT_S_M().cast<double>(), &msg.transform);
+  for (const Submap& submap : submaps) {
+    msg.child_frame_id = submap.getFrameName();
+    tf::transformKindrToMsg(submap.getT_S_M().cast<double>(), &msg.transform);
     tf_broadcaster_.sendTransform(msg);
   }
 }

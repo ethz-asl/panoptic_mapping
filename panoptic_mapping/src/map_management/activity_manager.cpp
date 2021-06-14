@@ -23,22 +23,21 @@ ActivityManager::ActivityManager(const Config& config)
 void ActivityManager::processSubmaps(SubmapCollection* submaps) {
   CHECK_NOTNULL(submaps);
   std::unordered_set<int> submaps_to_delete;
-  for (const auto& submap_ptr : *submaps) {
+  for (Submap& submap : *submaps) {
     // Parse only active object maps.
     // NOTE(schmluk): Could be extended to free space for global consistency.
-    if (!submap_ptr->isActive() ||
-        submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
+    if (!submap.isActive() || submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
 
     // Check for re-detections of new submaps.
-    if (!checkRequiredRedetection(submap_ptr.get())) {
-      submaps_to_delete.insert(submap_ptr->getID());
+    if (!checkRequiredRedetection(&submap)) {
+      submaps_to_delete.insert(submap.getID());
       continue;
     }
 
     // Check tracking for active submaps.
-    checkMissedDetections(submap_ptr.get());
+    checkMissedDetections(&submap);
   }
 
   // Remove requested submaps.
@@ -47,8 +46,8 @@ void ActivityManager::processSubmaps(SubmapCollection* submaps) {
   }
 
   // Reset.
-  for (const auto& submap_ptr : *submaps) {
-    submap_ptr->setWasTracked(false);
+  for (Submap& submap : *submaps) {
+    submap.setWasTracked(false);
   }
 }
 

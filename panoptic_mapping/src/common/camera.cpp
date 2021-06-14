@@ -143,18 +143,17 @@ std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
                                               bool only_active_submaps,
                                               bool include_freespace) const {
   std::vector<int> result;
-  for (auto& submap_ptr : submaps) {
-    if (!submap_ptr->isActive() && only_active_submaps) {
+  for (const Submap& submap : submaps) {
+    if (!submap.isActive() && only_active_submaps) {
       continue;
     }
-    if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace &&
-        !include_freespace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_freespace) {
       continue;
     }
-    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+    if (!submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
-    result.push_back(submap_ptr->getID());
+    result.push_back(submap.getID());
   }
   return result;
 }
@@ -188,16 +187,16 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
     const SubmapCollection& submaps, const Transformation& T_M_C,
     bool only_active_submaps) const {
   std::unordered_map<int, voxblox::BlockIndexList> result;
-  for (auto& submap_ptr : submaps) {
-    if (!submap_ptr->isActive() && only_active_submaps) {
+  for (const Submap& submap : submaps) {
+    if (!submap.isActive() && only_active_submaps) {
       continue;
     }
-    if (!submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+    if (!submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
-    voxblox::BlockIndexList block_list = findVisibleBlocks(*submap_ptr, T_M_C);
+    voxblox::BlockIndexList block_list = findVisibleBlocks(submap, T_M_C);
     if (!block_list.empty()) {
-      result[submap_ptr->getID()] = block_list;
+      result[submap.getID()] = block_list;
     }
   }
   return result;

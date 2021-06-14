@@ -44,8 +44,8 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
   std::stringstream info;
 
   // Check all inactive maps for alignment with the currently active ones.
-  for (const auto& submap : *submaps) {
-    if (submap->isActive() || submap->getLabel() == PanopticLabel::kFreeSpace) {
+  for (Submap& submap : *submaps) {
+    if (submap.isActive() || submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
 
@@ -54,45 +54,45 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     if (!config_.allow_multiple_matches) {
       matching_ids_points = {{0, -1.f}};  // empty initializer.
     }
-    for (const auto& other : *submaps) {
-      if (!other->isActive() ||
-          !submap->getBoundingVolume().intersects(other->getBoundingVolume())) {
+    for (const Submap& other : *submaps) {
+      if (!other.isActive() ||
+          !submap.getBoundingVolume().intersects(other.getBoundingVolume())) {
         continue;
       }
 
       float matching_points;
-      if (submapsConflict(*submap, *other, &matching_points)) {
+      if (submapsConflict(submap, other, &matching_points)) {
         // No conflicts allowed, update also the matched submap if it
         // exists.
-        if (submap->getChangeState() != ChangeState::kAbsent) {
-          info << "\nSubmap " << submap->getID() << " (" << submap->getName()
-               << ") conflicts with submap " << other->getID() << " ("
-               << other->getName() << ")";
-          if (submap->getChangeState() == ChangeState::kPersistent) {
+        if (submap.getChangeState() != ChangeState::kAbsent) {
+          info << "\nSubmap " << submap.getID() << " (" << submap.getName()
+               << ") conflicts with submap " << other.getID() << " ("
+               << other.getName() << ")";
+          if (submap.getChangeState() == ChangeState::kPersistent) {
             if (!config_.allow_multiple_matches) {
-              for (const auto& matched : *submaps) {
-                if (matched->isActive() &&
-                    matched->getInstanceID() == submap->getInstanceID()) {
-                  matched->setChangeState(ChangeState::kNew);
-                  info << ", was matched with submap " << matched->getID()
-                       << " (" << matched->getName() << ")";
+              for (Submap& matched : *submaps) {
+                if (matched.isActive() &&
+                    matched.getInstanceID() == submap.getInstanceID()) {
+                  matched.setChangeState(ChangeState::kNew);
+                  info << ", was matched with submap " << matched.getID()
+                       << " (" << matched.getName() << ")";
                   break;
                 }
               }
               // Get a new instance id.
-              submap->setInstanceID(InstanceID());
+              submap.setInstanceID(InstanceID());
             }
           }
-          submap->setChangeState(ChangeState::kAbsent);
+          submap.setChangeState(ChangeState::kAbsent);
           info << ".";
         }
         break;
-      } else if (submap->getClassID() == other->getClassID()) {
+      } else if (submap.getClassID() == other.getClassID()) {
         // Semantically match, so could be a candidate.
         if (config_.allow_multiple_matches) {
-          matching_ids_points.emplace_back(other->getID(), matching_points);
+          matching_ids_points.emplace_back(other.getID(), matching_points);
         } else if (matching_ids_points[0].second < matching_points) {
-          matching_ids_points[0] = {other->getID(), matching_points};
+          matching_ids_points[0] = {other.getID(), matching_points};
         }
       }
     }
@@ -102,16 +102,16 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     const float acceptance_count =
         std::min(static_cast<float>(config_.match_acceptance_points),
                  config_.match_acceptance_percentage *
-                     submap->getIsoSurfacePoints().size());
+                     submap.getIsoSurfacePoints().size());
     if (!config_.allow_multiple_matches) {
       if (matching_ids_points[0].second > acceptance_count) {
         Submap* other = submaps->getSubmapPtr(matching_ids_points[0].first);
-        if (other->getInstanceID() != submap->getInstanceID()) {
+        if (other->getInstanceID() != submap.getInstanceID()) {
           // Geometry and semantic class match, it's a new match.
-          submap->setChangeState(ChangeState::kPersistent);
-          submap->setInstanceID(other->getInstanceID());
+          submap.setChangeState(ChangeState::kPersistent);
+          submap.setInstanceID(other->getInstanceID());
           other->setChangeState(ChangeState::kMatched);
-          info << "\nSubmap " << submap->getID() << " (" << submap->getName()
+          info << "\nSubmap " << submap.getID() << " (" << submap.getName()
                << ") was matched with submap " << other->getID() << " ("
                << other->getName() << ").";
         }

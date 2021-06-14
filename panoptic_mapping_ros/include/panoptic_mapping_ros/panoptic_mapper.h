@@ -80,7 +80,7 @@ class PanopticMapper {
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
   }
-  MapManager& getMapManager() { return *map_manager_; }
+  MapManager* getMapManagerPtr() { return map_manager_.get(); }
 
  private:
   // Setup.

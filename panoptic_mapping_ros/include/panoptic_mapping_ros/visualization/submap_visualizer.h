@@ -70,7 +70,7 @@ class SubmapVisualizer {
 
   // Visualization message creation.
   std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
-      const SubmapCollection& submaps);
+      SubmapCollection* submaps);
   visualization_msgs::MarkerArray generateBlockMsgs(
       const SubmapCollection& submaps);
   pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
@@ -79,8 +79,8 @@ class SubmapVisualizer {
       const SubmapCollection& submaps);
 
   // Publish visualization requests.
-  void visualizeAll(const SubmapCollection& submaps);
-  void visualizeMeshes(const SubmapCollection& submaps);
+  void visualizeAll(SubmapCollection* submaps);
+  void visualizeMeshes(SubmapCollection* submaps);
   void visualizeTsdfBlocks(const SubmapCollection& submaps);
   void visualizeFreeSpace(const SubmapCollection& submaps);
   void visualizeBoundingVolume(const SubmapCollection& submaps);

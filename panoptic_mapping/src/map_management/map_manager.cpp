@@ -62,16 +62,15 @@ void MapManager::pruneActiveBlocks() {
   Timer timer("map_management/prune_active_blocks");
   std::stringstream info;
   std::vector<int> submaps_to_remove;
-  for (auto& submap_ptr : *map_) {
-    if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace ||
-        !submap_ptr->isActive()) {
+  for (Submap& submap : *map_) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace || !submap.isActive()) {
       continue;
     }
-    info << pruneBlocks(submap_ptr.get());
+    info << pruneBlocks(&submap);
 
     // If a submap does not contain data anymore it can be removed.
-    if (submap_ptr->getTsdfLayer().getNumberOfAllocatedBlocks() == 0) {
-      submaps_to_remove.emplace_back(submap_ptr->getID());
+    if (submap.getTsdfLayer().getNumberOfAllocatedBlocks() == 0) {
+      submaps_to_remove.emplace_back(submap.getID());
       if (config_.verbosity >= 4) {
         info << "Removed submap!";
       }

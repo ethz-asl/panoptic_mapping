@@ -51,9 +51,9 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
   if (submaps->size() > 0) {
-    Submap* map = submaps->begin()->get();
-    map->setIsActive(true);
-    map_id_ = map->getID();
+    Submap& map = *(submaps->begin());
+    map.setIsActive(true);
+    map_id_ = map.getID();
   } else {
     // Allocate the single map.
     Submap::Config config;

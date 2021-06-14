@@ -15,12 +15,12 @@ PlanningInterface::PlanningInterface(
 
 bool PlanningInterface::isObserved(const Point& position,
                                    bool include_inactive_maps) const {
-  for (const auto& submap : *submaps_) {
-    if (include_inactive_maps || submap->isActive()) {
-      const Point position_S = submap->getT_S_M() * position;
-      if (submap->getBoundingVolume().contains_S(position_S)) {
+  for (const Submap& submap : *submaps_) {
+    if (include_inactive_maps || submap.isActive()) {
+      const Point position_S = submap.getT_S_M() * position;
+      if (submap.getBoundingVolume().contains_S(position_S)) {
         auto block_ptr =
-            submap->getTsdfLayer().getBlockPtrByCoordinates(position_S);
+            submap.getTsdfLayer().getBlockPtrByCoordinates(position_S);
         if (block_ptr) {
           const TsdfVoxel& voxel = block_ptr->getVoxelByCoordinates(position_S);
           if (voxel.weight >= kObservedMinWeight_) {
@@ -40,24 +40,23 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
   bool is_expected_occupied = false;
   for (const auto& submap : *submaps_) {
     // Filter out irrelevant submaps.
-    if (submap->getChangeState() == ChangeState::kAbsent) {
+    if (submap.getChangeState() == ChangeState::kAbsent) {
       continue;
     }
-    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
-      if (is_known_free || (is_expected_free && !submap->isActive())) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
+      if (is_known_free || (is_expected_free && !submap.isActive())) {
         continue;
       }
-    } else if (!submap->isActive() && is_expected_occupied) {
+    } else if (!submap.isActive() && is_expected_occupied) {
       continue;
     }
 
     // Check the state.
-    const Point position_S = submap->getT_S_M() * position;
-    if (!submap->getBoundingVolume().contains_S(position_S)) {
+    const Point position_S = submap.getT_S_M() * position;
+    if (!submap.getBoundingVolume().contains_S(position_S)) {
       continue;
     }
-    auto block_ptr =
-        submap->getTsdfLayer().getBlockPtrByCoordinates(position_S);
+    auto block_ptr = submap.getTsdfLayer().getBlockPtrByCoordinates(position_S);
     if (!block_ptr) {
       continue;
     }
@@ -65,9 +64,9 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     if (voxel.weight <= kObservedMinWeight_) {
       continue;
     }
-    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       if (voxel.distance > 0.f) {
-        if (submap->isActive()) {
+        if (submap.isActive()) {
           is_known_free = true;
         } else {
           is_expected_free = true;
@@ -75,13 +74,13 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
       }
     } else {
       if (voxel.distance <= 0.f) {
-        if (submap->isActive()) {
+        if (submap.isActive()) {
           return VoxelState::kKnownOccupied;
         } else {
           is_expected_occupied = true;
         }
       } else {
-        if (submap->isActive()) {
+        if (submap.isActive()) {
           is_known_free = true;
         } else {
           is_expected_free = true;
@@ -112,19 +111,17 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
 
   for (const auto& submap : *submaps_) {
     // Check activity.
-    if (!submap->isActive() && !include_inactive_maps) {
+    if (!submap.isActive() && !include_inactive_maps) {
       continue;
     }
-    if (submap->getLabel() == PanopticLabel::kFreeSpace &&
-        !include_free_space) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_free_space) {
       continue;
     }
 
     // Look up the voxel if it is observed.
-    const Point position_S = submap->getT_S_M() * position;
-    if (submap->getBoundingVolume().contains_S(position_S)) {
-      voxblox::Interpolator<TsdfVoxel> interpolator(
-          submap->getTsdfLayerPtr().get());
+    const Point position_S = submap.getT_S_M() * position;
+    if (submap.getBoundingVolume().contains_S(position_S)) {
+      voxblox::Interpolator<TsdfVoxel> interpolator(&(submap.getTsdfLayer()));
       if (interpolator.getDistance(position_S, &current_distance, true)) {
         *distance = std::min(*distance, current_distance);
       }

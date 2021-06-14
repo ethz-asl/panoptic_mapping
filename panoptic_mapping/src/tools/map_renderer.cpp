@@ -34,30 +34,30 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
                    -1;
 
   // Parse all submaps.
-  for (const auto& submap_ptr : submaps) {
+  for (const Submap& submap : submaps) {
     // Filter out submaps.
-    if (!submap_ptr->isActive() && only_active_submaps) {
+    if (!submap.isActive() && only_active_submaps) {
       continue;
     }
-    if (submap_ptr->getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
-    if (!camera_.submapIsInViewFrustum(*submap_ptr, T_M_C)) {
+    if (!camera_.submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
 
     // Project all surface points.
-    const Transformation T_C_S = T_M_C.inverse() * submap_ptr->getT_M_S();
+    const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();
     const float size_factor_x =
-        camera_.getConfig().fx * submap_ptr->getTsdfLayer().voxel_size() / 2.f;
+        camera_.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
     const float size_factor_y =
-        camera_.getConfig().fy * submap_ptr->getTsdfLayer().voxel_size() / 2.f;
+        camera_.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
 
     voxblox::BlockIndexList index_list;
-    submap_ptr->getMeshLayer().getAllAllocatedMeshes(&index_list);
+    submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
     for (const voxblox::BlockIndex& index : index_list) {
       for (const Point& vertex :
-           submap_ptr->getMeshLayer().getMeshByIndex(index).vertices) {
+           submap.getMeshLayer().getMeshByIndex(index).vertices) {
         const Point p_C = T_C_S * vertex;
         int u, v;
         if (camera_.projectPointToImagePlane(p_C, &u, &v)) {
@@ -79,14 +79,14 @@ cv::Mat MapRenderer::render(const SubmapCollection& submaps,
                 }
                 if (range < range_image_(v_new, u_new)) {
                   range_image_(v_new, u_new) = range;
-                  result.at<int>(v_new, u_new) = (*paint)(*submap_ptr);
+                  result.at<int>(v_new, u_new) = (*paint)(submap);
                 }
               }
             }
           } else {
             if (range < range_image_(v, u)) {
               range_image_(v, u) = range;
-              result.at<int>(v, u) = (*paint)(*submap_ptr);
+              result.at<int>(v, u) = (*paint)(submap);
             }
           }
         }
