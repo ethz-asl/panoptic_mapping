@@ -1,4 +1,4 @@
-#include "panoptic_mapping/integrator/projection_interpolators.h"
+#include "panoptic_mapping/integration/projection_interpolators.h"
 
 #include <cmath>
 #include <limits>

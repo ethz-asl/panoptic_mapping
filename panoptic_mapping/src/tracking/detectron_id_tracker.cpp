@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/detectron_id_tracker.h"
+#include "panoptic_mapping/tracking/detectron_id_tracker.h"
 
 #include <memory>
 #include <unordered_map>

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/integrator/class_projective_integrator.h"
+#include "panoptic_mapping/integration/class_projective_tsdf_integrator.h"
 
 #include <algorithm>
 #include <chrono>
@@ -14,7 +14,7 @@
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<
-    IntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
+    TsdfIntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
     ClassProjectiveIntegrator::registration_("class_projective");
 
 void ClassProjectiveIntegrator::Config::checkParams() const {

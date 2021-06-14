@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATION_PROJECTIVE_TSDF_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATION_PROJECTIVE_TSDF_INTEGRATOR_H_
 
 #include <memory>
 #include <string>
@@ -9,8 +9,8 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
 #include "panoptic_mapping/common/common.h"
-#include "panoptic_mapping/integrator/integrator_base.h"
-#include "panoptic_mapping/integrator/projection_interpolators.h"
+#include "panoptic_mapping/integration/projection_interpolators.h"
+#include "panoptic_mapping/integration/tsdf_integrator_base.h"
 
 namespace panoptic_mapping {
 
@@ -18,7 +18,7 @@ namespace panoptic_mapping {
  * Allocate blocks based on the 3D points and project all visible blocks into
  * the image for updates.
  */
-class ProjectiveIntegrator : public IntegratorBase {
+class ProjectiveIntegrator : public TsdfIntegratorBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
@@ -36,7 +36,7 @@ class ProjectiveIntegrator : public IntegratorBase {
     // System params.
     int integration_threads = std::thread::hardware_concurrency();
 
-    Config() { setConfigName("ProjectiveIntegrator"); }
+    Config() { setConfigName("ProjectiveTsdfIntegrator"); }
 
    protected:
     void setupParamsAndPrinting() override;
@@ -78,10 +78,10 @@ class ProjectiveIntegrator : public IntegratorBase {
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      IntegratorBase, ProjectiveIntegrator, std::shared_ptr<Globals>>
+      TsdfIntegratorBase, ProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_INTEGRATOR_PROJECTIVE_INTEGRATOR_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATION_PROJECTIVE_TSDF_INTEGRATOR_H_

@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_INTEGRATOR_INTEGRATOR_BASE_H_
-#define PANOPTIC_MAPPING_INTEGRATOR_INTEGRATOR_BASE_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATION_TSDF_INTEGRATOR_BASE_H_
+#define PANOPTIC_MAPPING_INTEGRATION_TSDF_INTEGRATOR_BASE_H_
 
 #include <memory>
 #include <utility>
@@ -17,16 +17,16 @@ namespace panoptic_mapping {
 /**
  * Interface for TSDF integrators.
  */
-class IntegratorBase : public InputDataUser {
+class TsdfIntegratorBase : public InputDataUser {
  public:
-  explicit IntegratorBase(std::shared_ptr<Globals> globals)
+  explicit TsdfIntegratorBase(std::shared_ptr<Globals> globals)
       : globals_(std::move(globals)) {
     // Per default require all three images.
     addRequiredInput(InputData::InputType::kDepthImage);
     addRequiredInput(InputData::InputType::kColorImage);
     addRequiredInput(InputData::InputType::kSegmentationImage);
   }
-  ~IntegratorBase() override = default;
+  ~TsdfIntegratorBase() override = default;
 
   virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 
@@ -36,4 +36,4 @@ class IntegratorBase : public InputDataUser {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_INTEGRATOR_INTEGRATOR_BASE_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATION_TSDF_INTEGRATOR_BASE_H_

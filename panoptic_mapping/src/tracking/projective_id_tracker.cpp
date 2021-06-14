@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/projective_id_tracker.h"
+#include "panoptic_mapping/tracking/projective_id_tracker.h"
 
 #include <future>
 #include <memory>

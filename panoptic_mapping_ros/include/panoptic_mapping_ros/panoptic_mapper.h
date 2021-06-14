@@ -10,16 +10,16 @@
 #include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/common/globals.h>
-#include <panoptic_mapping/integrator/integrator_base.h>
+#include <panoptic_mapping/common/label_handler.h>
+#include <panoptic_mapping/integration/tsdf_integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/map_management/activity_manager.h>
 #include <panoptic_mapping/map_management/map_manager.h>
 #include <panoptic_mapping/map_management/tsdf_registrator.h>
-#include <panoptic_mapping/preprocessing/id_tracker_base.h>
-#include <panoptic_mapping/preprocessing/label_handler.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <panoptic_mapping/tracking/id_tracker_base.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
@@ -109,7 +109,7 @@ class PanopticMapper {
 
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;
-  std::unique_ptr<IntegratorBase> tsdf_integrator_;
+  std::unique_ptr<TsdfIntegratorBase> tsdf_integrator_;
   std::unique_ptr<TsdfRegistrator> tsdf_registrator_;
   std::unique_ptr<ActivityManager> activity_manager_;
   std::unique_ptr<MapManager> map_manager_;

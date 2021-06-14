@@ -13,7 +13,7 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
-#include "panoptic_mapping/integrator/mesh_integrator.h"
+#include "panoptic_mapping/integration/mesh_integrator.h"
 #include "panoptic_mapping/map/utils/instance_id.h"
 #include "panoptic_mapping/map/utils/submap_bounding_volume.h"
 #include "panoptic_mapping/map/utils/submap_id.h"

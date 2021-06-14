@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/tracking_info.h"
+#include "panoptic_mapping/tracking/tracking_info.h"
 
 #include <algorithm>
 #include <iostream>

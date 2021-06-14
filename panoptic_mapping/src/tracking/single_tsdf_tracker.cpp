@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/single_tsdf_tracker.h"
+#include "panoptic_mapping/tracking/single_tsdf_tracker.h"
 
 #include <memory>
 #include <unordered_set>

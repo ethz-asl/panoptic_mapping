@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_INTEGRATOR_CLASS_PROJECTIVE_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_INTEGRATOR_CLASS_PROJECTIVE_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_
 
 #include <memory>
 #include <string>
@@ -9,9 +9,9 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
 #include "panoptic_mapping/common/common.h"
-#include "panoptic_mapping/integrator/integrator_base.h"
-#include "panoptic_mapping/integrator/projection_interpolators.h"
-#include "panoptic_mapping/integrator/projective_integrator.h"
+#include "panoptic_mapping/integration/projection_interpolators.h"
+#include "panoptic_mapping/integration/projective_tsdf_integrator.h"
+#include "panoptic_mapping/integration/tsdf_integrator_base.h"
 
 namespace panoptic_mapping {
 
@@ -29,7 +29,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
     // Integration params.
     ProjectiveIntegrator::Config pi_config;
 
-    Config() { setConfigName("ClassProjectiveIntegrator"); }
+    Config() { setConfigName("ClassProjectiveTsdfIntegrator"); }
 
    protected:
     void setupParamsAndPrinting() override;
@@ -49,10 +49,10 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      IntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
+      TsdfIntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_INTEGRATOR_CLASS_PROJECTIVE_INTEGRATOR_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATION_CLASS_PROJECTIVE_TSDF_INTEGRATOR_H_

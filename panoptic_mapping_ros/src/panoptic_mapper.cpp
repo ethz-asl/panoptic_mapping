@@ -57,7 +57,7 @@ void PanopticMapper::setupMembers() {
 
   // Tsdf Integrator.
   ros::NodeHandle integrator_nh(nh_private_, "tsdf_integrator");
-  tsdf_integrator_ = config_utilities::FactoryRos::create<IntegratorBase>(
+  tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>(
       integrator_nh, globals_);
 
   // Tsdf Registrator.

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/integrator/mesh_integrator.h"
+#include "panoptic_mapping/integration/mesh_integrator.h"
 
 #include <chrono>
 #include <future>

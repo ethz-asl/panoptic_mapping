@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/geometric_edge_refiner.h"
+#include "panoptic_mapping/tracking/geometric_edge_refiner.h"
 
 namespace panoptic_mapping {
 

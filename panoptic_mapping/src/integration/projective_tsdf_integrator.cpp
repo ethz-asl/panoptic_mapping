@@ -1,4 +1,4 @@
-#include "panoptic_mapping/integrator/projective_integrator.h"
+#include "panoptic_mapping/integration/projective_tsdf_integrator.h"
 
 #include <algorithm>
 #include <chrono>
@@ -15,8 +15,8 @@
 
 namespace panoptic_mapping {
 
-config_utilities::Factory::RegistrationRos<IntegratorBase, ProjectiveIntegrator,
-                                           std::shared_ptr<Globals>>
+config_utilities::Factory::RegistrationRos<
+    TsdfIntegratorBase, ProjectiveIntegrator, std::shared_ptr<Globals>>
     ProjectiveIntegrator::registration_("projective");
 
 void ProjectiveIntegrator::Config::checkParams() const {
@@ -36,7 +36,7 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
-    : config_(config.checkValid()), IntegratorBase(std::move(globals)) {
+    : config_(config.checkValid()), TsdfIntegratorBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Setup the interpolators (one for each thread).

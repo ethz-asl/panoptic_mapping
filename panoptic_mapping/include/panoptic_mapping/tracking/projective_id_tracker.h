@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_PREPROCESSING_PROJECTIVE_ID_TRACKER_H_
-#define PANOPTIC_MAPPING_PREPROCESSING_PROJECTIVE_ID_TRACKER_H_
+#ifndef PANOPTIC_MAPPING_TRACKING_PROJECTIVE_ID_TRACKER_H_
+#define PANOPTIC_MAPPING_TRACKING_PROJECTIVE_ID_TRACKER_H_
 
 #include <memory>
 #include <string>
@@ -11,10 +11,10 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
-#include "panoptic_mapping/preprocessing/id_tracker_base.h"
-#include "panoptic_mapping/preprocessing/label_handler.h"
-#include "panoptic_mapping/preprocessing/tracking_info.h"
+#include "panoptic_mapping/common/label_handler.h"
 #include "panoptic_mapping/tools/map_renderer.h"
+#include "panoptic_mapping/tracking/id_tracker_base.h"
+#include "panoptic_mapping/tracking/tracking_info.h"
 
 namespace panoptic_mapping {
 
@@ -89,4 +89,4 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_PREPROCESSING_PROJECTIVE_ID_TRACKER_H_
+#endif  // PANOPTIC_MAPPING_TRACKING_PROJECTIVE_ID_TRACKER_H_

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/ground_truth_id_tracker.h"
+#include "panoptic_mapping/tracking/ground_truth_id_tracker.h"
 
 #include <memory>
 #include <unordered_set>

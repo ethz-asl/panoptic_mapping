@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_INTEGRATOR_SINGLE_TSDF_INTEGRATOR_H_
-#define PANOPTIC_MAPPING_INTEGRATOR_SINGLE_TSDF_INTEGRATOR_H_
+#ifndef PANOPTIC_MAPPING_INTEGRATION_SINGLE_TSDF_INTEGRATOR_H_
+#define PANOPTIC_MAPPING_INTEGRATION_SINGLE_TSDF_INTEGRATOR_H_
 
 #include <memory>
 #include <string>
@@ -9,7 +9,7 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
 #include "panoptic_mapping/common/common.h"
-#include "panoptic_mapping/integrator/projective_integrator.h"
+#include "panoptic_mapping/integration/projective_tsdf_integrator.h"
 
 namespace panoptic_mapping {
 
@@ -47,10 +47,10 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      IntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
+      TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_INTEGRATOR_SINGLE_TSDF_INTEGRATOR_H_
+#endif  // PANOPTIC_MAPPING_INTEGRATION_SINGLE_TSDF_INTEGRATOR_H_

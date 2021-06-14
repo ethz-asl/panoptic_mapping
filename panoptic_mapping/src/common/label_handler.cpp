@@ -1,4 +1,4 @@
-#include "panoptic_mapping/preprocessing/label_handler.h"
+#include "panoptic_mapping/common/label_handler.h"
 
 #include <sstream>
 #include <string>

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/integrator/single_tsdf_integrator.h"
+#include "panoptic_mapping/integration/single_tsdf_integrator.h"
 
 #include <algorithm>
 #include <chrono>
@@ -14,8 +14,8 @@
 
 namespace panoptic_mapping {
 
-config_utilities::Factory::RegistrationRos<IntegratorBase, SingleTsdfIntegrator,
-                                           std::shared_ptr<Globals>>
+config_utilities::Factory::RegistrationRos<
+    TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
     SingleTsdfIntegrator::registration_("single_tsdf");
 
 void SingleTsdfIntegrator::Config::checkParams() const {
