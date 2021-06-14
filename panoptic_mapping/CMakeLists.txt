@@ -37,7 +37,6 @@ cs_add_library(${PROJECT_NAME}
         src/tracking/ground_truth_id_tracker.cpp
         src/tracking/projective_id_tracker.cpp
         src/tracking/detectron_id_tracker.cpp
-        src/tracking/geometric_edge_refiner.cpp
         src/integration/projective_tsdf_integrator.cpp
         src/integration/class_projective_tsdf_integrator.cpp
         src/integration/single_tsdf_integrator.cpp
