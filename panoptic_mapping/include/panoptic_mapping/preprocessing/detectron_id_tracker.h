@@ -35,8 +35,9 @@ class DetectronIDTracker : public ProjectiveIDTracker {
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
- private:
+ protected:
   int allocateSubmap(int detectron_id, SubmapCollection* submaps) override;
+  bool classesMatch(int input_id, int submap_class_id) override;
 
  private:
   static config_utilities::Factory::RegistrationRos<

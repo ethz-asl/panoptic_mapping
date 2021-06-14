@@ -39,6 +39,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
     std::string tracking_metric = "IoU";  // IoU, overlap
     float match_acceptance_threshold = 0.5;
+    bool use_class_data_for_matching = true;
 
     // Allocation .
     int min_allocation_size = 0;  // #px required to allocate new submap.
@@ -65,7 +66,10 @@ class ProjectiveIDTracker : public IDTrackerBase {
  protected:
   // Internal methods.
   virtual int allocateSubmap(int instance_id, SubmapCollection* submaps);
+  virtual bool classesMatch(int input_id, int submap_class_id);
   void allocateFreeSpaceSubmap(SubmapCollection* submaps);
+  TrackingInfoAggregator computeTrackingData(SubmapCollection* submaps,
+                                             InputData* input);
   TrackingInfo renderTrackingInfo(const Submap& submap,
                                   const Transformation& T_M_C,
                                   const cv::Mat& depth_image,

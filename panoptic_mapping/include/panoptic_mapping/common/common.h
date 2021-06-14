@@ -41,8 +41,8 @@ struct ClassVoxel {
   uint belongs_count = 0u;
   uint foreign_count = 0u;
 
-  // Class-wise classification (index 0 is reserved for the beloning submap).
-  std::unordered_map<int, int> counts;
+  // Class-wise classification (index 0 is reserved for the belonging submap).
+  std::unordered_map<int, int> counts{{0, 0}};
   int current_count = -1;
   int current_index = -1;
 };

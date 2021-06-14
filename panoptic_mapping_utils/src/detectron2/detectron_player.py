@@ -7,8 +7,9 @@ import csv
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from panoptic_mapping_ros.msg import DetectronLabel, DetectronLabels
 import cv2
+
+from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 
 class DetectronPlayer(object):

@@ -71,6 +71,12 @@ void PanopticMapper::setupMembers() {
   activity_manager_ = std::make_unique<ActivityManager>(
       config_utilities::getConfigFromRos<ActivityManager::Config>(activity_nh));
 
+  // Map Manager.
+  ros::NodeHandle management_nh(nh_private_, "map_management");
+  map_manager_ = std::make_unique<MapManager>(
+      config_utilities::getConfigFromRos<MapManager::Config>(management_nh),
+      submaps_);
+
   // Planning Interface.
   planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
 
@@ -161,6 +167,7 @@ void PanopticMapper::processInput(InputData* input) {
   // Update other submap data?
 
   // Check activity.
+  map_manager_->tickMapManagement();
   activity_manager_->processSubmaps(submaps_.get());
 
   // If requested perform change detection, visualization, and logging.

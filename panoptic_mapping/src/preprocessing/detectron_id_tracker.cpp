@@ -70,7 +70,8 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
   if (it == labels_->end()) {
     return -1;
   } else {
-    if (!globals_->labelHandler()->segmentationIdExists(detectron_id)) {
+    if (!globals_->labelHandler()->segmentationIdExists(
+            it->second.category_id)) {
       pan_label = PanopticLabel::kUnknown;
     } else if (it->second.is_thing) {
       pan_label = PanopticLabel::kInstance;
@@ -91,15 +92,25 @@ int DetectronIDTracker::allocateSubmap(int detectron_id,
       break;
     }
   }
-  config.use_class_layer = true;
+  config.use_class_layer =
+      config_.projective_id_tracker.submap_creation.use_class_layer;
   Submap* new_submap = submaps->createSubmap(config);
   new_submap->setLabel(pan_label);
-  int class_id = it->second.category_id;
+  const int class_id = it->second.category_id;
   new_submap->setClassID(class_id);
   if (globals_->labelHandler()->segmentationIdExists(class_id)) {
     new_submap->setName(globals_->labelHandler()->getName(class_id));
   }
   return new_submap->getID();
+}
+
+bool DetectronIDTracker::classesMatch(int input_id, int submap_class_id) {
+  auto it = labels_->find(input_id);
+  if (it == labels_->end()) {
+    // No known input label.
+    return false;
+  }
+  return it->second.category_id == submap_class_id;
 }
 
 }  // namespace panoptic_mapping
