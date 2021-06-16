@@ -53,7 +53,7 @@ id_tracker:
 
   
 tsdf_integrator:  
-  type: projective # projective, class_projective, single_tsdf
+  type: class_projective # projective, class_projective, single_tsdf
   verbosity: 1     
 
   # Projective
