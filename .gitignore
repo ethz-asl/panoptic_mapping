@@ -33,6 +33,9 @@ devel_isolated/
 cmake-build-debug/
 .idea/
 
+# VS Code stuff
+.vscode*
+
 # qcreator stuff
 CMakeLists.txt.user
 
