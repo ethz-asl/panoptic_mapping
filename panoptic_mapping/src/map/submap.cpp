@@ -212,10 +212,10 @@ void Submap::computeIsoSurfacePoints() {
 
 void Submap::updateBoundingVolume() { bounding_volume_.update(); }
 
-void Submap::applyClassLayer(const LayerManipulator& manipulator,
+bool Submap::applyClassLayer(const LayerManipulator& manipulator,
                              bool clear_class_layer) {
   if (!has_class_layer_) {
-    return;
+    return true;
   }
   manipulator.applyClassificationLayer(tsdf_layer_.get(), *class_layer_,
                                        config_.truncation_distance);
@@ -224,6 +224,7 @@ void Submap::applyClassLayer(const LayerManipulator& manipulator,
     has_class_layer_ = false;
   }
   updateEverything();
+  return tsdf_layer_->getNumberOfAllocatedBlocks() != 0;
 }
 
 }  // namespace panoptic_mapping
