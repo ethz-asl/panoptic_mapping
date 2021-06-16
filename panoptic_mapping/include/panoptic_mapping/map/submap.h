@@ -14,14 +14,17 @@
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/integration/mesh_integrator.h"
-#include "panoptic_mapping/map/utils/instance_id.h"
-#include "panoptic_mapping/map/utils/submap_bounding_volume.h"
-#include "panoptic_mapping/map/utils/submap_id.h"
+#include "panoptic_mapping/map/instance_id.h"
+#include "panoptic_mapping/map/submap_bounding_volume.h"
+#include "panoptic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 
+class LayerManipulator;
+
 class Submap {
  public:
+  /* Config */
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
     float truncation_distance = 0.2;  // m, negative values = #vs
@@ -38,16 +41,17 @@ class Submap {
     void initializeDependentVariableDefaults() override;
   };
 
+  /* Construction */
   explicit Submap(const Config& config);
   virtual ~Submap() = default;
 
-  // IO.
+  /* IO */
   void getProto(SubmapProto* proto) const;
   bool saveToStream(std::fstream* outfile_ptr) const;
   static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
-  // Const accessors.
+  /* Const accessors */
   const Config& getConfig() const { return config_; }
   int getID() const { return id_; }
   int getInstanceID() const { return instance_id_; }
@@ -62,6 +66,7 @@ class Submap {
   const Transformation& getT_S_M() const { return T_M_S_inv_; }
   bool isActive() const { return is_active_; }
   bool wasTracked() const { return was_tracked_; }
+  bool hasClassLayer() const { return has_class_layer_; }
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
@@ -70,7 +75,7 @@ class Submap {
     return bounding_volume_;
   }
 
-  // Modifying accessors.
+  /* Modifying accessors */
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
@@ -79,7 +84,7 @@ class Submap {
   }
   SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
 
-  // Setters.
+  /* Setters */
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
@@ -90,11 +95,28 @@ class Submap {
   void setIsActive(bool is_active) { is_active_ = is_active; }
   void setWasTracked(bool was_tracked) { was_tracked_ = was_tracked; }
 
-  // Processing.
+  /* Processing */
+  // Set the submap status to inactive and update its status accordingly.
   void finishActivePeriod();
-  void updateMesh(bool only_updated_blocks = true);
-  void computeIsoSurfacePoints();
+
+  // Update all dynamically computable quantities.
+  void updateEverything(bool only_updated_blocks = true);
+
+  // Update the bounding volume based on all allocated blocks.
   void updateBoundingVolume();
+
+  // Update the mesh based on the current tsdf blocks. Set only_updated_blocks
+  // true for incremental mesh updates, false for a full re-computation.
+  void updateMesh(bool only_updated_blocks = true);
+
+  // Compute the iso-surface points of the submap based on its current mesh.
+  void computeIsoSurfacePoints();
+
+  // Removes non-belonging points from the TSDF and deletes the class layer.
+  // Uses the provided manipulator to perform the class layer integration.
+  // Return whether any blocks remain.
+  bool applyClassLayer(const LayerManipulator& manipulator,
+                       bool clear_class_layer = true);
 
  private:
   friend class SubmapCollection;
@@ -110,6 +132,7 @@ class Submap {
   // State.
   bool is_active_ = true;
   bool was_tracked_ = true;  // Set to true by the id tracker if matched.
+  bool has_class_layer_ = false;
   ChangeState change_state_ = ChangeState::kNew;
 
   // Transformations.
@@ -125,7 +148,6 @@ class Submap {
   SubmapBoundingVolume bounding_volume_;
 
   // Processing.
-  // TODO(schmluk): move this out of the submaps? Could be more efficient here.
   std::unique_ptr<MeshIntegrator> mesh_integrator_;
 };
 

@@ -11,6 +11,7 @@
 #include "panoptic_mapping/map/submap.h"
 #include "panoptic_mapping/map/submap_collection.h"
 #include "panoptic_mapping/map_management/activity_manager.h"
+#include "panoptic_mapping/map_management/layer_manipulator.h"
 #include "panoptic_mapping/map_management/tsdf_registrator.h"
 
 namespace panoptic_mapping {
@@ -29,9 +30,14 @@ class MapManager {
     int change_detection_frequency = 0;
     int activity_management_frequency = 0;
 
+    // Behavior.
+    bool merge_deactivated_submaps_if_possible = false;
+    bool apply_class_layer_when_deactivating_submaps = false;
+
     // Member configs.
     TsdfRegistrator::Config tsdf_registrator_config;
     ActivityManager::Config activity_manager_config;
+    LayerManipulator::Config layer_manipulator_config;
 
     Config() { setConfigName("MapManager"); }
 
@@ -43,23 +49,29 @@ class MapManager {
   MapManager(const Config& config, std::shared_ptr<SubmapCollection> map);
   virtual ~MapManager() = default;
 
-  // Perform all required actions.
-  void tickMapManagement();
+  // Perform all actions when with specified timings.
+  void tick();
 
-  // Access to specific tasks.
+  // Perform specific tasks.
   void pruneActiveBlocks();
+  void manageSubmapActivity();
   void performChangeDetection();
+  void finishMapping();
+
+  // Tools.
+  bool mergeSubmapIfPossible(int submap_id, int* merged_id = nullptr);
 
  protected:
-  std::string pruneBlocks(Submap* submap);
+  std::string pruneBlocks(Submap* submap) const;
 
  private:
   // Members.
   const Config config_;
   const std::shared_ptr<SubmapCollection> map_;
 
-  ActivityManager activity_manager_;
-  TsdfRegistrator tsdf_registrator_;
+  std::shared_ptr<ActivityManager> activity_manager_;
+  std::shared_ptr<TsdfRegistrator> tsdf_registrator_;
+  std::shared_ptr<LayerManipulator> layer_manipulator_;
 
   // Action tick counters.
   class Ticker {

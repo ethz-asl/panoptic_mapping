@@ -203,6 +203,21 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
                                       color_mode_voxblox, &msg.mesh);
     }
 
+    // Add removed blocks so they are cleared from the visualization as well.
+    voxblox::BlockIndexList block_indices;
+    submap.getTsdfLayer().getAllAllocatedBlocks(&block_indices);
+    for (const auto& block_index : info.previous_blocks) {
+      if (std::find(block_indices.begin(), block_indices.end(), block_index) ==
+          block_indices.end()) {
+        voxblox_msgs::MeshBlock mesh_block;
+        mesh_block.index[0] = block_index.x();
+        mesh_block.index[1] = block_index.y();
+        mesh_block.index[2] = block_index.z();
+        msg.mesh.mesh_blocks.push_back(mesh_block);
+      }
+    }
+    info.previous_blocks = block_indices;
+
     if (msg.mesh.mesh_blocks.empty()) {
       // Nothing changed, don't send an empty msg which would reset the mesh.
       continue;
@@ -267,28 +282,15 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
       const ClassVoxel& class_voxel =
           class_block.getVoxelByLinearIndex(linear_index);
 
-      // Compute belonging probability in [0, 1].
-      float probability;
-      if (class_voxel.current_index < 0) {
-        probability = static_cast<float>(class_voxel.belongs_count) /
-                      (class_voxel.foreign_count + class_voxel.belongs_count);
-      } else {
-        int total_count = 0;
-        for (const auto& count : class_voxel.counts) {
-          total_count += count.second;
-        }
-        probability =
-            static_cast<float>(class_voxel.counts.at(0)) / total_count;
-      }
-
       // Coloring.
+      float probability = class_voxel.getBelongingProbability();
       tsdf_voxel.color.b = 0;
       if (probability > 0.5) {
-        tsdf_voxel.color.r = (1.f - probability) * 2.f * 255.f;
+        tsdf_voxel.color.r = ((1.f - probability) * 2.f * 255.f);
         tsdf_voxel.color.g = 255;
       } else {
         tsdf_voxel.color.r = 255;
-        tsdf_voxel.color.g = (probability)*2.f * 255.f;
+        tsdf_voxel.color.g = (probability * 2.f * 255.f);
       }
     }
   }
@@ -554,7 +556,8 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
   }
 
   // Update according to visualization mode.
-  if (info->change_color || visualization_mode_ == VisualizationMode::kActive) {
+  if (info->change_color || visualization_mode_ == VisualizationMode::kActive ||
+      visualization_mode_ == VisualizationMode::kInactive) {
     switch (visualization_mode_) {
       case VisualizationMode::kAll: {
         info->alpha = 1.f;
@@ -566,6 +569,18 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
             info->alpha = 1.f;
           } else {
             info->alpha = 0.4f;
+          }
+          info->republish_everything = true;
+          info->was_active = submap.isActive();
+        }
+        break;
+      }
+      case VisualizationMode::kInactive: {
+        if (info->was_active != submap.isActive() || info->change_color) {
+          if (submap.isActive()) {
+            info->alpha = 0.4f;
+          } else {
+            info->alpha = 1.f;
           }
           info->republish_everything = true;
           info->was_active = submap.isActive();
@@ -642,6 +657,8 @@ SubmapVisualizer::visualizationModeFromString(
     return VisualizationMode::kActive;
   } else if (visualization_mode == "active_only") {
     return VisualizationMode::kActiveOnly;
+  } else if (visualization_mode == "inactive") {
+    return VisualizationMode::kInactive;
   } else {
     LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
                  << "', using 'all' instead.";
@@ -658,6 +675,8 @@ std::string SubmapVisualizer::visualizationModeToString(
       return "active";
     case VisualizationMode::kActiveOnly:
       return "active_only";
+    case VisualizationMode::kInactive:
+      return "inactive";
   }
   return "unknown";
 }

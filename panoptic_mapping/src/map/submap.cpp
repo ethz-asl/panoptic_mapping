@@ -8,6 +8,8 @@
 #include <cblox/utils/quat_transformation_protobuf_utils.h>
 #include <voxblox/io/layer_io.h>
 
+#include "panoptic_mapping/map_management/layer_manipulator.h"
+
 namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
@@ -52,6 +54,7 @@ Submap::Submap(const Config& config)
   if (config_.use_class_layer) {
     class_layer_ = std::make_shared<ClassLayer>(config_.voxel_size,
                                                 config_.voxels_per_side);
+    has_class_layer_ = true;
   }
 
   // Setup tools.
@@ -63,14 +66,6 @@ Submap::Submap(const Config& config)
 void Submap::setT_M_S(const Transformation& T_M_S) {
   T_M_S_ = T_M_S;
   T_M_S_inv_ = T_M_S_.inverse();
-}
-
-void Submap::finishActivePeriod() {
-  // TODO(schmluk): at the moment these things are specifically set when loading
-  // submaps, need to update automatically once submaps can go out of scope.
-  is_active_ = false;
-  change_state_ = ChangeState::kUnobserved;
-  bounding_volume_.update();
 }
 
 void Submap::getProto(SubmapProto* proto) const {
@@ -162,10 +157,24 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   return submap;
 }
 
+void Submap::finishActivePeriod() {
+  if (!is_active_) {
+    return;
+  }
+  is_active_ = false;
+  change_state_ = ChangeState::kUnobserved;
+  updateEverything();
+}
+
+void Submap::updateEverything(bool only_updated_blocks) {
+  updateBoundingVolume();
+  updateMesh(only_updated_blocks);
+  computeIsoSurfacePoints();
+}
+
 void Submap::updateMesh(bool only_updated_blocks) {
   // Use the default integrator config to have color always available.
-  mesh_integrator_->generateMesh(only_updated_blocks, true,
-                                 config_.use_class_layer);
+  mesh_integrator_->generateMesh(only_updated_blocks, true, has_class_layer_);
 }
 
 void Submap::computeIsoSurfacePoints() {
@@ -189,13 +198,32 @@ void Submap::computeIsoSurfacePoints() {
       // Try to interpolate the voxel weight and verify the distance.
       TsdfVoxel voxel;
       if (interpolator.getVoxel(vertex, &voxel, true)) {
-        CHECK_LE(voxel.distance, 1e-2 * config_.voxel_size);
-        iso_surface_points_.emplace_back(vertex, voxel.weight);
+        if (voxel.distance > 1e-2 * config_.voxel_size) {
+          LOG(WARNING) << "IsoSurface Point has distance '" << voxel.distance
+                       << "' > " << 1e-2 * config_.voxel_size
+                       << ", will be ignored.";
+        } else {
+          iso_surface_points_.emplace_back(vertex, voxel.weight);
+        }
       }
     }
   }
 }
 
 void Submap::updateBoundingVolume() { bounding_volume_.update(); }
+
+void Submap::applyClassLayer(const LayerManipulator& manipulator,
+                             bool clear_class_layer) {
+  if (!has_class_layer_) {
+    return;
+  }
+  manipulator.applyClassificationLayer(tsdf_layer_.get(), *class_layer_,
+                                       config_.truncation_distance);
+  if (clear_class_layer) {
+    class_layer_.reset();
+    has_class_layer_ = false;
+  }
+  updateEverything();
+}
 
 }  // namespace panoptic_mapping

@@ -37,8 +37,8 @@ id_tracker:
   # Projective ID tracker
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
-  match_acceptance_threshold: 0.1
-  min_allocation_size: 2000 # px, for submap allocation.
+  match_acceptance_threshold: 0.1  # (0.1)
+  min_allocation_size: 2000 # px, for submap allocation. (2000)
   use_class_data_for_matching: true
   
   impaint_voxel_size: true
@@ -49,12 +49,14 @@ id_tracker:
   
   # Detectron
   use_edge_refinement: false
-  use_class_layer: true
+  use_class_layer: false   # for submap allocation
 
   
 tsdf_integrator:  
-  type: class_projective # projective, class_projective, single_tsdf
-  verbosity: 1
+  type: projective # projective, class_projective, single_tsdf
+  verbosity: 1     
+
+  # Projective
   use_weight_dropoff: true
   max_weight: 10000
   interpolation_method: adaptive  # nearest, bilinear, adaptive
@@ -63,16 +65,23 @@ tsdf_integrator:
   
   # Class integrator
   use_accurate_classification: false
+  use_instance_classification: &use_instance_classification false
   
 map_management:
   verbosity: 0
+  
+  # Frequencies
   prune_active_blocks_frequency: 1
   activity_management_frequency: 1
   change_detection_frequency: 0
   
+  # Behavior
+  merge_deactivated_submaps_if_possible: true
+  apply_class_layer_when_deactivating_submaps: false
+  
   activity_manager:
-    required_reobservations: 0 # Consecutive observations to keep new submaps.
-    deactivate_after_missed_detections: 30  # Deactivate submaps when not observed for x frames.
+    required_reobservations: 1 # Consecutive observations to keep new submaps.
+    deactivate_after_missed_detections: 10  # Deactivate submaps when not observed for x frames.
   
   tsdf_registrator:
     verbosity: 3
@@ -84,12 +93,16 @@ map_management:
     match_acceptance_percentage: 0.2
     normalize_by_voxel_weight: true
     allow_multiple_matches: false
+    
+  layer_manipulator:
+      verbosity: 3
+      use_instance_classification: *use_instance_classification
   
 visualization:  
   submaps:
     verbosity: 1
     color_mode: submaps # submaps, instances, color, normals, classes, change, classification
-    visualization_mode: active  # all, active, active_only
+    visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true
     visualize_tsdf_blocks: true

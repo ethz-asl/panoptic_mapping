@@ -116,6 +116,8 @@ void PanopticMapper::setupRos() {
       this);
   print_timings_srv_ = nh_private_.advertiseService(
       "print_timings", &PanopticMapper::printTimingsCallback, this);
+  finish_mapping_srv_ = nh_private_.advertiseService(
+      "finish_mapping", &PanopticMapper::finishMappingCallback, this);
 
   // Timers.
   if (config_.visualization_interval > 0.0) {
@@ -155,7 +157,7 @@ void PanopticMapper::processInput(InputData* input) {
 
   // Perform all requested map management actions.
   Timer management_timer("input/map_management");
-  map_manager_->tickMapManagement();
+  map_manager_->tick();
   ros::WallTime t3 = ros::WallTime::now();
   management_timer.Stop();
 
@@ -186,13 +188,7 @@ void PanopticMapper::processInput(InputData* input) {
   LOG_IF(INFO, config_.print_timing) << "\n" << Timing::Print();
 }
 
-void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {
-  data_logger_->writeData(ros::Time::now().toSec(), *submaps_);
-}
-
-void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
-  publishVisualization();
-}
+void PanopticMapper::finishMapping() { map_manager_->finishMapping(); }
 
 void PanopticMapper::publishVisualization() {
   // Update the submaps meshes.
@@ -203,6 +199,45 @@ void PanopticMapper::publishVisualization() {
   submap_visualizer_->visualizeAll(submaps_.get());
   planning_visualizer_->visualizeAll();
   timer.Stop();
+}
+
+bool PanopticMapper::saveMap(const std::string& file_path) {
+  bool success = submaps_->saveToFile(file_path);
+  LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
+                        << " submaps to '" << file_path << "'.";
+  return success;
+}
+
+bool PanopticMapper::loadMap(const std::string& file_path) {
+  auto loaded_map = std::make_shared<SubmapCollection>();
+
+  // Load the map.
+  if (!loaded_map->loadFromFile(file_path, true)) {
+    return false;
+  }
+
+  // Loaded submaps are 'from the past' so set them to inactive.
+  for (Submap& submap : *loaded_map) {
+    submap.finishActivePeriod();
+  }
+
+  // Set the map.
+  submaps_ = loaded_map;
+
+  // Reproduce the mesh and visualization.
+  submap_visualizer_->clearMesh();
+  submap_visualizer_->visualizeAll(submaps_.get());
+
+  LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
+  return true;
+}
+
+void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {
+  data_logger_->writeData(ros::Time::now().toSec(), *submaps_);
+}
+
+void PanopticMapper::publishVisualizationCallback(const ros::TimerEvent&) {
+  publishVisualization();
 }
 
 bool PanopticMapper::setVisualizationModeCallback(
@@ -254,12 +289,6 @@ bool PanopticMapper::saveMapCallback(
   response.success = saveMap(request.file_path);
   return response.success;
 }
-bool PanopticMapper::saveMap(const std::string& file_path) {
-  bool success = submaps_->saveToFile(file_path);
-  LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
-                        << " submaps to '" << file_path << "'.";
-  return success;
-}
 
 bool PanopticMapper::loadMapCallback(
     panoptic_mapping_msgs::SaveLoadMap::Request& request,
@@ -268,33 +297,16 @@ bool PanopticMapper::loadMapCallback(
   return response.success;
 }
 
-bool PanopticMapper::loadMap(const std::string& file_path) {
-  auto loaded_map = std::make_shared<SubmapCollection>();
-
-  // Load the map.
-  if (!loaded_map->loadFromFile(file_path, true)) {
-    return false;
-  }
-
-  // Loaded submaps are 'from the past' so set them to inactive.
-  for (Submap& submap : *loaded_map) {
-    submap.finishActivePeriod();
-  }
-
-  // Set the map.
-  submaps_ = loaded_map;
-
-  // Reproduce the mesh and visualization.
-  submap_visualizer_->clearMesh();
-  submap_visualizer_->visualizeAll(submaps_.get());
-
-  LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
-  return true;
-}
-
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,
                                           std_srvs::Empty::Response& response) {
   LOG(INFO) << Timing::Print();
+  return true;
+}
+
+bool PanopticMapper::finishMappingCallback(
+    std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
+  finishMapping();
+  return true;
 }
 
 }  // namespace panoptic_mapping

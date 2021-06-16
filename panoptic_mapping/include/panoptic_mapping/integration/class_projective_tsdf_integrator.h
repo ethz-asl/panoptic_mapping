@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
@@ -25,6 +26,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
     int verbosity = 4;
 
     bool use_accurate_classification = false;  // false: use binary
+    bool use_instance_classification = false;  // false: use class id
 
     // Integration params.
     ProjectiveIntegrator::Config pi_config;
@@ -40,6 +42,8 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
                             std::shared_ptr<Globals> globals);
   ~ClassProjectiveIntegrator() override = default;
 
+  void processInput(SubmapCollection* submaps, InputData* input) override;
+
  protected:
   void updateBlock(Submap* submap, InterpolatorBase* interpolator,
                    const voxblox::BlockIndex& block_index,
@@ -51,6 +55,9 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
   static config_utilities::Factory::RegistrationRos<
       TsdfIntegratorBase, ClassProjectiveIntegrator, std::shared_ptr<Globals>>
       registration_;
+
+  // Cached data.
+  std::unordered_map<int, int> id_to_class_;
 };
 
 }  // namespace panoptic_mapping

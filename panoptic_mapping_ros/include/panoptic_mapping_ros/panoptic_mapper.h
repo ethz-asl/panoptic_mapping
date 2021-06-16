@@ -32,6 +32,7 @@ namespace panoptic_mapping {
 
 class PanopticMapper {
  public:
+  /* Config */
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     std::string global_frame_name = "mission";
@@ -46,10 +47,11 @@ class PanopticMapper {
     void checkParams() const override;
   };
 
+  /* Construction */
   PanopticMapper(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private);
   virtual ~PanopticMapper() = default;
 
-  // ROS callbacks.
+  /* ROS callbacks */
   void publishVisualizationCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
   bool saveMapCallback(
@@ -64,18 +66,26 @@ class PanopticMapper {
           response);                                               // NOLINT
   bool printTimingsCallback(std_srvs::Empty::Request& request,     // NOLINT
                             std_srvs::Empty::Response& response);  // NOLINT
+  bool finishMappingCallback(std_srvs::Empty::Request& request,    // NOLINT
+                             std_srvs::Empty::Response& response);  // NOLINT
 
-  // Processing.
+  /* Processing */
+  // Integrate a set of input images. The input is usually gathered from ROS
+  // topics and provided by the InputSynchronizer.
   void processInput(InputData* input);
 
-  // IO.
+  // Performs various post-processing actions.
+  // NOTE(schmluk): This is currently a preliminary tool to play around with.
+  void finishMapping();
+
+  /* IO */
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
 
-  // Visualization.
+  /* Visualization */
   void publishVisualization();
 
-  // Access.
+  /* Access */
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
@@ -98,6 +108,7 @@ class PanopticMapper {
   ros::ServiceServer set_visualization_mode_srv_;
   ros::ServiceServer set_color_mode_srv_;
   ros::ServiceServer print_timings_srv_;
+  ros::ServiceServer finish_mapping_srv_;
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
 

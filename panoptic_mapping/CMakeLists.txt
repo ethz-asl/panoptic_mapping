@@ -28,9 +28,9 @@ cs_add_library(${PROJECT_NAME}
         src/common/input_data_user.cpp
         src/map/submap.cpp
         src/map/submap_collection.cpp
-        src/map/utils/submap_id.cpp
-        src/map/utils/instance_id.cpp
-        src/map/utils/submap_bounding_volume.cpp
+        src/map/submap_id.cpp
+        src/map/instance_id.cpp
+        src/map/submap_bounding_volume.cpp
         src/common/label_handler.cpp
         src/tracking/tracking_info.cpp
         src/tracking/single_tsdf_tracker.cpp
@@ -43,8 +43,9 @@ cs_add_library(${PROJECT_NAME}
         src/integration/projection_interpolators.cpp
         src/integration/mesh_integrator.cpp
         src/map_management/map_manager.cpp
-        src/map_management/tsdf_registrator.cpp
         src/map_management/activity_manager.cpp
+        src/map_management/tsdf_registrator.cpp
+        src/map_management/layer_manipulator.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp

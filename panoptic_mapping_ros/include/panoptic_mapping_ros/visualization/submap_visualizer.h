@@ -58,7 +58,7 @@ class SubmapVisualizer {
     kChange,
     kClassification
   };
-  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly };
+  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly, kInactive };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);
@@ -113,6 +113,7 @@ class SubmapVisualizer {
     // Tracking.
     ChangeState previous_change_state;  // kChange
     bool was_active;                    // kActive
+    voxblox::BlockIndexList previous_blocks;  // Track deleted blocks.
   };
 
   void updateVisInfos(const SubmapCollection& submaps);

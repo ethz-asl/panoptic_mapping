@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_MAP_UTILS_INSTANCE_ID_H_
-#define PANOPTIC_MAPPING_MAP_UTILS_INSTANCE_ID_H_
+#ifndef PANOPTIC_MAPPING_MAP_INSTANCE_ID_H_
+#define PANOPTIC_MAPPING_MAP_INSTANCE_ID_H_
 
 #include <unordered_map>
 
@@ -62,4 +62,4 @@ class InstanceIDManager {
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_MAP_UTILS_INSTANCE_ID_H_
+#endif  // PANOPTIC_MAPPING_MAP_INSTANCE_ID_H_

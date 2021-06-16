@@ -24,6 +24,7 @@ void ClassProjectiveIntegrator::Config::checkParams() const {
 void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("use_accurate_classification", &use_accurate_classification);
+  setupParam("use_instance_classification", &use_instance_classification);
   setupParam("projective_integrator_config", &pi_config);
 }
 
@@ -32,6 +33,19 @@ ClassProjectiveIntegrator::ClassProjectiveIntegrator(
     : config_(config.checkValid()),
       ProjectiveIntegrator(config.pi_config, std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+}
+
+void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
+                                             InputData* input) {
+  CHECK_NOTNULL(submaps);  // Input is not used here and checked later.
+  // Cache submap ids by class.
+  id_to_class_.clear();
+  for (const Submap& submap : *submaps) {
+    id_to_class_.emplace(submap.getID(), submap.getClassID());
+  }
+
+  // Run the integration.
+  ProjectiveIntegrator::processInput(submaps, input);
 }
 
 void ClassProjectiveIntegrator::updateBlock(Submap* submap,
@@ -47,7 +61,7 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
                  << "' in submap " << submap->getID() << ".";
     return;
   }
-  const bool use_class_layer = submap->getConfig().use_class_layer;
+  const bool use_class_layer = submap->hasClassLayer();
   const bool is_free_space_submap =
       submap->getLabel() == PanopticLabel::kFreeSpace;
   voxblox::Block<TsdfVoxel>& block =
@@ -88,30 +102,44 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     voxel.weight =
         std::min(voxel.weight + weight, config_.pi_config.max_weight);
 
-    // Only merge color near the surface and if point belongs to the submap.
-    if (std::abs(sdf) < truncation_distance) {
-      voxel.color = Color::blendTwoColors(
-          voxel.color, voxel.weight,
-          interpolator->interpolateColor(color_image), weight);
+    // Only merge color and classification data near the surface.
+    if (std::abs(sdf) >= truncation_distance) {
+      continue;
     }
+    voxel.color = Color::blendTwoColors(
+        voxel.color, voxel.weight, interpolator->interpolateColor(color_image),
+        weight);
 
     // Update class tracking.
     if (use_class_layer) {
       ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
-      if (config_.use_accurate_classification) {
-        // The id 0 is reserved for the belonging submap.
+      // The id 0 is reserved for the belonging submap, others are offset by 1.
+      if (config_.use_instance_classification) {
         if (point_belongs_to_this_submap) {
           id = 0;
         } else {
           id++;
         }
-        const int counts = ++class_voxel.counts[id];
-        if (counts > class_voxel.current_count) {
-          class_voxel.current_count = counts;
-          class_voxel.current_index = id;
-        }
       } else {
-        if (point_belongs_to_this_submap) {
+        // Use class labels.
+        auto it = id_to_class_.find(id);
+        if (it == id_to_class_.end()) {
+          // Unknown labels will be ignored.
+          continue;
+        }
+        id = it->second;
+        if (id == submap->getClassID()) {
+          id = 0;
+        }
+        }
+        if (config_.use_accurate_classification) {
+          const int counts = ++(class_voxel.counts[id]);
+          if (counts > class_voxel.current_count) {
+            class_voxel.current_count = counts;
+            class_voxel.current_index = id;
+          }
+      } else {
+        if (id == 0) {
           class_voxel.belongs_count++;
         } else {
           class_voxel.foreign_count++;
