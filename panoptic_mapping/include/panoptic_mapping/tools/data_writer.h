@@ -22,7 +22,8 @@ class DataWriter {
     int verbosity = 4;
 
     // Output.
-    std::string output_directory = "";  // Target directory needs to exist already.
+    std::string output_directory =
+        "";  // Target directory needs to exist already.
     std::string file_name = "panoptic_mapping_data";  // Filename without suffix
 
     // Evaluation Fields.

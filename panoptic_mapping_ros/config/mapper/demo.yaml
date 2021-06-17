@@ -37,7 +37,7 @@ tsdf_integrator:
   verbosity: 1     
   use_weight_dropoff: true
   max_weight: 10000
-  interpolation_method: adaptive  # nearest, bilinear, adaptive
+  interpolation_method: bilinear  # nearest, bilinear, adaptive
   foreign_rays_clear: true
   integration_threads: 8
   

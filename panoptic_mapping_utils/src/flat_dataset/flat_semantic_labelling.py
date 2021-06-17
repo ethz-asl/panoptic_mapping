@@ -560,10 +560,14 @@ if __name__ == "__main__":
     get_ir_corrections = False
     apply_mesh_labels = True
     export_mesh_labels = False
+    use_large_flat = False
 
     # Run
-    # main_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
-    main_large_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
+    if use_large_flat:
+        main_large_flat(get_ir_corrections, apply_mesh_labels,
+                        export_mesh_labels)
+    else:
+        main_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
 
     # Tools.
     # get_available_meshes(f_labels)

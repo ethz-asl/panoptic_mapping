@@ -95,9 +95,9 @@ void PanopticMapper::setupMembers() {
 
   // Data Logging.
   if (config_.data_logging_interval != 0.0) {
-  data_logger_ = std::make_unique<DataWriter>(
-      config_utilities::getConfigFromRos<DataWriter::Config>(
-          ros::NodeHandle(nh_private_, "data_writer")));
+    data_logger_ = std::make_unique<DataWriter>(
+        config_utilities::getConfigFromRos<DataWriter::Config>(
+            ros::NodeHandle(nh_private_, "data_writer")));
   }
 
   // Setup all input topics.

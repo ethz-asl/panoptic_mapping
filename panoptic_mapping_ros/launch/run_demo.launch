@@ -21,7 +21,7 @@
   <include file="$(find panoptic_mapping_utils)/launch/play_flat_dataset.launch" pass_all_args="true" />
   
   <!-- Mapper -->
-  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen">
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="getting_data_demo_node" output="screen">
     <!-- Config -->
     <rosparam file="$(find panoptic_mapping_ros)/config/mapper/$(arg config).yaml"/>
 
