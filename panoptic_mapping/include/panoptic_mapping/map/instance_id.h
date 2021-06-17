@@ -6,51 +6,29 @@
 namespace panoptic_mapping {
 
 /**
- * This class instantiates and tracks instance IDs. Instance IDs are allowed to
- * be duplicates but by default generate new unique ids.
- */
-class InstanceID {
- public:
-  // controlled con- and destruction.
-  InstanceID();
-  explicit InstanceID(int id);
-  InstanceID(const InstanceID& other);
-  ~InstanceID();
-
-  // Conversion and assignment.
-  operator int() const { return id_; }
-  InstanceID& operator=(const int& id);
-  // NOTE(schmluk): Other assignment or move operators should call the copy
-  // constructor, so no need to implement them.
-
- private:
-  int id_;
-};
-
-/**
- * Singleton for global ID management.
+ * Class for ID management. Default uses a global singleton but e.g. individual
+ * submap collections are allowed to have separate.
  */
 class InstanceIDManager {
  public:
-  // accessor
-  static InstanceIDManager& getInstance() {
+  InstanceIDManager();
+
+  // Default is a global instance id manager, as singleton.
+  static InstanceIDManager* getGlobalInstance() {
     static InstanceIDManager instance;
-    return instance;
+    return &instance;
   }
 
-  // prevent copies
-  InstanceIDManager(InstanceIDManager const&) = delete;
-  void operator=(InstanceIDManager const&) = delete;
+ private:
+  friend class InstanceID;
 
-  // interaction
+  // Interaction
   int requestID();
   void registerID(int id);
   void releaseID(int id);
 
  private:
-  InstanceIDManager();
-
-  static const bool kAllowIDReuse = true;
+  static const bool kAllowIDReuse = false;
 
   // Tracking.
   int current_id_;
@@ -58,6 +36,29 @@ class InstanceIDManager {
 
   void increment(int id);
   bool decrement(int id);
+};
+
+/**
+ * This class instantiates and tracks instance IDs. Instance IDs are allowed to
+ * be duplicates but by default generate new unique ids.
+ */
+class InstanceID {
+ public:
+  // controlled con- and destruction.
+  explicit InstanceID(
+      InstanceIDManager* manager = InstanceIDManager::getGlobalInstance());
+  explicit InstanceID(int id, InstanceIDManager* manager =
+                                  InstanceIDManager::getGlobalInstance());
+  InstanceID(const InstanceID& other);
+  ~InstanceID();
+
+  // Conversion and assignment.
+  operator int() const { return id_; }
+  InstanceID& operator=(const int& id);
+
+ private:
+  int id_;
+  InstanceIDManager* const manager_;
 };
 
 }  // namespace panoptic_mapping

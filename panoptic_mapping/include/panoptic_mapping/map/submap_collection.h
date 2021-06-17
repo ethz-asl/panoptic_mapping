@@ -18,39 +18,54 @@ namespace panoptic_mapping {
  */
 class SubmapCollection {
  public:
+  /* Construction */
   SubmapCollection() = default;
+  SubmapCollection(SubmapCollection&&) = default;
   virtual ~SubmapCollection() = default;
 
-  // IO.
+  /* IO */
   bool saveToFile(const std::string& file_path) const;
   bool loadFromFile(const std::string& file_path, bool recompute_data = true);
 
-  // Modify the collection.
-  void addSubmap(std::unique_ptr<Submap> submap);
+  /* Modify the collection */
   Submap* createSubmap(const Submap::Config& config);
   bool removeSubmap(int id);
   void clear();
 
-  // Accessors.
+  /* Accessors */
   size_t size() const { return submaps_.size(); }
   bool submapIdExists(int id) const;      // Check whether id exists.
   const Submap& getSubmap(int id) const;  // This assumes that the id exists.
   Submap* getSubmapPtr(int id);           // This assumes that the id exists.
   int getActiveFreeSpaceSubmapID() const { return active_freespace_submap_id_; }
-
-  // Setters.
-  void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
-
-  // Tools.
-  void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
-                    std::vector<int>* deleted_ids) const;
   const std::unordered_map<int, std::unordered_set<int>>&
   getInstanceToSubmapIDTable() const {
     return instance_to_submap_ids_;
   }
+
+  /* Setters */
+  void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
+
+  /* Tools */
+  // Utility function that tells you which submaps are new that are not in the
+  // id list and which ones are deleted that were in the id list.
+  void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,
+                    std::vector<int>* deleted_ids) const;
+
+  // Update the list of contained submaps for each instance.
   void updateInstanceToSubmapIDTable();
 
+  // Creates a deep copy of all submaps, with new submap and instance id
+  // managers. The submap ids may diverge when new submaps are added after
+  // copying so be careful to manage these appropriately if information is to be
+  // fused back to the original collection.
+  std::unique_ptr<SubmapCollection> clone() const;
+
  private:
+  // IDs are managed within a submap collection.
+  SubmapIDManager submap_id_manager_;
+  InstanceIDManager instance_id_manager_;
+
   // The map.
   std::vector<std::unique_ptr<Submap>> submaps_;
 

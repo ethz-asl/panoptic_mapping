@@ -17,6 +17,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("visualization_interval", &visualization_interval);
   setupParam("data_logging_interval", &data_logging_interval);
   setupParam("print_timing", &print_timing);
+  setupParam("use_threadsafe_submap_collection",
+             &use_threadsafe_submap_collection);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -34,6 +36,9 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 void PanopticMapper::setupMembers() {
   // Map.
   submaps_ = std::make_shared<SubmapCollection>();
+
+  // Threadsafe wrapper for the map.
+  thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
 
   // Camera.
   auto camera = std::make_shared<Camera>(
@@ -170,9 +175,14 @@ void PanopticMapper::processInput(InputData* input) {
     dataLoggingCallback(event);
   }
   ros::WallTime t4 = ros::WallTime::now();
-  timer.Stop();
+
+  // If requested update the thread_safe_submaps.
+  if (config_.use_threadsafe_submap_collection) {
+    thread_safe_submaps_->update();
+  }
 
   // Logging.
+  timer.Stop();
   std::stringstream info;
   info << "Processed input data.";
   if (config_.verbosity >= 3) {

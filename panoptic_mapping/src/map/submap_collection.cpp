@@ -11,13 +11,9 @@
 
 namespace panoptic_mapping {
 
-void SubmapCollection::addSubmap(std::unique_ptr<Submap> submap) {
-  id_to_index_[submap->getID()] = submaps_.size();
-  submaps_.emplace_back(std::move(submap));
-}
-
 Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
-  submaps_.emplace_back(std::make_unique<Submap>(config));
+  submaps_.emplace_back(std::make_unique<Submap>(config, &submap_id_manager_,
+                                                 &instance_id_manager_));
   Submap* new_submap = submaps_.back().get();
   id_to_index_[new_submap->getID()] = submaps_.size() - 1;
   return new_submap;
@@ -83,9 +79,8 @@ void SubmapCollection::updateIDList(const std::vector<int>& id_list,
 void SubmapCollection::updateInstanceToSubmapIDTable() {
   // Clear the table and add all new elements.
   instance_to_submap_ids_ = std::unordered_map<int, std::unordered_set<int>>();
-  for (const auto& submap_ptr : submaps_) {
-    instance_to_submap_ids_[submap_ptr->getInstanceID()].emplace(
-        submap_ptr->getID());
+  for (const Submap& submap : *this) {
+    instance_to_submap_ids_[submap.getInstanceID()].emplace(submap.getID());
   }
 }
 
@@ -159,19 +154,40 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
     }
 
     // Add to the collection.
-    addSubmap(std::move(submap_ptr));
+    id_to_index_[submap_ptr->getID()] = submaps_.size();
+    submaps_.emplace_back(std::move(submap_ptr));
   }
   proto_file.close();
 
   // Recompute data that is not stored with the submap.
   if (recompute_data) {
-    for (const auto& submap_ptr : submaps_) {
-      submap_ptr->updateBoundingVolume();
-      submap_ptr->updateMesh(false);
-      submap_ptr->computeIsoSurfacePoints();
+    for (Submap& submap : *this) {
+      submap.updateBoundingVolume();
+      submap.updateMesh(false);
+      submap.computeIsoSurfacePoints();
     }
   }
   return true;
+}
+
+std::unique_ptr<SubmapCollection> SubmapCollection::clone() const {
+  std::unique_ptr<SubmapCollection> result =
+      std::make_unique<SubmapCollection>();
+
+  // Copy all the meta data.
+  result->submap_id_manager_ = submap_id_manager_;
+  result->instance_id_manager_ = instance_id_manager_;
+  result->id_to_index_ = id_to_index_;
+  result->instance_to_submap_ids_ = instance_to_submap_ids_;
+  result->active_freespace_submap_id_ = active_freespace_submap_id_;
+
+  // Deep copy all the submaps to the new managers.
+  for (const Submap& submap : *this) {
+    result->submaps_.emplace_back(submap.clone(&result->submap_id_manager_,
+                                               &result->instance_id_manager_));
+  }
+
+  return result;
 }
 
 }  // namespace panoptic_mapping

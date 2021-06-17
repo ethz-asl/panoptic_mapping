@@ -28,7 +28,7 @@ class Submap {
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
     float truncation_distance = 0.2;  // m, negative values = #vs
-    int voxels_per_side = 16;  // Needs to be a multiple of 2.
+    int voxels_per_side = 16;         // Needs to be a multiple of 2.
     bool use_class_layer = false;
 
     MeshIntegrator::Config mesh_config;
@@ -42,12 +42,21 @@ class Submap {
   };
 
   /* Construction */
-  explicit Submap(const Config& config);
+  explicit Submap(
+      const Config& config,
+      SubmapIDManager* submap_id_manager = SubmapIDManager::getGlobalInstance(),
+      InstanceIDManager* instance_id_manager =
+          InstanceIDManager::getGlobalInstance());
   virtual ~Submap() = default;
 
   /* IO */
+  // Serialize the submap to protobuf.
   void getProto(SubmapProto* proto) const;
+
+  // Save the submap to file.
   bool saveToStream(std::fstream* outfile_ptr) const;
+
+  // Load the submap from file.
   static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
@@ -118,9 +127,23 @@ class Submap {
   bool applyClassLayer(const LayerManipulator& manipulator,
                        bool clear_class_layer = true);
 
+  // Deep copy of the submap. Notice that new submapID and instanceID managers
+  // need to be provided to not corrupt the ID counts. ID counts will not be
+  // double checked so use with care.
+  std::unique_ptr<Submap> clone(SubmapIDManager* submap_id_manager,
+                                InstanceIDManager* instance_id_manager) const;
+
  private:
   friend class SubmapCollection;
   const Config config_;
+
+  // This constructor is intended to allow deep copies of the submap collection,
+  // moving the id to the new id managers.
+  Submap(const Config& config, SubmapIDManager* submap_id_manager,
+         InstanceIDManager* instance_id_manager, int submap_id);
+
+  // Setup all default data.
+  void initialize();
 
   // Labels.
   const SubmapID id_;       // UUID

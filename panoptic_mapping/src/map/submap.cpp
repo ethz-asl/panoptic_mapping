@@ -35,8 +35,25 @@ void Submap::Config::setupParamsAndPrinting() {
   setupParam("mesh_config", &mesh_config);
 }
 
-Submap::Submap(const Config& config)
-    : config_(config.checkValid()), bounding_volume_(*this) {
+Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
+               InstanceIDManager* instance_id_manager)
+    : config_(config.checkValid()),
+      bounding_volume_(*this),
+      id_(submap_id_manager),
+      instance_id_(instance_id_manager) {
+  initialize();
+}
+
+Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
+               InstanceIDManager* instance_id_manager, int submap_id)
+    : config_(config.checkValid()),
+      bounding_volume_(*this),
+      id_(submap_id, submap_id_manager),
+      instance_id_(instance_id_manager) {
+  initialize();
+}
+
+void Submap::initialize() {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << static_cast<int>(id_);
@@ -58,9 +75,9 @@ Submap::Submap(const Config& config)
   }
 
   // Setup tools.
-    mesh_integrator_ = std::make_unique<MeshIntegrator>(
-        config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
-        config_.truncation_distance);
+  mesh_integrator_ = std::make_unique<MeshIntegrator>(
+      config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
+      config_.truncation_distance);
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {
@@ -225,6 +242,43 @@ bool Submap::applyClassLayer(const LayerManipulator& manipulator,
   }
   updateEverything();
   return tsdf_layer_->getNumberOfAllocatedBlocks() != 0;
+}
+
+std::unique_ptr<Submap> Submap::clone(
+    SubmapIDManager* submap_id_manager,
+    InstanceIDManager* instance_id_manager) const {
+  auto result = std::unique_ptr<Submap>(
+      new Submap(config_, submap_id_manager, instance_id_manager, getID()));
+
+  // Copy all members.
+  result->instance_id_ = static_cast<int>(instance_id_);
+  result->class_id_ = class_id_;
+  result->label_ = label_;
+  result->name_ = name_;
+  result->is_active_ = is_active_;
+  result->was_tracked_ = was_tracked_;
+  result->has_class_layer_ = has_class_layer_;
+  result->change_state_ = change_state_;
+  result->frame_name_ = frame_name_;
+  result->T_M_S_ = T_M_S_;
+  result->T_M_S_inv_ = T_M_S_inv_;
+  result->iso_surface_points_ = iso_surface_points_;
+
+  // Deep copy all pointers.
+  result->tsdf_layer_ = std::make_shared<TsdfLayer>(*tsdf_layer_);
+  result->mesh_layer_ = std::make_shared<MeshLayer>(*mesh_layer_);
+  if (class_layer_) {
+    result->class_layer_ = std::make_shared<ClassLayer>(*class_layer_);
+  }
+  result->mesh_integrator_ = std::make_unique<MeshIntegrator>(
+      result->config_.mesh_config, result->tsdf_layer_, result->mesh_layer_,
+      result->class_layer_, result->config_.truncation_distance);
+
+  // The bounding volume can not completely be copied so it's just updated,
+  // which should be identical.
+  result->bounding_volume_.update();
+
+  return result;
 }
 
 }  // namespace panoptic_mapping

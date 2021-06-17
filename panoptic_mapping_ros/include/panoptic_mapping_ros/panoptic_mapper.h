@@ -17,6 +17,7 @@
 #include <panoptic_mapping/map_management/map_manager.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <panoptic_mapping/tools/thread_safe_submap_collection.h>
 #include <panoptic_mapping/tracking/id_tracker_base.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
@@ -39,6 +40,7 @@ class PanopticMapper {
     double visualization_interval = -1.0;    // s, use -1 for always, 0 never.
     double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
     bool print_timing = false;               // Print timings after every frame.
+    bool use_threadsafe_submap_collection = false;
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -62,11 +64,11 @@ class PanopticMapper {
       panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
   bool setVisualizationModeCallback(
       panoptic_mapping_msgs::SetVisualizationMode::Request& request,  // NOLINT
-      panoptic_mapping_msgs::SetVisualizationMode::Response&
-          response);                                               // NOLINT
-  bool printTimingsCallback(std_srvs::Empty::Request& request,     // NOLINT
-                            std_srvs::Empty::Response& response);  // NOLINT
-  bool finishMappingCallback(std_srvs::Empty::Request& request,    // NOLINT
+      panoptic_mapping_msgs::SetVisualizationMode::Response&          // NOLINT
+          response);
+  bool printTimingsCallback(std_srvs::Empty::Request& request,      // NOLINT
+                            std_srvs::Empty::Response& response);   // NOLINT
+  bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
                              std_srvs::Empty::Response& response);  // NOLINT
 
   /* Processing */
@@ -87,6 +89,9 @@ class PanopticMapper {
 
   /* Access */
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
+  const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
+    return *thread_safe_submaps_;
+  }
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
   }
@@ -117,6 +122,7 @@ class PanopticMapper {
 
   // Map.
   std::shared_ptr<SubmapCollection> submaps_;
+  std::shared_ptr<ThreadSafeSubmapCollection> thread_safe_submaps_;
 
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;

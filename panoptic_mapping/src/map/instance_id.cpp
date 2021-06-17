@@ -3,24 +3,26 @@
 namespace panoptic_mapping {
 
 // By default create a new unique id.
-InstanceID::InstanceID() : id_(InstanceIDManager::getInstance().requestID()) {}
+InstanceID::InstanceID(InstanceIDManager* manager)
+    : manager_(manager), id_(manager->requestID()) {}
 
-InstanceID::~InstanceID() { InstanceIDManager::getInstance().releaseID(id_); }
+InstanceID::~InstanceID() { manager_->releaseID(id_); }
 
-InstanceID::InstanceID(int id) : id_(id) {
-  InstanceIDManager::getInstance().registerID(id);
+InstanceID::InstanceID(int id, InstanceIDManager* manager)
+    : manager_(manager_), id_(id) {
+  manager_->registerID(id);
 }
 
-InstanceID::InstanceID(const InstanceID& other) {
-  InstanceIDManager::getInstance().releaseID(id_);
+InstanceID::InstanceID(const InstanceID& other) : manager_(other.manager_) {
+  manager_->releaseID(id_);
   id_ = other.id_;
-  InstanceIDManager::getInstance().registerID(id_);
+  manager_->registerID(id_);
 }
 
 InstanceID& InstanceID::operator=(const int& id) {
-  InstanceIDManager::getInstance().releaseID(id_);
+  manager_->releaseID(id_);
   id_ = id;
-  InstanceIDManager::getInstance().registerID(id_);
+  manager_->registerID(id_);
   return *this;
 }
 
