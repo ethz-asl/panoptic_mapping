@@ -1,0 +1,65 @@
+# General Params
+verbosity: 3
+print_timing: false
+use_threadsafe_submap_collection: true
+global_frame_name: world
+sensor_frame_name: airsim_drone/Depth_cam
+label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
+visualization_interval: -1.0
+data_logging_interval: 0.0
+max_input_queue_length: 100
+
+camera:
+  verbosity: 0
+  width: 640  # Px
+  height: 480
+  vx: 320
+  vy: 240
+  fx: 320
+  fy: 320
+  max_range: 5  # m
+  min_range: 0.1
+
+id_tracker:
+  type: ground_truth 
+  verbosity: 1
+  instance_voxel_size: 0.03
+  background_voxel_size: 0.08
+  unknown_voxel_size: 0.1
+  freespace_voxel_size: 0.3
+  voxels_per_side: 16
+  truncation_distance: -2 # negative = #vs
+  use_ground_truth_instance_ids: true
+  input_is_ir_id: false
+  
+tsdf_integrator:  
+  type: projective 
+  verbosity: 1     
+  use_weight_dropoff: true
+  max_weight: 10000
+  interpolation_method: adaptive  # nearest, bilinear, adaptive
+  foreign_rays_clear: true
+  integration_threads: 8
+  
+visualization:  
+  submaps:
+    verbosity: 1
+    color_mode: submaps # submaps, instances, color, normals, classes, change, classification
+    visualization_mode: active  # all, active, active_only, inactive
+    submap_color_discretization: 20
+    visualize_mesh: true
+    visualize_tsdf_blocks: true
+    visualize_free_space: true
+    visualize_bounding_volumes: true
+    include_free_space: false
+    mesh_min_weight: 0.000001
+  
+  planning:
+    verbosity: 1
+    visualize_slice: true
+    slice_resolution: 0.1
+    slice_height: -0.5
+  
+  tracking:
+    verbosity: 1
+    visualize_tracking: true

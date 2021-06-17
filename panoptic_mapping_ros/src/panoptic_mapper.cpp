@@ -94,9 +94,11 @@ void PanopticMapper::setupMembers() {
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
 
   // Data Logging.
+  if (config_.data_logging_interval != 0.0) {
   data_logger_ = std::make_unique<DataWriter>(
       config_utilities::getConfigFromRos<DataWriter::Config>(
           ros::NodeHandle(nh_private_, "data_writer")));
+  }
 
   // Setup all input topics.
   input_synchronizer_ = std::make_unique<InputSynchronizer>(
