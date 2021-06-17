@@ -32,7 +32,7 @@ class LabelHandler {
 
   // This returns true if the id was found.
   bool segmentationIdExists(int segmentation_id) const;
-  int getSegmentationIdFromMeshId(int mesh_id) const;
+  int getSegmentationIdFromIrId(int ir_id) const;
 
   // These acessors assume that the segmentation_id exists.
   int getClassID(int segmentation_id) const;
@@ -49,7 +49,7 @@ class LabelHandler {
  private:
   // List of the labels associated with each segmentation id.
   std::unordered_map<int, LabelEntry> labels_;
-  std::unordered_map<int, int> mesh_to_instance_id_;
+  std::unordered_map<int, int> ir_to_instance_id_;
 };
 
 }  // namespace panoptic_mapping

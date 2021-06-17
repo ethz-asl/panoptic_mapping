@@ -20,7 +20,7 @@ std::string LabelHandler::LabelEntry::toString() const {
 void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   // Currently assumes fixed header names in the target file. Reading
   // exceptions should be handled by the CSVReader.
-  mesh_to_instance_id_.clear();
+  ir_to_instance_id_.clear();
   labels_.clear();
 
   // Read all possible columns and write the present ones.
@@ -61,8 +61,8 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
     labels_[inst] = label;
 
     // Mesh.
-    if (mesh != -1) {
-      mesh_to_instance_id_[mesh] = inst;
+    if (ir != -1) {
+      ir_to_instance_id_[ir] = inst;
     }
   }
   LOG(INFO) << "Read " << labels_.size() << " labels from '" << source_file
@@ -76,9 +76,9 @@ bool LabelHandler::segmentationIdExists(int segmentation_id) const {
   return labels_.find(segmentation_id) != labels_.end();
 }
 
-int LabelHandler::getSegmentationIdFromMeshId(int mesh_id) const {
-  auto it = mesh_to_instance_id_.find(mesh_id);
-  if (it != mesh_to_instance_id_.end()) {
+int LabelHandler::getSegmentationIdFromIrId(int ir_id) const {
+  auto it = ir_to_instance_id_.find(ir_id);
+  if (it != ir_to_instance_id_.end()) {
     return it->second;
   } else {
     return -1;  // Label for unknown things.

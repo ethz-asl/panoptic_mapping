@@ -46,7 +46,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();
-    bool input_is_mesh_id = false;  // lookup by instance_id or mesh_id
+    bool input_is_ir_id = false;  // lookup by instance_id or infrared_id
 
     // Camera and renderer settings.
     MapRenderer::Config renderer;

@@ -19,7 +19,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    bool input_is_mesh_id =
+    bool input_is_ir_id =
         false;  // If true look up the instance id in the label handler.
     bool use_ground_truth_instance_ids = true;
     float truncation_distance = -2;  // negative = # voxel sizes

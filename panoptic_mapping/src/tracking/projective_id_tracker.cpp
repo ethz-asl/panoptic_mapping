@@ -44,7 +44,7 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
 
   setupParam("rendering_threads", &rendering_threads);
 
-  setupParam("input_is_mesh_id", &input_is_mesh_id);
+  setupParam("input_is_ir_id", &input_is_ir_id);
   setupParam("renderer", &renderer);
 }
 
@@ -203,10 +203,10 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 }
 
 bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
-  if (config_.input_is_mesh_id) {
+  if (config_.input_is_ir_id) {
     // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
 
-    input_id = globals_->labelHandler()->getSegmentationIdFromMeshId(input_id);
+    input_id = globals_->labelHandler()->getSegmentationIdFromIrId(input_id);
   }
   if (!globals_->labelHandler()->segmentationIdExists(input_id)) {
     // Unknown ID.
@@ -302,9 +302,9 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
                                         SubmapCollection* submaps) {
   // Lookup the labels associated with the input_id.
   PanopticLabel label = PanopticLabel::kUnknown;
-  if (config_.input_is_mesh_id) {
+  if (config_.input_is_ir_id) {
     instance_id =
-        globals_->labelHandler()->getSegmentationIdFromMeshId(instance_id);
+        globals_->labelHandler()->getSegmentationIdFromIrId(instance_id);
     // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
   }
   if (globals_->labelHandler()->segmentationIdExists(instance_id)) {
