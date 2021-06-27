@@ -8,6 +8,8 @@ import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+from PIL import Image as PilImage
+import numpy as np
 
 from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
@@ -23,6 +25,7 @@ class DetectronPlayer(object):
         self.img_pub = rospy.Publisher("~predicted_image",
                                        Image,
                                        queue_size=10)
+        self.depth_pub = rospy.Publisher("~depth_image", Image, queue_size=10)
         self.label_pub = rospy.Publisher("~labels",
                                          DetectronLabels,
                                          queue_size=10)
@@ -70,6 +73,16 @@ class DetectronPlayer(object):
         img_msg.header.stamp = id_img.header.stamp
         img_msg.header.frame_id = id_img.header.frame_id
         self.img_pub.publish(img_msg)
+
+        # Load and publish depth image.
+        depth_file = os.path.join(self.data_path,
+                                  self.stamp_to_id[timestamp] + "_depth.tiff")
+        if os.path.isfile(depth_file):
+            cv_img = PilImage.open(depth_file)
+            img_msg = self.cv_bridge.cv2_to_imgmsg(np.array(cv_img), "32FC1")
+            img_msg.header.stamp = id_img.header.stamp
+            img_msg.header.frame_id = id_img.header.frame_id
+            self.depth_pub.publish(img_msg)
 
         # Load and publish labels.
         label_msg = DetectronLabels()
