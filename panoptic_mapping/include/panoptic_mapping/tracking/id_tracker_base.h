@@ -23,12 +23,7 @@ namespace panoptic_mapping {
 class IDTrackerBase : public InputDataUser {
  public:
   explicit IDTrackerBase(std::shared_ptr<Globals> globals)
-      : globals_(std::move(globals)) {
-    // Per default require all three images.
-    addRequiredInput(InputData::InputType::kDepthImage);
-    addRequiredInput(InputData::InputType::kColorImage);
-    addRequiredInput(InputData::InputType::kSegmentationImage);
-  }
+      : globals_(std::move(globals)) {}
   ~IDTrackerBase() override = default;
 
   // Interface;

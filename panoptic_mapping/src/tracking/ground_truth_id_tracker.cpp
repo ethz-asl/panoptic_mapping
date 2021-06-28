@@ -27,7 +27,6 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
   setupParam("unknown_voxel_size", &unknown_voxel_size);
   setupParam("freespace_voxel_size", &freespace_voxel_size);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("use_ground_truth_instance_ids", &use_ground_truth_instance_ids);
   setupParam("truncation_distance", &truncation_distance);
 }
@@ -43,30 +42,19 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));
-  // NOTE: The id_image is always provided as CV_32SC1 (int) image
   // Look for new instances.
-  // TODO(schmluk): take a proper sensor model for all trackers.
-  const float max_depth = 5.f;
-  const float min_depth = 0.1;
   std::unordered_set<int> instances;
   for (int u = 0; u < input->idImage()->cols; ++u) {
     for (int v = 0; v < input->idImage()->rows; ++v) {
-      //      const float depth = input->depthImage().at<float>(v, u);
-      //      if (depth < max_depth && depth > min_depth) {
-      instances.insert(input->idImage()->at<int>(v, u));
-      //      }
+      if (input->validityImage()->at<uint>(v, u)) {
+        instances.insert(input->idImage()->at<int>(v, u));
+      }
     }
   }
 
   // Allocate new submaps if necessary.
   for (const int instance : instances) {
-    if (config_.input_is_mesh_id) {
-      allocateSubmap(
-          globals_->labelHandler()->getSegmentationIdFromMeshId(instance),
-          submaps);
-    } else {
       allocateSubmap(instance, submaps);
-    }
   }
   printAndResetWarnings();
 

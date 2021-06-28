@@ -18,7 +18,6 @@ void DetectronIDTracker::Config::checkParams() const {
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("use_edge_refinement", &use_edge_refinement);
   setupParam("projective_id_tracker", &projective_id_tracker);
 }
 

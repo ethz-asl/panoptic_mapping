@@ -17,8 +17,6 @@ class DetectronIDTracker : public ProjectiveIDTracker {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-
-    bool use_edge_refinement = false;
     ProjectiveIDTracker::Config projective_id_tracker;
 
     Config() { setConfigName("DetectronIDTracker"); }

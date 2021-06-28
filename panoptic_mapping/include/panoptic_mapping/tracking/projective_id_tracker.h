@@ -46,7 +46,6 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();
-    bool input_is_mesh_id = false;  // lookup by instance_id or mesh_id
 
     // Camera and renderer settings.
     MapRenderer::Config renderer;
@@ -58,7 +57,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  ProjectiveIDTracker(const Config& config, std::shared_ptr<Globals> globals);
+  ProjectiveIDTracker(const Config& config, std::shared_ptr<Globals> globals,
+                      bool print_config = true);
   ~ProjectiveIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;

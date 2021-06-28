@@ -31,8 +31,7 @@ id_tracker:
   truncation_distance: -2 # negative = #vs
   
   # Ground Truth
-  use_ground_truth_instance_ids: false
-  input_is_mesh_id: false
+  use_ground_truth_instance_ids: true
   
   # Projective ID tracker
   depth_tolerance: -1  # m, negative = #vs

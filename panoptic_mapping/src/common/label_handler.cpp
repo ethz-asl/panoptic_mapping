@@ -20,7 +20,6 @@ std::string LabelHandler::LabelEntry::toString() const {
 void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   // Currently assumes fixed header names in the target file. Reading
   // exceptions should be handled by the CSVReader.
-  mesh_to_instance_id_.clear();
   labels_.clear();
 
   // Read all possible columns and write the present ones.
@@ -59,30 +58,13 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
       label.color = voxblox::Color(r, g, b);
     }
     labels_[inst] = label;
-
-    // Mesh.
-    if (mesh != -1) {
-      mesh_to_instance_id_[mesh] = inst;
-    }
   }
   LOG(INFO) << "Read " << labels_.size() << " labels from '" << source_file
             << "'.";
-
-  // Unknown labels are referred to -1.
-  labels_[-1] = LabelEntry();
 }
 
 bool LabelHandler::segmentationIdExists(int segmentation_id) const {
   return labels_.find(segmentation_id) != labels_.end();
-}
-
-int LabelHandler::getSegmentationIdFromMeshId(int mesh_id) const {
-  auto it = mesh_to_instance_id_.find(mesh_id);
-  if (it != mesh_to_instance_id_.end()) {
-    return it->second;
-  } else {
-    return -1;  // Label for unknown things.
-  }
 }
 
 int LabelHandler::getClassID(int segmentation_id) const {

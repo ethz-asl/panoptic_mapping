@@ -49,7 +49,6 @@ class LabelHandler {
  private:
   // List of the labels associated with each segmentation id.
   std::unordered_map<int, LabelEntry> labels_;
-  std::unordered_map<int, int> mesh_to_instance_id_;
 };
 
 }  // namespace panoptic_mapping

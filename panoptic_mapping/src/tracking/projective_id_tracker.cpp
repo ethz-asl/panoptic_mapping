@@ -44,16 +44,21 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
 
   setupParam("rendering_threads", &rendering_threads);
 
-  setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("renderer", &renderer);
 }
 
 ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
-                                         std::shared_ptr<Globals> globals)
+                                         std::shared_ptr<Globals> globals,
+                                         bool print_config)
     : IDTrackerBase(std::move(globals)),
       config_(config.checkValid()),
       renderer_(config.renderer, globals_->camera()->getConfig()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
+  setRequiredInputs({InputData::InputType::kColorImage,
+                     InputData::InputType::kDepthImage,
+                     InputData::InputType::kSegmentationImage,
+                     InputData::InputType::kValidityImage});
 }
 
 void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
@@ -203,11 +208,6 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 }
 
 bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
-  if (config_.input_is_mesh_id) {
-    // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
-
-    input_id = globals_->labelHandler()->getSegmentationIdFromMeshId(input_id);
-  }
   if (!globals_->labelHandler()->segmentationIdExists(input_id)) {
     // Unknown ID.
     return false;
@@ -302,11 +302,6 @@ int ProjectiveIDTracker::allocateSubmap(int instance_id,
                                         SubmapCollection* submaps) {
   // Lookup the labels associated with the input_id.
   PanopticLabel label = PanopticLabel::kUnknown;
-  if (config_.input_is_mesh_id) {
-    instance_id =
-        globals_->labelHandler()->getSegmentationIdFromMeshId(instance_id);
-    // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
-  }
   if (globals_->labelHandler()->segmentationIdExists(instance_id)) {
     label = globals_->labelHandler()->getPanopticLabel(instance_id);
   }
