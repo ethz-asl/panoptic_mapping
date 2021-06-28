@@ -16,7 +16,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("global_frame_name", &global_frame_name);
   setupParam("visualization_interval", &visualization_interval);
   setupParam("data_logging_interval", &data_logging_interval);
-  setupParam("print_timing", &print_timing);
+  setupParam("print_timing_interval", &print_timing_interval);
   setupParam("use_threadsafe_submap_collection",
              &use_threadsafe_submap_collection);
 }
@@ -148,6 +148,11 @@ void PanopticMapper::setupRos() {
         nh_private_.createTimer(ros::Duration(config_.data_logging_interval),
                                 &PanopticMapper::dataLoggingCallback, this);
   }
+  if (config_.print_timing_interval > 0.0) {
+    print_timing_timer_ =
+        nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
+                                &PanopticMapper::dataLoggingCallback, this);
+  }
 }
 
 void PanopticMapper::processInput(InputData* input) {
@@ -219,7 +224,7 @@ void PanopticMapper::processInput(InputData* input) {
     info << " = " << int((t4 - t0).toSec() * 1000) << "ms)";
   }
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
-  LOG_IF(INFO, config_.print_timing) << "\n" << Timing::Print();
+  LOG_IF(INFO, config_.print_timing_interval < 0.0) << "\n" << Timing::Print();
 }
 
 void PanopticMapper::finishMapping() { map_manager_->finishMapping(); }
@@ -333,9 +338,15 @@ bool PanopticMapper::loadMapCallback(
 
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,
                                           std_srvs::Empty::Response& response) {
-  LOG(INFO) << Timing::Print();
+  printTimings();
   return true;
 }
+
+void PanopticMapper::printTimingsCallback(const ros::TimerEvent&) {
+  printTimings();
+}
+
+void PanopticMapper::printTimings() const { LOG(INFO) << Timing::Print(); }
 
 bool PanopticMapper::finishMappingCallback(
     std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {

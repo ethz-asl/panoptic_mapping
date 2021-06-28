@@ -37,9 +37,9 @@ class PanopticMapper {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     std::string global_frame_name = "mission";
-    double visualization_interval = -1.0;    // s, use -1 for always, 0 never.
-    double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
-    bool print_timing = false;               // Print timings after every frame.
+    double visualization_interval = -1.0;  // s, use -1 for always, 0 never.
+    double data_logging_interval = 0.0;    // s, use -1 for always, 0 never.
+    double print_timing_interval = 0.0;    // s, use -1 for always, 0 never.
     bool use_threadsafe_submap_collection = false;
 
     Config() { setConfigName("PanopticMapper"); }
@@ -54,8 +54,12 @@ class PanopticMapper {
   virtual ~PanopticMapper() = default;
 
   /* ROS callbacks */
+  // Timers.
   void publishVisualizationCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
+  void printTimingsCallback(const ros::TimerEvent&);
+
+  // Services.
   bool saveMapCallback(
       panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
       panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
@@ -84,7 +88,11 @@ class PanopticMapper {
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
 
-  /* Visualization */
+  /* Utilities */
+  // Print all timings (from voxblox::timing) to console.
+  void printTimings() const;
+
+  // Update the meshes and publish the all visualizations of the current map.
   void publishVisualization();
 
   /* Access */
@@ -116,6 +124,7 @@ class PanopticMapper {
   ros::ServiceServer finish_mapping_srv_;
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
+  ros::Timer print_timing_timer_;
 
   // Members.
   const Config config_;
