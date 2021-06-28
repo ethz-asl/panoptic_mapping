@@ -69,9 +69,9 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   // Visualization.
   cv::Mat input_vis;
   if (visualizationIsOn()) {
-    Timer timer("visualization/tracking/input_image");
+    Timer vis_timer("visualization/tracking/input_image");
     input_vis = renderer_.colorIdImage(*(input->idImage()));
-    timer.Stop();
+    vis_timer.Stop();
   }
 
   // Render all submaps.

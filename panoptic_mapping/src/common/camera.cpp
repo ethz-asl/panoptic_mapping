@@ -225,8 +225,8 @@ cv::Mat Camera::computeValidityImage(const cv::Mat& depth_image) const {
   for (int v = 0; v < depth_image.rows; v++) {
     for (int u = 0; u < depth_image.cols; u++) {
       float depth = depth_image.at<float>(v, u);
-      validity_image.at<uint>(v, u) =
-          (depth >= config_.min_range && depth <= config_.max_range);
+      validity_image.at<uchar>(v, u) = static_cast<uchar>(
+          depth >= config_.min_range && depth <= config_.max_range);
     }
   }
   return validity_image;

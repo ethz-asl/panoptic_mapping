@@ -20,12 +20,7 @@ namespace panoptic_mapping {
 class TsdfIntegratorBase : public InputDataUser {
  public:
   explicit TsdfIntegratorBase(std::shared_ptr<Globals> globals)
-      : globals_(std::move(globals)) {
-    // Per default require all three images.
-    addRequiredInput(InputData::InputType::kDepthImage);
-    addRequiredInput(InputData::InputType::kColorImage);
-    addRequiredInput(InputData::InputType::kSegmentationImage);
-  }
+      : globals_(std::move(globals)) {}
   ~TsdfIntegratorBase() override = default;
 
   virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;

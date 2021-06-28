@@ -25,8 +25,6 @@ void InputSynchronizer::Config::checkParams() const {
   checkParamGT(max_input_queue_length, 0, "max_input_queue_length");
   checkParamCond(!global_frame_name.empty(),
                  "'global_frame_name' may not be empty.");
-  checkParamCond(!sensor_frame_name.empty(),
-                 "'sensor_frame_name' may not be empty.");
 }
 
 void InputSynchronizer::Config::setupParamsAndPrinting() {

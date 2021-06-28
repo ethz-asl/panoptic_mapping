@@ -155,9 +155,9 @@ void PanopticMapper::processInput(InputData* input) {
   Timer timer("input");
 
   // Compute and store the validity image.
-  if (compute_vertex_map_) {
+  if (compute_validity_image_) {
     Timer validity_timer("input/compute_validity_image");
-    input->setVertexMap(
+    input->setValidityImage(
         globals_->camera()->computeValidityImage(input->depthImage()));
     validity_timer.Stop();
   }

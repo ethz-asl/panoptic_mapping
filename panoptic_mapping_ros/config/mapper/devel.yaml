@@ -47,7 +47,6 @@ id_tracker:
   voxel_size: 0.05
   
   # Detectron
-  use_edge_refinement: false
   use_class_layer: false   # for submap allocation
 
   

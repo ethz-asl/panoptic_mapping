@@ -38,6 +38,11 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), TsdfIntegratorBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  // Request all inputs.
+  setRequiredInputs({InputData::InputType::kColorImage,
+                     InputData::InputType::kDepthImage,
+                     InputData::InputType::kSegmentationImage,
+                     InputData::InputType::kVertexMap});
 
   // Setup the interpolators (one for each thread).
   for (int i = 0; i < config_.integration_threads; ++i) {
@@ -59,7 +64,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
 
   // Allocate all blocks in corresponding submaps.
-  Timer alloc_timer("input/tsdf_integration/allocate_blocks");
+  Timer alloc_timer("tsdf_integration/allocate_blocks");
   cam_config_ = &(globals_->camera()->getConfig());
   allocateNewBlocks(submaps, input);
   alloc_timer.Stop();
@@ -67,7 +72,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // Find all active blocks that are in the field of view.
   // Note(schmluk): This could potentially also be included in the parallel part
   // but is already almost instantaneous.
-  Timer find_timer("input/tsdf_integration/find_blocks");
+  Timer find_timer("tsdf_integration/find_blocks");
   std::unordered_map<int, voxblox::BlockIndexList> block_lists =
       globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(), true);
   std::vector<int> id_list;
@@ -78,7 +83,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   find_timer.Stop();
 
   // Integrate in parallel.
-  Timer int_timer("input/tsdf_integration/integration");
+  Timer int_timer("tsdf_integration/integration");
   SubmapIndexGetter index_getter(id_list);
   std::vector<std::future<void>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {

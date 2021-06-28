@@ -46,7 +46,7 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   std::unordered_set<int> instances;
   for (int u = 0; u < input->idImage()->cols; ++u) {
     for (int v = 0; v < input->idImage()->rows; ++v) {
-      if (input->validityImage()->at<uint>(v, u)) {
+      if (input->validityImage()->at<uchar>(v, u)) {
         instances.insert(input->idImage()->at<int>(v, u));
       }
     }
