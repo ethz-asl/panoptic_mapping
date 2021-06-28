@@ -11,24 +11,30 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, SingleTSDFTracker,
     SingleTSDFTracker::registration_("single_tsdf");
 
 void SingleTSDFTracker::Config::checkParams() const {
-  checkParamGT(voxels_per_side, 0, "voxels_per_side");
-  checkParamGT(voxel_size, 0.f, "voxel_size");
+  checkParamConfig(submap_config);
 }
 
 void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("voxel_size", &voxel_size);
-  setupParam("truncation_distance", &truncation_distance);
-  setupParam("voxels_per_side", &voxels_per_side);
+  setupParam("submap_config", &submap_config);
   setupParam("use_class_layer", &use_class_layer);
+  setupParam("use_detectron", &use_detectron);
 }
 
 SingleTSDFTracker::SingleTSDFTracker(const Config& config,
                                      std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  setRequiredInputs(
-      {InputData::InputType::kColorImage, InputData::InputType::kDepthImage});
+  std::unordered_set<InputData::InputType> required_types = {
+      InputData::InputType::kColorImage, InputData::InputType::kDepthImage};
+  if (config_.use_class_layer_) {
+    required_types.insert(InputData::InputType::kSegmentationImage);
+  }
+  if (config_.use_detectron) {
+    required_types.insert(InputData::InputType::kDetectronLabels);
+  }
+
+  setRequiredInputs(required_inputs_);
 }
 
 void SingleTSDFTracker::processInput(SubmapCollection* submaps,
@@ -41,29 +47,21 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   if (!is_setup_) {
     setup(submaps);
   }
-
-  // Set the id data.
-  //  input->setIdImage(cv::Mat(input->depthImage().rows,
-  //  input->depthImage().cols,
-  //                            CV_16SC1, map_id_));
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
   if (submaps->size() > 0) {
     Submap& map = *(submaps->begin());
+    if (map.getConfig() != config_.submap_config) {
+      LOG(WARNING)
+          << "Loaded submap config does not match the specified config.";
+    }
     map.setIsActive(true);
     map_id_ = map.getID();
   } else {
     // Allocate the single map.
-    Submap::Config config;
-    config.voxels_per_side = config_.voxels_per_side;
-    config.voxel_size = config_.voxel_size;
-    config.truncation_distance = config_.truncation_distance;
-    if (config.truncation_distance < 0.f) {
-      config.truncation_distance *= -config.voxel_size;
-    }
-    Submap* new_submap = submaps->createSubmap(config);
+    Submap* new_submap = submaps->createSubmap(config_.submap_config);
     new_submap->setLabel(PanopticLabel::kBackground);
     map_id_ = new_submap->getID();
   }

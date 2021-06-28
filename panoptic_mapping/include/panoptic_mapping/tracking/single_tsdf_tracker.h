@@ -19,10 +19,9 @@ class SingleTSDFTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    float voxel_size = 0.1;
-    float truncation_distance = 0.2;
-    int voxels_per_side = 16;
+    Submap::Config submap_config;
     bool use_class_layer = false;
+    bool use_detectron = false;
 
     Config() { setConfigName("SingleTSDFTracker"); }
 
