@@ -15,7 +15,7 @@
 namespace panoptic_mapping {
 
 const std::unordered_map<InputData::InputType, std::string>
-    InputSynchronizer::kTopicNames_ = {
+    InputSynchronizer::kDefaultTopicNames_ = {
         {InputData::InputType::kDepthImage, "depth_image_in"},
         {InputData::InputType::kColorImage, "color_image_in"},
         {InputData::InputType::kSegmentationImage, "segmentation_image_in"},
@@ -42,8 +42,7 @@ InputSynchronizer::InputSynchronizer(const Config& config,
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void InputSynchronizer::requestInputs(
-    const std::unordered_set<InputData::InputType>& types) {
+void InputSynchronizer::requestInputs(const InputData::InputTypes& types) {
   for (const auto& type : types) {
     requested_inputs_.insert(type);
   }
@@ -60,6 +59,7 @@ void InputSynchronizer::advertiseInputTopics() {
         addQueue<MsgT>(type, [](const MsgT& msg, InputData* data) {
           cv_bridge::CvImageConstPtr depth = cv_bridge::toCvCopy(msg, "32FC1");
           data->setDepthImage(depth->image);
+          data->setFrameName(msg->header.frame_id);
         });
         break;
       }
@@ -106,10 +106,12 @@ void InputSynchronizer::checkForMatchingMessages(const ros::Time& timestamp) {
 
   // Get general data.
   tf::StampedTransform transform;
+  const std::string sensor_frame_name = config_.sensor_frame_name.empty()
+                                            ? data.sensorFrameName()
+                                            : config_.sensor_frame_name;
   try {
-    tf_listener_.lookupTransform(config_.global_frame_name,
-                                 config_.sensor_frame_name, timestamp,
-                                 transform);
+    tf_listener_.lookupTransform(config_.global_frame_name, sensor_frame_name,
+                                 timestamp, transform);
     Transformation T_M_C;
     tf::transformTFToKindr(transform, &T_M_C);
     data.setT_M_C(T_M_C);

@@ -30,7 +30,8 @@ class InputSynchronizer {
     int max_input_queue_length = 10;  // Number of data points per type stored
     // before old data starts being discarded.
     std::string global_frame_name = "mission";
-    std::string sensor_frame_name = "sensor";
+    std::string sensor_frame_name = "";  // If no frame name is specified the
+                                         // header of the depth image is taken.
 
     Config() { setConfigName("InputSynchronizer"); }
 
@@ -42,8 +43,13 @@ class InputSynchronizer {
   InputSynchronizer(const Config& config, const ros::NodeHandle& nh);
   virtual ~InputSynchronizer() = default;
 
+  // Access.
+  const InputData::InputTypes& getRequestedInputs() const {
+    return requested_inputs_;
+  }
+
   // Setup tools. Add all inputs and set the callback, then advertise to setup.
-  void requestInputs(const std::unordered_set<InputData::InputType>& types);
+  void requestInputs(const InputData::InputTypes& types);
   void setInputCallback(std::function<void(InputData*)> callback) {
     callback_ = std::move(callback);
   }
@@ -59,7 +65,7 @@ class InputSynchronizer {
       InputData::InputType type,
       std::function<void(const MsgT&, InputData*)> extraction_function) {
     input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
-        nh_, kTopicNames_.at(type), config_.max_input_queue_length,
+        nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
         extraction_function, [this](const ros::Time& timestamp) {
           this->checkForMatchingMessages(timestamp);
         }));
@@ -73,13 +79,13 @@ class InputSynchronizer {
   tf::TransformListener tf_listener_;
 
   // Inputs.
-  std::unordered_set<InputData::InputType> requested_inputs_;
+  InputData::InputTypes requested_inputs_;
   std::function<void(InputData*)> callback_;
   std::vector<std::unique_ptr<InputQueueBase>> input_queues_;
 
   // Settings.
   static const std::unordered_map<InputData::InputType, std::string>
-      kTopicNames_;
+      kDefaultTopicNames_;
 };
 
 }  // namespace panoptic_mapping

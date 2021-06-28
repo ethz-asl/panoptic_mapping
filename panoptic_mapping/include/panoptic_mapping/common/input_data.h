@@ -38,8 +38,10 @@ class InputData {
     kColorImage,
     kSegmentationImage,
     kDetectronLabels,
-    kVertexMap
+    kVertexMap,
+    kValidityImage
   };
+
   static std::string inputTypeToString(InputType type) {
     switch (type) {
       case InputType::kDepthImage:
@@ -52,15 +54,23 @@ class InputData {
         return "Detectron Labels";
       case InputType::kVertexMap:
         return "Vertex Map";
+      case InputType::kValidityImage:
+        return "Validity Image";
     }
   }
 
+  using InputTypes = std::unordered_set<InputType>;
+
+  /* Construction */
   InputData() = default;
   virtual ~InputData() = default;
 
-  // Input.
+  /* Data input */
   void setT_M_C(const Transformation& T_M_C) { T_M_C_ = T_M_C; }
   void setTimeStamp(double timestamp) { timestamp_ = timestamp; }
+  void setFrameName(const std::string& frame_name) {
+    sensor_frame_name_ = frame_name;
+  }
   void setDepthImage(const cv::Mat& depth_image) {
     depth_image_ = depth_image;
     contained_inputs_.insert(InputType::kDepthImage);
@@ -81,34 +91,52 @@ class InputData {
     vertex_map_ = vertex_map;
     contained_inputs_.insert(InputType::kVertexMap);
   }
+  void setValidityImage(const cv::Mat& validity_image) {
+    validity_image_ = validity_image;
+    contained_inputs_.insert(InputType::kValidityImage);
+  }
 
-  // Access.
+  /* Access */
+  // Access to constant data.
   const Transformation& T_M_C() const { return T_M_C_; }
+  const std::string& sensorFrameName() const { return sensor_frame_name_; }
   double timestamp() const { return timestamp_; }
   const cv::Mat& depthImage() const { return depth_image_; }
   const cv::Mat& colorImage() const { return color_image_; }
-  cv::Mat* idImage() { return &id_image_; }
   const DetectronLabels& detectronLabels() const { return detectron_labels_; }
   const cv::Mat& vertexMap() const { return vertex_map_; }
+
+  // Access to modifyable data.
+  cv::Mat* idImage() { return &id_image_; }
+  cv::Mat* validityImage() { return &validity_image_; }
+
+  /* Tools */
+  bool has(InputType input_type) const {
+    return contained_inputs_.find(input_type) != contained_inputs_.end();
+  }
 
  private:
   friend InputDataUser;
 
   // Permanent data.
-  Transformation T_M_C_;    // Transform Camera (sensor) to Mission.
-  double timestamp_ = 0.0;  // Timestamp of the inputs.
+  Transformation T_M_C_;  // Transform from Camera/Sensor (C) to Mission (M).
+  std::string sensor_frame_name_;  // Sensor frame name, taken from depth data.
+  double timestamp_ = 0.0;         // Timestamp of the inputs.
 
-  // Common data.
+  // Common Input data.
   cv::Mat depth_image_;  // Float depth image (CV_32FC1).
   cv::Mat color_image_;  // BGR (CV_8U).
   cv::Mat id_image_;     // Mutable assigned ids as ints (CV_32SC1).
-  cv::Mat vertex_map_;   // XYZ points (CV32FC3), can be compute via camera.
 
-  // Optional data.
+  // Common derived data.
+  cv::Mat vertex_map_;      // XYZ points (CV32FC3), can be compute via camera.
+  cv::Mat validity_image_;  // 0-1 image for valid pixels (CV_8UC1).
+
+  // Optional Input data.
   DetectronLabels detectron_labels_;
 
   // Content tracking.
-  std::unordered_set<InputType> contained_inputs_;
+  InputData::InputTypes contained_inputs_;
 };
 
 }  // namespace panoptic_mapping

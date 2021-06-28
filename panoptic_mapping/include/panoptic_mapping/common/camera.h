@@ -25,9 +25,9 @@ class Camera {
     // Camera Intrinsics. [px]
     int width = 640;
     int height = 480;
-    float vx = 320.f;  // center point
+    float vx = 320.f;  // Center point.
     float vy = 240.f;
-    float fx = 320.f;  // focal lengths
+    float fx = 320.f;  // Focal lengths.
     float fy = 320.f;
 
     float max_range = 5.f;   // m
@@ -82,11 +82,13 @@ class Camera {
 
   cv::Mat computeVertexMap(const cv::Mat& depth_image) const;
 
+  cv::Mat computeValidityImage(const cv::Mat& depth_image) const;
+
  private:
   const Config config_;
 
-  // Precomputed stored values.
-  std::vector<Point> view_frustum_;  // top, right, bottom, left plane normals
+  // Pre-computed stored values.
+  std::vector<Point> view_frustum_;  // Top, right, bottom, left plane normals.
 };
 
 }  // namespace panoptic_mapping

@@ -218,4 +218,18 @@ cv::Mat Camera::computeVertexMap(const cv::Mat& depth_image) const {
   return vertices;
 }
 
+cv::Mat Camera::computeValidityImage(const cv::Mat& depth_image) const {
+  // Check whether the depth image is valid. Currently just checks for min and
+  // max range.
+  cv::Mat validity_image(depth_image.size(), CV_8UC1);
+  for (int v = 0; v < depth_image.rows; v++) {
+    for (int u = 0; u < depth_image.cols; u++) {
+      float depth = depth_image.at<float>(v, u);
+      validity_image.at<uint>(v, u) =
+          (depth >= config_.min_range && depth <= config_.max_range);
+    }
+  }
+  return validity_image;
+}
+
 }  // namespace panoptic_mapping

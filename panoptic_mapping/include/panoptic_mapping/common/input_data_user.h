@@ -17,17 +17,17 @@ class InputDataUser {
   InputDataUser() = default;
   virtual ~InputDataUser() = default;
 
-  const std::unordered_set<InputData::InputType>& getRequiredInputs() const {
+  const InputData::InputTypes& getRequiredInputs() const {
     return required_inputs_;
   }
   bool inputIsValid(const InputData& input_data, bool raise_warning = true);
 
  protected:
   void addRequiredInput(InputData::InputType type);
-  void setRequiredInputs(const std::unordered_set<InputData::InputType>& types);
+  void setRequiredInputs(const InputData::InputTypes& types);
 
  private:
-  std::unordered_set<InputData::InputType> required_inputs_;
+  InputData::InputTypes required_inputs_;
 };
 
 }  // namespace panoptic_mapping

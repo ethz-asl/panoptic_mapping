@@ -1,6 +1,6 @@
 <launch>
   <!-- Arguments -->
-  <arg name="env_name" default="large_flat_dataset"/>
+  <arg name="env_name" default="flat_dataset"/>
   <arg name="waypoints" default="/home/lukas/Documents/Datasets/$(arg env_name)/waypoints1.yaml"/>
   <arg name="airsim_cfg" default="/home/lukas/Documents/Datasets/$(arg env_name)/airsim.yaml"/>
   <arg name="output_dir" default="/home/lukas/Documents/Datasets/$(arg env_name)/"/>

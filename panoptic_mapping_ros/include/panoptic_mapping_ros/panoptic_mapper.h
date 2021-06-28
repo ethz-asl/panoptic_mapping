@@ -139,6 +139,10 @@ class PanopticMapper {
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<PlanningVisualizer> planning_visualizer_;
   std::unique_ptr<TrackingVisualizer> tracking_visualizer_;
+
+  // Which processing to perform.
+  bool compute_vertex_map_ = false;
+  bool compute_validity_image_ = false;
 };
 
 }  // namespace panoptic_mapping

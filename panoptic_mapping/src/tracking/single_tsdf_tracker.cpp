@@ -25,16 +25,16 @@ SingleTSDFTracker::SingleTSDFTracker(const Config& config,
                                      std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  std::unordered_set<InputData::InputType> required_types = {
-      InputData::InputType::kColorImage, InputData::InputType::kDepthImage};
-  if (config_.use_class_layer_) {
-    required_types.insert(InputData::InputType::kSegmentationImage);
+  InputData::InputTypes required_inputs = {InputData::InputType::kColorImage,
+                                           InputData::InputType::kDepthImage};
+  if (config_.use_class_layer) {
+    required_inputs.insert(InputData::InputType::kSegmentationImage);
   }
   if (config_.use_detectron) {
-    required_types.insert(InputData::InputType::kDetectronLabels);
+    required_inputs.insert(InputData::InputType::kDetectronLabels);
   }
 
-  setRequiredInputs(required_inputs_);
+  setRequiredInputs(required_inputs);
 }
 
 void SingleTSDFTracker::processInput(SubmapCollection* submaps,
@@ -53,7 +53,11 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
   if (submaps->size() > 0) {
     Submap& map = *(submaps->begin());
-    if (map.getConfig() != config_.submap_config) {
+    if (map.getConfig().voxel_size != config_.submap_config.voxel_size ||
+        map.getConfig().voxels_per_side !=
+            config_.submap_config.voxels_per_side ||
+        map.getConfig().truncation_distance !=
+            config_.submap_config.truncation_distance) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }

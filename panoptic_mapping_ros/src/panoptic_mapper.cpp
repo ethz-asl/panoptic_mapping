@@ -73,6 +73,7 @@ void PanopticMapper::setupMembers() {
 
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
+
   // Submaps.
   submap_visualizer_ = std::make_unique<SubmapVisualizer>(
       config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
@@ -98,19 +99,31 @@ void PanopticMapper::setupMembers() {
       config_utilities::getConfigFromRos<DataWriter::Config>(
           ros::NodeHandle(nh_private_, "data_writer")));
 
-  // Setup all input topics.
+  // Setup all requested inputs from all modules.
+  InputData::InputTypes requested_inputs = id_tracker_->getRequiredInputs();
+  requested_inputs.insert(tsdf_integrator_->getRequiredInputs().begin(),
+                          tsdf_integrator_->getRequiredInputs().end());
+  compute_vertex_map_ =
+      requested_inputs.find(InputData::InputType::kVertexMap) !=
+      requested_inputs.end();
+  compute_validity_image_ =
+      requested_inputs.find(InputData::InputType::kValidityImage) !=
+      requested_inputs.end();
+
+  // Setup the input synchronizer.
   input_synchronizer_ = std::make_unique<InputSynchronizer>(
       config_utilities::getConfigFromRos<InputSynchronizer::Config>(
           nh_private_),
       nh_);
-  input_synchronizer_->requestInputs(id_tracker_->getRequiredInputs());
-  input_synchronizer_->requestInputs(tsdf_integrator_->getRequiredInputs());
+  input_synchronizer_->requestInputs(requested_inputs);
   input_synchronizer_->setInputCallback(
       [this](InputData* data) { this->processInput(data); });
-  input_synchronizer_->advertiseInputTopics();
 }
 
 void PanopticMapper::setupRos() {
+  // Setup all input topics.
+  input_synchronizer_->advertiseInputTopics();
+
   // Services.
   save_map_srv_ = nh_private_.advertiseService(
       "save_map", &PanopticMapper::saveMapCallback, this);
@@ -141,12 +154,23 @@ void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   Timer timer("input");
 
+  // Compute and store the validity image.
+  if (compute_vertex_map_) {
+    Timer validity_timer("input/compute_validity_image");
+    input->setVertexMap(
+        globals_->camera()->computeValidityImage(input->depthImage()));
+    validity_timer.Stop();
+  }
+
   // Compute and store the vertex map.
-  Timer vertex_timer("input/compute_vertices");
-  input->setVertexMap(
-      globals_->camera()->computeVertexMap(input->depthImage()));
+  if (compute_vertex_map_) {
+    Timer vertex_timer("input/compute_vertex_map");
+    input->setVertexMap(
+        globals_->camera()->computeVertexMap(input->depthImage()));
+    vertex_timer.Stop();
+  }
+
   ros::WallTime t0 = ros::WallTime::now();
-  vertex_timer.Stop();
 
   // Track the segmentation images and allocate new submaps.
   Timer id_timer("input/id_tracking");

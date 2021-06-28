@@ -3,7 +3,6 @@ verbosity: 3
 print_timing: false
 use_threadsafe_submap_collection: true
 global_frame_name: world
-sensor_frame_name: airsim_drone/Depth_cam
 label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 #label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
 visualization_interval: -1.0

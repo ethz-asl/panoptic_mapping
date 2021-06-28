@@ -11,8 +11,7 @@ bool InputDataUser::inputIsValid(const InputData& input_data,
   // requested.
   std::string error_msg;
   for (const InputData::InputType& input : required_inputs_) {
-    if (input_data.contained_inputs_.find(input) ==
-        input_data.contained_inputs_.end()) {
+    if (!input_data.has(input)) {
       if (raise_warning) {
         if (error_msg.empty()) {
           error_msg = "The inputs '" + InputData::inputTypeToString(input);
@@ -38,8 +37,7 @@ void InputDataUser::addRequiredInput(InputData::InputType type) {
   required_inputs_.insert(type);
 }
 
-void InputDataUser::setRequiredInputs(
-    const std::unordered_set<InputData::InputType>& types) {
+void InputDataUser::setRequiredInputs(const InputData::InputTypes& types) {
   required_inputs_ = types;
 }
 
