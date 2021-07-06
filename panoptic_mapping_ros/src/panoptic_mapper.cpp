@@ -4,6 +4,9 @@
 #include <sstream>
 #include <string>
 
+#include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
+#include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
+
 namespace panoptic_mapping {
 
 void PanopticMapper::Config::checkParams() const {
@@ -54,9 +57,19 @@ void PanopticMapper::setupMembers() {
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);
 
+  // Submap Allocation.
+  std::shared_ptr<SubmapAllocatorBase> submap_allocator =
+      config_utilities::FactoryRos::create<SubmapAllocatorBase>(
+          ros::NodeHandle(nh_private_, "submap_allocator"));
+  std::shared_ptr<FreespaceAllocatorBase> freespace_allocator =
+      config_utilities::FactoryRos::create<FreespaceAllocatorBase>(
+          ros::NodeHandle(nh_private_, "freespace_allocator"));
+
   // ID Tracking.
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
       ros::NodeHandle(nh_private_, "id_tracker"), globals_);
+  id_tracker_->setSubmapAllocator(submap_allocator);
+  id_tracker_->setFreespaceAllocator(freespace_allocator);
 
   // Tsdf Integrator.
   tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>(
@@ -103,6 +116,10 @@ void PanopticMapper::setupMembers() {
   InputData::InputTypes requested_inputs = id_tracker_->getRequiredInputs();
   requested_inputs.insert(tsdf_integrator_->getRequiredInputs().begin(),
                           tsdf_integrator_->getRequiredInputs().end());
+  requested_inputs.insert(submap_allocator->getRequiredInputs().begin(),
+                          submap_allocator->getRequiredInputs().end());
+  requested_inputs.insert(freespace_allocator->getRequiredInputs().begin(),
+                          freespace_allocator->getRequiredInputs().end());
   compute_vertex_map_ =
       requested_inputs.find(InputData::InputType::kVertexMap) !=
       requested_inputs.end();

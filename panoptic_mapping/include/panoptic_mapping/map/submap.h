@@ -24,7 +24,7 @@ class LayerManipulator;
 
 class Submap {
  public:
-  /* Config */
+  // Config.
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
     float truncation_distance = 0.2;  // m, negative values = #vs
@@ -41,7 +41,7 @@ class Submap {
     void initializeDependentVariableDefaults() override;
   };
 
-  /* Construction */
+  // Construction.
   explicit Submap(
       const Config& config,
       SubmapIDManager* submap_id_manager = SubmapIDManager::getGlobalInstance(),
@@ -49,18 +49,35 @@ class Submap {
           InstanceIDManager::getGlobalInstance());
   virtual ~Submap() = default;
 
-  /* IO */
-  // Serialize the submap to protobuf.
+  // IO.
+  /**
+   * @brief Serialize the submap to protobuf.
+   *
+   * @param proto The output protobuf object.
+   */
   void getProto(SubmapProto* proto) const;
 
-  // Save the submap to file.
+  /**
+   * @brief Save the submap to file.
+   *
+   * @param outfile_ptr The file to write the protobuf data to.
+   * @return Success of the saving operation.
+   */
   bool saveToStream(std::fstream* outfile_ptr) const;
 
-  // Load the submap from file.
+  /**
+   * @brief Load the submap from file.
+   *
+   * @param proto_file_ptr File from where to read the protobuf data.
+   * @param tmp_byte_offset_ptr Byte offset result, used to keep track where we
+   * are in the file if necessary. NOTE(schmluk): Mostly unused, initialize to
+   * 0.
+   * @return Unique pointer to the loaded submap.
+   */
   static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
-  /* Const accessors */
+  // Const accessors.
   const Config& getConfig() const { return config_; }
   int getID() const { return id_; }
   int getInstanceID() const { return instance_id_; }
@@ -84,7 +101,7 @@ class Submap {
     return bounding_volume_;
   }
 
-  /* Modifying accessors */
+  // Modifying accessors.
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
@@ -93,7 +110,7 @@ class Submap {
   }
   SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
 
-  /* Setters */
+  // Setters.
   void setT_M_S(const Transformation& T_M_S);
   void setInstanceID(int id) { instance_id_ = id; }
   void setClassID(int id) { class_id_ = id; }
@@ -104,32 +121,66 @@ class Submap {
   void setIsActive(bool is_active) { is_active_ = is_active; }
   void setWasTracked(bool was_tracked) { was_tracked_ = was_tracked; }
 
-  /* Processing */
-  // Set the submap status to inactive and update its status accordingly.
+  // Processing.
+  /**
+   * @brief Set the submap status to inactive and update its status accordingly.
+   */
   void finishActivePeriod();
 
-  // Update all dynamically computable quantities.
+  /**
+   * @brief Update all dynamically computable quantities.
+   *
+   * @param only_updated_blocks If false, recompute all quantities from scratch.
+   * If true, recompute based on what is flagged updated.
+   */
   void updateEverything(bool only_updated_blocks = true);
 
-  // Update the bounding volume based on all allocated blocks.
+  /**
+   * @brief Update the bounding volume based on all allocated blocks.
+   */
   void updateBoundingVolume();
 
-  // Update the mesh based on the current tsdf blocks. Set only_updated_blocks
-  // true for incremental mesh updates, false for a full re-computation.
+  /**
+   * @brief Update the mesh based on the current tsdf blocks. Set
+   * only_updated_blocks true for incremental mesh updates, false for a full
+   * re-computation.
+   *
+   * @param only_updated_blocks If false, recompute the mesh from scratch. If
+   * true, update based on the updated(kMesh) flag of the TSDF layer.
+   */
   void updateMesh(bool only_updated_blocks = true);
 
-  // Compute the iso-surface points of the submap based on its current mesh.
+  /**
+   * @brief Compute the iso-surface points of the submap based on its current
+   * mesh. Update the mesh before calling this function if it is out of date.
+   */
   void computeIsoSurfacePoints();
 
-  // Removes non-belonging points from the TSDF and deletes the class layer.
-  // Uses the provided manipulator to perform the class layer integration.
-  // Return whether any blocks remain.
+  /**
+   * @brief Removes non-belonging points from the TSDF and deletes the class
+   * layer. Uses the provided manipulator to perform the class layer
+   * integration.
+   *
+   * @param manipulator Manipulator used to carry out the application of the
+   * class layer.
+   * @param clear_class_layer True: erase the class layer. False: keep the class
+   * layer for lookups, but no further manipulations.
+   * @return True if any blocks remain, false if the TSDF map was cleared.
+   */
   bool applyClassLayer(const LayerManipulator& manipulator,
                        bool clear_class_layer = true);
 
-  // Deep copy of the submap. Notice that new submapID and instanceID managers
-  // need to be provided to not corrupt the ID counts. ID counts will not be
-  // double checked so use with care.
+  /**
+   * @brief Create a deep copy of the submap. Notice that new submapID and
+   * instanceID managers need to be provided to not corrupt the ID counts. ID
+   * counts will not be double checked so use with care.
+   *
+   * @param submap_id_manager Pointer to the new submapID manager that holds
+   * this submap.
+   * @param instance_id_manager Pointer to the new instanceID manager that holds
+   * this submap.
+   * @return Unique pointer holding the copy.
+   */
   std::unique_ptr<Submap> clone(SubmapIDManager* submap_id_manager,
                                 InstanceIDManager* instance_id_manager) const;
 
@@ -142,7 +193,7 @@ class Submap {
   Submap(const Config& config, SubmapIDManager* submap_id_manager,
          InstanceIDManager* instance_id_manager, int submap_id);
 
-  // Setup all default data.
+  // Setup.
   void initialize();
 
   // Labels.

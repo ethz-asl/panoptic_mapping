@@ -19,17 +19,32 @@ camera:
   fy: 320
   max_range: 5  # m
   min_range: 0.1
-
-id_tracker:
-  type: detectron  # single_tsdf, ground_truth, projective, detectron
-  verbosity: 1
+  
+submap_allocator:
+  type: semantic  # semantic
+  verbosity: 1   
+  
+  # submaps
+  voxels_per_side: &voxels_per_side 16
+  truncation_distance: -2 # negative = #vs
+  use_class_layer: true 
+  
+  # Semantic
   instance_voxel_size: 0.05
   background_voxel_size: 0.1
   unknown_voxel_size: 0.1
-  freespace_voxel_size: 0.3
-  voxels_per_side: 16
-  truncation_distance: -2 # negative = #vs
   
+freespace_allocator:
+  type: monolithic  # monolithic
+  verbosity: 1  
+  voxels_per_side: *voxels_per_side 
+  truncation_distance: -2   
+  voxel_size: 0.3
+
+id_tracker:
+  type: projective  # single_tsdf, ground_truth, projective, detectron
+  verbosity: 1
+
   # Ground Truth
   use_ground_truth_instance_ids: true
   
@@ -43,13 +58,7 @@ id_tracker:
   impaint_voxel_size: true
   debug: true
   
-  # Single TSDF Tracker
-  voxel_size: 0.05
-  
-  # Detectron
-  use_class_layer: false   # for submap allocation
 
-  
 tsdf_integrator:  
   type: class_projective # projective, class_projective, single_tsdf
   verbosity: 1     

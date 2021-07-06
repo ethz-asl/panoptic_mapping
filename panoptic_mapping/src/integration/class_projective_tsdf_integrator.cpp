@@ -31,7 +31,7 @@ void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
 ClassProjectiveIntegrator::ClassProjectiveIntegrator(
     const Config& config, std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.pi_config, std::move(globals)) {
+      ProjectiveIntegrator(config.pi_config, std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 

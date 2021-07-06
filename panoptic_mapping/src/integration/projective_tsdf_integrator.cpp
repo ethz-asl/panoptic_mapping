@@ -35,14 +35,16 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
-                                           std::shared_ptr<Globals> globals)
+                                           std::shared_ptr<Globals> globals,
+                                           bool print_config)
     : config_(config.checkValid()), TsdfIntegratorBase(std::move(globals)) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
   // Request all inputs.
-  setRequiredInputs({InputData::InputType::kColorImage,
-                     InputData::InputType::kDepthImage,
-                     InputData::InputType::kSegmentationImage,
-                     InputData::InputType::kVertexMap});
+  setRequiredInputs(
+      {InputData::InputType::kColorImage, InputData::InputType::kDepthImage,
+       InputData::InputType::kSegmentationImage,
+       InputData::InputType::kVertexMap, InputData::InputType::kValidityImage});
 
   // Setup the interpolators (one for each thread).
   for (int i = 0; i < config_.integration_threads; ++i) {

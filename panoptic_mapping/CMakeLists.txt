@@ -38,6 +38,8 @@ cs_add_library(${PROJECT_NAME}
         src/tracking/ground_truth_id_tracker.cpp
         src/tracking/projective_id_tracker.cpp
         src/tracking/detectron_id_tracker.cpp
+        src/submap_allocation/semantic_submap_allocator.cpp
+        src/submap_allocation/monolithic_freespace_allocator.cpp
         src/integration/projective_tsdf_integrator.cpp
         src/integration/class_projective_tsdf_integrator.cpp
         src/integration/single_tsdf_integrator.cpp

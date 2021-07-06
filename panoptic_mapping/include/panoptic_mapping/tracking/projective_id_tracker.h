@@ -19,21 +19,13 @@
 namespace panoptic_mapping {
 
 /**
- * Uses ground truth segmentation and compares them against the rendered map to
- * track associations.
+ * @brief Uses the input segmentation images and compares them against the
+ * rendered map to track associations.
  */
-
 class ProjectiveIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    // Submap params.
-    // TODO(schmluk): Clean submap creation away from id tracking.
-    float instance_voxel_size = 0.05;
-    float background_voxel_size = 0.1;
-    float unknown_voxel_size = 0.1;
-    float freespace_voxel_size = 0.3;
-    Submap::Config submap_creation;
 
     // Tracking.
     float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
@@ -41,13 +33,13 @@ class ProjectiveIDTracker : public IDTrackerBase {
     float match_acceptance_threshold = 0.5;
     bool use_class_data_for_matching = true;
 
-    // Allocation .
+    // Allocation.
     int min_allocation_size = 0;  // #px required to allocate new submap.
 
     // System params.
     int rendering_threads = std::thread::hardware_concurrency();
 
-    // Camera and renderer settings.
+    // Renderer settings.
     MapRenderer::Config renderer;
 
     Config() { setConfigName("ProjectiveIDTracker"); }
@@ -65,9 +57,9 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
  protected:
   // Internal methods.
-  virtual int allocateSubmap(int instance_id, SubmapCollection* submaps);
   virtual bool classesMatch(int input_id, int submap_class_id);
-  void allocateFreeSpaceSubmap(SubmapCollection* submaps);
+  virtual Submap* allocateSubmap(int input_id, SubmapCollection* submaps,
+                                 InputData* input);
   TrackingInfoAggregator computeTrackingData(SubmapCollection* submaps,
                                              InputData* input);
   TrackingInfo renderTrackingInfo(const Submap& submap,
