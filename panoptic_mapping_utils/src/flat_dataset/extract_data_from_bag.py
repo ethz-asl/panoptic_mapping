@@ -46,9 +46,9 @@ def extract_bag(source_bag, target_dest):
         image_id = "%06d" % img_no
         img_no = img_no + 1
         if img_no_and_ts[image_id] != msg.header.stamp:
-            warn(
-                "Image timestamps don't match for frame %s: color: %s vs depth: %s"
-                % (image_id, img_no_and_ts[image_id], msg.header.stamp))
+            warn("Image timestamps don't match for frame %s: "
+                 "color: %s vs depth: %s" %
+                 (image_id, img_no_and_ts[image_id], msg.header.stamp))
         img2 = Image.fromarray(
             cv_bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough'))
         img2.save(os.path.join(target_dest, image_id + "_depth.tiff"))
@@ -60,26 +60,27 @@ def extract_bag(source_bag, target_dest):
         image_id = "%06d" % img_no
         img_no = img_no + 1
         if img_no_and_ts[image_id] != msg.header.stamp:
-            warn(
-                "Image timestamps don't match for frame %s: color: %s vs segmentation: %s"
-                % (image_id, img_no_and_ts[image_id], msg.header.stamp))
+            warn("Image timestamps don't match for frame %s: "
+                 "color: %s vs segmentation: %s" %
+                 (image_id, img_no_and_ts[image_id], msg.header.stamp))
         image = cv_bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         cv2.imwrite(os.path.join(target_dest, image_id + "_segmentation.png"),
                     image)
     print("GTSeg: %i frames found." % img_no)
 
     # Poses.
-    # NOTE(schmluk): There should be a pose exactly stamped for each frame from unreal_airsim.
+    # NOTE(schmluk): There should be a pose exactly stamped for each frame
+    # from unreal_airsim.
     found_poses = 0
     for _, msg, _ in bag.read_messages(topics=["/tf"]):
         msg = msg.transforms[0]
-        if (msg.child_frame_id == CAMERA_FRAME_NAME):
-            if (msg.header.stamp in img_no_and_ts.values()):
+        if msg.child_frame_id == CAMERA_FRAME_NAME:
+            if msg.header.stamp in img_no_and_ts.values():
                 found_poses += 1
                 frame_id = img_no_and_ts.keys()[img_no_and_ts.values().index(
                     msg.header.stamp)]
                 quat = msg.transform.rotation
-                matrix = quaternion_matrix([quat.w, quat.x, quat.y, quat.z])
+                matrix = quaternion_matrix([quat.x, quat.y, quat.z, quat.w])
                 with open(os.path.join(target_dest, frame_id + "_pose.txt"),
                           'w') as f:
                     f.write('%f %f %f %f\n' %
