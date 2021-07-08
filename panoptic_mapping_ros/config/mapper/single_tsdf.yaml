@@ -23,44 +23,29 @@ camera:
   
 submap_allocator:
   type: semantic  # semantic
-  verbosity: 1   
-  
-  # submaps
-  voxels_per_side: &voxels_per_side 16
-  truncation_distance: -2 # negative = #vs
-  use_class_layer: true 
-  
-  # Semantic
-  instance_voxel_size: 0.05
-  background_voxel_size: 0.1
-  unknown_voxel_size: 0.1
-  
 freespace_allocator:
   type: monolithic  # monolithic
-  verbosity: 1  
-  voxels_per_side: *voxels_per_side 
-  truncation_distance: -2   
-  voxel_size: 0.3
 
 id_tracker:
   type: single_tsdf  # single_tsdf, ground_truth, projective, detectron
   verbosity: 1
-
-  # Ground Truth
-  use_ground_truth_instance_ids: true
   
   # Projective ID tracker
-  depth_tolerance: -1  # m, negative = #vs
-  tracking_metric: IoU  # IoU, overlap
-  match_acceptance_threshold: 0.1  # (0.1)
-  min_allocation_size: 2000 # px, for submap allocation. (2000)
-  use_class_data_for_matching: true
-  
-  impaint_voxel_size: true
-  debug: true
+#  depth_tolerance: -1  # m, negative = #vs
+#  tracking_metric: IoU  # IoU, overlap
+#  match_acceptance_threshold: 0.1  # (0.1)
+#  min_allocation_size: 2000 # px, for submap allocation. (2000)
+#  use_class_data_for_matching: true
+#  
+#  impaint_voxel_size: true
+#  debug: true
   
   # Single TSDF
-  
+  voxel_size: 0.1
+  truncation_distance: -2
+  voxels_per_side: 16
+  use_class_layer: false
+  use_instance_classification: false
 
 tsdf_integrator:  
   type: single_tsdf # projective, class_projective, single_tsdf
@@ -71,13 +56,14 @@ tsdf_integrator:
   max_weight: 10000
   interpolation_method: adaptive  # nearest, bilinear, adaptive
   foreign_rays_clear: true
-  integration_threads: 8
+  integration_threads: 4
   
   # Class Projective
   use_accurate_classification: false
   use_instance_classification: &use_instance_classification false
   
   # Single TSDF
+  deallocate_unused_blocks: true
   
 map_management:
   verbosity: 0
@@ -86,34 +72,12 @@ map_management:
   prune_active_blocks_frequency: 0 # 1
   activity_management_frequency: 0 # 1
   change_detection_frequency: 0
-  
-  # Behavior
-  merge_deactivated_submaps_if_possible: true
-  apply_class_layer_when_deactivating_submaps: false
-  
-  activity_manager:
-    required_reobservations: 1 # Consecutive observations to keep new submaps.
-    deactivate_after_missed_detections: 10  # Deactivate submaps when not observed for x frames.
-  
-  tsdf_registrator:
-    verbosity: 3
-    min_voxel_weight: 0.000001
-    error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 100  
-    match_rejection_percentage: 0.2
-    match_acceptance_points: 100
-    match_acceptance_percentage: 0.2
-    normalize_by_voxel_weight: true
-    allow_multiple_matches: false
     
-  layer_manipulator:
-      verbosity: 3
-      use_instance_classification: *use_instance_classification
   
 visualization:  
   submaps:
     verbosity: 1
-    color_mode: submaps # submaps, instances, color, normals, classes, change, classification
+    color_mode: color # submaps, instances, color, normals, classes, change, classification, single_tsdf
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true

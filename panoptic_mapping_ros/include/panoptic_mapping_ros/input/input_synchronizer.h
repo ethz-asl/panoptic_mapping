@@ -31,7 +31,9 @@ class InputSynchronizer {
     // before old data starts being discarded.
     std::string global_frame_name = "mission";
     std::string sensor_frame_name = "";  // If no frame name is specified the
-                                         // header of the depth image is taken.
+    // header of the depth image is taken.
+    bool use_transform_caching = true;  // If true treat transforms like an
+    // input and look them up based on the depth images.
 
     Config() { setConfigName("InputSynchronizer"); }
 
@@ -64,12 +66,43 @@ class InputSynchronizer {
   void addQueue(
       InputData::InputType type,
       std::function<void(const MsgT&, InputData*)> extraction_function) {
-    input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
-        nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
-        extraction_function, [this](const ros::Time& timestamp) {
-          this->checkForMatchingMessages(timestamp);
-        }));
+    if (type == InputData::InputType::kDepthImage &&
+        config_.use_transform_caching) {
+      // Enable transform caching in the time callback.
+      input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
+          nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
+          extraction_function, [this](const ros::Time& timestamp) {
+            this->cacheTransform(timestamp);
+            this->checkForMatchingMessages(timestamp);
+          }));
+    } else {
+      input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
+          nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
+          extraction_function, [this](const ros::Time& timestamp) {
+            this->checkForMatchingMessages(timestamp);
+          }));
+    }
   }
+
+  /**
+   * @brief Try to lookup the transform and store it in the cache.
+   *
+   * @param stamp Timestamp for which to lookup the transform.
+   */
+  void cacheTransform(const ros::Time& stamp);
+
+  /**
+   * @brief Try to lookup the specified transform from tf.
+   *
+   * @param stamp Timestamp to lookup.
+   * @param base_frame Base frame to lookup.
+   * @param child_frame Child frame to lookup.
+   * @param transformation Output transform if it could be looked up.
+   * @return True if the transform could be looked up.
+   */
+  bool lookupTransform(const ros::Time& stamp, const std::string& base_frame,
+                       const std::string& child_frame,
+                       Transformation* transformation) const;
 
  private:
   const Config config_;
@@ -86,6 +119,11 @@ class InputSynchronizer {
   // Settings.
   static const std::unordered_map<InputData::InputType, std::string>
       kDefaultTopicNames_;
+
+  // Transform caching.
+  bool frames_setup_ = false;
+  std::string used_sensor_frame_;
+  std::unordered_map<uint64_t, Transformation> transform_cache_;
 };
 
 }  // namespace panoptic_mapping

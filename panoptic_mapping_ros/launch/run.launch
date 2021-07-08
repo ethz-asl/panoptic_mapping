@@ -9,14 +9,14 @@
   <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
-  <arg name="use_detectron" default="true"/>
+  <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
   <arg name="scan_id" default="1"/>
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="devel"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="single_tsdf"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>
@@ -39,8 +39,7 @@
 
     <!-- Input -->
     <remap from="color_image_in" to="$(arg namespace)/color_image"/>
-<!--    <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>-->
-    <remap from="depth_image_in" to="/detectron_player/depth_image"/>
+    <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
     <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>
     <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
   </node>  
