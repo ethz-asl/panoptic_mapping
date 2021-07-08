@@ -12,16 +12,21 @@
 namespace panoptic_mapping {
 
 /**
- * Allocates a single submap to emulate running a single TSDF grid as map
- * representation.
+ * @brief Allocates a single submap to emulate running a monolithic TSDF grid as
+ * map representation. Combine this module with the SingleTsdfIntegrator.
  */
 class SingleTSDFTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
+
+    // Submap allocation config. Set use class_layer to true to perform label
+    // integration.
     Submap::Config submap_config;
-    bool use_class_layer = false;
+
+    // System params.
     bool use_detectron = false;
+    bool use_instance_classification = false;
 
     Config() { setConfigName("SingleTSDFTracker"); }
 

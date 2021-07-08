@@ -161,6 +161,36 @@ void MapManager::performChangeDetection() {
 }
 
 void MapManager::finishMapping() {
+  // TEST single_tsdf
+  // Remove all empty blocks since voxblox would not allocate these.
+  voxblox::BlockIndexList all_blocks;
+  voxblox::BlockIndexList empty_blocks;
+
+  Submap* map = &(*map_->begin());
+  map->getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
+  const int vps = std::pow(map->getConfig().voxels_per_side, 3);
+  int removed_blocks = 0;
+
+  for (const auto& block_i : all_blocks) {
+    const TsdfBlock& block = map->getTsdfLayer().getBlockByIndex(block_i);
+    bool has_data = false;
+    for (int i = 0; i < vps; ++i) {
+      if (block.getVoxelByLinearIndex(i).weight > 1e-6) {
+        has_data = true;
+        break;
+      }
+      if (has_data) {
+        break;
+      }
+    }
+    if (!has_data) {
+      map->getTsdfLayerPtr()->removeBlock(block_i);
+      removed_blocks++;
+    }
+  }
+  LOG(INFO) << "Removed " << removed_blocks << " block from the map.";
+  return;
+
   // Deactivate last submaps.
   for (Submap& submap : *map_) {
     if (submap.isActive()) {

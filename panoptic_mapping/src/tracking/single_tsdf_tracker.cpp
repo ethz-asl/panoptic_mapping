@@ -17,24 +17,22 @@ void SingleTSDFTracker::Config::checkParams() const {
 void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("submap_config", &submap_config);
-  setupParam("use_class_layer", &use_class_layer);
   setupParam("use_detectron", &use_detectron);
+  setupParam("use_instance_classification", &use_instance_classification);
 }
 
 SingleTSDFTracker::SingleTSDFTracker(const Config& config,
                                      std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  InputData::InputTypes required_inputs = {InputData::InputType::kColorImage,
-                                           InputData::InputType::kDepthImage};
-  if (config_.use_class_layer) {
-    required_inputs.insert(InputData::InputType::kSegmentationImage);
+  addRequiredInput(InputData::InputType::kColorImage);
+  addRequiredInput(InputData::InputType::kDepthImage);
+  if (config_.submap_config.use_class_layer) {
+    addRequiredInput(InputData::InputType::kSegmentationImage);
   }
   if (config_.use_detectron) {
-    required_inputs.insert(InputData::InputType::kDetectronLabels);
+    addRequiredInput(InputData::InputType::kDetectronLabels);
   }
-
-  setRequiredInputs(required_inputs);
 }
 
 void SingleTSDFTracker::processInput(SubmapCollection* submaps,
@@ -57,7 +55,9 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
         map.getConfig().voxels_per_side !=
             config_.submap_config.voxels_per_side ||
         map.getConfig().truncation_distance !=
-            config_.submap_config.truncation_distance) {
+            config_.submap_config.truncation_distance ||
+        map.getConfig().use_class_layer !=
+            config_.submap_config.use_class_layer) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }

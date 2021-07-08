@@ -19,18 +19,19 @@ config_utilities::Factory::RegistrationRos<
     SingleTsdfIntegrator::registration_("single_tsdf");
 
 void SingleTsdfIntegrator::Config::checkParams() const {
-  checkParamConfig(pi_config);
+  checkParamConfig(projective_integrator_config);
 }
 
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("projective_integrator_config", &pi_config);
+  setupParam("projective_integrator_config", &projective_integrator_config);
 }
 
 SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.pi_config, std::move(globals)) {
+      ProjectiveIntegrator(config.projective_integrator_config,
+                           std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
@@ -62,7 +63,8 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
 
   // Integrate in parallel.
   std::vector<std::future<bool>> threads;
-  for (int i = 0; i < config_.pi_config.integration_threads; ++i) {
+  for (int i = 0; i < config_.projective_integrator_config.integration_threads;
+       ++i) {
     threads.emplace_back(std::async(
         std::launch::async, [this, &index_getter, map, input, i, T_C_S]() {
           voxblox::BlockIndex index;
@@ -73,6 +75,7 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
           return true;
         }));
   }
+
   // Join all threads.
   for (auto& thread : threads) {
     thread.get();
@@ -94,7 +97,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
                                        const cv::Mat& color_image,
                                        const cv::Mat& id_image) const {
   CHECK_NOTNULL(submap);
-  // set up preliminaries
+  // Set up preliminaries.
   if (!submap->getTsdfLayer().hasBlock(index)) {
     LOG(WARNING) << "Tried to access inexistent block '" << index.transpose()
                  << "' in submap " << submap->getID() << ".";
@@ -107,49 +110,34 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
 
-  // update all voxels
+  // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
-                                  i);  // voxel center in camera frame
+                                  i);  // Voxel center in camera frame.
     // Compute distance and weight.
     int id;
     float sdf;
     float weight;
-    const bool is_free_space_submap =
-        submap->getLabel() == PanopticLabel::kFreeSpace;
     if (!computeVoxelDistanceAndWeight(
             &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
-            submap_id, truncation_distance, voxel_size, is_free_space_submap)) {
+            submap_id, truncation_distance, voxel_size, false)) {
       continue;
     }
 
     // Apply distance, color, and weight.
-    const bool point_belongs_to_this_submap = id == submap_id;
-    if (point_belongs_to_this_submap || is_free_space_submap) {
-      voxel.distance = (voxel.distance * voxel.weight +
-                        std::max(std::min(truncation_distance, sdf),
-                                 -1.f * truncation_distance) *
-                            weight) /
-                       (voxel.weight + weight);
-      voxel.weight =
-          std::min(voxel.weight + weight, config_.pi_config.max_weight);
-      // only merge color near the surface and if point belongs to the submap.
-      if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
-        voxel.color = Color::blendTwoColors(
-            voxel.color, voxel.weight,
-            interpolator->interpolateColor(color_image), weight);
-      }
-    } else {
-      // Voxels that don't belong to the submap are 'cleared' if they are in
-      // front of the surface.
-      if (sdf > 0) {
-        voxel.distance =
-            (voxel.distance * voxel.weight + truncation_distance * weight) /
-            (voxel.weight + weight);
-        voxel.weight =
-            std::min(voxel.weight + weight, config_.pi_config.max_weight);
-      }
+    voxel.distance = (voxel.distance * voxel.weight +
+                      std::max(std::min(truncation_distance, sdf),
+                               -1.f * truncation_distance) *
+                          weight) /
+                     (voxel.weight + weight);
+    voxel.weight = std::min(voxel.weight + weight,
+                            config_.projective_integrator_config.max_weight);
+    // Only merge color near the surface and if point belongs to the submap.
+    if (std::abs(sdf) < truncation_distance) {
+      voxel.color = Color::blendTwoColors(
+          voxel.color, voxel.weight,
+          interpolator->interpolateColor(color_image), weight);
     }
   }
 }
@@ -161,7 +149,7 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
 
   const Transformation T_S_C = map->getT_S_M() * input->T_M_C();
 
-  // Parse through each point to allocate instance + background blocks.
+  // Parse through each point to reset the depth image.
   for (int v = 0; v < input->depthImage().rows; v++) {
     for (int u = 0; u < input->depthImage().cols; u++) {
       const cv::Vec3f& vertex = input->vertexMap().at<cv::Vec3f>(v, u);
@@ -176,7 +164,7 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
     }
   }
 
-  // Allocate all potential space blocks.
+  // Allocate all potential blocks.
   const float block_size = map->getTsdfLayer().block_size();
   const float block_diag_half = std::sqrt(3.f) * block_size / 2.f;
   const Transformation T_C_S = T_S_C.inverse();
@@ -196,9 +184,7 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
     }
   }
 
-  // Update all bounding volumes. This is currently done in every integration
-  // step since it's not too expensive and won't do anything if no new block
-  // was allocated.
+  // Update the bounding volume.
   map->updateBoundingVolume();
 }
 

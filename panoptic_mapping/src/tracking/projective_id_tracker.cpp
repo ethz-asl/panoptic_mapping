@@ -40,7 +40,7 @@ ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
       renderer_(config.renderer, globals_->camera()->getConfig(), false) {
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
-  setRequiredInputs({InputData::InputType::kColorImage,
+  addRequiredInputs({InputData::InputType::kColorImage,
                      InputData::InputType::kDepthImage,
                      InputData::InputType::kSegmentationImage,
                      InputData::InputType::kValidityImage});

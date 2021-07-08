@@ -37,8 +37,8 @@ void InputDataUser::addRequiredInput(InputData::InputType type) {
   required_inputs_.insert(type);
 }
 
-void InputDataUser::setRequiredInputs(const InputData::InputTypes& types) {
-  required_inputs_ = types;
+void InputDataUser::addRequiredInputs(const InputData::InputTypes& types) {
+  for (const auto& type : types) required_inputs_.insert(type);
 }
 
 }  // namespace panoptic_mapping

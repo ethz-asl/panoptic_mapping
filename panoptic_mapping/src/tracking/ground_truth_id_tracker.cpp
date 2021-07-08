@@ -21,7 +21,7 @@ GroundTruthIDTracker::GroundTruthIDTracker(const Config& config,
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
-  setRequiredInputs({InputData::InputType::kSegmentationImage,
+  addRequiredInputs({InputData::InputType::kSegmentationImage,
                      InputData::InputType::kValidityImage});
 }
 

@@ -14,39 +14,96 @@
 namespace panoptic_mapping {
 
 /***
- * This class contains and manages access to all submaps.
+ * @brief This class contains and manages access to all submaps. It represents
+ * the full map consisting of all submaps.
  */
 class SubmapCollection {
  public:
-  /* Construction */
+  // Construction.
   SubmapCollection() = default;
   SubmapCollection(SubmapCollection&&) = default;
   virtual ~SubmapCollection() = default;
 
-  /* IO */
+  // IO.
+  /**
+   * @brief Save the current map to disk (.panmap file).
+   *
+   * @param file_path Filename including full path and extension to save to.
+   * @return True if the map was saved successfully.
+   */
   bool saveToFile(const std::string& file_path) const;
+
+  /**
+   * @brief Load a saved map (.panmap file) from disk, overwriting the current
+   * content of the submap collection.
+   *
+   * @param file_path Filename including full path and extension to load.
+   * @param recompute_data Whether to recompute all derived qualities (such as
+   * meshes, bounding volumes, ...) for loaded map.
+   * @return True if the map was loaded successfully.
+   */
   bool loadFromFile(const std::string& file_path, bool recompute_data = true);
 
-  /* Modify the collection */
+  // Modifying the collection.
+  /**
+   * @brief Create a new submap and add it to the collection. This is the only
+   * way new submaps can be added.
+   *
+   * @param config Config of the submap to create.
+   * @return Pointer to the newly created submap.
+   */
   Submap* createSubmap(const Submap::Config& config);
+
+  /**
+   * @brief Remove a submap from the collection.
+   *
+   * @param id SubmapID of the submap to be deleted.
+   * @return True if the submap existed and was deleted.
+   */
   bool removeSubmap(int id);
+
+  /**
+   * @brief Remove all submaps contained in the collection.
+   */
   void clear();
 
-  /* Accessors */
+  // Access.
   size_t size() const { return submaps_.size(); }
-  bool submapIdExists(int id) const;      // Check whether id exists.
+  /**
+   * @brief Whether the submap of given ID exists.
+   *
+   * @param id SubmapID to check for.
+   * @return True if SubmapID id exists.
+   */
+  bool submapIdExists(int id) const;
+
+  /**
+   * @brief Const access to the requested submap. Assumes that the provided id
+   * exists, if unsure use 'submapIdExists(id)' first.
+   *
+   * @param id SubmapID to retrieve.
+   */
+
   const Submap& getSubmap(int id) const;  // This assumes that the id exists.
-  Submap* getSubmapPtr(int id);           // This assumes that the id exists.
+                                          /**
+                                           * @brief Modifying access to the requested submap. Assumes that the provided
+                                           * id exists, if unsure use 'submapIdExists(id)' first.
+                                           *
+                                           * @param id SubmapID to retrieve.
+                                           */
+  Submap* getSubmapPtr(int id);
+
   int getActiveFreeSpaceSubmapID() const { return active_freespace_submap_id_; }
   const std::unordered_map<int, std::unordered_set<int>>&
   getInstanceToSubmapIDTable() const {
     return instance_to_submap_ids_;
   }
 
-  /* Setters */
+  // Setters.
   void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
 
-  /* Tools */
+  // Tools.
+
   // Utility function that tells you which submaps are new that are not in the
   // id list and which ones are deleted that were in the id list.
   void updateIDList(const std::vector<int>& id_list, std::vector<int>* new_ids,

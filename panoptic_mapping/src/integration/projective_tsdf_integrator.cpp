@@ -41,7 +41,7 @@ ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
   // Request all inputs.
-  setRequiredInputs(
+  addRequiredInputs(
       {InputData::InputType::kColorImage, InputData::InputType::kDepthImage,
        InputData::InputType::kSegmentationImage,
        InputData::InputType::kVertexMap, InputData::InputType::kValidityImage});
