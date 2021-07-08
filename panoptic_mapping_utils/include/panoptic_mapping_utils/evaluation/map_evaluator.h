@@ -98,19 +98,6 @@ class MapEvaluator {
   std::unique_ptr<SubmapVisualizer> visualizer_;
 };
 
-class Bounds {
- public:
-  virtual bool pointIsValid(const Point& point) const = 0;
-};
-
-// Bounding volume since windows are inaccurate in the gt pointcloud.
-class FlatBounds : public Bounds {
- public:
-  bool pointIsValid(const Point& point) const override {
-    return point.x() >= -5.7;
-  }
-};
-
 }  // namespace panoptic_mapping
 
 #endif  // PANOPTIC_MAPPING_UTILS_EVALUATION_MAP_EVALUATOR_H_

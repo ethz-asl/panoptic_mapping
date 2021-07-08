@@ -33,8 +33,6 @@ def create_labels(meta_data, output_file: str = ""):
                                 quotechar='|',
                                 quoting=csv.QUOTE_MINIMAL)
             writer.writerow(["InstanceID", "ClassID", "PanopticID", "Name"])
-            print(meta_data.stuff_classes, len(meta_data.stuff_classes))
-            print(meta_data.thing_classes, len(meta_data.thing_classes))
             id = 0
             for label in meta_data.stuff_classes:
                 writer.writerow([id, id, 0, label])
@@ -70,14 +68,6 @@ def create_predictions(params: Params):
     print("done!")
     if msg:
         print(msg)
-
-    # test
-    # im = cv2.imread(
-    # "/home/lukas/Documents/PanopticMapping/Detectron2/input.jpg")
-    # panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
-    # print(segments_info)
-    # plt.imshow(panoptic_seg.numpy())
-    # plt.show()
 
     # Get files to parse.
     files = [
