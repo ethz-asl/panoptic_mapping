@@ -181,7 +181,6 @@ void PanopticMapper::processInput(InputData* input) {
     Timer validity_timer("input/compute_validity_image");
     input->setValidityImage(
         globals_->camera()->computeValidityImage(input->depthImage()));
-    validity_timer.Stop();
   }
 
   // Compute and store the vertex map.
@@ -189,7 +188,6 @@ void PanopticMapper::processInput(InputData* input) {
     Timer vertex_timer("input/compute_vertex_map");
     input->setVertexMap(
         globals_->camera()->computeVertexMap(input->depthImage()));
-    vertex_timer.Stop();
   }
 
   ros::WallTime t0 = ros::WallTime::now();
@@ -213,12 +211,12 @@ void PanopticMapper::processInput(InputData* input) {
   management_timer.Stop();
 
   // If requested perform visualization and logging.
-  ros::TimerEvent event;
   if (config_.visualization_interval < 0.f) {
-    publishVisualizationCallback(event);
+    Timer vis_timer("input/visualization");
+    publishVisualizationCallback(ros::TimerEvent());
   }
   if (config_.data_logging_interval < 0.f) {
-    dataLoggingCallback(event);
+    dataLoggingCallback(ros::TimerEvent());
   }
   ros::WallTime t4 = ros::WallTime::now();
 

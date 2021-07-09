@@ -13,7 +13,8 @@ std::string LabelHandler::LabelEntry::toString() const {
      << ", PanopticID: " << panopticLabelToString(label)
      << ", Color: " << static_cast<int>(color.r) << " "
      << static_cast<int>(color.g) << " " << static_cast<int>(color.b)
-     << ", Name: " << name << ", SuperCategory: " << supercategory;
+     << ", Name: " << name << ", SuperCategory: " << supercategory
+     << ", Size: " << size;
   return ss.str();
 }
 
@@ -23,18 +24,21 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
   labels_.clear();
 
   // Read all possible columns and write the present ones.
-  io::CSVReader<11> in(source_file);
+  // NOTE(schmluk): Since there is no ignore missing or extra columns we read
+  // all possible columns and ignore unused ones. This should possibly be
+  // cleaned up at some point.
+  io::CSVReader<12> in(source_file);
   in.read_header(io::ignore_missing_column, "InstanceID", "ClassID",
                  "PanopticID", "MeshID", "R", "G", "B", "Name", "SuperCategory",
-                 "InfraredID", "RIOGlobalID");
+                 "InfraredID", "RIOGlobalID", "Size");
 
   bool read_row = true;
   while (read_row) {
-    std::string name, supercat;
+    std::string name, supercat, size;
     int inst = -1, cls = -1, pan = -1, mesh = -1, r = -1, g = -1, b = -1,
         ir = -1, rio = -1;
-    read_row =
-        in.read_row(inst, cls, pan, mesh, r, g, b, name, supercat, ir, rio);
+    read_row = in.read_row(inst, cls, pan, mesh, r, g, b, name, supercat, ir,
+                           rio, size);
     // Label.
     LabelEntry label;
     if (inst != -1) {
@@ -50,6 +54,9 @@ void LabelHandler::readLabelsFromFile(const std::string& source_file) {
     }
     if (!name.empty()) {
       label.name = name;
+    }
+    if (!size.empty()) {
+      label.size = size;
     }
     if (!supercat.empty()) {
       label.supercategory = supercat;

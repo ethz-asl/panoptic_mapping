@@ -81,10 +81,10 @@ void GroundTruthIDTracker::parseInputInstance(int instance,
       submaps, input, instance,
       globals_->labelHandler()->getLabelEntry(instance));
   if (new_submap) {
-    instance_to_id_[instance] = new_submap->getID();
     if (config_.use_ground_truth_instance_ids) {
       new_submap->setInstanceID(instance);
     }
+    instance_to_id_[instance] = new_submap->getID();
   } else {
     LOG_IF(WARNING, config_.verbosity >= 2)
         << "Submap allocation failed for input ID '" << instance << "'.";

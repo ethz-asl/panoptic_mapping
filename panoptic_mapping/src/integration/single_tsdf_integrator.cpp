@@ -25,6 +25,7 @@ void SingleTsdfIntegrator::Config::checkParams() const {
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("projective_integrator_config", &projective_integrator_config);
+  projective_integrator_config.foreign_rays_clear = false;
 }
 
 SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
@@ -122,6 +123,10 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     if (!computeVoxelDistanceAndWeight(
             &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
             submap_id, truncation_distance, voxel_size, false)) {
+      continue;
+    }
+
+    if (sdf < -truncation_distance) {
       continue;
     }
 

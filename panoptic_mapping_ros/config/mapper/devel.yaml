@@ -3,8 +3,8 @@ verbosity: 3
 use_threadsafe_submap_collection: true
 use_transform_caching: true
 global_frame_name: world
-label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
-#label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
+#label_path: /home/lukas/Documents/Datasets/flat_dataset/run1/detectron_labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -31,7 +31,9 @@ submap_allocator:
   use_class_layer: true 
   
   # Semantic
-  instance_voxel_size: 0.05
+  small_instance_voxel_size: 0.02
+  medium_instance_voxel_size: 0.05
+  large_instance_voxel_size: 0.07
   background_voxel_size: 0.1
   unknown_voxel_size: 0.1
   
@@ -43,11 +45,11 @@ freespace_allocator:
   voxel_size: 0.3
 
 id_tracker:
-  type: single_tsdf  # single_tsdf, ground_truth, projective, detectron
-  verbosity: 1
+  type: ground_truth  # single_tsdf, ground_truth, projective, detectron
+  verbosity: 4
 
   # Ground Truth
-  use_ground_truth_instance_ids: true
+  use_ground_truth_instance_ids: false
   
   # Projective ID tracker
   depth_tolerance: -1  # m, negative = #vs
@@ -63,7 +65,7 @@ id_tracker:
   
 
 tsdf_integrator:  
-  type: single_tsdf # projective, class_projective, single_tsdf
+  type: projective # projective, class_projective, single_tsdf
   verbosity: 1     
 
   # Projective
@@ -83,8 +85,8 @@ map_management:
   verbosity: 0
   
   # Frequencies
-  prune_active_blocks_frequency: 0 # 1
-  activity_management_frequency: 0 # 1
+  prune_active_blocks_frequency: 1 # 1
+  activity_management_frequency: 1 # 1
   change_detection_frequency: 0
   
   # Behavior

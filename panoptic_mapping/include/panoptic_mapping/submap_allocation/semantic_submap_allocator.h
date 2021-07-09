@@ -22,7 +22,9 @@ class SemanticSubmapAllocator : public SubmapAllocatorBase {
     Submap::Config submap_config;
 
     // Voxel sizes per label.
-    float instance_voxel_size = 0.05;   // m
+    float small_instance_voxel_size = 0.03;   // m
+    float medium_instance_voxel_size = 0.05;  // m
+    float large_instance_voxel_size = 0.07;   // m
     float background_voxel_size = 0.1;  // m
     float unknown_voxel_size = 0.1;     // m
 

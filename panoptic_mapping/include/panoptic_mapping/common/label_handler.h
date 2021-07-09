@@ -21,6 +21,7 @@ class LabelHandler {
     PanopticLabel label = PanopticLabel::kUnknown;
     std::string name = "UninitializedName";
     std::string supercategory = "UninitializedSupercategory";
+    std::string size = "Unknown";
     Color color = Color(80, 80, 80);
 
     // Print the contents of a label.

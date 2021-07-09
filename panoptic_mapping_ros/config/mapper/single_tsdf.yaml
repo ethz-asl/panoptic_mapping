@@ -41,7 +41,7 @@ id_tracker:
 #  debug: true
   
   # Single TSDF
-  voxel_size: 0.1
+  voxel_size: 0.05
   truncation_distance: -2
   voxels_per_side: 16
   use_class_layer: false
