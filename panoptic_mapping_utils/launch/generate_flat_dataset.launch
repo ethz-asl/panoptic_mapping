@@ -40,7 +40,7 @@
   
    <!-- Record a rosbag of the visualization-->
   <node pkg="rosbag" type="record" name="rosbag" if="$(arg record_data)"
-       args="record -o $(arg output_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected "/>  
+       args="record -o $(arg output_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected /airsim_drone/Pointcloud"/>  
 <!--  /airsim_drone/Pointcloud     -->
 
   <!-- RVIZ Visualization -->

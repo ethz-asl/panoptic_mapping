@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import csv
 
 import airsim
 import numpy as np
-from scipy import misc
+import imageio
 
 
 def get_ir_ids(ir_correction_file):
@@ -140,7 +140,8 @@ class Labler(object):
         return self.meshes_to_label
 
     def add_instance(self, mesh_names, class_name):
-        """ mesh names: list of all meshnames to include, class_name: string of class name """
+        """ mesh names: list of all meshnames to include, 
+        class_name: string of class name """
         # Instance
         label_id = self.instance_counter
         self.instance_counter = self.instance_counter + 1
@@ -501,9 +502,9 @@ def export_labels(labels, out_file_name):
     """
     Save label data to file.
     """
-    color_palette = misc.imread(
-        "/home/lukas/programs/AirSim/Unreal/Plugins/AirSim/Content/HUDAssets/"
-        "seg_color_pallet.png")
+    color_palette = imageio.imread(
+        "/home/lukas/programs/AirSim/Unreal/Plugins/AirSim/Content/"
+        "HUDAssets/seg_color_palette.png")
     with open(out_file_name, 'w') as csvfile:
         writer = csv.writer(csvfile,
                             delimiter=',',
@@ -555,11 +556,11 @@ if __name__ == "__main__":
     # Args.
     get_ir_corrections = False
     apply_mesh_labels = True
-    export_mesh_labels = False
+    export_mesh_labels = True
 
     # Run
-    # main_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
-    main_large_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
+    main_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
+    # main_large_flat(get_ir_corrections, apply_mesh_labels, export_mesh_labels)
 
     # Tools.
     # get_available_meshes(f_labels)

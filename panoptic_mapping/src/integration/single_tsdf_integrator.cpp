@@ -110,6 +110,10 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
+  ClassBlock* class_block;
+  if (submap->hasClassLayer()) {
+    class_block = &submap->getClassLayerPtr()->getBlockByIndex(index);
+  }
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
@@ -130,7 +134,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
       continue;
     }
 
-    // Apply distance, color, and weight.
+    // Apply distance, color, weight, and class labeling if requested.
     voxel.distance = (voxel.distance * voxel.weight +
                       std::max(std::min(truncation_distance, sdf),
                                -1.f * truncation_distance) *
@@ -138,8 +142,8 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
                      (voxel.weight + weight);
     voxel.weight = std::min(voxel.weight + weight,
                             config_.projective_integrator_config.max_weight);
-    // Only merge color near the surface and if point belongs to the submap.
-    if (std::abs(sdf) < truncation_distance) {
+    // Only merge color and classes near the surface.
+    if (sdf < truncation_distance) {
       voxel.color = Color::blendTwoColors(
           voxel.color, voxel.weight,
           interpolator->interpolateColor(color_image), weight);
