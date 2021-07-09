@@ -28,7 +28,8 @@ def create_label_ids_flat(ir_correction_file):
     Create the class and instance labels for the objects in the flat dataset.
     """
     # labels for the flat test dataset
-    labels = []  # {InstanceID, ClassID, PanopticID, MeshID, InfraredID, Name}
+    labels = [
+    ]  # {InstanceID, ClassID, PanopticID, MeshID, InfraredID, Name, Size}
 
     mesh_ids, ir_ids = get_ir_ids(ir_correction_file)
 
@@ -41,7 +42,7 @@ def create_label_ids_flat(ir_correction_file):
         "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
     ]
 
-    def set_label(name, increment_class=True, count=1):
+    def set_label(name, size="M", increment_class=True, count=1):
         for i in range(count):
             if i >= len(letters):
                 print("Warning: can only write %i (request is %i) suffixes "
@@ -54,6 +55,7 @@ def create_label_ids_flat(ir_correction_file):
             id_counter[0] = id_counter[0] + 1
             label["InstanceID"] = label_id
             label["Name"] = full_name
+            label["Size"] = size
 
             # IR and mesh
             if label_id < len(mesh_ids):
@@ -82,34 +84,34 @@ def create_label_ids_flat(ir_correction_file):
 
     # Instances
     panotpic_id = 1
-    set_label("SM_Bed")
+    set_label("SM_Bed", "L")
     set_label("SM_Bed_lamp", count=2)
     set_label("SM_Bed_table", count=2)
-    set_label("SM_Bottle")
+    set_label("SM_Bottle", "S")
     set_label("SM_Ceiling_lamp", count=12)
     set_label("SM_Chair", count=2)
     set_label("SM_Kitchen_Chair", increment_class=False)
     set_label("SM_Coffee_table")
-    set_label("SM_Cup", count=3)
-    set_label("SM_Decor", count=2)
+    set_label("SM_Cup", "S", count=3)
+    set_label("SM_Decor", "S", count=2)
     set_label("SM_Digital_Clock")
     set_label("SM_Dimmer", count=2)
     set_label("SM_Door", count=2)
     set_label("SM_Floor_Lamp")
-    set_label("SM_Journal", count=3)
-    set_label("SM_Kitchen")
+    set_label("SM_Journal", "S", count=3)
+    set_label("SM_Kitchen", "L")
     set_label("SM_Picture", count=7)
-    set_label("SM_Plant")
-    set_label("SM_Plate", count=3)
-    set_label("SM_Remote")
-    set_label("SM_Sofa")
-    set_label("SM_Stack_of_Books", count=6)
+    set_label("SM_Plant", "S")
+    set_label("SM_Plate", "S", count=3)
+    set_label("SM_Remote", "S")
+    set_label("SM_Sofa", "L")
+    set_label("SM_Stack_of_Books", "S", count=6)
     set_label("SM_Table")
-    set_label("SM_Table_Decor")
-    set_label("SM_Tumblr", count=2)
+    set_label("SM_Table_Decor", "S")
+    set_label("SM_Tumblr", "S", count=2)
     set_label("SM_TV")
     set_label("SM_Wall_Clock")
-    set_label("SM_Coffee_Machine")
+    set_label("SM_Coffee_Machine", "S")
     set_label("SM_Nightstand")
 
     print("Created a labeling with %i instances and %i classes." %
@@ -508,15 +510,8 @@ def export_labels(labels, out_file_name):
                             quotechar='|',
                             quoting=csv.QUOTE_MINIMAL)
         writer.writerow([
-            "InstanceID",
-            "ClassID",
-            "PanopticID",
-            "MeshID",
-            "InfraredID",
-            "R",
-            "G",
-            "B",
-            "Name",
+            "InstanceID", "ClassID", "PanopticID", "MeshID", "InfraredID", "R",
+            "G", "B", "Name", "Size"
         ])
         for label in labels:
             writer.writerow([
@@ -524,7 +519,8 @@ def export_labels(labels, out_file_name):
                 label["MeshID"], label["InfraredID"],
                 color_palette[0, label["MeshID"] * 4,
                               0], color_palette[0, label["MeshID"] * 4, 1],
-                color_palette[0, label["MeshID"] * 4, 2], label["Name"]
+                color_palette[0, label["MeshID"] * 4,
+                              2], label["Name"], label["Size"]
             ])
     print("Saved %i labels in '%s'." % (len(labels), out_file_name))
 

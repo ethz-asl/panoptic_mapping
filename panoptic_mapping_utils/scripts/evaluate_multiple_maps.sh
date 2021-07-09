@@ -2,7 +2,7 @@
 # Run this script to setup semantic labelling.
 
 target_dir="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution"
-target_files=("run1_2cm" "run1_5cm" "run1_10cm" "run1_20cm")
+target_files=("3cm" "5cm" "10cm" "20cm")
 
 
 # Evaluation

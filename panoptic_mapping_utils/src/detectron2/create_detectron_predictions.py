@@ -26,19 +26,21 @@ class Params:
 
 
 def create_labels(meta_data, output_file: str = ""):
+    sizes = []
     if (output_file):
         with open(output_file, 'w') as csvfile:
             writer = csv.writer(csvfile,
                                 delimiter=',',
                                 quotechar='|',
                                 quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["InstanceID", "ClassID", "PanopticID", "Name"])
+            writer.writerow(
+                ["InstanceID", "ClassID", "PanopticID", "Name", "Size"])
             id = 0
             for label in meta_data.stuff_classes:
-                writer.writerow([id, id, 0, label])
+                writer.writerow([id, id, 0, label, ''])
                 id += 1
-            for label in meta_data.thing_classes:
-                writer.writerow([id, id, 0, label])
+            for i, label in enumerate(meta_data.thing_classes):
+                writer.writerow([id, id, 1, label, sizes[i]])
                 id += 1
         return len(meta_data.thing_classes), "Saved %i labels in '%s'." % (
             id, output_file)
@@ -115,7 +117,7 @@ if __name__ == '__main__':
     params = Params()
     params.model = "COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"
     params.target_path = '/home/lukas/Documents/Datasets/flat_dataset/run1'
-    params.output_label_file = '/home/lukas/Documents/Datasets/flat_dataset/run1/detectron_labels.csv'
+    params.output_label_file = '/home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv'
 
     # Run.
     create_predictions(params)

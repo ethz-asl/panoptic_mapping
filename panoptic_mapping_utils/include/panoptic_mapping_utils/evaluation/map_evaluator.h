@@ -34,6 +34,7 @@ class MapEvaluator {
     bool visualize = true;
     bool evaluate = true;
     bool compute_coloring = false;  // Use map_file to load and display.
+    bool ignore_truncated_points = false;
     bool color_by_max_error = false;  // false: color by average error
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }

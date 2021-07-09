@@ -28,6 +28,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("visualize", &visualize);
   setupParam("compute_coloring", &compute_coloring);
   setupParam("color_by_max_error", &color_by_max_error);
+  setupParam("ignore_truncated_points", &ignore_truncated_points);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -156,10 +157,13 @@ void MapEvaluator::computeReconstructionError(
     float distance;
     if (planning_->getDistance(point, &distance, false, false)) {
       if (std::abs(distance) > request.maximum_distance) {
-        distance = request.maximum_distance;
         truncated_points++;
+        if (!request.ignore_truncated_points) {
+          abserror.push_back(request.maximum_distance);
+        }
+      } else {
+        abserror.push_back(std::abs(distance));
       }
-      abserror.push_back(std::abs(distance));
     } else {
       unknown_points++;
     }
