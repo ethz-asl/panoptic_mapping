@@ -19,7 +19,6 @@ class GroundTruthIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    bool use_ground_truth_instance_ids = true;
 
     Config() { setConfigName("GroundTruthIDTracker"); }
 
@@ -34,7 +33,16 @@ class GroundTruthIDTracker : public IDTrackerBase {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
-  void parseInputInstance(int instance, SubmapCollection* submaps,
+  /**
+   * @brief Check whether this instance id is already allocated or allocate if
+   * possible.
+   *
+   * @param instance Segmentation input id to use.
+   * @param submaps Submap collection to allocate the submap in.
+   * @param input Input data based upon which the submap will be allocated.
+   * @return True if the submap was allocated or tracked.
+   */
+  bool parseInputInstance(int instance, SubmapCollection* submaps,
                           InputData* input);
   void printAndResetWarnings();
 

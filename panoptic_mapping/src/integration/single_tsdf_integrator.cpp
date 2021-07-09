@@ -43,7 +43,7 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(globals_->camera().get());
   CHECK(inputIsValid(*input));
 
-  // Allocate all blocks in corresponding submaps.
+  // Allocate all blocks in the map.
   cam_config_ = &(globals_->camera()->getConfig());
   Submap* map = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
   auto t1 = std::chrono::high_resolution_clock::now();
@@ -112,6 +112,12 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const int submap_id = submap->getID();
   ClassBlock* class_block;
   if (submap->hasClassLayer()) {
+    if (!submap->getClassLayer().hasBlock(index)) {
+      LOG(WARNING) << "Tried to access inexistent class block '"
+                   << index.transpose() << "' in submap " << submap->getID()
+                   << ".";
+      return;
+    }
     class_block = &submap->getClassLayerPtr()->getBlockByIndex(index);
   }
 

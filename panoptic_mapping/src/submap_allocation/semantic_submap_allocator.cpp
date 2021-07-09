@@ -7,13 +7,13 @@ config_utilities::Factory::RegistrationRos<SubmapAllocatorBase,
     SemanticSubmapAllocator::registration_("semantic");
 
 void SemanticSubmapAllocator::Config::checkParams() const {
-  // NOTE(schmluk): the submap config is not checked for validity to not
-  // initialize the truncation distance.
+  checkParamConfig(submap_config);
   checkParamGT(small_instance_voxel_size, 0.f, "small_instance_voxel_size");
   checkParamGT(medium_instance_voxel_size, 0.f, "medium_instance_voxel_size");
   checkParamGT(large_instance_voxel_size, 0.f, "large_instance_voxel_size");
   checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
   checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
+  checkParamNE(truncation_distance, 0.f, "truncation_distance");
 }
 
 void SemanticSubmapAllocator::Config::setupParamsAndPrinting() {
@@ -24,6 +24,7 @@ void SemanticSubmapAllocator::Config::setupParamsAndPrinting() {
   setupParam("large_instance_voxel_size", &large_instance_voxel_size);
   setupParam("background_voxel_size", &background_voxel_size);
   setupParam("unknown_voxel_size", &unknown_voxel_size);
+  setupParam("truncation_distance", &truncation_distance);
 }
 
 SemanticSubmapAllocator::SemanticSubmapAllocator(const Config& config,
@@ -60,7 +61,8 @@ Submap* SemanticSubmapAllocator::allocateSubmap(
     }
   }
 
-  // Check the truncation distance is met.
+  // Set the truncation distance.
+  config.truncation_distance = config_.truncation_distance;
   if (config.truncation_distance < 0.f) {
     config.truncation_distance *= -config.voxel_size;
   }
@@ -70,7 +72,8 @@ Submap* SemanticSubmapAllocator::allocateSubmap(
   new_submap->setClassID(label.class_id);
   new_submap->setLabel(label.label);
   new_submap->setName(label.name);
-
+  std::cout << "Created Subamp " << new_submap->getID() << " for input ID "
+            << input_id << std::endl;
   return new_submap;
 }
 

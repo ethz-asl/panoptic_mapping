@@ -47,9 +47,6 @@ freespace_allocator:
 id_tracker:
   type: ground_truth  # single_tsdf, ground_truth, projective, detectron
   verbosity: 4
-
-  # Ground Truth
-  use_ground_truth_instance_ids: false
   
   # Projective ID tracker
   depth_tolerance: -1  # m, negative = #vs
@@ -82,11 +79,11 @@ tsdf_integrator:
   # Single TSDF
   
 map_management:
-  verbosity: 0
+  verbosity: 4
   
   # Frequencies
-  prune_active_blocks_frequency: 1 # 1
-  activity_management_frequency: 1 # 1
+  prune_active_blocks_frequency: 0 # 1
+  activity_management_frequency: 0 # 1
   change_detection_frequency: 0
   
   # Behavior

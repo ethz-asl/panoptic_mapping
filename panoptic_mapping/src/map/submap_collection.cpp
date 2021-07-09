@@ -54,6 +54,10 @@ Submap* SubmapCollection::getSubmapPtr(int id) {
 void SubmapCollection::clear() {
   submaps_.clear();
   id_to_index_.clear();
+  instance_id_manager_ = InstanceIDManager();
+  submap_id_manager_ = SubmapIDManager();
+  instance_to_submap_ids_.clear();
+  active_freespace_submap_id_ = -1;
 }
 
 void SubmapCollection::updateIDList(const std::vector<int>& id_list,

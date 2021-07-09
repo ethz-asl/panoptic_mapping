@@ -113,7 +113,7 @@ def extract_bag(source_bag, target_dest):
 
 
 if __name__ == '__main__':
-    source_bag = '/home/lukas/Documents/Datasets/large_flat_dataset/' \
+    source_bag = '/home/lukas/Documents/Datasets/flat_dataset/' \
                  'run1.bag'
-    target_dest = '/home/lukas/Documents/Datasets/large_flat_dataset/run1'
+    target_dest = '/home/lukas/Documents/Datasets/flat_dataset/run1'
     extract_bag(source_bag, target_dest)

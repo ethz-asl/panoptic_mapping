@@ -30,7 +30,7 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(submaps);
   CHECK_NOTNULL(input);
   CHECK(inputIsValid(*input));
-  // Look for new instances.
+  // Look for new instances that are within integration range.
   std::unordered_set<int> instances;
   for (int u = 0; u < input->idImage()->cols; ++u) {
     for (int v = 0; v < input->idImage()->rows; ++v) {
@@ -49,20 +49,33 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   // Set segmentation image to submap ids.
   for (auto it = input->idImage()->begin<int>();
        it != input->idImage()->end<int>(); ++it) {
-    *it = instance_to_id_[*it];
+    auto it2 = instance_to_id_.find(*it);
+    if (it2 == instance_to_id_.end()) {
+      *it = -1;
+    } else {
+      *it = it2->second;
+    }
   }
 
   // Allocate free space map if required.
   freespace_allocator_->allocateSubmap(submaps, input);
 }
 
-void GroundTruthIDTracker::parseInputInstance(int instance,
+bool GroundTruthIDTracker::parseInputInstance(int instance,
                                               SubmapCollection* submaps,
                                               InputData* input) {
   // Known existing submap.
-  if (instance_to_id_.find(instance) != instance_to_id_.end()) {
-    submaps->getSubmapPtr(instance_to_id_[instance])->setWasTracked(true);
-    return;
+  auto it = instance_to_id_.find(instance);
+  if (it != instance_to_id_.end()) {
+    if (submaps->submapIdExists(it->second)) {
+      submaps->getSubmapPtr(it->second)->setWasTracked(true);
+      return true;
+    } else {
+      LOG_IF(WARNING, config_.verbosity >= 2)
+          << "Submap '" << it->second << "' for instance ID '" << instance
+          << "' has been deleted.";
+      instance_to_id_.erase(it);
+    }
   }
 
   // Check whether the instance code is known.
@@ -73,7 +86,7 @@ void GroundTruthIDTracker::parseInputInstance(int instance,
     } else {
       error_it->second++;
     }
-    return;
+    return false;
   }
 
   // Allocate new submap.
@@ -81,13 +94,13 @@ void GroundTruthIDTracker::parseInputInstance(int instance,
       submaps, input, instance,
       globals_->labelHandler()->getLabelEntry(instance));
   if (new_submap) {
-    if (config_.use_ground_truth_instance_ids) {
-      new_submap->setInstanceID(instance);
-    }
+    new_submap->setInstanceID(instance);
     instance_to_id_[instance] = new_submap->getID();
+    return true;
   } else {
     LOG_IF(WARNING, config_.verbosity >= 2)
         << "Submap allocation failed for input ID '" << instance << "'.";
+    return false;
   }
 }
 
