@@ -25,6 +25,7 @@ void InputSynchronizer::Config::checkParams() const {
   checkParamGT(max_input_queue_length, 0, "max_input_queue_length");
   checkParamCond(!global_frame_name.empty(),
                  "'global_frame_name' may not be empty.");
+  checkParamGE(transform_lookup_time, 0.f, "transform_lookup_time");
 }
 
 void InputSynchronizer::Config::setupParamsAndPrinting() {
@@ -33,6 +34,7 @@ void InputSynchronizer::Config::setupParamsAndPrinting() {
   setupParam("global_frame_name", &global_frame_name);
   setupParam("sensor_frame_name", &sensor_frame_name);
   setupParam("use_transform_caching", &use_transform_caching);
+  setupParam("transform_lookup_time", &transform_lookup_time);
 }
 
 InputSynchronizer::InputSynchronizer(const Config& config,
@@ -137,29 +139,49 @@ void InputSynchronizer::checkForMatchingMessages(const ros::Time& timestamp) {
   callback_(&data);
 }
 
-void InputSynchronizer::cacheTransform(const ros::Time& stamp) {
+void InputSynchronizer::cacheTransform(const ros::Time& timestamp) {
   if (frames_setup_) {
     Transformation transform;
-    if (lookupTransform(stamp, config_.global_frame_name, used_sensor_frame_,
-                        &transform)) {
-      const uint64_t time = stamp.sec * 1000000000 + stamp.nsec;
+    if (lookupTransform(timestamp, config_.global_frame_name,
+                        used_sensor_frame_, &transform)) {
+      const uint64_t time = timestamp.sec * 1000000000 + timestamp.nsec;
       transform_cache_[time] = transform;
     }
   }
 }
 
-bool InputSynchronizer::lookupTransform(const ros::Time& stamp,
+bool InputSynchronizer::lookupTransform(const ros::Time& timestamp,
                                         const std::string& base_frame,
                                         const std::string& child_frame,
                                         Transformation* transformation) const {
   tf::StampedTransform transform;
-  try {
-    tf_listener_.lookupTransform(base_frame, child_frame, stamp, transform);
-  } catch (tf::TransformException& ex) {
+  const auto t_start = std::chrono::high_resolution_clock::now();
+  bool found_transform = false;
+  std::string exception;
+  const int64_t max_time = config_.transform_lookup_time * 1e3;
+
+  // Try to lookup the transform for the maximum wait time.
+  do {
+    try {
+      tf_listener_.lookupTransform(base_frame, child_frame, timestamp,
+                                   transform);
+    } catch (tf::TransformException& ex) {
+      exception = ex.what();
+      ros::Duration(0.005).sleep();
+      continue;
+    }
+    found_transform = true;
+    break;
+  } while (std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::high_resolution_clock::now() - t_start)
+               .count() <= max_time);
+
+  if (!found_transform) {
     LOG_IF(WARNING, config_.verbosity > 0)
         << "Unable to lookup transform between '" << base_frame << "' and '"
-        << child_frame << "' at time '" << stamp << "' (" << ex.what()
-        << "), skipping inputs.";
+        << child_frame << "' at time '" << timestamp << "' over '"
+        << config_.transform_lookup_time << "s', skipping inputs. Exception: '"
+        << exception << "'.";
     return false;
   }
   CHECK_NOTNULL(transformation);

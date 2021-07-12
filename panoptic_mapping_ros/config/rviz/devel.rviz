@@ -4,7 +4,9 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Mesh1
+        - /Mesh1/Status1
+        - /BoundingVolumes1/Status1
+        - /TsdfBlocks1/Status1
       Splitter Ratio: 0.8294117450714111
     Tree Height: 726
   - Class: rviz/Selection
@@ -25,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: FreeSpaceTsdf
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -150,49 +152,65 @@ Visualization Manager:
       Visible:
         0_SM_Kitchen_a: true
         10_SM_Plate_a: true
-        11_SM_Table_Decor_a: true
-        12_SM_Table_a: true
-        13_SM_Wall_Clock_a: true
-        14_SM_Plate_c: true
-        15_SM_Cup_c: true
-        16_SM_Picture_d: true
+        11_SM_Table_a: true
+        12_SM_Wall_Clock_a: true
+        13_SM_Table_Decor_a: true
+        14_SM_Picture_d: true
+        15_SM_Plate_c: true
+        16_SM_Cup_c: true
         17_SM_Chair_b: true
         18_SM_Sofa_a: true
         19_SM_Picture_b: true
         1_SM_Door_a: true
         20_SM_TV_Wall_a: true
-        21_SM_Bed_lamp_b: true
-        22_SM_Bed_lamp_a: true
-        23_SM_Ceiling_lamp_i: true
-        24_SM_Stack_of_Books_f: true
-        25_SM_Bed_table_a: true
-        27_SM_Picture_e: true
-        28_SM_Ceiling_lamp_j: true
-        29_SM_Bed_a: true
-        2_SM_Tumblr_a: true
-        30_SM_Bed_table_b: true
-        33_SM_TV_a: true
-        34_SM_Ceiling_lamp_f: true
-        35_SM_Ceiling_lamp_h: true
-        36_SM_Plate_b: true
-        37_SM_Picture_c: true
-        38_SM_Ceiling_lamp_e: true
-        39_SM_Cup_a: true
-        3_SM_Dimmer_a: true
-        40_SM_Journal_c: true
-        41_SM_Remote_a: true
+        21_SM_Bed_lamp_a: true
+        22_SM_Ceiling_lamp_i: true
+        23_SM_Stack_of_Books_f: true
+        24_SM_Bed_table_a: true
+        26_SM_Picture_e: true
+        27_SM_Ceiling_lamp_j: true
+        28_SM_Bed_a: true
+        29_SM_Bed_table_b: true
+        2_SM_Dimmer_a: true
+        30_SM_Bed_lamp_b: true
+        31_SM_Ceiling_lamp_g: true
+        32_SM_Journal_c: true
+        33_SM_Journal_b: true
+        34_SM_Coffee_table_a: true
+        35_SM_TV_a: true
+        36_SM_Ceiling_lamp_e: true
+        37_SM_Ceiling_lamp_d: true
+        38_SM_Ceiling_lamp_f: true
+        39_SM_Picture_c: true
+        3_SM_Tumblr_a: true
+        40_SM_Remote_a: true
+        41_SM_Cup_a: true
         42_SM_Picture_a: true
         43_SM_Ceiling_lamp_c: true
-        44_SM_Coffee_table_a: true
-        45_SM_Journal_b: true
-        46_SM_Ceiling_lamp_d: true
-        47_SM_Ceiling_lamp_g: true
-        48_SM_Floor_Lamp_a: true
-        49_SM_Windows_Windows_a: true
-        4_SM_Floor_a: true
-        50_SM_Tumblr_b: true
-        5_SM_Walls_a: true
-        7_SM_Ceiling_a: true
+        44_SM_Plate_b: true
+        45_SM_Ceiling_lamp_h: true
+        46_SM_Floor_Lamp_a: true
+        47_SM_Windows_Windows_a: true
+        48_SM_Door_b: true
+        49_SM_Tumblr_b: true
+        4_SM_Ceiling_a: true
+        50_SM_Dimmer_b: true
+        51_SM_Ceiling_lamp_a: true
+        52_SM_Ceiling_lamp_b: true
+        53_SM_Picture_f: true
+        54_SM_Picture_g: true
+        55_SM_Journal_a: true
+        56_SM_Digital_Clock_a: true
+        57_SM_Stack_of_Books_c: true
+        58_SM_Decor_b: true
+        59_SM_Stack_of_Books_a: true
+        5_SM_Floor_a: true
+        60_SM_Stack_of_Books_b: true
+        61_SM_Decor_a: true
+        62_SM_Stack_of_Books_e: true
+        63_SM_Stack_of_Books_d: true
+        64_SM_Plant_a: true
+        6_SM_Walls_a: true
         8_SM_Chair_a: true
         9_SM_Cup_b: true
         Value: true
@@ -213,7 +231,7 @@ Visualization Manager:
       Max Color: 255; 255; 255
       Max Intensity: 0.6000001430511475
       Min Color: 0; 0; 0
-      Min Intensity: -0.5982100963592529
+      Min Intensity: -0.5994832515716553
       Name: FreeSpaceTsdf
       Position Transformer: XYZ
       Queue Size: 10
@@ -221,14 +239,14 @@ Visualization Manager:
       Size (Pixels): 5
       Size (m): 0.009999999776482582
       Style: Points
-      Topic: /panoptic_mapper/visualization/free_space_tsdf
+      Topic: /panoptic_mapper/visualization/submaps/free_space_tsdf
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
     - Class: rviz/MarkerArray
       Enabled: false
-      Marker Topic: /panoptic_mapper/visualization/bounding_volumes
+      Marker Topic: /panoptic_mapper/visualization/submaps/bounding_volumes
       Name: BoundingVolumes
       Namespaces:
         {}
@@ -399,10 +417,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.33479642868042
+      Pitch: 1.0997964143753052
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.5991499423980713
+      Yaw: 3.3691482543945312
     Saved: ~
 Window Geometry:
   Color:
@@ -416,7 +434,7 @@ Window Geometry:
     collapsed: false
   Normals:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000015600000361fc020000000ffb0000001200530065006c0065006300740069006f006e000000003d0000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afc0000003d00000361000000c900fffffffa000000010100000002fb0000000e004e006f0072006d0061006c007302000001c8000002830000018800000138fb000000100044006900730070006c0061007900730100000000000001560000015600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0043006f006c006f0072020000003b0000001d0000018e00000135fb0000000a0049006e007000750074020000003b000001500000018b00000133fb0000001000520065006e0064006500720065006402000001c80000001d0000018b00000131fb0000000e0054007200610063006b0065006402000001c7000001500000018c00000134fb0000001e0055006e0072006500660069006e0064006500200049006e007000750074020000003b0000025800000280000001e0000000010000010f00000361fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000361000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004f30000003efc0100000002fb0000000800540069006d00650100000000000004f3000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000003970000036100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015600000361fc020000000ffb0000001200530065006c0065006300740069006f006e000000003d0000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afc0000003d00000361000000c900fffffffa000000010100000002fb0000000e004e006f0072006d0061006c007302000001c8000002830000018800000138fb000000100044006900730070006c0061007900730100000000000001560000015600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0043006f006c006f0072020000003b0000001d00000280000001e0fb0000000a0049006e007000750074020000003b000001500000018b00000133fb0000001000520065006e0064006500720065006402000001c80000001d0000018b00000131fb0000000e0054007200610063006b0065006402000001c7000001500000018c00000134fb0000001e0055006e0072006500660069006e0064006500200049006e007000750074020000003b0000025800000280000001e0000000010000010f00000361fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000361000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004f30000003efc0100000002fb0000000800540069006d00650100000000000004f3000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000003970000036100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Rendered:
     collapsed: false
   Selection:

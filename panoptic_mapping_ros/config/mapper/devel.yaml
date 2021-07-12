@@ -2,7 +2,8 @@
 verbosity: 3
 use_threadsafe_submap_collection: true
 use_transform_caching: true
-global_frame_name: odom
+transform_lookup_time: 0.1
+global_frame_name: world
 #label_path: /home/lukas/Documents/Datasets/flat_dataset/run1/detectron_labels.csv
 label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 visualization_interval: -1.0

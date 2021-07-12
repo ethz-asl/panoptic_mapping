@@ -34,6 +34,8 @@ class InputSynchronizer {
     // header of the depth image is taken.
     bool use_transform_caching = true;  // If true treat transforms like an
     // input and look them up based on the depth images.
+    float transform_lookup_time =
+        0.1f;  // s, Maximum time to wait for transforms.
 
     Config() { setConfigName("InputSynchronizer"); }
 
@@ -58,10 +60,22 @@ class InputSynchronizer {
   void advertiseInputTopics();
 
  private:
-  // Check for matching data to trigger the callback.
+  /**
+   * @brief Check for data with matching timestamps to trigger the extraction
+   * callback.
+   *
+   * @param timestamp Timestamp to match against.
+   */
   void checkForMatchingMessages(const ros::Time& timestamp);
 
-  // Utility function for more readable queue allocation.
+  /**
+   * @brief Utility function for more readable queue allocation.
+   *
+   * @tparam MsgT Message type of the topic to subscribe.
+   * @param type Input type based on which the topic names are selected.
+   * @param extraction_function Function that is called to extract the message
+   * to input data.
+   */
   template <typename MsgT>
   void addQueue(
       InputData::InputType type,
@@ -87,9 +101,9 @@ class InputSynchronizer {
   /**
    * @brief Try to lookup the transform and store it in the cache.
    *
-   * @param stamp Timestamp for which to lookup the transform.
+   * @param timestamp Timestamp for which to lookup the transform.
    */
-  void cacheTransform(const ros::Time& stamp);
+  void cacheTransform(const ros::Time& timestamp);
 
   /**
    * @brief Try to lookup the specified transform from tf.
