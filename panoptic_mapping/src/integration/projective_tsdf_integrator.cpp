@@ -280,8 +280,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const int id = input->idImage()->at<int>(v, u);
       if (submaps->submapIdExists(id)) {
         Submap* submap = submaps->getSubmapPtr(id);
-        const Point p_S = submap->getT_S_M() * input->T_M_C() *
-                          p_C;  // p_S = T_S_M * T_M_C * p_C
+        const Point p_S = submap->getT_S_M() * input->T_M_C() * p_C;
         const voxblox::BlockIndex index =
             submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
         submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(index);

@@ -72,8 +72,6 @@ Submap* SemanticSubmapAllocator::allocateSubmap(
   new_submap->setClassID(label.class_id);
   new_submap->setLabel(label.label);
   new_submap->setName(label.name);
-  std::cout << "Created Subamp " << new_submap->getID() << " for input ID "
-            << input_id << std::endl;
   return new_submap;
 }
 

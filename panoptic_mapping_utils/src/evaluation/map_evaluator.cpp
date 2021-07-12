@@ -67,23 +67,38 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
 
   // Load the map to evaluate.
   if (!request.map_file.empty()) {
-    submaps_ = std::make_shared<SubmapCollection>();
-    if (!submaps_->loadFromFile(request.map_file)) {
-      LOG(ERROR) << "Could not load panoptic map from '" << request.map_file
-                 << "'.";
-      submaps_.reset();
-      return false;
-    }
-
-    // Setup related tools.
-    planning_ = std::make_unique<PlanningInterface>(submaps_);
+    // Load the map.
+    const std::string extension =
+        request.map_file.substr(request.map_file.find_last_of('.'));
     size_t separator = request.map_file.find_last_of('/');
     target_directory_ = request.map_file.substr(0, separator);
     target_map_name_ = request.map_file.substr(
-        separator + 1, request.map_file.length() - separator - 8);
-    LOG_IF(INFO, request.verbosity >= 2) << "Loaded the target panoptic map.";
+        separator + 1,
+        request.map_file.length() - separator - extension.length() - 1);
+
+    if (extension == ".panmap") {
+      // Load panoptic map.
+      use_voxblox_ = false;
+      submaps_ = std::make_shared<SubmapCollection>();
+      if (!submaps_->loadFromFile(request.map_file)) {
+        LOG(ERROR) << "Could not load panoptic map from '" << request.map_file
+                   << "'.";
+        submaps_.reset();
+        return false;
+      }
+      planning_ = std::make_unique<PlanningInterface>(submaps_);
+      LOG_IF(INFO, request.verbosity >= 2) << "Loaded the target panoptic map.";
+    } else if (extension == ".vxblx") {
+      use_voxblox_ = true;
+      voxblox::io::LoadLayer<voxblox::TsdfVoxel>(request.map_file, &voxblox_);
+      LOG_IF(INFO, request.verbosity >= 2) << "Loaded the target voxblox map.";
+    } else {
+      LOG(ERROR) << "cannot load file of unknown extension '"
+                 << request.map_file << "'.";
+      return false;
+    }
   }
-  if (!submaps_) {
+  if (!submaps_ && !use_voxblox_) {
     LOG(ERROR) << "No panoptic map loaded.";
     return false;
   }
@@ -150,22 +165,43 @@ void MapEvaluator::computeReconstructionError(
   ProgressBar bar;
 
   // Evaluate gt pcl based(# gt points within < trunc_dist)
+  std::unique_ptr<voxblox::Interpolator<voxblox::TsdfVoxel>> interp;
+
+  if (use_voxblox_) {
+    interp.reset(new voxblox::Interpolator<voxblox::TsdfVoxel>(voxblox_.get()));
+  }
+
   for (const auto& pcl_point : *gt_ptcloud_) {
-    const voxblox::Point point(pcl_point.x, pcl_point.y, pcl_point.z);
+    const Point point(pcl_point.x, pcl_point.y, pcl_point.z);
     total_points++;
 
     float distance;
-    if (planning_->getDistance(point, &distance, false, false)) {
-      if (std::abs(distance) > request.maximum_distance) {
-        truncated_points++;
-        if (!request.ignore_truncated_points) {
-          abserror.push_back(request.maximum_distance);
+    if (use_voxblox_) {
+      if (interp->getDistance(point, &distance, true)) {
+        if (std::abs(distance) > request.maximum_distance) {
+          truncated_points++;
+          if (!request.ignore_truncated_points) {
+            abserror.push_back(request.maximum_distance);
+          }
+        } else {
+          abserror.push_back(std::abs(distance));
         }
       } else {
-        abserror.push_back(std::abs(distance));
+        unknown_points++;
       }
     } else {
-      unknown_points++;
+      if (planning_->getDistance(point, &distance, false, false)) {
+        if (std::abs(distance) > request.maximum_distance) {
+          truncated_points++;
+          if (!request.ignore_truncated_points) {
+            abserror.push_back(request.maximum_distance);
+          }
+        } else {
+          abserror.push_back(std::abs(distance));
+        }
+      } else {
+        unknown_points++;
+      }
     }
 
     // Progress bar.

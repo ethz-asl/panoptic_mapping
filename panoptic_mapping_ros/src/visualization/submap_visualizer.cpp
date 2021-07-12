@@ -324,6 +324,9 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
         submap.getTsdfLayer().voxel_size() *
         static_cast<float>(submap.getTsdfLayer().voxels_per_side());
     unsigned int counter = 0;
+    std::cout << "Submap " << submap.getID() << " has "
+              << submap.getTsdfLayer().getNumberOfAllocatedBlocks()
+              << " blocks." << std::endl;
 
     // Get color.
     Color color = kUnknownColor_;

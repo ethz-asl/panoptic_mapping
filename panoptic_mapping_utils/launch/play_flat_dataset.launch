@@ -13,7 +13,9 @@
 <!-- ============ Play Data ============ -->
   <arg name="sim_time_string" value="" unless="$(arg use_sim_time)"/>
   <arg name="sim_time_string" value=" --clock" if="$(arg use_sim_time)"/>
-  
+  <param name="use_sim_time" value="$(arg use_sim_time)" /> 
+
+  <!-- Play the bag. -->
   <node pkg="rosbag" type="play" name="rosbag" args="$(arg bag_name)$(arg sim_time_string) -r $(arg bag_play_rate) -d $(arg wait_time) -s $(arg start_at)">
     <remap from="/airsim_drone/ground_truth/pose" to="$(arg namespace)/pose" />
     <remap from="/airsim_drone/Pointcloud" to="$(arg namespace)/pointcloud" />  
@@ -23,11 +25,15 @@
     <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_detectron)"/>
   </node>
   
+    <!-- Publish Detectron Predictions if requested. -->
    <node pkg="panoptic_mapping_utils" type="detectron_player.py" name="detectron_player" if="$(arg use_detectron)" output="screen">
      <param name="data_path" value="$(arg detectron_data_path)" /> 
      <remap from="~id_image_in" to="$(arg namespace)/segmentation_groundtruth" />  
      <remap from="~predicted_image" to="$(arg namespace)/segmentation_image" />  
      <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  
   </node>
+
+  <!-- Static Odom-World transform. -->
+  <node pkg="tf" type="static_transform_publisher" name="static_world_tf" args="0 0 0 0 0 0 1 world odom 100"/>
   
 </launch>

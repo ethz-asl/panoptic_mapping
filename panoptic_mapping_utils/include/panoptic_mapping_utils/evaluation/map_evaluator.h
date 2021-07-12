@@ -14,6 +14,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <ros/ros.h>
+#include <voxblox_ros/tsdf_server.h>
 
 namespace panoptic_mapping {
 
@@ -93,6 +94,8 @@ class MapEvaluator {
   // Stored data.
   std::unique_ptr<pcl::PointCloud<pcl::PointXYZ>> gt_ptcloud_;
   std::shared_ptr<SubmapCollection> submaps_;
+  std::shared_ptr<TsdfLayer> voxblox_;
+  bool use_voxblox_;
   std::string target_directory_;
   std::string target_map_name_;
   std::unique_ptr<PlanningInterface> planning_;
