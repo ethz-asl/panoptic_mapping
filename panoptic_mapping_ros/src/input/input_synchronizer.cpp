@@ -154,34 +154,18 @@ bool InputSynchronizer::lookupTransform(const ros::Time& timestamp,
                                         const std::string& base_frame,
                                         const std::string& child_frame,
                                         Transformation* transformation) const {
-  tf::StampedTransform transform;
-  const auto t_start = std::chrono::high_resolution_clock::now();
-  bool found_transform = false;
-  std::string exception;
-  const int64_t max_time = config_.transform_lookup_time * 1e3;
-
   // Try to lookup the transform for the maximum wait time.
-  do {
-    try {
-      tf_listener_.lookupTransform(base_frame, child_frame, timestamp,
-                                   transform);
-    } catch (tf::TransformException& ex) {
-      exception = ex.what();
-      ros::Duration(0.005).sleep();
-      continue;
-    }
-    found_transform = true;
-    break;
-  } while (std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::high_resolution_clock::now() - t_start)
-               .count() <= max_time);
-
-  if (!found_transform) {
+  tf::StampedTransform transform;
+  try {
+    tf_listener_.waitForTransform(base_frame, child_frame, timestamp,
+                                  ros::Duration(config_.transform_lookup_time));
+    tf_listener_.lookupTransform(base_frame, child_frame, timestamp, transform);
+  } catch (tf::TransformException& ex) {
     LOG_IF(WARNING, config_.verbosity > 0)
         << "Unable to lookup transform between '" << base_frame << "' and '"
         << child_frame << "' at time '" << timestamp << "' over '"
         << config_.transform_lookup_time << "s', skipping inputs. Exception: '"
-        << exception << "'.";
+        << ex.what() << "'.";
     return false;
   }
   CHECK_NOTNULL(transformation);

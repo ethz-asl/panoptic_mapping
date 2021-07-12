@@ -17,8 +17,9 @@
 namespace panoptic_mapping {
 
 /**
- * Allocate blocks based on the 3D points and project all visible blocks into
- * the image for updates.
+ * @brief Allocate blocks based on the 3D points and project all visible blocks
+ * into the image for updates. Also update a separate class layer to estimate
+ * which voxels belong to the current submap.
  */
 class ClassProjectiveIntegrator : public ProjectiveIntegrator {
  public:
@@ -47,8 +48,8 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
  protected:
   void updateBlock(Submap* submap, InterpolatorBase* interpolator,
                    const voxblox::BlockIndex& block_index,
-                   const Transformation& T_C_S, const cv::Mat& color_image,
-                   const cv::Mat& id_image) const override;
+                   const Transformation& T_C_S,
+                   const InputData& input) const override;
 
  private:
   const Config config_;

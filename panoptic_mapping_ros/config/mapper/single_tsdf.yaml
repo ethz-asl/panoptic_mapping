@@ -2,7 +2,7 @@
 verbosity: 3
 use_threadsafe_submap_collection: true
 use_transform_caching: true
-transform_lookup_time: 0.1
+transform_lookup_time: 1.0
 global_frame_name: world
 label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 #label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
@@ -12,7 +12,7 @@ print_timing_interval: 0.0
 max_input_queue_length: 500
 
 camera:
-  verbosity: 0
+  verbosity: 1
   width: 640  # Px
   height: 480
   vx: 320
@@ -56,15 +56,14 @@ tsdf_integrator:
   use_weight_dropoff: true
   max_weight: 10000
   interpolation_method: adaptive  # nearest, bilinear, adaptive
-  foreign_rays_clear: true
-  integration_threads: 4
+  integration_threads: 8
   
   # Class Projective
   use_accurate_classification: false
   use_instance_classification: &use_instance_classification false
   
   # Single TSDF
-  deallocate_unused_blocks: true
+
   
 map_management:
   verbosity: 0
@@ -85,7 +84,7 @@ visualization:
     visualize_tsdf_blocks: true
     visualize_free_space: true
     visualize_bounding_volumes: true
-    include_free_space: false
+    include_free_space: true
     mesh_min_weight: 0.000001
   
   planning:

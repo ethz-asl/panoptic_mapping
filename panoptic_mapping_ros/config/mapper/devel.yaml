@@ -12,7 +12,7 @@ print_timing_interval: 0.0
 max_input_queue_length: 500
 
 camera:
-  verbosity: 0
+  verbosity: 1
   width: 640  # Px
   height: 480
   vx: 320
@@ -32,9 +32,9 @@ submap_allocator:
   use_class_layer: true 
   
   # Semantic
-  small_instance_voxel_size: 0.02
-  medium_instance_voxel_size: 0.05
-  large_instance_voxel_size: 0.07
+  small_instance_voxel_size: 0.08 #0.02
+  medium_instance_voxel_size: 0.08 # 0.05
+  large_instance_voxel_size: 0.08 # 0.08
   background_voxel_size: 0.1
   unknown_voxel_size: 0.1
   
@@ -46,8 +46,8 @@ freespace_allocator:
   voxel_size: 0.3
 
 id_tracker:
-  type: ground_truth  # ground_truth, projective, detectron, single_tsdf
-  verbosity: 4
+  type: ground_truth # ground_truth, projective, detectron, single_tsdf
+  verbosity: 1
   
   # Projective ID tracker
   depth_tolerance: -1  # m, negative = #vs
@@ -63,7 +63,7 @@ id_tracker:
   
 
 tsdf_integrator:  
-  type: projective # projective, class_projective, single_tsdf
+  type: class_projective # projective, class_projective, single_tsdf
   verbosity: 1     
 
   # Projective
@@ -71,7 +71,7 @@ tsdf_integrator:
   max_weight: 10000
   interpolation_method: adaptive  # nearest, bilinear, adaptive
   foreign_rays_clear: true
-  integration_threads: 8
+  integration_threads: 1
   
   # Class Projective
   use_accurate_classification: false

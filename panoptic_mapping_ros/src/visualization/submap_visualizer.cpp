@@ -324,9 +324,6 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
         submap.getTsdfLayer().voxel_size() *
         static_cast<float>(submap.getTsdfLayer().voxels_per_side());
     unsigned int counter = 0;
-    std::cout << "Submap " << submap.getID() << " has "
-              << submap.getTsdfLayer().getNumberOfAllocatedBlocks()
-              << " blocks." << std::endl;
 
     // Get color.
     Color color = kUnknownColor_;
@@ -371,7 +368,10 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
   pcl::PointCloud<pcl::PointXYZI> result;
 
   // Create a pointcloud with distance = intensity. Taken from voxblox.
-  int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+
+  // TEST
+  // const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+  int free_space_id = 5;
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);

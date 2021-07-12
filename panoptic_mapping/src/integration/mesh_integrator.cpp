@@ -130,7 +130,7 @@ void MeshIntegrator::updateMeshForBlock(
   // This block should already exist, otherwise it makes no sense to update
   // the mesh for it. ;)
   if (!tsdf_layer_->hasBlock(block_index)) {
-    LOG(ERROR) << "Trying to mesh a non-existent tsdf block at index: "
+    LOG(ERROR) << "Trying to mesh a non-existent TSDF block at index: "
                << block_index.transpose();
   }
   if (use_class_layer_ && !class_layer_->hasBlock(block_index)) {
@@ -373,9 +373,16 @@ void MeshIntegrator::updateMeshColor(const TsdfBlock& tsdf_block,
       voxblox::utils::getColorIfValid(voxel, config_.min_weight,
                                       &(mesh->colors[i]));
     } else {
-      const TsdfBlock::ConstPtr neighbor_block =
-          tsdf_layer_->getBlockPtrByCoordinates(vertex);
-      const TsdfVoxel& voxel = neighbor_block->getVoxelByCoordinates(vertex);
+      const voxblox::BlockIndex index =
+          tsdf_layer_->computeBlockIndexFromCoordinates(vertex);
+      if (!tsdf_layer_->hasBlock(index)) {
+        // The vertices should never lie outside allocated blocks.
+        LOG(WARNING)
+            << "Tried to color a mesh vertex outside allocated blocks.";
+        return;
+      }
+      const TsdfBlock& neighbor_block = tsdf_layer_->getBlockByIndex(index);
+      const TsdfVoxel& voxel = neighbor_block.getVoxelByCoordinates(vertex);
       voxblox::utils::getColorIfValid(voxel, config_.min_weight,
                                       &(mesh->colors[i]));
     }

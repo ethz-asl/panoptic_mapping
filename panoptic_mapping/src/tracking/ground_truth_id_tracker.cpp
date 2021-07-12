@@ -32,10 +32,10 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
   // Look for new instances that are within integration range.
   std::unordered_set<int> instances;
-  for (int u = 0; u < input->idImage()->cols; ++u) {
-    for (int v = 0; v < input->idImage()->rows; ++v) {
-      if (input->validityImage()->at<uchar>(v, u)) {
-        instances.insert(input->idImage()->at<int>(v, u));
+  for (int u = 0; u < input->idImage().cols; ++u) {
+    for (int v = 0; v < input->idImage().rows; ++v) {
+      if (input->validityImage().at<uchar>(v, u)) {
+        instances.insert(input->idImage().at<int>(v, u));
       }
     }
   }
@@ -47,8 +47,8 @@ void GroundTruthIDTracker::processInput(SubmapCollection* submaps,
   printAndResetWarnings();
 
   // Set segmentation image to submap ids.
-  for (auto it = input->idImage()->begin<int>();
-       it != input->idImage()->end<int>(); ++it) {
+  for (auto it = input->idImagePtr()->begin<int>();
+       it != input->idImagePtr()->end<int>(); ++it) {
     auto it2 = instance_to_id_.find(*it);
     if (it2 == instance_to_id_.end()) {
       *it = -1;
@@ -105,10 +105,14 @@ bool GroundTruthIDTracker::parseInputInstance(int instance,
 }
 
 void GroundTruthIDTracker::printAndResetWarnings() {
+  if (config_.verbosity < 2) {
+    unknown_ids.clear();
+    return;
+  }
   for (auto it : unknown_ids) {
-    LOG_IF(WARNING, config_.verbosity >= 2)
-        << "Encountered " << it.second
-        << " occurences of unknown segmentation ID '" << it.first << "'.";
+    LOG(WARNING) << "Encountered " << it.second
+                 << " occurences of unknown segmentation ID '" << it.first
+                 << "'.";
   }
   unknown_ids.clear();
 }

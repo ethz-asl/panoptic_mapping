@@ -13,15 +13,13 @@ config_utilities::Factory::Registration<InterpolatorBase, InterpolatorBilinear>
 config_utilities::Factory::Registration<InterpolatorBase, InterpolatorAdaptive>
     InterpolatorAdaptive::registration_("adaptive");
 
-int InterpolatorNearest::computeWeights(float u, float v,
-                                        const Eigen::MatrixXf& range_image,
-                                        const cv::Mat& id_image) {
+void InterpolatorNearest::computeWeights(float u, float v,
+                                         const Eigen::MatrixXf& range_image) {
   u_ = std::round(u);
   v_ = std::round(v);
-  return id_image.at<int>(v_, u_);
 }
 
-float InterpolatorNearest::interpolateDepth(
+float InterpolatorNearest::interpolateRange(
     const Eigen::MatrixXf& range_image) {
   return range_image(v_, u_);
 }
@@ -31,9 +29,12 @@ Color InterpolatorNearest::interpolateColor(const cv::Mat& color_image) {
   return Color(color_bgr[2], color_bgr[1], color_bgr[0]);
 }
 
-int InterpolatorBilinear::computeWeights(float u, float v,
-                                         const Eigen::MatrixXf& range_image,
-                                         const cv::Mat& id_image) {
+int InterpolatorNearest::interpolateID(const cv::Mat& id_image) {
+  return id_image.at<int>(v_, u_);
+}
+
+void InterpolatorBilinear::computeWeights(float u, float v,
+                                          const Eigen::MatrixXf& range_image) {
   u_ = std::floor(u);
   v_ = std::floor(v);
   float du = u - static_cast<float>(u_);
@@ -42,19 +43,9 @@ int InterpolatorBilinear::computeWeights(float u, float v,
   weight_[1] = (1.f - du) * dv;
   weight_[2] = du * (1.f - dv);
   weight_[3] = du * dv;
-  std::unordered_map<int, float> ids;  // these are zero initialized by default.
-  ids[id_image.at<int>(v_, u_)] += weight_[0];
-  ids[id_image.at<int>(v_ + 1, u_)] += weight_[1];
-  ids[id_image.at<int>(v_, u_ + 1)] += weight_[2];
-  ids[id_image.at<int>(v_ + 1, u_ + 1)] += weight_[3];
-  return std::max_element(std::begin(ids), std::end(ids),
-                          [](const auto& p1, const auto& p2) {
-                            return p1.second < p2.second;
-                          })
-      ->first;
 }
 
-float InterpolatorBilinear::interpolateDepth(
+float InterpolatorBilinear::interpolateRange(
     const Eigen::MatrixXf& range_image) {
   return range_image(v_, u_) * weight_[0] +
          range_image(v_ + 1, u_) * weight_[1] +
@@ -75,39 +66,55 @@ Color InterpolatorBilinear::interpolateColor(const cv::Mat& color_image) {
   return Color(color[2], color[1], color[0]);  // bgr image
 }
 
-int InterpolatorAdaptive::computeWeights(float u, float v,
-                                         const Eigen::MatrixXf& range_image,
-                                         const cv::Mat& id_image) {
+int InterpolatorBilinear::interpolateID(const cv::Mat& id_image) {
+  // Since IDs can not be interpolated we assign weight to all IDs in the image
+  // based on the corner weights and return  the highest weight ID.
+  std::unordered_map<int, float> ids;  // These are zero initialized by default.
+  ids[id_image.at<int>(v_, u_)] += weight_[0];
+  ids[id_image.at<int>(v_ + 1, u_)] += weight_[1];
+  ids[id_image.at<int>(v_, u_ + 1)] += weight_[2];
+  ids[id_image.at<int>(v_ + 1, u_ + 1)] += weight_[3];
+  return std::max_element(std::begin(ids), std::end(ids),
+                          [](const auto& p1, const auto& p2) {
+                            return p1.second < p2.second;
+                          })
+      ->first;
+}
+
+void InterpolatorAdaptive::computeWeights(float u, float v,
+                                          const Eigen::MatrixXf& range_image) {
+  // NOTE(schmluk): This is currently a compile-time value. Could make this a
+  // param or similar.
   constexpr float max_depth_difference = 0.2;  // m
   u_ = std::floor(u);
   v_ = std::floor(v);
-  use_bilinear_ = true;
 
   // Check max depth difference.
-  if (use_bilinear_) {
-    float min = std::numeric_limits<float>::max();
-    float max = std::numeric_limits<float>::min();
-    for (size_t i = 0; i < 4; ++i) {
-      const float depth = range_image(v_ + v_offset_[i], u_ + u_offset_[i]);
-      if (depth > max) {
-        max = depth;
-      } else if (depth < min) {
-        min = depth;
-      }
+  float min = std::numeric_limits<float>::max();
+  float max = std::numeric_limits<float>::lowest();
+  for (size_t i = 0; i < 4; ++i) {
+    const float depth = range_image(v_ + v_offset_[i], u_ + u_offset_[i]);
+    if (depth > max) {
+      max = depth;
     }
-    if (max - min < max_depth_difference) {
-      return InterpolatorBilinear::computeWeights(u, v, range_image, id_image);
-    } else {
+    if (depth < min) {
+      min = depth;
+    }
+    if (max - min > max_depth_difference) {
       use_bilinear_ = false;
+      u_ = std::round(u);
+      v_ = std::round(v);
+      return;
     }
   }
-  return id_image.at<int>(std::round(v), std::round(u));
+  use_bilinear_ = true;
+  InterpolatorBilinear::computeWeights(u, v, range_image);
 }
 
-float InterpolatorAdaptive::interpolateDepth(
+float InterpolatorAdaptive::interpolateRange(
     const Eigen::MatrixXf& range_image) {
   if (use_bilinear_) {
-    return InterpolatorBilinear::interpolateDepth(range_image);
+    return InterpolatorBilinear::interpolateRange(range_image);
   }
   return range_image(v_, u_);
 }
@@ -118,6 +125,13 @@ Color InterpolatorAdaptive::interpolateColor(const cv::Mat& color_image) {
   }
   auto color_bgr = color_image.at<cv::Vec3b>(v_, u_);
   return Color(color_bgr[2], color_bgr[1], color_bgr[0]);
+}
+
+int InterpolatorAdaptive::interpolateID(const cv::Mat& id_image) {
+  if (use_bilinear_) {
+    return InterpolatorBilinear::interpolateID(id_image);
+  }
+  return id_image.at<int>(v_, u_);
 }
 
 }  // namespace panoptic_mapping

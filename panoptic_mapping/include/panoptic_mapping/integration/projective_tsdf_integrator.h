@@ -26,13 +26,15 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
 
     // Integration params.
     bool use_weight_dropoff = true;
+    float weight_dropoff_epsilon =
+        -1.f;  // m, negative values are multiples of the voxel size.
     bool use_constant_weight = false;
     float max_weight = 1e5;
     std::string interpolation_method;  // nearest, bilinear, adaptive
 
     // Behavior
-    bool foreign_rays_clear = true;  // observations of object B can clear
-    // spcae in object A
+    bool foreign_rays_clear = true;  // Observations of object B clear
+    // space in object A.
 
     // System params.
     int integration_threads = std::thread::hardware_concurrency();
@@ -51,24 +53,68 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
-  void allocateNewBlocks(SubmapCollection* submaps, InputData* input);
+  /**
+   * @brief Allocate all new blocks in all submaps.
+   *
+   * @param submaps Submap collection to allocate data in.
+   * @param input Input measurements based on which blocks are allocated.
+   */
+  virtual void allocateNewBlocks(SubmapCollection* submaps,
+                                 const InputData& input);
 
-  void updateSubmap(Submap* submap, InterpolatorBase* interpolator,
-                    const voxblox::BlockIndexList& block_indices,
-                    const Transformation& T_M_C, const cv::Mat& color_image,
-                    const cv::Mat& id_image) const;
+  virtual void updateSubmap(Submap* submap, InterpolatorBase* interpolator,
+                            const voxblox::BlockIndexList& block_indices,
+                            const InputData& input) const;
 
   virtual void updateBlock(Submap* submap, InterpolatorBase* interpolator,
                            const voxblox::BlockIndex& block_index,
                            const Transformation& T_C_S,
-                           const cv::Mat& color_image,
-                           const cv::Mat& id_image) const;
+                           const InputData& input) const;
 
-  bool computeVoxelDistanceAndWeight(
-      float* sdf, float* weight, int* id, InterpolatorBase* interpolator,
-      const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-      int submap_id, float truncation_distance, float voxel_size,
-      bool is_free_space_submap) const;
+  virtual bool updateVoxel(InterpolatorBase* interpolator, TsdfVoxel* voxel,
+                           const Point& p_C, const InputData& input,
+                           const int submap_id, const bool is_free_space_submap,
+                           const float truncation_distance,
+                           const float voxel_size) const;
+
+  /**
+   * @brief Sets up the interpolator and computes the signed distance.
+   *
+   * @param p_C Voxel center in camera frame in meters.
+   * @param interpolator Interpolator to setup and use.
+   * @return Whether the voxel is valid to continue processing.
+   */
+  virtual bool computeSignedDistance(const Point& p_C,
+                                     InterpolatorBase* interpolator,
+                                     float* sdf) const;
+
+  /**
+   * @brief Compute the measurement weight for a given voxel based on the
+   * parameters set in the config.
+   *
+   * @param p_C Voxel center in camera frame in meters.
+   * @param voxel_size The voxel size in meters.
+   * @param truncation_distance The truncation distance in meters.
+   * @param sdf The signed distance used for this update.
+   * @return The measurement weight.
+   */
+  virtual float computeWeight(const Point& p_C, const float voxel_size,
+                              const float truncation_distance,
+                              const float sdf) const;
+
+  /**
+   * @brief Update the values of a voxel in a weighted averaging fashion.
+   *
+   * @param voxel The voxel to be updated. The pointer is not checked for
+   * validity.
+   * @param sdf The signed distance measurement to be fused, already truncated
+   * to the truncation distance.
+   * @param weight The measurement weight to be used for the update.
+   * @param color Optional pointer to a color to be fused.
+   */
+  virtual void updateVoxelValues(TsdfVoxel* voxel, const float sdf,
+                                 const float weight,
+                                 const Color* color = nullptr) const;
 
   // Cached data.
   Eigen::MatrixXf range_image_;

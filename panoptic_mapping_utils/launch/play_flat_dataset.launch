@@ -3,10 +3,11 @@
   <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/>
   <arg name="detectron_data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>  
   <arg name="bag_play_rate" default="1"/>
-  <arg name="use_sim_time" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="remap_tf" default="true"/>
   <arg name="start_at" default="1"/>
   <arg name="wait_time" default="2"/>
-  <arg name="namespace" default=""/>
+  <arg name="namespace" default="data"/>
   <arg name="use_detectron" default="false"/>
     
    
@@ -23,6 +24,7 @@
     <remap from="/airsim_drone/Depth_cam" to="$(arg namespace)/depth_image" />
     <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_image" unless="$(arg use_detectron)"/>
     <remap from="/airsim_drone/Id_corrected" to="$(arg namespace)/segmentation_groundtruth" if="$(arg use_detectron)"/>
+    <remap from="/tf" to="/tf_old" if="$(arg remap_tf)" />
   </node>
   
     <!-- Publish Detectron Predictions if requested. -->
@@ -32,8 +34,13 @@
      <remap from="~predicted_image" to="$(arg namespace)/segmentation_image" />  
      <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  
   </node>
+  
+  <!-- TF Remapper -->
+  <node pkg="tf" type="tf_remap" name="tf_remap" if="$(arg remap_tf)"/>
 
   <!-- Static Odom-World transform. -->
   <node pkg="tf" type="static_transform_publisher" name="static_world_tf" args="0 0 0 0 0 0 1 world odom 100"/>
+  
+    <arg name="remap_tf" default="true"/>
   
 </launch>

@@ -51,19 +51,18 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   auto t2 = std::chrono::high_resolution_clock::now();
 
   // Find all active blocks that are in the field of view.
-  voxblox::BlockIndexList block_lists =
-      globals_->camera()->findVisibleBlocks(*map, input->T_M_C());
+  voxblox::BlockIndexList block_lists = globals_->camera()->findVisibleBlocks(
+      *map, input->T_M_C(), max_range_in_image_);
   std::vector<voxblox::BlockIndex> indices;
   indices.resize(block_lists.size());
   for (size_t i = 0; i < indices.size(); ++i) {
     indices[i] = block_lists[i];
   }
   IndexGetter<voxblox::BlockIndex> index_getter(indices);
-  Transformation T_C_S =
-      input->T_M_C().inverse() * map->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+  const Transformation T_C_S = input->T_M_C().inverse() * map->getT_M_S();
 
   // Integrate in parallel.
-  std::vector<std::future<bool>> threads;
+  std::vector<std::future<void>> threads;
   for (int i = 0; i < config_.projective_integrator_config.integration_threads;
        ++i) {
     threads.emplace_back(std::async(
@@ -71,9 +70,8 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
           voxblox::BlockIndex index;
           while (index_getter.getNextIndex(&index)) {
             this->updateBlock(map, interpolators_[i].get(), index, T_C_S,
-                              input->colorImage(), *(input->idImage()));
+                              *input);
           }
-          return true;
         }));
   }
 
@@ -93,32 +91,32 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
 
 void SingleTsdfIntegrator::updateBlock(Submap* submap,
                                        InterpolatorBase* interpolator,
-                                       const voxblox::BlockIndex& index,
+                                       const voxblox::BlockIndex& block_index,
                                        const Transformation& T_C_S,
-                                       const cv::Mat& color_image,
-                                       const cv::Mat& id_image) const {
-  CHECK_NOTNULL(submap);
+                                       const InputData& input) const {
   // Set up preliminaries.
-  if (!submap->getTsdfLayer().hasBlock(index)) {
-    LOG(WARNING) << "Tried to access inexistent block '" << index.transpose()
-                 << "' in submap " << submap->getID() << ".";
+  if (!submap->getTsdfLayer().hasBlock(block_index)) {
+    LOG_IF(WARNING, config_.verbosity >= 1)
+        << "Tried to access inexistent block '" << block_index.transpose()
+        << "' in submap " << submap->getID() << ".";
     return;
   }
   voxblox::Block<TsdfVoxel>& block =
-      submap->getTsdfLayerPtr()->getBlockByIndex(index);
-  block.setUpdatedAll();
+      submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
+  bool was_updated = false;
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
   ClassBlock* class_block;
   if (submap->hasClassLayer()) {
-    if (!submap->getClassLayer().hasBlock(index)) {
-      LOG(WARNING) << "Tried to access inexistent class block '"
-                   << index.transpose() << "' in submap " << submap->getID()
-                   << ".";
+    if (!submap->getClassLayer().hasBlock(block_index)) {
+      LOG_IF(WARNING, config_.verbosity >= 1)
+          << "Tried to access inexistent class block '"
+          << block_index.transpose() << "' in submap " << submap->getID()
+          << ".";
       return;
     }
-    class_block = &submap->getClassLayerPtr()->getBlockByIndex(index);
+    class_block = &submap->getClassLayerPtr()->getBlockByIndex(block_index);
   }
 
   // Update all voxels.
@@ -126,35 +124,47 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
-    // Compute distance and weight.
-    int id;
-    float sdf;
-    float weight;
-    if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
-            submap_id, truncation_distance, voxel_size, false)) {
-      continue;
-    }
-
-    if (sdf < -truncation_distance) {
-      continue;
-    }
-
-    // Apply distance, color, weight, and class labeling if requested.
-    voxel.distance = (voxel.distance * voxel.weight +
-                      std::max(std::min(truncation_distance, sdf),
-                               -1.f * truncation_distance) *
-                          weight) /
-                     (voxel.weight + weight);
-    voxel.weight = std::min(voxel.weight + weight,
-                            config_.projective_integrator_config.max_weight);
-    // Only merge color and classes near the surface.
-    if (sdf < truncation_distance) {
-      voxel.color = Color::blendTwoColors(
-          voxel.color, voxel.weight,
-          interpolator->interpolateColor(color_image), weight);
+    if (updateVoxel(interpolator, &voxel, p_C, input, submap_id, true,
+                    truncation_distance, voxel_size)) {
+      was_updated = true;
     }
   }
+
+  if (was_updated) {
+    block.setUpdatedAll();
+  }
+}
+
+bool SingleTsdfIntegrator::updateVoxel(InterpolatorBase* interpolator,
+                                       TsdfVoxel* voxel, const Point& p_C,
+                                       const InputData& input,
+                                       const int submap_id,
+                                       const bool is_free_space_submap,
+                                       const float truncation_distance,
+                                       const float voxel_size) const {
+  // Compute the signed distance. This also sets up the interpolator.
+  float sdf;
+  if (!computeSignedDistance(p_C, interpolator, &sdf)) {
+    return false;
+  }
+  if (sdf < -truncation_distance) {
+    return false;
+  }
+
+  // Compute the weight of the measurement.
+  const float weight = computeWeight(p_C, voxel_size, truncation_distance, sdf);
+
+  // Truncate the sdf to the truncation band.
+  sdf = std::min(truncation_distance, sdf);
+
+  // Only merge color near the surface and if point belongs to the submap.
+  if (std::abs(sdf) < truncation_distance) {
+    const Color color = interpolator->interpolateColor(input.colorImage());
+    updateVoxelValues(voxel, sdf, weight, &color);
+  } else {
+    updateVoxelValues(voxel, sdf, weight);
+  }
+  return true;
 }
 
 void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
@@ -171,13 +181,10 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
       const Point p_C(vertex[0], vertex[1], vertex[2]);
       const float ray_distance = p_C.norm();
       range_image_(v, u) = ray_distance;
-      if (ray_distance > cam_config_->max_range ||
-          ray_distance < cam_config_->min_range) {
-        continue;
-      }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
     }
   }
+  max_range_in_image_ = std::max(max_range_in_image_, cam_config_->max_range);
 
   // Allocate all potential blocks.
   const float block_size = map->getTsdfLayer().block_size();

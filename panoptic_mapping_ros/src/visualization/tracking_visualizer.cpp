@@ -13,7 +13,7 @@ void TrackingVisualizer::Config::setupParamsAndPrinting() {
 }
 
 void TrackingVisualizer::Config::fromRosParam() {
-  ros_namespace = rosParamNameSpace() + "/tracking";
+  ros_namespace = rosParamNameSpace();
 }
 
 TrackingVisualizer::TrackingVisualizer(const Config& config)

@@ -22,11 +22,15 @@ config_utilities::Factory::RegistrationRos<
 void ProjectiveIntegrator::Config::checkParams() const {
   checkParamGT(integration_threads, 0, "integration_threads");
   checkParamGT(max_weight, 0.f, "max_weight");
+  if (use_weight_dropoff) {
+    checkParamNE(weight_dropoff_epsilon, 0.f, "weight_dropoff_epsilon");
+  }
 }
 
 void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("use_weight_dropoff", &use_weight_dropoff);
+  setupParam("weight_dropoff_epsilon", &weight_dropoff_epsilon);
   setupParam("use_constant_weight", &use_constant_weight);
   setupParam("foreign_rays_clear", &foreign_rays_clear);
   setupParam("max_weight", &max_weight);
@@ -68,7 +72,7 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // Allocate all blocks in corresponding submaps.
   Timer alloc_timer("tsdf_integration/allocate_blocks");
   cam_config_ = &(globals_->camera()->getConfig());
-  allocateNewBlocks(submaps, input);
+  allocateNewBlocks(submaps, *input);
   alloc_timer.Stop();
 
   // Find all active blocks that are in the field of view.
@@ -76,7 +80,8 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   // but is already almost instantaneous.
   Timer find_timer("tsdf_integration/find_blocks");
   std::unordered_map<int, voxblox::BlockIndexList> block_lists =
-      globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(), true);
+      globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(),
+                                            max_range_in_image_, true);
   std::vector<int> id_list;
   id_list.reserve(block_lists.size());
   for (const auto& id_blocklist_pair : block_lists) {
@@ -89,17 +94,16 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   SubmapIndexGetter index_getter(id_list);
   std::vector<std::future<void>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {
-    threads.emplace_back(std::async(
-        std::launch::async,
-        [this, &index_getter, &block_lists, submaps, input, i]() {
-          int index;
-          while (index_getter.getNextIndex(&index)) {
-            this->updateSubmap(submaps->getSubmapPtr(index),
-                               interpolators_[i].get(), block_lists.at(index),
-                               input->T_M_C(), input->colorImage(),
-                               *(input->idImage()));
-          }
-        }));
+    threads.emplace_back(
+        std::async(std::launch::async,
+                   [this, &index_getter, &block_lists, submaps, input, i]() {
+                     int index;
+                     while (index_getter.getNextIndex(&index)) {
+                       this->updateSubmap(submaps->getSubmapPtr(index),
+                                          interpolators_[i].get(),
+                                          block_lists.at(index), *input);
+                     }
+                   }));
   }
 
   // Join all threads.
@@ -111,14 +115,11 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
 
 void ProjectiveIntegrator::updateSubmap(
     Submap* submap, InterpolatorBase* interpolator,
-    const voxblox::BlockIndexList& block_indices, const Transformation& T_M_C,
-    const cv::Mat& color_image, const cv::Mat& id_image) const {
-  CHECK_NOTNULL(submap);
-  // Update.
-  Transformation T_C_S =
-      T_M_C.inverse() * submap->getT_M_S();  // p_C = T_C_M * T_M_S * p_S
+    const voxblox::BlockIndexList& block_indices,
+    const InputData& input) const {
+  Transformation T_C_S = input.T_M_C().inverse() * submap->getT_M_S();
   for (const auto& index : block_indices) {
-    updateBlock(submap, interpolator, index, T_C_S, color_image, id_image);
+    updateBlock(submap, interpolator, index, T_C_S, input);
   }
 }
 
@@ -126,72 +127,93 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
                                        InterpolatorBase* interpolator,
                                        const voxblox::BlockIndex& index,
                                        const Transformation& T_C_S,
-                                       const cv::Mat& color_image,
-                                       const cv::Mat& id_image) const {
+                                       const InputData& input) const {
   CHECK_NOTNULL(submap);
-  // set up preliminaries
+  // Set up preliminaries.
   if (!submap->getTsdfLayer().hasBlock(index)) {
-    LOG(WARNING) << "Tried to access inexistent block '" << index.transpose()
-                 << "' in submap " << submap->getID() << ".";
+    LOG_IF(WARNING, config_.verbosity >= 1)
+        << "Tried to access inexistent block '" << index.transpose()
+        << "' in submap " << submap->getID() << ".";
     return;
   }
   voxblox::Block<TsdfVoxel>& block =
       submap->getTsdfLayerPtr()->getBlockByIndex(index);
-  block.setUpdatedAll();
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
+  const bool is_free_space_submap =
+      submap->getLabel() == PanopticLabel::kFreeSpace;
+  bool was_updated = false;
 
-  // update all voxels
+  // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
-                                  i);  // voxel center in camera frame
-    // Compute distance and weight.
-    int id;
-    float sdf;
-    float weight;
-    const bool is_free_space_submap =
-        submap->getLabel() == PanopticLabel::kFreeSpace;
-    if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
-            submap_id, truncation_distance, voxel_size, is_free_space_submap)) {
-      continue;
+                                  i);  // Voxel center in camera frame.
+    if (updateVoxel(interpolator, &voxel, p_C, input, submap_id,
+                    is_free_space_submap, truncation_distance, voxel_size)) {
+      was_updated = true;
     }
-
-    // Apply distance, color, and weight.
-    const bool point_belongs_to_this_submap = id == submap_id;
-    if (point_belongs_to_this_submap || is_free_space_submap) {
-      voxel.distance = (voxel.distance * voxel.weight +
-                        std::max(std::min(truncation_distance, sdf),
-                                 -1.f * truncation_distance) *
-                            weight) /
-                       (voxel.weight + weight);
-      voxel.weight = std::min(voxel.weight + weight, config_.max_weight);
-      // only merge color near the surface and if point belongs to the submap.
-      if (std::abs(sdf) < truncation_distance && point_belongs_to_this_submap) {
-        voxel.color = Color::blendTwoColors(
-            voxel.color, voxel.weight,
-            interpolator->interpolateColor(color_image), weight);
-      }
-    } else {
-      // Voxels that don't belong to the submap are 'cleared' if they are in
-      // front of the surface.
-      if (sdf > 0) {
-        voxel.distance =
-            (voxel.distance * voxel.weight + truncation_distance * weight) /
-            (voxel.weight + weight);
-        voxel.weight = std::min(voxel.weight + weight, config_.max_weight);
-      }
-    }
+  }
+  if (was_updated) {
+    block.setUpdatedAll();
   }
 }
 
-bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
-    float* sdf, float* weight, int* id, InterpolatorBase* interpolator,
-    const Point& p_C, const cv::Mat& color_image, const cv::Mat& id_image,
-    int submap_id, float truncation_distance, float voxel_size,
-    bool is_free_space_submap) const {
+bool ProjectiveIntegrator::updateVoxel(InterpolatorBase* interpolator,
+                                       TsdfVoxel* voxel, const Point& p_C,
+                                       const InputData& input,
+                                       const int submap_id,
+                                       const bool is_free_space_submap,
+                                       const float truncation_distance,
+                                       const float voxel_size) const {
+  // Compute the signed distance. This also sets up the interpolator.
+  float sdf;
+  if (!computeSignedDistance(p_C, interpolator, &sdf)) {
+    return false;
+  }
+  if (sdf < -truncation_distance) {
+    return false;
+  }
+
+  // Check whether this is a clearing or an updating measurement.
+  const bool point_belongs_to_this_submap =
+      interpolator->interpolateID(input.idImage()) == submap_id;
+  if (!(point_belongs_to_this_submap || config_.foreign_rays_clear ||
+        is_free_space_submap)) {
+    return false;
+  }
+
+  // Compute the weight of the measurement.
+  const float weight = computeWeight(p_C, voxel_size, truncation_distance, sdf);
+
+  // Apply distance, color, and weight.
+  if (point_belongs_to_this_submap || is_free_space_submap) {
+    // Truncate the sdf to the truncation band.
+    sdf = std::min(sdf, truncation_distance);
+
+    // Only merge color near the surface and if point belongs to the submap.
+    if (!point_belongs_to_this_submap || is_free_space_submap ||
+        std::abs(sdf) >= truncation_distance) {
+      updateVoxelValues(voxel, sdf, weight);
+    } else {
+      const Color color = interpolator->interpolateColor(input.colorImage());
+      updateVoxelValues(voxel, sdf, weight, &color);
+    }
+  } else {
+    // Voxels that don't belong to the submap are 'cleared' if they are in
+    // front of the surface. If the foreign_rays_clear flag is not set the
+    // update step already returned before here.
+    if (sdf > 0) {
+      updateVoxelValues(voxel, truncation_distance, weight);
+    }
+  }
+  return true;
+}
+
+bool ProjectiveIntegrator::computeSignedDistance(const Point& p_C,
+                                                 InterpolatorBase* interpolator,
+                                                 float* sdf) const {
   // Skip voxels that are too far or too close.
   if (p_C.z() < 0.0) {
     return false;
@@ -204,71 +226,71 @@ bool ProjectiveIntegrator::computeVoxelDistanceAndWeight(
 
   // Project the current voxel into the range image, only count points that fall
   // fully into the image.
-  float u;
-  float v;
+  float u, v;
   if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
     return false;
   }
 
-  // Set up the interpolator and check whether this is a clearing or an updating
-  // measurement.
-  *id = interpolator->computeWeights(u, v, range_image_, id_image);
-  const bool point_belongs_to_this_submap = *id == submap_id;
-  if (!point_belongs_to_this_submap &&
-      !(config_.foreign_rays_clear || is_free_space_submap)) {
-    return false;
-  }
-
-  //  Compute the signed distance.
+  // Set up the interpolator and compute the signed distance.
+  interpolator->computeWeights(u, v, range_image_);
   const float distance_to_surface =
-      interpolator->interpolateDepth(range_image_);
-  if (distance_to_surface > cam_config_->max_range ||
-      distance_to_surface < cam_config_->min_range) {
-    return false;
-  }
-  const float new_sdf = distance_to_surface - distance_to_voxel;
-  if (new_sdf < -truncation_distance) {
-    return false;
-  }
+      interpolator->interpolateRange(range_image_);
+  *sdf = distance_to_surface - distance_to_voxel;
+  return true;
+}
 
-  // Compute the weight of the measurement.
+float ProjectiveIntegrator::computeWeight(const Point& p_C,
+                                          const float voxel_size,
+                                          const float truncation_distance,
+                                          const float sdf) const {
   // This approximates the number of rays that would hit this voxel.
-  float observation_weight =
+  float weight =
       cam_config_->fx * cam_config_->fy * std::pow(voxel_size / p_C.z(), 2.f);
 
   // Weight reduction with distance squared (according to sensor noise models).
   if (!config_.use_constant_weight) {
-    observation_weight /= std::pow(p_C.z(), 2.f);
+    weight /= std::pow(p_C.z(), 2.f);
   }
 
   // Apply weight drop-off if appropriate.
-  if (config_.use_weight_dropoff && point_belongs_to_this_submap) {
-    const voxblox::FloatingPoint dropoff_epsilon = voxel_size;
-    if (new_sdf < -dropoff_epsilon) {
-      observation_weight = observation_weight *
-                           (truncation_distance + new_sdf) /
-                           (truncation_distance - dropoff_epsilon);
-      observation_weight = std::max(observation_weight, 0.f);
+  if (config_.use_weight_dropoff) {
+    const float dropoff_epsilon =
+        config_.weight_dropoff_epsilon > 0.f
+            ? config_.weight_dropoff_epsilon
+            : config_.weight_dropoff_epsilon * -voxel_size;
+    if (sdf < -dropoff_epsilon) {
+      weight *=
+          (truncation_distance + sdf) / (truncation_distance - dropoff_epsilon);
+      weight = std::max(weight, 0.f);
     }
   }
+  return weight;
+}
 
-  // Results (id is already updated).
-  *sdf = new_sdf;
-  *weight = observation_weight;
-  return true;
+void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
+                                             const float weight,
+                                             const Color* color) const {
+  // Weighted averaging fusion.
+  voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
+                    (voxel->weight + weight);
+  voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
+  if (color != nullptr) {
+    voxel->color =
+        Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
+  }
 }
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
-                                             InputData* input) {
+                                             const InputData& input) {
   // This method also resets the depth image.
   range_image_.setZero();
   max_range_in_image_ = 0.f;
 
   // Parse through each point to allocate instance + background blocks.
   std::unordered_set<Submap*> touched_submaps;
-  for (int v = 0; v < input->depthImage().rows; v++) {
-    for (int u = 0; u < input->depthImage().cols; u++) {
-      const cv::Vec3f& vertex = input->vertexMap().at<cv::Vec3f>(v, u);
+  for (int v = 0; v < input.depthImage().rows; v++) {
+    for (int u = 0; u < input.depthImage().cols; u++) {
+      const cv::Vec3f& vertex = input.vertexMap().at<cv::Vec3f>(v, u);
       const Point p_C(vertex[0], vertex[1], vertex[2]);
       const float ray_distance = p_C.norm();
       range_image_(v, u) = ray_distance;
@@ -277,10 +299,10 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         continue;
       }
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
-      const int id = input->idImage()->at<int>(v, u);
+      const int id = input.idImage().at<int>(v, u);
       if (submaps->submapIdExists(id)) {
         Submap* submap = submaps->getSubmapPtr(id);
-        const Point p_S = submap->getT_S_M() * input->T_M_C() * p_C;
+        const Point p_S = submap->getT_S_M() * input.T_M_C() * p_C;
         const voxblox::BlockIndex index =
             submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
         submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(index);
@@ -300,7 +322,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
     const float block_size = space->getTsdfLayer().block_size();
     const float block_diag_half = std::sqrt(3.f) * block_size / 2.f;
-    const Transformation T_C_S = input->T_M_C().inverse() * space->getT_M_S();
+    const Transformation T_C_S = input.T_M_C().inverse() * space->getT_M_S();
     const Point camera_S = T_C_S.inverse().getPosition();  // T_S_C
     const int max_steps = std::floor((max_range_in_image_ + block_diag_half) /
                                      space->getTsdfLayer().block_size());

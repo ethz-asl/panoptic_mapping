@@ -44,6 +44,11 @@ class GroundTruthIDTracker : public IDTrackerBase {
    */
   bool parseInputInstance(int instance, SubmapCollection* submaps,
                           InputData* input);
+
+  /**
+   * @brief Print all warnings of missing submaps to console and reset the
+   * counter.
+   */
   void printAndResetWarnings();
 
  private:
@@ -51,8 +56,8 @@ class GroundTruthIDTracker : public IDTrackerBase {
       IDTrackerBase, GroundTruthIDTracker, std::shared_ptr<Globals>>
       registration_;
   const Config config_;
-  std::unordered_map<int, int> instance_to_id_;  // track active maps
-  std::unordered_map<int, int> unknown_ids;      // for error handling
+  std::unordered_map<int, int> instance_to_id_;  // Track active maps.
+  std::unordered_map<int, int> unknown_ids;      // For error handling.
 };
 
 }  // namespace panoptic_mapping
