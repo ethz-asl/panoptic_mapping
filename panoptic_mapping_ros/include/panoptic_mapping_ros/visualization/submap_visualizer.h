@@ -45,7 +45,8 @@ class SubmapVisualizer {
 
   // Constructors.
   explicit SubmapVisualizer(const Config& config,
-                            std::shared_ptr<Globals> globals);
+                            std::shared_ptr<Globals> globals,
+                            bool print_config = true);
   virtual ~SubmapVisualizer() = default;
 
   // Visualization modes.
@@ -69,33 +70,33 @@ class SubmapVisualizer {
       VisualizationMode visualization_mode);
 
   // Visualization message creation.
-  std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
+  virtual std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
       SubmapCollection* submaps);
-  visualization_msgs::MarkerArray generateBlockMsgs(
+  virtual visualization_msgs::MarkerArray generateBlockMsgs(
       const SubmapCollection& submaps);
-  pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
+  virtual pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
       const SubmapCollection& submaps);
-  visualization_msgs::MarkerArray generateBoundingVolumeMsgs(
+  virtual visualization_msgs::MarkerArray generateBoundingVolumeMsgs(
       const SubmapCollection& submaps);
 
   // Publish visualization requests.
-  void visualizeAll(SubmapCollection* submaps);
-  void visualizeMeshes(SubmapCollection* submaps);
-  void visualizeTsdfBlocks(const SubmapCollection& submaps);
-  void visualizeFreeSpace(const SubmapCollection& submaps);
-  void visualizeBoundingVolume(const SubmapCollection& submaps);
-  void publishTfTransforms(const SubmapCollection& submaps);
+  virtual void visualizeAll(SubmapCollection* submaps);
+  virtual void visualizeMeshes(SubmapCollection* submaps);
+  virtual void visualizeTsdfBlocks(const SubmapCollection& submaps);
+  virtual void visualizeFreeSpace(const SubmapCollection& submaps);
+  virtual void visualizeBoundingVolume(const SubmapCollection& submaps);
+  virtual void publishTfTransforms(const SubmapCollection& submaps);
 
   // Interaction.
-  void reset();
-  void clearMesh();
-  void setVisualizationMode(VisualizationMode visualization_mode);
-  void setColorMode(ColorMode color_mode);
-  void setGlobalFrameName(const std::string& frame_name) {
+  virtual void reset();
+  virtual void clearMesh();
+  virtual void setVisualizationMode(VisualizationMode visualization_mode);
+  virtual void setColorMode(ColorMode color_mode);
+  virtual void setGlobalFrameName(const std::string& frame_name) {
     global_frame_name_ = frame_name;
   }
 
- private:
+ protected:
   static const Color kUnknownColor_;
 
   struct SubmapVisInfo {
@@ -111,18 +112,17 @@ class SubmapVisualizer {
     float alpha = 1.0;
 
     // Tracking.
-    ChangeState previous_change_state;  // kChange
-    bool was_active;                    // kActive
+    ChangeState previous_change_state;        // kChange
+    bool was_active;                          // kActive
     voxblox::BlockIndexList previous_blocks;  // Track deleted blocks.
   };
 
-  void updateVisInfos(const SubmapCollection& submaps);
-  void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
-  void generateClassificationMesh(Submap* submap, voxblox_msgs::Mesh* mesh);
+  virtual void updateVisInfos(const SubmapCollection& submaps);
+  virtual void setSubmapVisColor(const Submap& submap, SubmapVisInfo* info);
+  virtual void generateClassificationMesh(Submap* submap,
+                                          voxblox_msgs::Mesh* mesh);
 
- private:
-  const Config config_;
-
+ protected:
   // Settings.
   VisualizationMode visualization_mode_;
   ColorMode color_mode_;
@@ -145,6 +145,12 @@ class SubmapVisualizer {
   ros::Publisher mesh_pub_;
   ros::Publisher tsdf_blocks_pub_;
   ros::Publisher bounding_volume_pub_;
+
+ private:
+  const Config config_;
+  static config_utilities::Factory::RegistrationRos<
+      SubmapVisualizer, SubmapVisualizer, std::shared_ptr<Globals>>
+      registration_;
 };
 
 }  // namespace panoptic_mapping

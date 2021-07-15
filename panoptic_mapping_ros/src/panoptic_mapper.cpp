@@ -3,6 +3,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
@@ -88,10 +89,8 @@ void PanopticMapper::setupMembers() {
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
 
   // Submaps.
-  submap_visualizer_ = std::make_unique<SubmapVisualizer>(
-      config_utilities::getConfigFromRos<SubmapVisualizer::Config>(
-          ros::NodeHandle(visualization_nh, "submaps")),
-      globals_);
+  submap_visualizer_ = config_utilities::FactoryRos::create<SubmapVisualizer>(
+      ros::NodeHandle(visualization_nh, "submaps"), globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Planning.
@@ -113,13 +112,14 @@ void PanopticMapper::setupMembers() {
           ros::NodeHandle(nh_private_, "data_writer")));
 
   // Setup all requested inputs from all modules.
-  InputData::InputTypes requested_inputs = id_tracker_->getRequiredInputs();
-  requested_inputs.insert(tsdf_integrator_->getRequiredInputs().begin(),
-                          tsdf_integrator_->getRequiredInputs().end());
-  requested_inputs.insert(submap_allocator->getRequiredInputs().begin(),
-                          submap_allocator->getRequiredInputs().end());
-  requested_inputs.insert(freespace_allocator->getRequiredInputs().begin(),
-                          freespace_allocator->getRequiredInputs().end());
+  InputData::InputTypes requested_inputs;
+  std::vector<InputDataUser*> input_data_users = {
+      id_tracker_.get(), tsdf_integrator_.get(), submap_allocator.get(),
+      freespace_allocator.get()};
+  for (const InputDataUser* input_data_user : input_data_users) {
+    requested_inputs.insert(input_data_user->getRequiredInputs().begin(),
+                            input_data_user->getRequiredInputs().end());
+  }
   compute_vertex_map_ =
       requested_inputs.find(InputData::InputType::kVertexMap) !=
       requested_inputs.end();

@@ -13,6 +13,10 @@ namespace panoptic_mapping {
 
 const Color SubmapVisualizer::kUnknownColor_(50, 50, 50);
 
+config_utilities::Factory::RegistrationRos<SubmapVisualizer, SubmapVisualizer,
+                                           std::shared_ptr<Globals>>
+    SubmapVisualizer::registration_("submaps");
+
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
   // NOTE(schmluk): if the visualization or color mode is not valid it will be
@@ -40,13 +44,17 @@ void SubmapVisualizer::Config::fromRosParam() {
 }
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
-                                   std::shared_ptr<Globals> globals)
+                                   std::shared_ptr<Globals> globals,
+                                   bool print_config)
     : config_(config.checkValid()), globals_(std::move(globals)) {
-  visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
-  color_mode_ = colorModeFromString(config_.color_mode);
-  id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
+
+  // Parse visualization data.
+  setVisualizationMode(visualizationModeFromString(config_.visualization_mode));
+  setColorMode(colorModeFromString(config_.color_mode));
+  id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
 
   // Setup publishers.
   nh_ = ros::NodeHandle(config_.ros_namespace);
@@ -368,10 +376,7 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
   pcl::PointCloud<pcl::PointXYZI> result;
 
   // Create a pointcloud with distance = intensity. Taken from voxblox.
-
-  // TEST
-  // const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
-  int free_space_id = 5;
+  const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);
