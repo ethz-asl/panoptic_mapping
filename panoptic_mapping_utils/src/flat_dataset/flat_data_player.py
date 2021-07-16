@@ -6,6 +6,7 @@ import csv
 
 import rospy
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge
 import cv2
 from PIL import Image as PilImage
@@ -29,13 +30,14 @@ class FlatDataPlayer(object):
         self.refresh_rate = 100  # Hz
 
         # ROS
-        self.color_pub = rospy.Publisher("~color_image", Image, queue_size=10)
-        self.depth_pub = rospy.Publisher("~depth_image", Image, queue_size=10)
-        self.id_pub = rospy.Publisher("~id_image", Image, queue_size=10)
+        self.color_pub = rospy.Publisher("~color_image", Image, queue_size=100)
+        self.depth_pub = rospy.Publisher("~depth_image", Image, queue_size=100)
+        self.id_pub = rospy.Publisher("~id_image", Image, queue_size=100)
         if self.use_detectron:
             self.label_pub = rospy.Publisher("~labels",
                                              DetectronLabels,
-                                             queue_size=10)
+                                             queue_size=100)
+        self.pose_pub = rospy.Publisher("~pose", PoseStamped, queue_size=100)
         self.tf_broadcaster = tf.TransformBroadcaster()
 
         # setup
@@ -153,6 +155,17 @@ class FlatDataPlayer(object):
             self.tf_broadcaster.sendTransform(
                 (transform[0, 3], transform[1, 3], transform[2, 3]), rotation,
                 now, self.sensor_frame_name, self.global_frame_name)
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = now
+        pose_msg.header.frame_id = self.global_frame_name
+        pose_msg.pose.position.x = pose_data[3]
+        pose_msg.pose.position.y = pose_data[7]
+        pose_msg.pose.position.z = pose_data[11]
+        pose_msg.pose.orientation.x = rotation[0]
+        pose_msg.pose.orientation.y = rotation[1]
+        pose_msg.pose.orientation.z = rotation[2]
+        pose_msg.pose.orientation.w = rotation[3]
+        self.pose_pub.publish(pose_msg)
 
         self.current_index += 1
 

@@ -191,7 +191,6 @@ void PanopticMapper::processInput(InputData* input) {
     input->setVertexMap(
         globals_->camera()->computeVertexMap(input->depthImage()));
   }
-
   ros::WallTime t0 = ros::WallTime::now();
 
   // Track the segmentation images and allocate new submaps.

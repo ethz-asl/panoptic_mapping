@@ -122,7 +122,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
-    ClassVoxel* class_voxel;
+    ClassVoxel* class_voxel = nullptr;
     if (use_class_layer) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
@@ -185,7 +185,6 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
   max_range_in_image_ = 0.f;
 
   const Transformation T_S_C = map->getT_S_M() * input->T_M_C();
-
   // Parse through each point to reset the depth image.
   for (int v = 0; v < input->depthImage().rows; v++) {
     for (int u = 0; u < input->depthImage().cols; u++) {
@@ -196,7 +195,7 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
       max_range_in_image_ = std::max(max_range_in_image_, ray_distance);
     }
   }
-  max_range_in_image_ = std::max(max_range_in_image_, cam_config_->max_range);
+  max_range_in_image_ = std::min(max_range_in_image_, cam_config_->max_range);
 
   // Allocate all potential blocks.
   const float block_size = map->getTsdfLayer().block_size();

@@ -313,6 +313,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       }
     }
   }
+  max_range_in_image_ = std::min(max_range_in_image_, cam_config_->max_range);
 
   // Allocate all potential free space blocks.
   if (submaps->submapIdExists(submaps->getActiveFreeSpaceSubmapID())) {

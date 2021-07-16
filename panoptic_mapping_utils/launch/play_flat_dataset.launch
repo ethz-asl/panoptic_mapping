@@ -20,6 +20,7 @@
     <remap from="~depth_image" to="$(arg namespace)/depth_image" />  
     <remap from="~id_image" to="$(arg namespace)/segmentation_image" />  
     <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  
+    <remap from="~pose" to="$(arg namespace)/pose" />  
   </node>
 
 </launch>

@@ -161,7 +161,7 @@ bool InputSynchronizer::lookupTransform(const ros::Time& timestamp,
                                   ros::Duration(config_.transform_lookup_time));
     tf_listener_.lookupTransform(base_frame, child_frame, timestamp, transform);
   } catch (tf::TransformException& ex) {
-    LOG_IF(WARNING, config_.verbosity > 0)
+    LOG_IF(WARNING, config_.verbosity >= 2)
         << "Unable to lookup transform between '" << base_frame << "' and '"
         << child_frame << "' at time '" << timestamp << "' over '"
         << config_.transform_lookup_time << "s', skipping inputs. Exception: '"
