@@ -22,6 +22,7 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
+    // Standard integrator params.
     ProjectiveIntegrator::Config projective_integrator_config;
 
     Config() { setConfigName("SingleTsdfIntegrator"); }
@@ -48,8 +49,8 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   bool updateVoxel(InterpolatorBase* interpolator, TsdfVoxel* voxel,
                    const Point& p_C, const InputData& input,
                    const int submap_id, const bool is_free_space_submap,
-                   const float truncation_distance,
-                   const float voxel_size) const override;
+                   const float truncation_distance, const float voxel_size,
+                   ClassVoxel* class_voxel = nullptr) const override;
 
  private:
   const Config config_;

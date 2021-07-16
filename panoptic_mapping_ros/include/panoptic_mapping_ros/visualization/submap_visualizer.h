@@ -44,9 +44,8 @@ class SubmapVisualizer {
   };
 
   // Constructors.
-  explicit SubmapVisualizer(const Config& config,
-                            std::shared_ptr<Globals> globals,
-                            bool print_config = true);
+  SubmapVisualizer(const Config& config, std::shared_ptr<Globals> globals,
+                   bool print_config = true);
   virtual ~SubmapVisualizer() = default;
 
   // Visualization modes.

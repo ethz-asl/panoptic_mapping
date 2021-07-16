@@ -4,7 +4,7 @@ from panoptic_data_reader import read_panoptic_mapper_data_log
 import os
 
 # Params
-keys = ['Reconstruction Error [cm]', 'Map Size [MB]']  # x, y
+keys = ['Map Size [MB]', 'Reconstruction Error [cm]']  # x, y
 output_dir = '/home/lukas/Pictures/pan'
 output_name = 'multi_res'
 store_output = True
@@ -25,21 +25,27 @@ data = {
     'voxblox 10cm': [2.284, 7.0],
     'voxblox 5cm': [1.832, 39.5],
     'voxblox 2cm': [1.205, 247.8],
-    'panmap GT': [],
-    'panmap Detectron': [],
+    # 'panmap multi w/ GT': [0, 0],
+    # 'panmap multi w/ Detectron': [0, 0],
 }
 
 # Plot
-for d in dirs:
-    data = read_panoptic_mapper_data_log(d)
-    x = data[keys[0]]
-    x = x - x[0]
-    y = data[keys[1]]
-    plt.plot(x, y)
+keylist = sorted(data.keys())
+for k in keylist:
+    if k.startswith('supereight'):
+        style = 'ok'
+    elif k.startswith('panmap single_tsdf'):
+        style = 'ob'
+    elif k.startswith('voxblox'):
+        style = 'og'
+    elif k.startswith('panmap multi'):
+        style = 'ob'
+    plt.scatter(data[k][1], data[k][0], c=style[1], marker=style[0])
 
+plt.semilogx()
 plt.xlabel(keys[0])
 plt.ylabel(keys[1])
-plt.legend(names)
+plt.legend(keylist)
 
 # Print
 

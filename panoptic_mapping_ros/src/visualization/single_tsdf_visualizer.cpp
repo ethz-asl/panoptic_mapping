@@ -1,5 +1,6 @@
 #include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -22,12 +23,15 @@ void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
                                            std::shared_ptr<Globals> globals,
                                            bool print_config)
-    : config_(config.checkValid()),
-      SubmapVisualizer(config_.submap_visualizer_config, std::move(globals),
-                       false) {
+    : SubmapVisualizer(config.submap_visualizer_config, std::move(globals),
+                       false),
+      config_(config.checkValid()) {
   // Print config after setting up the modes.
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
+  // Check the visualization modes.
+  setVisualizationMode(visualization_mode_);
+  setColorMode(color_mode_);
 }
 
 void SingleTsdfVisualizer::reset() {
@@ -122,6 +126,68 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
 
 void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
                                           voxblox_msgs::MeshBlock* mesh_block) {
+  const voxblox::BlockIndex block_index(
+      mesh_block->index[0], mesh_block->index[1], mesh_block->index[2]);
+  if (!submap.getClassLayer().hasBlock(block_index)) {
+    return;
+  }
+
+  // Setup.
+  const ClassBlock& class_block =
+      submap.getClassLayer().getBlockByIndex(block_index);
+  const float point_conv_factor = 2.0f / std::numeric_limits<uint16_t>::max();
+  const float block_edge_length = submap.getClassLayer().block_size();
+  const size_t num_vertices = mesh_block->x.size();
+  mesh_block->r.resize(num_vertices);
+  mesh_block->g.resize(num_vertices);
+  mesh_block->b.resize(num_vertices);
+
+  // Coloring schemes.
+  std::function<Color(const ClassVoxel&)> get_color;
+  if (color_mode_ == ColorMode::kClassification) {
+    // Color the voxel by the certainty of classification from green 1.0 highest
+    // to red 0.0.
+    get_color = [](const ClassVoxel& voxel) {
+      const float probability = voxel.getBelongingProbability();
+      Color color;
+      color.b = 0;
+      if (probability > 0.5) {
+        color.r = ((1.f - probability) * 2.f * 255.f);
+        color.g = 255;
+      } else {
+        color.r = 255;
+        color.g = (probability * 2.f * 255.f);
+      }
+      return color;
+    };
+  } else {
+    // This implies the visualization mode is instances or classes.
+    get_color = [this](const ClassVoxel& voxel) {
+      return id_color_map_.colorLookup(voxel.current_index);
+    };
+  }
+
+  for (int i = 0; i < num_vertices; ++i) {
+    // Get the vertex position in map frame.
+    const float mesh_x =
+        (static_cast<float>(mesh_block->x[i]) * point_conv_factor +
+         static_cast<float>(block_index[0])) *
+        block_edge_length;
+    const float mesh_y =
+        (static_cast<float>(mesh_block->y[i]) * point_conv_factor +
+         static_cast<float>(block_index[1])) *
+        block_edge_length;
+    const float mesh_z =
+        (static_cast<float>(mesh_block->z[i]) * point_conv_factor +
+         static_cast<float>(block_index[2])) *
+        block_edge_length;
+    const ClassVoxel& voxel =
+        class_block.getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
+    const Color color = get_color(voxel);
+    mesh_block->r[i] = color.r;
+    mesh_block->g[i] = color.g;
+    mesh_block->b[i] = color.b;
+  }
 }
 
 void SingleTsdfVisualizer::updateVisInfos(const SubmapCollection& submaps) {
@@ -136,9 +202,6 @@ void SingleTsdfVisualizer::setVisualizationMode(
     VisualizationMode visualization_mode) {
   // If there is a new visualization mode recompute the colors and
   // republish everything.
-  if (visualization_mode == visualization_mode_) {
-    return;
-  }
   if (visualization_mode != VisualizationMode::kAll) {
     LOG(WARNING) << "Visualization mode '"
                  << visualizationModeToString(visualization_mode)
@@ -152,11 +215,7 @@ void SingleTsdfVisualizer::setVisualizationMode(
 
 void SingleTsdfVisualizer::setColorMode(ColorMode color_mode) {
   // If there is a new color mode recompute the colors.
-  if (color_mode == color_mode_) {
-    return;
-  }
-  if (color_mode == ColorMode::kChange ||
-      color_mode == ColorMode::kClassification) {
+  if (color_mode == ColorMode::kChange || color_mode == ColorMode::kSubmaps) {
     LOG(WARNING) << "Color mode '" << colorModeToString(color_mode)
                  << "' is not supported, using 'color' instead.";
     color_mode_ = ColorMode::kColor;

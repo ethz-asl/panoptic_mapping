@@ -8,6 +8,8 @@
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
 
+#include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
+
 namespace panoptic_mapping {
 
 void PanopticMapper::Config::checkParams() const {

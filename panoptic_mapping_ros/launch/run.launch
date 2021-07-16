@@ -7,9 +7,9 @@
   
   <!-- Flat Dataset args -->
   <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/> 
-  <arg name="bag_play_rate" default="2"/>  <!-- Realtime factor -->
-  <arg name="use_sim_time" default="true"/>
-  <arg name="remap_tf" default="true"/>
+  <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
+  <arg name="use_sim_time" default="false"/>
+  <arg name="remap_tf" default="false"/>
   <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
@@ -17,7 +17,7 @@
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="devel"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="single_tsdf"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>
@@ -61,7 +61,5 @@
     <param name="use_arrow" value="false" /> 
     <param name="length" value="0.5" />
   </node>
-  
-  
 
 </launch>

@@ -2,8 +2,8 @@
 verbosity: 3
 use_threadsafe_submap_collection: true
 use_transform_caching: true
-transform_lookup_time: 1.0
-global_frame_name: world
+transform_lookup_time: 0.5
+global_frame_name: odom
 label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 #label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
 visualization_interval: -1.0
@@ -45,7 +45,7 @@ id_tracker:
   voxel_size: 0.05
   truncation_distance: -2
   voxels_per_side: 16
-  use_class_layer: false
+  use_class_layer: true
   use_instance_classification: false
 
 tsdf_integrator:  
@@ -62,7 +62,6 @@ tsdf_integrator:
   use_accurate_classification: false
   use_instance_classification: &use_instance_classification false
   
-  # Single TSDF
 
   
 map_management:
@@ -78,8 +77,8 @@ visualization:
   submaps:
     type: single_tsdf  # submaps, single_tsdf
     verbosity: 1
-    color_mode: color # submaps, instances, color, normals, classes, change, classification, single_tsdf
-    visualization_mode: active  # all, active, active_only, inactive
+    color_mode: instances # instances, color, normals, classes, classification
+    visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true
     visualize_tsdf_blocks: true

@@ -101,14 +101,14 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
         << "' in submap " << submap->getID() << ".";
     return;
   }
-  voxblox::Block<TsdfVoxel>& block =
-      submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
+  TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
   bool was_updated = false;
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
   ClassBlock* class_block;
-  if (submap->hasClassLayer()) {
+  const bool use_class_layer = submap->hasClassLayer();
+  if (use_class_layer) {
     if (!submap->getClassLayer().hasBlock(block_index)) {
       LOG_IF(WARNING, config_.verbosity >= 1)
           << "Tried to access inexistent class block '"
@@ -121,11 +121,15 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
-    voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
+    TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
+    ClassVoxel* class_voxel;
+    if (use_class_layer) {
+      class_voxel = &class_block->getVoxelByLinearIndex(i);
+    }
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
     if (updateVoxel(interpolator, &voxel, p_C, input, submap_id, true,
-                    truncation_distance, voxel_size)) {
+                    truncation_distance, voxel_size, class_voxel)) {
       was_updated = true;
     }
   }
@@ -135,13 +139,11 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   }
 }
 
-bool SingleTsdfIntegrator::updateVoxel(InterpolatorBase* interpolator,
-                                       TsdfVoxel* voxel, const Point& p_C,
-                                       const InputData& input,
-                                       const int submap_id,
-                                       const bool is_free_space_submap,
-                                       const float truncation_distance,
-                                       const float voxel_size) const {
+bool SingleTsdfIntegrator::updateVoxel(
+    InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
+    const InputData& input, const int submap_id,
+    const bool is_free_space_submap, const float truncation_distance,
+    const float voxel_size, ClassVoxel* class_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -157,10 +159,20 @@ bool SingleTsdfIntegrator::updateVoxel(InterpolatorBase* interpolator,
   // Truncate the sdf to the truncation band.
   sdf = std::min(truncation_distance, sdf);
 
-  // Only merge color near the surface and if point belongs to the submap.
+  // Only merge color and semantics near the surface.
   if (std::abs(sdf) < truncation_distance) {
     const Color color = interpolator->interpolateColor(input.colorImage());
     updateVoxelValues(voxel, sdf, weight, &color);
+
+    // Update the semantic information if requested.
+    if (class_voxel) {
+      const int id = interpolator->interpolateID(input.idImage());
+      const int counts = ++(class_voxel->counts[id]);
+      if (counts > class_voxel->current_count) {
+        class_voxel->current_count = counts;
+        class_voxel->current_index = id;
+      }
+    }
   } else {
     updateVoxelValues(voxel, sdf, weight);
   }
@@ -201,6 +213,9 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
         if (globals_->camera()->pointIsInViewFrustum(T_C_S * candidate_S,
                                                      block_diag_half)) {
           map->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+          if (map->hasClassLayer()) {
+            map->getClassLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+          }
         }
       }
     }

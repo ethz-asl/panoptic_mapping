@@ -34,14 +34,13 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
   };
 
   // Constructors.
-  explicit SingleTsdfVisualizer(const Config& config,
-                                std::shared_ptr<Globals> globals,
-                                bool print_config = true);
-  virtual ~SingleTsdfVisualizer() = default;
+  SingleTsdfVisualizer(const Config& config, std::shared_ptr<Globals> globals,
+                       bool print_config = true);
+  ~SingleTsdfVisualizer() override = default;
 
   // Visualization message creation.
   std::vector<voxblox_msgs::MultiMesh> generateMeshMsgs(
-      SubmapCollection* submaps);
+      SubmapCollection* submaps) override;
 
   // Interaction.
   void reset() override;
@@ -54,7 +53,7 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
                       voxblox_msgs::MeshBlock* mesh_block);
   void updateVisInfos(const SubmapCollection& submaps) override;
 
- protected:
+ private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
       SubmapVisualizer, SingleTsdfVisualizer, std::shared_ptr<Globals>>

@@ -71,11 +71,28 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
                            const Transformation& T_C_S,
                            const InputData& input) const;
 
+  /**
+   * @brief Update a specific voxel based on the input.
+   *
+   * @param interpolator Projection interpolator to use. Interpolators are not
+   thread safe.
+   * @param voxel Tsdf voxel to be updated.
+   * @param p_C Position of the voxel center in camera frame in meters.
+   * @param input Input data used for the update.
+   * @param submap_id SubmapID of the owning submap.
+   * @param is_free_space_submap Whether the voxel belongs to a freespace map.
+   * @param truncation_distance Truncation distance to be used.
+   * @param voxel_size Voxel size of the TSDF layer.
+   * @param class_voxel Optional: class voxel to be updated.
+
+   * @return True if the voxel was updated.
+   */
   virtual bool updateVoxel(InterpolatorBase* interpolator, TsdfVoxel* voxel,
                            const Point& p_C, const InputData& input,
                            const int submap_id, const bool is_free_space_submap,
                            const float truncation_distance,
-                           const float voxel_size) const;
+                           const float voxel_size,
+                           ClassVoxel* class_voxel = nullptr) const;
 
   /**
    * @brief Sets up the interpolator and computes the signed distance.
