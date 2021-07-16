@@ -6,10 +6,8 @@
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
-  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/> 
-  <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
-  <arg name="use_sim_time" default="false"/>
-  <arg name="remap_tf" default="false"/>
+  <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
+  <arg name="play_rate" default="3"/>  <!-- Realtime factor -->
   <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
@@ -27,7 +25,6 @@
 
 
 <!-- ============ Run ============ -->
-  <param name="/use_sim_time" value="$(arg use_sim_time)" />
   
   <!-- Play data -->
   <include file="$(find panoptic_mapping_utils)/launch/play_flat_dataset.launch" pass_all_args="true" if="$(arg use_flat)" />
