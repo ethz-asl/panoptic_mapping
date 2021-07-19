@@ -63,7 +63,8 @@ class SubmapCollection {
   bool removeSubmap(int id);
 
   /**
-   * @brief Remove all submaps contained in the collection.
+   * @brief Remove all submaps contained in the collection. Also resets the
+   * SubmapID and InstanceID trackers.
    */
   void clear();
 
@@ -84,13 +85,13 @@ class SubmapCollection {
    * @param id SubmapID to retrieve.
    */
 
-  const Submap& getSubmap(int id) const;  // This assumes that the id exists.
-                                          /**
-                                           * @brief Modifying access to the requested submap. Assumes that the provided
-                                           * id exists, if unsure use 'submapIdExists(id)' first.
-                                           *
-                                           * @param id SubmapID to retrieve.
-                                           */
+  const Submap& getSubmap(int id) const;
+  /**
+   * @brief Modifying access to the requested submap. Assumes that the provided
+   * id exists, if unsure use 'submapIdExists(id)' first.
+   *
+   * @param id SubmapID to retrieve.
+   */
   Submap* getSubmapPtr(int id);
 
   int getActiveFreeSpaceSubmapID() const { return active_freespace_submap_id_; }

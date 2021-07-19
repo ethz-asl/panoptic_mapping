@@ -25,6 +25,7 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("min_voxel_weight", &min_voxel_weight);
   setupParam("error_threshold", &error_threshold);
+  setupParam("match_rejection_points", &match_rejection_points);
   setupParam("match_rejection_percentage", &match_rejection_percentage);
   setupParam("match_acceptance_points", &match_acceptance_points);
   setupParam("match_acceptance_percentage", &match_acceptance_percentage);

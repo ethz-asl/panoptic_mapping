@@ -115,4 +115,6 @@ const LabelHandler::LabelEntry& LabelHandler::getLabelEntry(
   return labels_.at(segmentation_id);
 }
 
+size_t LabelHandler::numberOfClasses() const { return labels_.size(); }
+
 }  // namespace panoptic_mapping

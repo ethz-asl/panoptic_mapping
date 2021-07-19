@@ -14,8 +14,8 @@
 namespace panoptic_mapping {
 
 /**
- * Utility class bundling camera related operations and data. Currently the
- * camera pose T_M_C is not stored with a camera but provided by the caller.
+ * @brief Utility class bundling camera related operations and data. Currently
+ * the camera pose T_M_C is not stored with a camera but provided by the caller.
  */
 class Camera {
  public:
@@ -69,11 +69,12 @@ class Camera {
                                         bool include_freespace = false) const;
 
   voxblox::BlockIndexList findVisibleBlocks(const Submap& subamp,
-                                            const Transformation& T_M_C) const;
+                                            const Transformation& T_M_C,
+                                            const float max_range = -1.f) const;
 
   std::unordered_map<int, voxblox::BlockIndexList> findVisibleBlocks(
       const SubmapCollection& submaps, const Transformation& T_M_C,
-      bool only_active_submaps = true) const;
+      const float max_range = -1.f, bool only_active_submaps = true) const;
 
   // Projection.
   bool projectPointToImagePlane(const Point& p_C, float* u, float* v) const;

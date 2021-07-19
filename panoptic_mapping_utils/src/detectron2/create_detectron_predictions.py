@@ -40,7 +40,7 @@ def create_labels(meta_data, output_file: str = ""):
                 writer.writerow([id, id, 0, label, ''])
                 id += 1
             for i, label in enumerate(meta_data.thing_classes):
-                writer.writerow([id, id, 1, label, sizes[i]])
+                writer.writerow([id, id, 1, label, ''])  #sizes[i]])
                 id += 1
         return len(meta_data.thing_classes), "Saved %i labels in '%s'." % (
             id, output_file)

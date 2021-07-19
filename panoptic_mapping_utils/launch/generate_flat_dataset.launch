@@ -4,7 +4,7 @@
   <arg name="waypoints" default="/home/lukas/Documents/Datasets/$(arg env_name)/waypoints1.yaml"/>
   <arg name="airsim_cfg" default="/home/lukas/Documents/Datasets/$(arg env_name)/airsim.yaml"/>
   <arg name="output_dir" default="/home/lukas/Documents/Datasets/$(arg env_name)/"/>
-  <arg name="use_sim_time" default="true"/>
+  <arg name="use_sim_time" default="false"/>
   <arg name="record_data" default="true"/>
 
   <!-- NOTE: to get the correct labels use 'compute_infrared_correction.py'-->
@@ -12,9 +12,6 @@
 
   <!-- ========== Execute ========== -->
   <param name="use_sim_time" value="$(arg use_sim_time)" />
-  
-  <!-- World transform -->
-  <node pkg="tf" type="static_transform_publisher" name="static_world_tf" args="0 0 0 0 0 0 1 /world /odom 100"/>
 
   <!-- airsim client -->
   <node name="airsim_simulator" pkg="unreal_airsim" type="airsim_simulator_node" required="true" output="screen" args="-alsologtostderr">

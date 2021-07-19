@@ -13,6 +13,10 @@ namespace panoptic_mapping {
 
 const Color SubmapVisualizer::kUnknownColor_(50, 50, 50);
 
+config_utilities::Factory::RegistrationRos<SubmapVisualizer, SubmapVisualizer,
+                                           std::shared_ptr<Globals>>
+    SubmapVisualizer::registration_("submaps");
+
 void SubmapVisualizer::Config::checkParams() const {
   checkParamGT(submap_color_discretization, 0, "submap_color_discretization");
   // NOTE(schmluk): if the visualization or color mode is not valid it will be
@@ -40,13 +44,17 @@ void SubmapVisualizer::Config::fromRosParam() {
 }
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
-                                   std::shared_ptr<Globals> globals)
+                                   std::shared_ptr<Globals> globals,
+                                   bool print_config)
     : config_(config.checkValid()), globals_(std::move(globals)) {
-  visualization_mode_ = visualizationModeFromString(config_.visualization_mode);
-  color_mode_ = colorModeFromString(config_.color_mode);
-  id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
+
+  // Parse visualization data.
+  setVisualizationMode(visualizationModeFromString(config_.visualization_mode));
+  setColorMode(colorModeFromString(config_.color_mode));
+  id_color_map_.setItemsPerRevolution(config_.submap_color_discretization);
 
   // Setup publishers.
   nh_ = ros::NodeHandle(config_.ros_namespace);
@@ -176,6 +184,9 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     msg.header.frame_id = submap.getFrameName();
     msg.name_space = info.name_space;
 
+    // Update the mesh.
+    submap.updateMesh();
+
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
       voxblox::BlockIndexList mesh_indices;
@@ -283,7 +294,7 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
           class_block.getVoxelByLinearIndex(linear_index);
 
       // Coloring.
-      float probability = class_voxel.getBelongingProbability();
+      float probability = classVoxelBelongingProbability(class_voxel);
       tsdf_voxel.color.b = 0;
       if (probability > 0.5) {
         tsdf_voxel.color.r = ((1.f - probability) * 2.f * 255.f);
@@ -368,7 +379,7 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
   pcl::PointCloud<pcl::PointXYZI> result;
 
   // Create a pointcloud with distance = intensity. Taken from voxblox.
-  int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+  const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);

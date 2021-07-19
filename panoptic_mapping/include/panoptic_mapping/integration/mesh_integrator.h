@@ -44,9 +44,9 @@
 namespace panoptic_mapping {
 
 /**
- * Integrates a TSDF layer to incrementally update a mesh layer using marching
- * cubes. Can optionally supply a second layer specifying whether a voxel
- * belongs to the submap.
+ * @brief Integrates a TSDF layer to incrementally update a mesh layer using
+ * marching cubes. Can optionally supply a second layer specifying whether a
+ * voxel belongs to the submap.
  */
 class MeshIntegrator {
  public:

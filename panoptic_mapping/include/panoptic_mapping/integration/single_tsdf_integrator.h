@@ -22,6 +22,7 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
+    // Standard integrator params.
     ProjectiveIntegrator::Config projective_integrator_config;
 
     Config() { setConfigName("SingleTsdfIntegrator"); }
@@ -37,18 +38,27 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
+  // Override methods specific to the single TSDF update.
   void allocateNewBlocks(Submap* map, InputData* input);
 
   void updateBlock(Submap* submap, InterpolatorBase* interpolator,
                    const voxblox::BlockIndex& block_index,
-                   const Transformation& T_C_S, const cv::Mat& color_image,
-                   const cv::Mat& id_image) const;
+                   const Transformation& T_C_S,
+                   const InputData& input) const override;
+
+  bool updateVoxel(InterpolatorBase* interpolator, TsdfVoxel* voxel,
+                   const Point& p_C, const InputData& input,
+                   const int submap_id, const bool is_free_space_submap,
+                   const float truncation_distance, const float voxel_size,
+                   ClassVoxel* class_voxel = nullptr) const override;
 
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
       TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
       registration_;
+
+  int num_classes_;
 };
 
 }  // namespace panoptic_mapping

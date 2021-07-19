@@ -57,7 +57,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   if (visualizationIsOn()) {
     vis_timer = std::make_unique<Timer>("visualization/tracking");
     Timer timer("visualization/tracking/input_image");
-    input_vis = renderer_.colorIdImage(*(input->idImage()));
+    input_vis = renderer_.colorIdImage(input->idImage());
     vis_timer->Pause();
   }
 
@@ -174,8 +174,8 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   detail_timer.Stop();
 
   // Translate the id image.
-  for (auto it = input->idImage()->begin<int>();
-       it != input->idImage()->end<int>(); ++it) {
+  for (auto it = input->idImagePtr()->begin<int>();
+       it != input->idImagePtr()->end<int>(); ++it) {
     *it = input_to_output[*it];
   }
 
@@ -202,7 +202,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     cv::Mat rendered_vis = renderer_.colorIdImage(
         renderer_.renderActiveSubmapIDs(*submaps, input->T_M_C()));
     timer = Timer("visualization/tracking/tracked");
-    cv::Mat tracked_vis = renderer_.colorIdImage(*(input->idImage()));
+    cv::Mat tracked_vis = renderer_.colorIdImage(input->idImage());
     timer.Stop();
     visualize(input_vis, "input");
     visualize(rendered_vis, "rendered");
@@ -244,7 +244,7 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
          input]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(*(input->idImage()),
+            tracking_data.insertInputImage(input->idImage(),
                                            input->depthImage(),
                                            globals_->camera()->getConfig());
           }
@@ -253,7 +253,7 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
           while (index_getter.getNextIndex(&index)) {
             result.emplace_back(this->renderTrackingInfo(
                 submaps->getSubmap(index), input->T_M_C(), input->depthImage(),
-                *(input->idImage())));
+                input->idImage()));
           }
           return result;
         }));

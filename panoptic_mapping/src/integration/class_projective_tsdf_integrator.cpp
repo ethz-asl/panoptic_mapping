@@ -48,29 +48,29 @@ void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
   ProjectiveIntegrator::processInput(submaps, input);
 }
 
-void ClassProjectiveIntegrator::updateBlock(Submap* submap,
-                                            InterpolatorBase* interpolator,
-                                            const voxblox::BlockIndex& index,
-                                            const Transformation& T_C_S,
-                                            const cv::Mat& color_image,
-                                            const cv::Mat& id_image) const {
+void ClassProjectiveIntegrator::updateBlock(
+    Submap* submap, InterpolatorBase* interpolator,
+    const voxblox::BlockIndex& block_index, const Transformation& T_C_S,
+    const InputData& input) const {
   CHECK_NOTNULL(submap);
   // set up preliminaries
-  if (!submap->getTsdfLayer().hasBlock(index)) {
-    LOG(WARNING) << "Tried to access inexistent block '" << index.transpose()
-                 << "' in submap " << submap->getID() << ".";
+  if (!submap->getTsdfLayer().hasBlock(block_index)) {
+    LOG(WARNING) << "Tried to access inexistent block '"
+                 << block_index.transpose() << "' in submap " << submap->getID()
+                 << ".";
     return;
   }
   const bool use_class_layer = submap->hasClassLayer();
   const bool is_free_space_submap =
       submap->getLabel() == PanopticLabel::kFreeSpace;
   voxblox::Block<TsdfVoxel>& block =
-      submap->getTsdfLayerPtr()->getBlockByIndex(index);
+      submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
   block.setUpdatedAll();
   // Allocate if not yet existent the class block
   ClassBlock::Ptr class_block;
   if (use_class_layer) {
-    class_block = submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);
+    class_block =
+        submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
   }
 
   const float voxel_size = block.voxel_size();
@@ -82,67 +82,68 @@ void ClassProjectiveIntegrator::updateBlock(Submap* submap,
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // voxel center in camera frame
-    // Compute distance and weight.
-    int id;
+
+    // Compute the signed distance. This also sets up the interpolator.
     float sdf;
-    float weight;
-    if (!computeVoxelDistanceAndWeight(
-            &sdf, &weight, &id, interpolator, p_C, color_image, id_image,
-            submap_id, truncation_distance, voxel_size, is_free_space_submap)) {
+    if (!computeSignedDistance(p_C, interpolator, &sdf)) {
+      continue;
+    }
+    if (sdf < -truncation_distance) {
       continue;
     }
 
-    // Apply distance and weight.
-    const bool point_belongs_to_this_submap = id == submap_id;
-    voxel.distance =
-        (voxel.distance * voxel.weight +
-         std::max(std::min(truncation_distance, sdf), -truncation_distance) *
-             weight) /
-        (voxel.weight + weight);
-    voxel.weight =
-        std::min(voxel.weight + weight, config_.pi_config.max_weight);
+    // Check whether this is a clearing or an updating measurement.
+    int id = interpolator->interpolateID(input.idImage());
 
-    // Only merge color and classification data near the surface.
-    if (std::abs(sdf) >= truncation_distance) {
-      continue;
-    }
-    voxel.color = Color::blendTwoColors(
-        voxel.color, voxel.weight, interpolator->interpolateColor(color_image),
-        weight);
+    // Compute the weight of the measurement.
+    const float weight =
+        computeWeight(p_C, voxel_size, truncation_distance, sdf);
 
-    // Update class tracking.
-    if (use_class_layer) {
-      ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
-      // The id 0 is reserved for the belonging submap, others are offset by 1.
-      if (config_.use_instance_classification) {
-        if (point_belongs_to_this_submap) {
-          id = 0;
+    // Truncate the sdf to the truncation band.
+    sdf = std::min(truncation_distance, sdf);
+
+    // Only merge color and class information near the surface and if point
+    // belongs to the submap.
+    if (std::abs(sdf) > truncation_distance) {
+      updateVoxelValues(&voxel, sdf, weight);
+    } else {
+      const Color color = interpolator->interpolateColor(input.colorImage());
+      updateVoxelValues(&voxel, sdf, weight, &color);
+      // Update class tracking.
+      if (use_class_layer) {
+        ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
+        // The id 0 is reserved for the belonging submap, others are offset
+        // by 1.
+        if (config_.use_instance_classification) {
+          if (id == submap_id) {
+            id = 0;
+          } else {
+            id++;
+          }
         } else {
-          id++;
-        }
-      } else {
-        // Use class labels.
-        auto it = id_to_class_.find(id);
-        if (it == id_to_class_.end()) {
-          // Unknown labels will be ignored.
-          continue;
-        }
-        id = it->second;
-        if (id == submap->getClassID()) {
-          id = 0;
-        }
+          // Use class labels.
+          auto it = id_to_class_.find(id);
+          if (it == id_to_class_.end()) {
+            // Unknown labels will be ignored.
+            continue;
+          }
+          id = it->second;
+          if (id == submap->getClassID()) {
+            id = 0;
+          }
         }
         if (config_.use_accurate_classification) {
-          const int counts = ++(class_voxel.counts[id]);
-          if (counts > class_voxel.current_count) {
-            class_voxel.current_count = counts;
+          const ClassVoxel::Counter counts = ++(class_voxel.counts[id]);
+          if (counts > class_voxel.belongs_count) {
+            class_voxel.belongs_count = counts;
             class_voxel.current_index = id;
           }
-      } else {
-        if (id == 0) {
-          class_voxel.belongs_count++;
         } else {
-          class_voxel.foreign_count++;
+          if (id == 0) {
+            class_voxel.belongs_count++;
+          } else {
+            class_voxel.foreign_count++;
+          }
         }
       }
     }

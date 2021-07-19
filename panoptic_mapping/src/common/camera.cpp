@@ -103,9 +103,6 @@ bool Camera::blockIsInViewFrustum(const Submap& submap,
 
 bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
                                       float* v) const {
-  if (p_C.z() < config_.min_range || p_C.z() > config_.max_range) {
-    return false;
-  }
   // All values are ceiled and floored to guarantee that the resulting points
   // will be valid for any integer conversion.
   CHECK_NOTNULL(u);
@@ -122,15 +119,12 @@ bool Camera::projectPointToImagePlane(const Point& p_C, float* u,
 }
 
 bool Camera::projectPointToImagePlane(const Point& p_C, int* u, int* v) const {
-  if (p_C.z() <= config_.min_range) {
-    return false;
-  }
   CHECK_NOTNULL(u);
-  CHECK_NOTNULL(v);
   *u = std::round(p_C.x() * config_.fx / p_C.z() + config_.vx);
   if (*u >= config_.width || *u < 0) {
     return false;
   }
+  CHECK_NOTNULL(v);
   *v = std::round(p_C.y() * config_.fy / p_C.z() + config_.vy);
   if (*v >= config_.height || *v < 0) {
     return false;
@@ -158,8 +152,9 @@ std::vector<int> Camera::findVisibleSubmapIDs(const SubmapCollection& submaps,
   return result;
 }
 
-voxblox::BlockIndexList Camera::findVisibleBlocks(
-    const Submap& submap, const Transformation& T_M_C) const {
+voxblox::BlockIndexList Camera::findVisibleBlocks(const Submap& submap,
+                                                  const Transformation& T_M_C,
+                                                  const float max_range) const {
   // Setup.
   voxblox::BlockIndexList result;
   voxblox::BlockIndexList all_blocks;
@@ -174,8 +169,10 @@ voxblox::BlockIndexList Camera::findVisibleBlocks(
     auto& block = submap.getTsdfLayer().getBlockByIndex(index);
     const Point p_C =
         T_C_S * (block.origin() + Point(1, 1, 1) * block_size /
-                                      2.0);  // center point of the block
-
+                                      2.0);  // Center point of the block.
+    if (max_range > 0 && p_C.norm() > config_.max_range + block_diag_half) {
+      continue;
+    }
     if (pointIsInViewFrustum(p_C, block_diag_half)) {
       result.push_back(index);
     }
@@ -185,7 +182,7 @@ voxblox::BlockIndexList Camera::findVisibleBlocks(
 
 std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
     const SubmapCollection& submaps, const Transformation& T_M_C,
-    bool only_active_submaps) const {
+    const float max_range, bool only_active_submaps) const {
   std::unordered_map<int, voxblox::BlockIndexList> result;
   for (const Submap& submap : submaps) {
     if (!submap.isActive() && only_active_submaps) {
@@ -194,7 +191,8 @@ std::unordered_map<int, voxblox::BlockIndexList> Camera::findVisibleBlocks(
     if (!submapIsInViewFrustum(submap, T_M_C)) {
       continue;
     }
-    voxblox::BlockIndexList block_list = findVisibleBlocks(submap, T_M_C);
+    voxblox::BlockIndexList block_list =
+        findVisibleBlocks(submap, T_M_C, max_range);
     if (!block_list.empty()) {
       result[submap.getID()] = block_list;
     }
