@@ -33,14 +33,16 @@ namespace panoptic_mapping {
 
 class PanopticMapper {
  public:
-  /* Config */
+  // Config.
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     std::string global_frame_name = "mission";
-    double visualization_interval = -1.0;  // s, use -1 for always, 0 never.
-    double data_logging_interval = 0.0;    // s, use -1 for always, 0 never.
-    double print_timing_interval = 0.0;    // s, use -1 for always, 0 never.
+    float visualization_interval = -1.f;  // s, use -1 for always, 0 never.
+    float data_logging_interval = 0.f;    // s, use -1 for always, 0 never.
+    float print_timing_interval = 0.f;    // s, use -1 for always, 0 never.
     bool use_threadsafe_submap_collection = false;
+    int ros_spinner_threads = std::thread::hardware_concurrency();
+    float check_input_interval = 0.01f;  // s
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -58,6 +60,7 @@ class PanopticMapper {
   void publishVisualizationCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
   void printTimingsCallback(const ros::TimerEvent&);
+  void inputCallback(const ros::TimerEvent&);
 
   // Services.
   bool saveMapCallback(
@@ -104,6 +107,7 @@ class PanopticMapper {
     return *planning_interface_;
   }
   MapManager* getMapManagerPtr() { return map_manager_.get(); }
+  const Config& getConfig() const { return config_; }
 
  private:
   // Setup.
@@ -125,6 +129,7 @@ class PanopticMapper {
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
   ros::Timer print_timing_timer_;
+  ros::Timer input_timer_;
 
   // Members.
   const Config config_;
@@ -152,6 +157,9 @@ class PanopticMapper {
   // Which processing to perform.
   bool compute_vertex_map_ = false;
   bool compute_validity_image_ = false;
+
+  // Tracking variables.
+  ros::WallTime previous_frame_time_ = ros::WallTime::now();
 };
 
 }  // namespace panoptic_mapping

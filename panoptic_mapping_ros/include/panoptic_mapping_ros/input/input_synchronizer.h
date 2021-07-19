@@ -2,7 +2,9 @@
 #define PANOPTIC_MAPPING_ROS_INPUT_INPUT_SYNCHRONIZER_H_
 
 #include <functional>
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,26 +16,23 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 
-#include "panoptic_mapping_ros/input/input_queue.h"
+#include "panoptic_mapping_ros/input/input_subscriber.h"
 
 namespace panoptic_mapping {
 
 /**
- * This class subscribes to all required input types via ROS and synchronizes
- * them into an input data package to be processed.
+ * @brief This class subscribes to all required input types via ROS and
+ * synchronizes them into an input data package to be processed.
  */
-
-class InputSynchronizer {
+class InputSynchronizer : public InputSynchronizerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     int max_input_queue_length = 10;  // Number of data points per type stored
     // before old data starts being discarded.
     std::string global_frame_name = "mission";
-    std::string sensor_frame_name = "";  // If no frame name is specified the
-    // header of the depth image is taken.
-    bool use_transform_caching = true;  // If true treat transforms like an
-    // input and look them up based on the depth images.
+    std::string sensor_frame_name =
+        "";  // Empty (default) take the frame of the depth message header.
     float transform_lookup_time =
         0.1f;  // s, Maximum time to wait for transforms.
 
@@ -45,29 +44,37 @@ class InputSynchronizer {
   };
 
   InputSynchronizer(const Config& config, const ros::NodeHandle& nh);
-  virtual ~InputSynchronizer() = default;
+  ~InputSynchronizer() override = default;
 
   // Access.
+  /**
+   * @brief Get the list of requested input types.
+   *
+   * @return const InputData::InputTypes&
+   */
   const InputData::InputTypes& getRequestedInputs() const {
     return requested_inputs_;
   }
 
-  // Setup tools. Add all inputs and set the callback, then advertise to setup.
+  /**
+   * @brief Check whether there is any input data ready to be retrieved.
+   */
+  bool hasInputData() const { return data_is_ready_; }
+
+  /**
+   * @brief Extract the most recent input data from the queue. The data will be
+   * deleted from the queue. This call is blocking.
+   *
+   * @return std::shared_ptr<InputData> The data. Nullptr if none is ready or
+   * data lookup failed.
+   */
+  std::shared_ptr<InputData> getInputData();
+
+  // Setup tools. Add all inputs and then advertise to finish setup.
   void requestInputs(const InputData::InputTypes& types);
-  void setInputCallback(std::function<void(InputData*)> callback) {
-    callback_ = std::move(callback);
-  }
   void advertiseInputTopics();
 
  private:
-  /**
-   * @brief Check for data with matching timestamps to trigger the extraction
-   * callback.
-   *
-   * @param timestamp Timestamp to match against.
-   */
-  void checkForMatchingMessages(const ros::Time& timestamp);
-
   /**
    * @brief Utility function for more readable queue allocation.
    *
@@ -80,45 +87,36 @@ class InputSynchronizer {
   void addQueue(
       InputData::InputType type,
       std::function<void(const MsgT&, InputData*)> extraction_function) {
-    if (type == InputData::InputType::kDepthImage &&
-        config_.use_transform_caching) {
-      // Enable transform caching in the time callback.
-      input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
-          nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
-          extraction_function, [this](const ros::Time& timestamp) {
-            this->cacheTransform(timestamp);
-            this->checkForMatchingMessages(timestamp);
-          }));
-    } else {
-      input_queues_.emplace_back(std::make_unique<InputQueue<MsgT>>(
-          nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
-          extraction_function, [this](const ros::Time& timestamp) {
-            this->checkForMatchingMessages(timestamp);
-          }));
-    }
+    subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>(
+        nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
+        extraction_function, this));
   }
-
-  /**
-   * @brief Try to lookup the transform and store it in the cache.
-   *
-   * @param timestamp Timestamp for which to lookup the transform.
-   */
-  void cacheTransform(const ros::Time& timestamp);
 
   /**
    * @brief Try to lookup the specified transform from tf.
    *
-   * @param stamp Timestamp to lookup.
+   * @param timestamp Timestamp to lookup.
    * @param base_frame Base frame to lookup.
    * @param child_frame Child frame to lookup.
    * @param transformation Output transform if it could be looked up.
    * @return True if the transform could be looked up.
    */
-  bool lookupTransform(const ros::Time& stamp, const std::string& base_frame,
+  bool lookupTransform(const ros::Time& timestamp,
+                       const std::string& base_frame,
                        const std::string& child_frame,
                        Transformation* transformation) const;
 
+  // These 3 methods modify the data queue so acquire the data_lock_ first.
+  bool getDataInQueue(const ros::Time& timestamp,
+                      InputSynchronizerData** data) override;
+
+  bool allocateDataInQueue(const ros::Time& timestamp);
+
+  void checkDataIsReady(InputSynchronizerData* data) override;
+
  private:
+  template <typename T>
+  friend class InputSubscriber;
   const Config config_;
 
   // ROS.
@@ -127,17 +125,20 @@ class InputSynchronizer {
 
   // Inputs.
   InputData::InputTypes requested_inputs_;
-  std::function<void(InputData*)> callback_;
-  std::vector<std::unique_ptr<InputQueueBase>> input_queues_;
+  InputData::InputTypes subscribed_inputs_;
+  std::vector<std::unique_ptr<InputSubscriberBase>> subscribers_;
+
+  // Data.
+  std::vector<std::unique_ptr<InputSynchronizerData>> data_queue_;
 
   // Settings.
   static const std::unordered_map<InputData::InputType, std::string>
       kDefaultTopicNames_;
 
-  // Transform caching.
-  bool frames_setup_ = false;
-  std::string used_sensor_frame_;
-  std::unordered_map<uint64_t, Transformation> transform_cache_;
+  // Variables.
+  bool data_is_ready_ = false;
+  ros::Time oldest_time_ = ros::Time(0);
+  std::string used_sensor_frame_name_;
 };
 
 }  // namespace panoptic_mapping

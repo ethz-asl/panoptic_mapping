@@ -184,6 +184,9 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     msg.header.frame_id = submap.getFrameName();
     msg.name_space = info.name_space;
 
+    // Update the mesh.
+    submap.updateMesh();
+
     // Mark the whole mesh for re-publishing if requested.
     if (info.republish_everything) {
       voxblox::BlockIndexList mesh_indices;

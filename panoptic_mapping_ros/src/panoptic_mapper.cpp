@@ -15,6 +15,8 @@ namespace panoptic_mapping {
 void PanopticMapper::Config::checkParams() const {
   checkParamCond(!global_frame_name.empty(),
                  "'global_frame_name' may not be empty.");
+  checkParamGT(ros_spinner_threads, 1, "ros_spinner_threads");
+  checkParamGT(check_input_interval, 0.f, "check_input_interval");
 }
 
 void PanopticMapper::Config::setupParamsAndPrinting() {
@@ -25,6 +27,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("print_timing_interval", &print_timing_interval);
   setupParam("use_threadsafe_submap_collection",
              &use_threadsafe_submap_collection);
+  setupParam("ros_spinner_threads", &ros_spinner_threads);
+  setupParam("check_input_interval", &check_input_interval);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -135,8 +139,6 @@ void PanopticMapper::setupMembers() {
           nh_private_),
       nh_);
   input_synchronizer_->requestInputs(requested_inputs);
-  input_synchronizer_->setInputCallback(
-      [this](InputData* data) { this->processInput(data); });
 }
 
 void PanopticMapper::setupRos() {
@@ -172,11 +174,31 @@ void PanopticMapper::setupRos() {
         nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
                                 &PanopticMapper::dataLoggingCallback, this);
   }
+  input_timer_ =
+      nh_private_.createTimer(ros::Duration(config_.check_input_interval),
+                              &PanopticMapper::inputCallback, this);
+}
+
+void PanopticMapper::inputCallback(const ros::TimerEvent&) {
+  if (input_synchronizer_->hasInputData()) {
+    std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
+    if (data) {
+      processInput(data.get());
+    }
+  }
 }
 
 void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   Timer timer("input");
+
+  // Print total elapsed time between frames if required.
+  LOG_IF(INFO, config_.verbosity >= 3)
+      << "Total frame time: "
+      << static_cast<int>(
+             (ros::WallTime::now() - previous_frame_time_).toSec() * 1000)
+      << "ms.";
+  previous_frame_time_ = ros::WallTime::now();
 
   // Compute and store the validity image.
   if (compute_validity_image_) {
@@ -246,14 +268,9 @@ void PanopticMapper::processInput(InputData* input) {
 void PanopticMapper::finishMapping() { map_manager_->finishMapping(); }
 
 void PanopticMapper::publishVisualization() {
-  // Update the submaps meshes.
   Timer timer("visualization");
-  for (Submap& submap : *submaps_) {
-    submap.updateMesh();
-  }
   submap_visualizer_->visualizeAll(submaps_.get());
   planning_visualizer_->visualizeAll();
-  timer.Stop();
 }
 
 bool PanopticMapper::saveMap(const std::string& file_path) {

@@ -66,6 +66,9 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
   msg.header.frame_id = submap.getFrameName();
   msg.name_space = map_name_space_;
 
+  // Update the mesh.
+  submap.updateMesh(true, false);
+
   // Mark the whole mesh for re-publishing if requested.
   if (info_.republish_everything) {
     voxblox::BlockIndexList mesh_indices;

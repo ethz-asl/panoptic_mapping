@@ -7,7 +7,7 @@
   
   <!-- Flat Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
-  <arg name="play_rate" default="2.5"/>  <!-- Realtime factor -->
+  <arg name="play_rate" default="2"/>  <!-- Realtime factor -->
   <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
