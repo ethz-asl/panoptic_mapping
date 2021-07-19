@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this script to setup semantic labelling.
 
-target_dir="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/voxblox"
+target_dir="/home/lukas/Documents/PanopticMapping/voxblox/const_weight"
 target_files=("2cm" "5cm" "10cm" "20cm")
 
 
