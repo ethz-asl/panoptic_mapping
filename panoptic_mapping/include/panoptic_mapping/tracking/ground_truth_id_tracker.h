@@ -13,37 +13,29 @@ namespace panoptic_mapping {
 
 /**
  * This id tracker looks up the corresponding ground truth instance id for each
- * submap.
+ * submap. Assumes that the input_ids are unique and persistent instance ids.
  */
 class GroundTruthIDTracker : public IDTrackerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
-    bool input_is_mesh_id =
-        false;  // If true look up the instance id in the label handler.
     bool use_ground_truth_instance_ids = true;
-    float truncation_distance = -2;  // negative = # voxel sizes
-    float instance_voxel_size = 0.05;
-    float background_voxel_size = 0.1;
-    float unknown_voxel_size = 0.1;
-    float freespace_voxel_size = 0.3;
-    int voxels_per_side = 16;
 
     Config() { setConfigName("GroundTruthIDTracker"); }
 
    protected:
     void setupParamsAndPrinting() override;
-    void checkParams() const override;
   };
 
-  GroundTruthIDTracker(const Config& config, std::shared_ptr<Globals> globals);
+  GroundTruthIDTracker(const Config& config, std::shared_ptr<Globals> globals,
+                       bool print_config = true);
   ~GroundTruthIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
  protected:
-  void allocateSubmap(int instance, SubmapCollection* submaps);
-  void allocateFreeSpaceSubmap(SubmapCollection* submaps);
+  void parseInputInstance(int instance, SubmapCollection* submaps,
+                          InputData* input);
   void printAndResetWarnings();
 
  private:

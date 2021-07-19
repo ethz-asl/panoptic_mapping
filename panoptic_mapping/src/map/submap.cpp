@@ -8,6 +8,8 @@
 #include <cblox/utils/quat_transformation_protobuf_utils.h>
 #include <voxblox/io/layer_io.h>
 
+#include "panoptic_mapping/map_management/layer_manipulator.h"
+
 namespace panoptic_mapping {
 
 void Submap::Config::checkParams() const {
@@ -33,8 +35,25 @@ void Submap::Config::setupParamsAndPrinting() {
   setupParam("mesh_config", &mesh_config);
 }
 
-Submap::Submap(const Config& config)
-    : config_(config.checkValid()), bounding_volume_(*this) {
+Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
+               InstanceIDManager* instance_id_manager)
+    : config_(config.checkValid()),
+      bounding_volume_(*this),
+      id_(submap_id_manager),
+      instance_id_(instance_id_manager) {
+  initialize();
+}
+
+Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
+               InstanceIDManager* instance_id_manager, int submap_id)
+    : config_(config.checkValid()),
+      bounding_volume_(*this),
+      id_(submap_id, submap_id_manager),
+      instance_id_(instance_id_manager) {
+  initialize();
+}
+
+void Submap::initialize() {
   // Default values.
   std::stringstream ss;
   ss << "submap_" << static_cast<int>(id_);
@@ -52,25 +71,18 @@ Submap::Submap(const Config& config)
   if (config_.use_class_layer) {
     class_layer_ = std::make_shared<ClassLayer>(config_.voxel_size,
                                                 config_.voxels_per_side);
+    has_class_layer_ = true;
   }
 
   // Setup tools.
-    mesh_integrator_ = std::make_unique<MeshIntegrator>(
-        config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
-        config_.truncation_distance);
+  mesh_integrator_ = std::make_unique<MeshIntegrator>(
+      config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
+      config_.truncation_distance);
 }
 
 void Submap::setT_M_S(const Transformation& T_M_S) {
   T_M_S_ = T_M_S;
   T_M_S_inv_ = T_M_S_.inverse();
-}
-
-void Submap::finishActivePeriod() {
-  // TODO(schmluk): at the moment these things are specifically set when loading
-  // submaps, need to update automatically once submaps can go out of scope.
-  is_active_ = false;
-  change_state_ = ChangeState::kUnobserved;
-  bounding_volume_.update();
 }
 
 void Submap::getProto(SubmapProto* proto) const {
@@ -162,10 +174,24 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   return submap;
 }
 
+void Submap::finishActivePeriod() {
+  if (!is_active_) {
+    return;
+  }
+  is_active_ = false;
+  change_state_ = ChangeState::kUnobserved;
+  updateEverything();
+}
+
+void Submap::updateEverything(bool only_updated_blocks) {
+  updateBoundingVolume();
+  updateMesh(only_updated_blocks);
+  computeIsoSurfacePoints();
+}
+
 void Submap::updateMesh(bool only_updated_blocks) {
   // Use the default integrator config to have color always available.
-  mesh_integrator_->generateMesh(only_updated_blocks, true,
-                                 config_.use_class_layer);
+  mesh_integrator_->generateMesh(only_updated_blocks, true, has_class_layer_);
 }
 
 void Submap::computeIsoSurfacePoints() {
@@ -189,13 +215,70 @@ void Submap::computeIsoSurfacePoints() {
       // Try to interpolate the voxel weight and verify the distance.
       TsdfVoxel voxel;
       if (interpolator.getVoxel(vertex, &voxel, true)) {
-        CHECK_LE(voxel.distance, 1e-2 * config_.voxel_size);
-        iso_surface_points_.emplace_back(vertex, voxel.weight);
+        if (voxel.distance > 1e-2 * config_.voxel_size) {
+          LOG(WARNING) << "IsoSurface Point has distance '" << voxel.distance
+                       << "' > " << 1e-2 * config_.voxel_size
+                       << ", will be ignored.";
+        } else {
+          iso_surface_points_.emplace_back(vertex, voxel.weight);
+        }
       }
     }
   }
 }
 
 void Submap::updateBoundingVolume() { bounding_volume_.update(); }
+
+bool Submap::applyClassLayer(const LayerManipulator& manipulator,
+                             bool clear_class_layer) {
+  if (!has_class_layer_) {
+    return true;
+  }
+  manipulator.applyClassificationLayer(tsdf_layer_.get(), *class_layer_,
+                                       config_.truncation_distance);
+  if (clear_class_layer) {
+    class_layer_.reset();
+    has_class_layer_ = false;
+  }
+  updateEverything();
+  return tsdf_layer_->getNumberOfAllocatedBlocks() != 0;
+}
+
+std::unique_ptr<Submap> Submap::clone(
+    SubmapIDManager* submap_id_manager,
+    InstanceIDManager* instance_id_manager) const {
+  auto result = std::unique_ptr<Submap>(
+      new Submap(config_, submap_id_manager, instance_id_manager, getID()));
+
+  // Copy all members.
+  result->instance_id_ = static_cast<int>(instance_id_);
+  result->class_id_ = class_id_;
+  result->label_ = label_;
+  result->name_ = name_;
+  result->is_active_ = is_active_;
+  result->was_tracked_ = was_tracked_;
+  result->has_class_layer_ = has_class_layer_;
+  result->change_state_ = change_state_;
+  result->frame_name_ = frame_name_;
+  result->T_M_S_ = T_M_S_;
+  result->T_M_S_inv_ = T_M_S_inv_;
+  result->iso_surface_points_ = iso_surface_points_;
+
+  // Deep copy all pointers.
+  result->tsdf_layer_ = std::make_shared<TsdfLayer>(*tsdf_layer_);
+  result->mesh_layer_ = std::make_shared<MeshLayer>(*mesh_layer_);
+  if (class_layer_) {
+    result->class_layer_ = std::make_shared<ClassLayer>(*class_layer_);
+  }
+  result->mesh_integrator_ = std::make_unique<MeshIntegrator>(
+      result->config_.mesh_config, result->tsdf_layer_, result->mesh_layer_,
+      result->class_layer_, result->config_.truncation_distance);
+
+  // The bounding volume can not completely be copied so it's just updated,
+  // which should be identical.
+  result->bounding_volume_.update();
+
+  return result;
+}
 
 }  // namespace panoptic_mapping

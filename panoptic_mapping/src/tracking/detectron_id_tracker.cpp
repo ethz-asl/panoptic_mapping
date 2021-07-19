@@ -18,14 +18,14 @@ void DetectronIDTracker::Config::checkParams() const {
 
 void DetectronIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("use_edge_refinement", &use_edge_refinement);
   setupParam("projective_id_tracker", &projective_id_tracker);
 }
 
 DetectronIDTracker::DetectronIDTracker(const Config& config,
                                        std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIDTracker(config.projective_id_tracker, std::move(globals)) {
+      ProjectiveIDTracker(config.projective_id_tracker, std::move(globals),
+                          false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   addRequiredInput(InputData::InputType::kDetectronLabels);
 }
@@ -38,50 +38,39 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps,
   // Cache the input labels for submap allocation.
   labels_ = &(input->detectronLabels());
 
-  // Track the predicted (and refined) ids.
+  // Track the predicted ids.
   ProjectiveIDTracker::processInput(submaps, input);
 }
 
-int DetectronIDTracker::allocateSubmap(int detectron_id,
-                                       SubmapCollection* submaps) {
+Submap* DetectronIDTracker::allocateSubmap(int input_id,
+                                           SubmapCollection* submaps,
+                                           InputData* input) {
   // Check whether the instance code is known.
-  auto it = labels_->find(detectron_id);
-  PanopticLabel pan_label;
+  auto it = labels_->find(input_id);
   if (it == labels_->end()) {
-    return -1;
+    return nullptr;
+  }
+
+  // Parse detectron label.
+  LabelHandler::LabelEntry label;
+  const int class_id = it->second.category_id;
+  if (globals_->labelHandler()->segmentationIdExists(class_id)) {
+    label = globals_->labelHandler()->getLabelEntry(input_id);
+  }
+  if (it->second.is_thing) {
+    label.label = PanopticLabel::kInstance;
   } else {
-    if (!globals_->labelHandler()->segmentationIdExists(
-            it->second.category_id)) {
-      pan_label = PanopticLabel::kUnknown;
-    } else if (it->second.is_thing) {
-      pan_label = PanopticLabel::kInstance;
-    } else {
-      pan_label = PanopticLabel::kBackground;
-    }
+    label.label = PanopticLabel::kBackground;
   }
 
   // Allocate new submap.
-  Submap::Config config = config_.projective_id_tracker.submap_creation;
-  switch (pan_label) {
-    case PanopticLabel::kInstance: {
-      config.voxel_size = config_.projective_id_tracker.instance_voxel_size;
-      break;
-    }
-    case PanopticLabel::kBackground: {
-      config.voxel_size = config_.projective_id_tracker.background_voxel_size;
-      break;
-    }
-  }
-  config.use_class_layer =
-      config_.projective_id_tracker.submap_creation.use_class_layer;
-  Submap* new_submap = submaps->createSubmap(config);
-  new_submap->setLabel(pan_label);
-  const int class_id = it->second.category_id;
+  Submap* new_submap =
+      submap_allocator_->allocateSubmap(submaps, input, input_id, label);
   new_submap->setClassID(class_id);
   if (globals_->labelHandler()->segmentationIdExists(class_id)) {
     new_submap->setName(globals_->labelHandler()->getName(class_id));
   }
-  return new_submap->getID();
+  return new_submap;
 }
 
 bool DetectronIDTracker::classesMatch(int input_id, int submap_class_id) {

@@ -16,44 +16,34 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, ProjectiveIDTracker,
     ProjectiveIDTracker::registration_("projective");
 
 void ProjectiveIDTracker::Config::checkParams() const {
-  checkParamGT(instance_voxel_size, 0.f, "instance_voxel_size");
-  checkParamGT(background_voxel_size, 0.f, "background_voxel_size");
-  checkParamGT(unknown_voxel_size, 0.f, "unknown_voxel_size");
-  checkParamGT(freespace_voxel_size, 0.f, "freespace_voxel_size");
   checkParamGT(rendering_threads, 0, "rendering_threads");
   checkParamNE(depth_tolerance, 0.f, "depth_tolerance");
   checkParamConfig(renderer);
-  checkParamConfig(submap_creation);
 }
 
 void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-
-  setupParam("instance_voxel_size", &instance_voxel_size);
-  setupParam("background_voxel_size", &background_voxel_size);
-  setupParam("unknown_voxel_size", &unknown_voxel_size);
-  setupParam("freespace_voxel_size", &freespace_voxel_size);
-  setupParam("submap_creation", &submap_creation);
-
   setupParam("depth_tolerance", &depth_tolerance);
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
   setupParam("use_class_data_for_matching", &use_class_data_for_matching);
-
   setupParam("min_allocation_size", &min_allocation_size);
-
   setupParam("rendering_threads", &rendering_threads);
-
-  setupParam("input_is_mesh_id", &input_is_mesh_id);
   setupParam("renderer", &renderer);
 }
 
 ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
-                                         std::shared_ptr<Globals> globals)
+                                         std::shared_ptr<Globals> globals,
+                                         bool print_config)
     : IDTrackerBase(std::move(globals)),
       config_(config.checkValid()),
-      renderer_(config.renderer, globals_->camera()->getConfig()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+      renderer_(config.renderer, globals_->camera()->getConfig(), false) {
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
+  addRequiredInputs({InputData::InputType::kColorImage,
+                     InputData::InputType::kDepthImage,
+                     InputData::InputType::kSegmentationImage,
+                     InputData::InputType::kValidityImage});
 }
 
 void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
@@ -63,22 +53,28 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
   // Visualization.
   cv::Mat input_vis;
+  std::unique_ptr<Timer> vis_timer;
   if (visualizationIsOn()) {
+    vis_timer = std::make_unique<Timer>("visualization/tracking");
     Timer timer("visualization/tracking/input_image");
     input_vis = renderer_.colorIdImage(*(input->idImage()));
-    timer.Stop();
+    vis_timer->Pause();
   }
 
   // Render all submaps.
   Timer timer("tracking");
   auto t0 = std::chrono::high_resolution_clock::now();
+  Timer detail_timer("tracking/compute_tracking_data");
   TrackingInfoAggregator tracking_data = computeTrackingData(submaps, input);
 
   // Assign the input ids to tracks or allocate new maps.
+  detail_timer = Timer("tracking/match_ids");
   std::unordered_map<int, int> input_to_output;
   std::stringstream info;
   int n_matched = 0;
   int n_new = 0;
+  Timer alloc_timer("tracking/allocate_submaps");
+  alloc_timer.Pause();
   for (const int input_id : tracking_data.getInputIDs()) {
     int submap_id;
     bool matched = false;
@@ -135,6 +131,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
     }
 
     // Allocate new submap if necessary and store tracking info.
+    alloc_timer.Unpause();
     bool allocate_new_submap = tracking_data.getNumberOfInputPixels(input_id) >=
                                config_.min_allocation_size;
     if (matched) {
@@ -143,12 +140,17 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
       submaps->getSubmapPtr(submap_id)->setWasTracked(true);
     } else if (allocate_new_submap) {
       n_new++;
-      int out_id = allocateSubmap(input_id, submaps);
-      input_to_output[input_id] = out_id;
+      Submap* new_submap = allocateSubmap(input_id, submaps, input);
+      if (new_submap) {
+        input_to_output[input_id] = new_submap->getID();
+      } else {
+        input_to_output[input_id] = -1;
+      }
     } else {
-      // Ignore these
+      // Ignore these.
       input_to_output[input_id] = -1;
     }
+    alloc_timer.Pause();
 
     // Logging.
     if (config_.verbosity >= 3) {
@@ -169,6 +171,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
       info << logging_details.str();
     }
   }
+  detail_timer.Stop();
 
   // Translate the id image.
   for (auto it = input->idImage()->begin<int>();
@@ -177,7 +180,9 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   }
 
   // Allocate free space map if required.
-  allocateFreeSpaceSubmap(submaps);
+  alloc_timer.Unpause();
+  freespace_allocator_->allocateSubmap(submaps, input);
+  alloc_timer.Stop();
 
   // Finish.
   auto t1 = std::chrono::high_resolution_clock::now();
@@ -192,22 +197,32 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 
   // Publish Visualization if requested.
   if (visualizationIsOn()) {
+    vis_timer->Unpause();
+    Timer timer("visualization/tracking/rendered");
     cv::Mat rendered_vis = renderer_.colorIdImage(
         renderer_.renderActiveSubmapIDs(*submaps, input->T_M_C()));
+    timer = Timer("visualization/tracking/tracked");
     cv::Mat tracked_vis = renderer_.colorIdImage(*(input->idImage()));
+    timer.Stop();
     visualize(input_vis, "input");
     visualize(rendered_vis, "rendered");
     visualize(input->colorImage(), "color");
     visualize(tracked_vis, "tracked");
+    vis_timer->Stop();
   }
 }
 
-bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
-  if (config_.input_is_mesh_id) {
-    // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
-
-    input_id = globals_->labelHandler()->getSegmentationIdFromMeshId(input_id);
+Submap* ProjectiveIDTracker::allocateSubmap(int input_id,
+                                            SubmapCollection* submaps,
+                                            InputData* input) {
+  LabelHandler::LabelEntry label;
+  if (globals_->labelHandler()->segmentationIdExists(input_id)) {
+    label = globals_->labelHandler()->getLabelEntry(input_id);
   }
+  return submap_allocator_->allocateSubmap(submaps, input, input_id, label);
+}
+
+bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
   if (!globals_->labelHandler()->segmentationIdExists(input_id)) {
     // Unknown ID.
     return false;
@@ -296,67 +311,6 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
   }
   result.evaluate(input_ids, depth_image);
   return result;
-}
-
-int ProjectiveIDTracker::allocateSubmap(int instance_id,
-                                        SubmapCollection* submaps) {
-  // Lookup the labels associated with the input_id.
-  PanopticLabel label = PanopticLabel::kUnknown;
-  if (config_.input_is_mesh_id) {
-    instance_id =
-        globals_->labelHandler()->getSegmentationIdFromMeshId(instance_id);
-    // NOTE(schmluk): If not found returns -1, which shouldn't be in the labels.
-  }
-  if (globals_->labelHandler()->segmentationIdExists(instance_id)) {
-    label = globals_->labelHandler()->getPanopticLabel(instance_id);
-  }
-
-  // Allocate new submap.
-  Submap::Config config = config_.submap_creation;
-  switch (label) {
-    case PanopticLabel::kInstance: {
-      config.voxel_size = config_.instance_voxel_size;
-      break;
-    }
-    case PanopticLabel::kBackground: {
-      config.voxel_size = config_.background_voxel_size;
-      break;
-    }
-    case PanopticLabel::kFreeSpace: {
-      config.voxel_size = config_.freespace_voxel_size;
-      break;
-    }
-    case PanopticLabel::kUnknown: {
-      config.voxel_size = config_.unknown_voxel_size;
-      break;
-    }
-  }
-  Submap* new_submap = submaps->createSubmap(config);
-
-  // Take all available information from the ground truth instance ids.
-  new_submap->setLabel(label);
-  if (label != PanopticLabel::kUnknown) {
-    new_submap->setClassID(globals_->labelHandler()->getClassID(instance_id));
-    new_submap->setName(globals_->labelHandler()->getName(instance_id));
-  }
-  return new_submap->getID();
-}
-
-void ProjectiveIDTracker::allocateFreeSpaceSubmap(SubmapCollection* submaps) {
-  if (submaps->getActiveFreeSpaceSubmapID() >= 0) {
-    // Currently only allocate one free space submap in the beginning.
-    return;
-  }
-
-  // Create a new freespace submap.
-  Submap::Config config = config_.submap_creation;
-  config.voxel_size = config_.freespace_voxel_size;
-  config.use_class_layer = false;
-  Submap* space_submap = submaps->createSubmap(config);
-  space_submap->setLabel(PanopticLabel::kFreeSpace);
-  space_submap->setInstanceID(-1);  // Will never appear in a seg image.
-  space_submap->setName("FreeSpace");
-  submaps->setActiveFreeSpaceSubmapID(space_submap->getID());
 }
 
 }  // namespace panoptic_mapping

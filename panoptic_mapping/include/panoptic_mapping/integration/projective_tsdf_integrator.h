@@ -15,8 +15,9 @@
 namespace panoptic_mapping {
 
 /**
- * Allocate blocks based on the 3D points and project all visible blocks into
- * the image for updates.
+ * @brief Allocate blocks based on the 3D points and project all visible blocks
+ * into the image for updates.
+ * TODO(schmluk): properly use validity image?
  */
 class ProjectiveIntegrator : public TsdfIntegratorBase {
  public:
@@ -43,7 +44,8 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
     void checkParams() const override;
   };
 
-  ProjectiveIntegrator(const Config& config, std::shared_ptr<Globals> globals);
+  ProjectiveIntegrator(const Config& config, std::shared_ptr<Globals> globals,
+                       bool print_config = true);
   ~ProjectiveIntegrator() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;

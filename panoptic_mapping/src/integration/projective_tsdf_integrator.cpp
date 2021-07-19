@@ -35,9 +35,16 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
-                                           std::shared_ptr<Globals> globals)
+                                           std::shared_ptr<Globals> globals,
+                                           bool print_config)
     : config_(config.checkValid()), TsdfIntegratorBase(std::move(globals)) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
+                                                       << config_.toString();
+  // Request all inputs.
+  addRequiredInputs(
+      {InputData::InputType::kColorImage, InputData::InputType::kDepthImage,
+       InputData::InputType::kSegmentationImage,
+       InputData::InputType::kVertexMap, InputData::InputType::kValidityImage});
 
   // Setup the interpolators (one for each thread).
   for (int i = 0; i < config_.integration_threads; ++i) {
@@ -59,14 +66,15 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
 
   // Allocate all blocks in corresponding submaps.
+  Timer alloc_timer("tsdf_integration/allocate_blocks");
   cam_config_ = &(globals_->camera()->getConfig());
-  auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(submaps, input);
-  auto t2 = std::chrono::high_resolution_clock::now();
+  alloc_timer.Stop();
 
   // Find all active blocks that are in the field of view.
   // Note(schmluk): This could potentially also be included in the parallel part
   // but is already almost instantaneous.
+  Timer find_timer("tsdf_integration/find_blocks");
   std::unordered_map<int, voxblox::BlockIndexList> block_lists =
       globals_->camera()->findVisibleBlocks(*submaps, input->T_M_C(), true);
   std::vector<int> id_list;
@@ -74,11 +82,12 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
   for (const auto& id_blocklist_pair : block_lists) {
     id_list.emplace_back(id_blocklist_pair.first);
   }
-  auto t3 = std::chrono::high_resolution_clock::now();
+  find_timer.Stop();
 
   // Integrate in parallel.
+  Timer int_timer("tsdf_integration/integration");
   SubmapIndexGetter index_getter(id_list);
-  std::vector<std::future<bool>> threads;
+  std::vector<std::future<void>> threads;
   for (int i = 0; i < config_.integration_threads; ++i) {
     threads.emplace_back(std::async(
         std::launch::async,
@@ -86,27 +95,18 @@ void ProjectiveIntegrator::processInput(SubmapCollection* submaps,
           int index;
           while (index_getter.getNextIndex(&index)) {
             this->updateSubmap(submaps->getSubmapPtr(index),
-                               interpolators_[i].get(), block_lists[index],
+                               interpolators_[i].get(), block_lists.at(index),
                                input->T_M_C(), input->colorImage(),
                                *(input->idImage()));
           }
-          return true;
         }));
   }
+
   // Join all threads.
   for (auto& thread : threads) {
     thread.get();
   }
-  auto t4 = std::chrono::high_resolution_clock::now();
-
-  LOG_IF(INFO, config_.verbosity >= 3)
-      << "Allocate: "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
-      << "ms, Find: "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count()
-      << "ms, Integrate: "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count()
-      << "ms.";
+  int_timer.Stop();
 }
 
 void ProjectiveIntegrator::updateSubmap(
@@ -285,7 +285,7 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
         const voxblox::BlockIndex index =
             submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
         submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(index);
-        if (submap->getConfig().use_class_layer) {
+        if (submap->hasClassLayer()) {
           // NOTE(schmluk): The projective integrator does not use the class
           // layer but was added here for simplicity.
           submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);

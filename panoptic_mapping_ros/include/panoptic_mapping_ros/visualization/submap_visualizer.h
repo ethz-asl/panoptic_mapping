@@ -21,11 +21,11 @@ namespace panoptic_mapping {
 
 class SubmapVisualizer {
  public:
-  // config
+  // Config.
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
-    std::string visualization_mode = "all";  // initial visualization mode.
-    std::string color_mode = "color";        // initial color mode.
+    std::string visualization_mode = "all";  // Initial visualization mode.
+    std::string color_mode = "color";        // Initial color mode.
     int submap_color_discretization = 20;
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
@@ -43,7 +43,7 @@ class SubmapVisualizer {
     void checkParams() const override;
   };
 
-  // constructors
+  // Constructors.
   explicit SubmapVisualizer(const Config& config,
                             std::shared_ptr<Globals> globals);
   virtual ~SubmapVisualizer() = default;
@@ -58,7 +58,7 @@ class SubmapVisualizer {
     kChange,
     kClassification
   };
-  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly };
+  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly, kInactive };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);
@@ -113,6 +113,7 @@ class SubmapVisualizer {
     // Tracking.
     ChangeState previous_change_state;  // kChange
     bool was_active;                    // kActive
+    voxblox::BlockIndexList previous_blocks;  // Track deleted blocks.
   };
 
   void updateVisInfos(const SubmapCollection& submaps);

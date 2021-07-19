@@ -15,7 +15,7 @@
 namespace panoptic_mapping {
 
 const std::unordered_map<InputData::InputType, std::string>
-    InputSynchronizer::kTopicNames_ = {
+    InputSynchronizer::kDefaultTopicNames_ = {
         {InputData::InputType::kDepthImage, "depth_image_in"},
         {InputData::InputType::kColorImage, "color_image_in"},
         {InputData::InputType::kSegmentationImage, "segmentation_image_in"},
@@ -25,8 +25,6 @@ void InputSynchronizer::Config::checkParams() const {
   checkParamGT(max_input_queue_length, 0, "max_input_queue_length");
   checkParamCond(!global_frame_name.empty(),
                  "'global_frame_name' may not be empty.");
-  checkParamCond(!sensor_frame_name.empty(),
-                 "'sensor_frame_name' may not be empty.");
 }
 
 void InputSynchronizer::Config::setupParamsAndPrinting() {
@@ -34,6 +32,7 @@ void InputSynchronizer::Config::setupParamsAndPrinting() {
   setupParam("max_input_queue_length", &max_input_queue_length);
   setupParam("global_frame_name", &global_frame_name);
   setupParam("sensor_frame_name", &sensor_frame_name);
+  setupParam("use_transform_caching", &use_transform_caching);
 }
 
 InputSynchronizer::InputSynchronizer(const Config& config,
@@ -42,8 +41,7 @@ InputSynchronizer::InputSynchronizer(const Config& config,
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
-void InputSynchronizer::requestInputs(
-    const std::unordered_set<InputData::InputType>& types) {
+void InputSynchronizer::requestInputs(const InputData::InputTypes& types) {
   for (const auto& type : types) {
     requested_inputs_.insert(type);
   }
@@ -60,6 +58,7 @@ void InputSynchronizer::advertiseInputTopics() {
         addQueue<MsgT>(type, [](const MsgT& msg, InputData* data) {
           cv_bridge::CvImageConstPtr depth = cv_bridge::toCvCopy(msg, "32FC1");
           data->setDepthImage(depth->image);
+          data->setFrameName(msg->header.frame_id);
         });
         break;
       }
@@ -104,26 +103,70 @@ void InputSynchronizer::checkForMatchingMessages(const ros::Time& timestamp) {
     queue->extractMsgToData(&data, timestamp);
   }
 
-  // Get general data.
-  tf::StampedTransform transform;
-  try {
-    tf_listener_.lookupTransform(config_.global_frame_name,
-                                 config_.sensor_frame_name, timestamp,
-                                 transform);
-    Transformation T_M_C;
-    tf::transformTFToKindr(transform, &T_M_C);
-    data.setT_M_C(T_M_C);
-  } catch (tf::TransformException& ex) {
-    LOG_IF(WARNING, config_.verbosity > 0)
-        << "Unable to lookup transform between '" << config_.sensor_frame_name
-        << "' and '" << config_.global_frame_name << "' (" << ex.what()
-        << "), skipping inputs.";
-    return;
+  // Get the transform.
+  if (!frames_setup_) {
+    if (config_.sensor_frame_name.empty()) {
+      used_sensor_frame_ = data.sensorFrameName();
+    } else {
+      used_sensor_frame_ = config_.sensor_frame_name;
+    }
+  }
+
+  Transformation T_M_C;
+  if (config_.use_transform_caching && frames_setup_) {
+    const uint64_t time = timestamp.sec * 1000000000 + timestamp.nsec;
+    auto it = transform_cache_.find(time);
+    if (it == transform_cache_.end()) {
+      // If the transform could not be cached a warning was already printed.
+      return;
+    } else {
+      T_M_C = it->second;
+      transform_cache_.erase(it);
+    }
+  } else {
+    if (!lookupTransform(timestamp, config_.global_frame_name,
+                         used_sensor_frame_, &T_M_C)) {
+      return;
+    }
   }
   data.setTimeStamp(timestamp.toSec());
+  data.setT_M_C(T_M_C);
+  frames_setup_ = true;
 
   // Send the input to its users.
   callback_(&data);
+}
+
+void InputSynchronizer::cacheTransform(const ros::Time& stamp) {
+  if (frames_setup_) {
+    Transformation transform;
+    if (lookupTransform(stamp, config_.global_frame_name, used_sensor_frame_,
+                        &transform)) {
+      const uint64_t time = stamp.sec * 1000000000 + stamp.nsec;
+      transform_cache_[time] = transform;
+    }
+  }
+}
+
+bool InputSynchronizer::lookupTransform(const ros::Time& stamp,
+                                        const std::string& base_frame,
+                                        const std::string& child_frame,
+                                        Transformation* transformation) const {
+  tf::StampedTransform transform;
+  try {
+    tf_listener_.lookupTransform(base_frame, child_frame, stamp, transform);
+  } catch (tf::TransformException& ex) {
+    LOG_IF(WARNING, config_.verbosity > 0)
+        << "Unable to lookup transform between '" << base_frame << "' and '"
+        << child_frame << "' at time '" << stamp << "' (" << ex.what()
+        << "), skipping inputs.";
+    return false;
+  }
+  CHECK_NOTNULL(transformation);
+  Transformation T_M_C;
+  tf::transformTFToKindr(transform, &T_M_C);
+  *transformation = T_M_C;
+  return true;
 }
 
 }  // namespace panoptic_mapping

@@ -37,6 +37,19 @@ struct ClassVoxel {
     }
   }
 
+  float getBelongingProbability() const {
+    if (current_index < 0) {
+      return static_cast<float>(belongs_count) /
+             (foreign_count + belongs_count);
+    } else {
+      int total_count = 0;
+      for (const auto& count : counts) {
+        total_count += count.second;
+      }
+      return static_cast<float>(counts.at(0)) / total_count;
+    }
+  }
+
   // Binary classification.
   uint belongs_count = 0u;
   uint foreign_count = 0u;

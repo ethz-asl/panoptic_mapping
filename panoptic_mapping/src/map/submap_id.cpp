@@ -1,10 +1,14 @@
-#include "panoptic_mapping/map/utils/submap_id.h"
+#include "panoptic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 
-SubmapID::SubmapID() : id_(SubmapIDManager::getInstance().requestID()) {}
+SubmapID::SubmapID(SubmapIDManager* manager)
+    : manager_(manager), id_(manager->requestID()) {}
 
-SubmapID::~SubmapID() { SubmapIDManager::getInstance().releaseID(id_); }
+SubmapID::SubmapID(int id, SubmapIDManager* manager)
+    : manager_(manager), id_(id) {}
+
+SubmapID::~SubmapID() { manager_->releaseID(id_); }
 
 SubmapIDManager::SubmapIDManager() : current_id_(0) {}
 

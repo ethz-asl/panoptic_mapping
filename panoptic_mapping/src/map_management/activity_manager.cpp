@@ -52,6 +52,7 @@ void ActivityManager::processSubmaps(SubmapCollection* submaps) {
 }
 
 bool ActivityManager::checkRequiredRedetection(Submap* submap) {
+  // Check the submap was re-detected in X consecutive frames after allocation.
   if (config_.required_reobservations <= 0) {
     return true;
   }
@@ -76,6 +77,7 @@ bool ActivityManager::checkRequiredRedetection(Submap* submap) {
 }
 
 void ActivityManager::checkMissedDetections(Submap* submap) {
+  // Check whether a submap was not detected for X consecutive frames.
   if (config_.deactivate_after_missed_detections <= 0) {
     return;
   }

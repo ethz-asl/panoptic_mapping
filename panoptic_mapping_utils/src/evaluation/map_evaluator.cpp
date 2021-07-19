@@ -28,6 +28,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("visualize", &visualize);
   setupParam("compute_coloring", &compute_coloring);
   setupParam("color_by_max_error", &color_by_max_error);
+  setupParam("ignore_truncated_points", &ignore_truncated_points);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -123,7 +124,6 @@ void MapEvaluator::computeReconstructionError(
     const EvaluationRequest& request) {
   // Go through each point, use trilateral interpolation to figure out the
   // distance at that point.
-  std::unique_ptr<Bounds> bounds = std::make_unique<FlatBounds>();
 
   // Setup.
   uint64_t total_points = 0;
@@ -152,18 +152,18 @@ void MapEvaluator::computeReconstructionError(
   // Evaluate gt pcl based(# gt points within < trunc_dist)
   for (const auto& pcl_point : *gt_ptcloud_) {
     const voxblox::Point point(pcl_point.x, pcl_point.y, pcl_point.z);
-    if (!bounds->pointIsValid(point)) {
-      continue;
-    }
     total_points++;
 
     float distance;
     if (planning_->getDistance(point, &distance, false, false)) {
       if (std::abs(distance) > request.maximum_distance) {
-        distance = request.maximum_distance;
         truncated_points++;
+        if (!request.ignore_truncated_points) {
+          abserror.push_back(request.maximum_distance);
+        }
+      } else {
+        abserror.push_back(std::abs(distance));
       }
-      abserror.push_back(std::abs(distance));
     } else {
       unknown_points++;
     }
@@ -229,8 +229,6 @@ void MapEvaluator::visualizeReconstructionError(
   constexpr int max_number_of_neighbors_factor = 25000;  // points per cubic
   // metre depending on voxel size for faster nn search.
 
-  std::unique_ptr<Bounds> bounds = std::make_unique<FlatBounds>();
-
   // Build a Kd tree for point lookup.
   TreeData kdtree_data;
   kdtree_data.points.reserve(gt_ptcloud_->size());
@@ -246,32 +244,32 @@ void MapEvaluator::visualizeReconstructionError(
   ProgressBar bar;
   for (auto& submap : *submaps_) {
     voxblox::BlockIndexList block_list;
-    submap->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
     max_counter += block_list.size();
   }
 
   // Parse all submaps
   for (auto& submap : *submaps_) {
-    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
     const size_t num_voxels_per_block =
-        std::pow(submap->getTsdfLayer().voxels_per_side(), 3);
-    const float voxel_size = submap->getTsdfLayer().voxel_size();
+        std::pow(submap.getTsdfLayer().voxels_per_side(), 3);
+    const float voxel_size = submap.getTsdfLayer().voxel_size();
     const float voxel_size_sqr = voxel_size * voxel_size;
-    const float truncation_distance = submap->getConfig().truncation_distance;
+    const float truncation_distance = submap.getConfig().truncation_distance;
     const int max_number_of_neighbors =
         max_number_of_neighbors_factor / std::pow(1.f / voxel_size, 2.f);
     voxblox::Interpolator<TsdfVoxel> interpolator(
-        submap->getTsdfLayerPtr().get());
+        submap.getTsdfLayerPtr().get());
 
     // Parse all voxels.
     voxblox::BlockIndexList block_list;
-    submap->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
     int block = 0;
     for (auto& block_index : block_list) {
       voxblox::Block<TsdfVoxel>& block =
-          submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
+          submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
       for (size_t linear_index = 0; linear_index < num_voxels_per_block;
            ++linear_index) {
         TsdfVoxel& voxel = block.getVoxelByLinearIndex(linear_index);
@@ -280,11 +278,6 @@ void MapEvaluator::visualizeReconstructionError(
           continue;  // these voxels can never be surface.
         }
         Point center = block.computeCoordinatesFromLinearIndex(linear_index);
-        if (!bounds->pointIsValid(center)) {
-          // Out of bounds.
-          voxel.color = Color(128, 128, 128);
-          continue;
-        }
 
         // Find surface points within 1 voxel size.
         // Note(schmluk): Use N neighbor search wih increasing N since radius
@@ -348,7 +341,7 @@ void MapEvaluator::visualizeReconstructionError(
       counter += 1.f;
       bar.display(counter / max_counter);
     }
-    submap->updateMesh(false);
+    submap.updateMesh(false);
   }
 
   // Store colored submaps.
@@ -361,7 +354,7 @@ void MapEvaluator::visualizeReconstructionError(
 void MapEvaluator::publishVisualization() {
   // Make sure the tfs arrive otherwise the mesh will be discarded.
   visualizer_->reset();
-  visualizer_->visualizeAll(*submaps_);
+  visualizer_->visualizeAll(submaps_.get());
 }
 
 }  // namespace panoptic_mapping

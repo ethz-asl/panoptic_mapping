@@ -34,6 +34,7 @@ class MapEvaluator {
     bool visualize = true;
     bool evaluate = true;
     bool compute_coloring = false;  // Use map_file to load and display.
+    bool ignore_truncated_points = false;
     bool color_by_max_error = false;  // false: color by average error
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
@@ -96,19 +97,6 @@ class MapEvaluator {
   std::string target_map_name_;
   std::unique_ptr<PlanningInterface> planning_;
   std::unique_ptr<SubmapVisualizer> visualizer_;
-};
-
-class Bounds {
- public:
-  virtual bool pointIsValid(const Point& point) const = 0;
-};
-
-// Bounding volume since windows are inaccurate in the gt pointcloud.
-class FlatBounds : public Bounds {
- public:
-  bool pointIsValid(const Point& point) const override {
-    return point.x() >= -5.7;
-  }
 };
 
 }  // namespace panoptic_mapping

@@ -14,14 +14,15 @@
 namespace panoptic_mapping {
 
 /**
- * Only one submap to emulate a monolithic approach.
+ * @brief Integrator that integrates all data into a single submap to emulate a
+ * monolithic approach. Combine this module with the SingleTsdfIDTracker.
  */
 class SingleTsdfIntegrator : public ProjectiveIntegrator {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    ProjectiveIntegrator::Config pi_config;
+    ProjectiveIntegrator::Config projective_integrator_config;
 
     Config() { setConfigName("SingleTsdfIntegrator"); }
 
@@ -38,11 +39,10 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
  protected:
   void allocateNewBlocks(Submap* map, InputData* input);
 
-  virtual void updateBlock(Submap* submap, InterpolatorBase* interpolator,
-                           const voxblox::BlockIndex& block_index,
-                           const Transformation& T_C_S,
-                           const cv::Mat& color_image,
-                           const cv::Mat& id_image) const;
+  void updateBlock(Submap* submap, InterpolatorBase* interpolator,
+                   const voxblox::BlockIndex& block_index,
+                   const Transformation& T_C_S, const cv::Mat& color_image,
+                   const cv::Mat& id_image) const;
 
  private:
   const Config config_;

@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/utils/submap_bounding_volume.h"
+#include "panoptic_mapping/map/submap_bounding_volume.h"
 
 #include <algorithm>
 #include <limits>
@@ -32,6 +32,11 @@ void SubmapBoundingVolume::update() {
   // Setup.
   voxblox::BlockIndexList block_indices;
   submap_->getTsdfLayer().getAllAllocatedBlocks(&block_indices);
+  if (block_indices.empty()) {
+    radius_ = 0.f;
+    center_ = Point();
+    return;
+  }
   std::vector<Point> block_centers;
   block_centers.reserve(block_indices.size());
   const FloatingPoint grid_size = submap_->getTsdfLayer().block_size();

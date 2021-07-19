@@ -14,18 +14,21 @@
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/integration/mesh_integrator.h"
-#include "panoptic_mapping/map/utils/instance_id.h"
-#include "panoptic_mapping/map/utils/submap_bounding_volume.h"
-#include "panoptic_mapping/map/utils/submap_id.h"
+#include "panoptic_mapping/map/instance_id.h"
+#include "panoptic_mapping/map/submap_bounding_volume.h"
+#include "panoptic_mapping/map/submap_id.h"
 
 namespace panoptic_mapping {
 
+class LayerManipulator;
+
 class Submap {
  public:
+  // Config.
   struct Config : public config_utilities::Config<Config> {
     float voxel_size = 0.1;           // m
     float truncation_distance = 0.2;  // m, negative values = #vs
-    int voxels_per_side = 16;  // Needs to be a multiple of 2.
+    int voxels_per_side = 16;         // Needs to be a multiple of 2.
     bool use_class_layer = false;
 
     MeshIntegrator::Config mesh_config;
@@ -38,12 +41,39 @@ class Submap {
     void initializeDependentVariableDefaults() override;
   };
 
-  explicit Submap(const Config& config);
+  // Construction.
+  explicit Submap(
+      const Config& config,
+      SubmapIDManager* submap_id_manager = SubmapIDManager::getGlobalInstance(),
+      InstanceIDManager* instance_id_manager =
+          InstanceIDManager::getGlobalInstance());
   virtual ~Submap() = default;
 
   // IO.
+  /**
+   * @brief Serialize the submap to protobuf.
+   *
+   * @param proto The output protobuf object.
+   */
   void getProto(SubmapProto* proto) const;
+
+  /**
+   * @brief Save the submap to file.
+   *
+   * @param outfile_ptr The file to write the protobuf data to.
+   * @return Success of the saving operation.
+   */
   bool saveToStream(std::fstream* outfile_ptr) const;
+
+  /**
+   * @brief Load the submap from file.
+   *
+   * @param proto_file_ptr File from where to read the protobuf data.
+   * @param tmp_byte_offset_ptr Byte offset result, used to keep track where we
+   * are in the file if necessary. NOTE(schmluk): Mostly unused, initialize to
+   * 0.
+   * @return Unique pointer to the loaded submap.
+   */
   static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
                                                 uint64_t* tmp_byte_offset_ptr);
 
@@ -62,6 +92,7 @@ class Submap {
   const Transformation& getT_S_M() const { return T_M_S_inv_; }
   bool isActive() const { return is_active_; }
   bool wasTracked() const { return was_tracked_; }
+  bool hasClassLayer() const { return has_class_layer_; }
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
@@ -91,14 +122,79 @@ class Submap {
   void setWasTracked(bool was_tracked) { was_tracked_ = was_tracked; }
 
   // Processing.
+  /**
+   * @brief Set the submap status to inactive and update its status accordingly.
+   */
   void finishActivePeriod();
-  void updateMesh(bool only_updated_blocks = true);
-  void computeIsoSurfacePoints();
+
+  /**
+   * @brief Update all dynamically computable quantities.
+   *
+   * @param only_updated_blocks If false, recompute all quantities from scratch.
+   * If true, recompute based on what is flagged updated.
+   */
+  void updateEverything(bool only_updated_blocks = true);
+
+  /**
+   * @brief Update the bounding volume based on all allocated blocks.
+   */
   void updateBoundingVolume();
+
+  /**
+   * @brief Update the mesh based on the current tsdf blocks. Set
+   * only_updated_blocks true for incremental mesh updates, false for a full
+   * re-computation.
+   *
+   * @param only_updated_blocks If false, recompute the mesh from scratch. If
+   * true, update based on the updated(kMesh) flag of the TSDF layer.
+   */
+  void updateMesh(bool only_updated_blocks = true);
+
+  /**
+   * @brief Compute the iso-surface points of the submap based on its current
+   * mesh. Update the mesh before calling this function if it is out of date.
+   */
+  void computeIsoSurfacePoints();
+
+  /**
+   * @brief Removes non-belonging points from the TSDF and deletes the class
+   * layer. Uses the provided manipulator to perform the class layer
+   * integration.
+   *
+   * @param manipulator Manipulator used to carry out the application of the
+   * class layer.
+   * @param clear_class_layer True: erase the class layer. False: keep the class
+   * layer for lookups, but no further manipulations.
+   * @return True if any blocks remain, false if the TSDF map was cleared.
+   */
+  bool applyClassLayer(const LayerManipulator& manipulator,
+                       bool clear_class_layer = true);
+
+  /**
+   * @brief Create a deep copy of the submap. Notice that new submapID and
+   * instanceID managers need to be provided to not corrupt the ID counts. ID
+   * counts will not be double checked so use with care.
+   *
+   * @param submap_id_manager Pointer to the new submapID manager that holds
+   * this submap.
+   * @param instance_id_manager Pointer to the new instanceID manager that holds
+   * this submap.
+   * @return Unique pointer holding the copy.
+   */
+  std::unique_ptr<Submap> clone(SubmapIDManager* submap_id_manager,
+                                InstanceIDManager* instance_id_manager) const;
 
  private:
   friend class SubmapCollection;
   const Config config_;
+
+  // This constructor is intended to allow deep copies of the submap collection,
+  // moving the id to the new id managers.
+  Submap(const Config& config, SubmapIDManager* submap_id_manager,
+         InstanceIDManager* instance_id_manager, int submap_id);
+
+  // Setup.
+  void initialize();
 
   // Labels.
   const SubmapID id_;       // UUID
@@ -110,6 +206,7 @@ class Submap {
   // State.
   bool is_active_ = true;
   bool was_tracked_ = true;  // Set to true by the id tracker if matched.
+  bool has_class_layer_ = false;
   ChangeState change_state_ = ChangeState::kNew;
 
   // Transformations.
@@ -125,7 +222,6 @@ class Submap {
   SubmapBoundingVolume bounding_volume_;
 
   // Processing.
-  // TODO(schmluk): move this out of the submaps? Could be more efficient here.
   std::unique_ptr<MeshIntegrator> mesh_integrator_;
 };
 

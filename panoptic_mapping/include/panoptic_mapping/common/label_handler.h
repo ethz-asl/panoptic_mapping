@@ -15,13 +15,16 @@ namespace panoptic_mapping {
 class LabelHandler {
  public:
   struct LabelEntry {
-    int segmentation_id = 0;
-    int class_id = 0;
+    // The default lable is unknown.
+    int segmentation_id = -1;
+    int class_id = -1;
     PanopticLabel label = PanopticLabel::kUnknown;
     std::string name = "UninitializedName";
     std::string supercategory = "UninitializedSupercategory";
+    std::string size = "Unknown";
     Color color = Color(80, 80, 80);
 
+    // Print the contents of a label.
     std::string toString() const;
   };
 
@@ -49,7 +52,6 @@ class LabelHandler {
  private:
   // List of the labels associated with each segmentation id.
   std::unordered_map<int, LabelEntry> labels_;
-  std::unordered_map<int, int> mesh_to_instance_id_;
 };
 
 }  // namespace panoptic_mapping

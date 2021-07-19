@@ -38,7 +38,7 @@ class ActivityManager {
   explicit ActivityManager(const Config& config);
   virtual ~ActivityManager() = default;
 
-  // Check whether there is significant difference between the two submaps.
+  // Check all criteria.
   void processSubmaps(SubmapCollection* submaps);
 
  private:

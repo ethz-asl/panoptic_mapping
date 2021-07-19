@@ -17,6 +17,7 @@
 #include <panoptic_mapping/map_management/map_manager.h>
 #include <panoptic_mapping/tools/data_writer.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <panoptic_mapping/tools/thread_safe_submap_collection.h>
 #include <panoptic_mapping/tracking/id_tracker_base.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
@@ -32,12 +33,14 @@ namespace panoptic_mapping {
 
 class PanopticMapper {
  public:
+  /* Config */
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
     std::string global_frame_name = "mission";
-    double visualization_interval = -1.0;    // s, use -1 for always, 0 never.
-    double data_logging_interval = 0.0;      // s, use -1 for always, 0 never.
-    bool print_timing = false;               // Print timings after every frame.
+    double visualization_interval = -1.0;  // s, use -1 for always, 0 never.
+    double data_logging_interval = 0.0;    // s, use -1 for always, 0 never.
+    double print_timing_interval = 0.0;    // s, use -1 for always, 0 never.
+    bool use_threadsafe_submap_collection = false;
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -46,12 +49,17 @@ class PanopticMapper {
     void checkParams() const override;
   };
 
+  /* Construction */
   PanopticMapper(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private);
   virtual ~PanopticMapper() = default;
 
-  // ROS callbacks.
+  /* ROS callbacks */
+  // Timers.
   void publishVisualizationCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
+  void printTimingsCallback(const ros::TimerEvent&);
+
+  // Services.
   bool saveMapCallback(
       panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
       panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
@@ -60,23 +68,38 @@ class PanopticMapper {
       panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
   bool setVisualizationModeCallback(
       panoptic_mapping_msgs::SetVisualizationMode::Request& request,  // NOLINT
-      panoptic_mapping_msgs::SetVisualizationMode::Response&
-          response);                                               // NOLINT
-  bool printTimingsCallback(std_srvs::Empty::Request& request,     // NOLINT
-                            std_srvs::Empty::Response& response);  // NOLINT
+      panoptic_mapping_msgs::SetVisualizationMode::Response&          // NOLINT
+          response);
+  bool printTimingsCallback(std_srvs::Empty::Request& request,      // NOLINT
+                            std_srvs::Empty::Response& response);   // NOLINT
+  bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
+                             std_srvs::Empty::Response& response);  // NOLINT
 
-  // Processing.
+  /* Processing */
+  // Integrate a set of input images. The input is usually gathered from ROS
+  // topics and provided by the InputSynchronizer.
   void processInput(InputData* input);
 
-  // IO.
+  // Performs various post-processing actions.
+  // NOTE(schmluk): This is currently a preliminary tool to play around with.
+  void finishMapping();
+
+  /* IO */
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
 
-  // Visualization.
+  /* Utilities */
+  // Print all timings (from voxblox::timing) to console.
+  void printTimings() const;
+
+  // Update the meshes and publish the all visualizations of the current map.
   void publishVisualization();
 
-  // Access.
+  /* Access */
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
+  const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
+    return *thread_safe_submaps_;
+  }
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
   }
@@ -98,14 +121,17 @@ class PanopticMapper {
   ros::ServiceServer set_visualization_mode_srv_;
   ros::ServiceServer set_color_mode_srv_;
   ros::ServiceServer print_timings_srv_;
+  ros::ServiceServer finish_mapping_srv_;
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
+  ros::Timer print_timing_timer_;
 
   // Members.
   const Config config_;
 
   // Map.
   std::shared_ptr<SubmapCollection> submaps_;
+  std::shared_ptr<ThreadSafeSubmapCollection> thread_safe_submaps_;
 
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;
@@ -122,6 +148,10 @@ class PanopticMapper {
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<PlanningVisualizer> planning_visualizer_;
   std::unique_ptr<TrackingVisualizer> tracking_visualizer_;
+
+  // Which processing to perform.
+  bool compute_vertex_map_ = false;
+  bool compute_validity_image_ = false;
 };
 
 }  // namespace panoptic_mapping

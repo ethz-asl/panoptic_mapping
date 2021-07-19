@@ -1,6 +1,6 @@
 <launch>
   <!-- Arguments -->
-  <arg name="env_name" default="large_flat_dataset"/>
+  <arg name="env_name" default="flat_dataset"/>
   <arg name="waypoints" default="/home/lukas/Documents/Datasets/$(arg env_name)/waypoints1.yaml"/>
   <arg name="airsim_cfg" default="/home/lukas/Documents/Datasets/$(arg env_name)/airsim.yaml"/>
   <arg name="output_dir" default="/home/lukas/Documents/Datasets/$(arg env_name)/"/>
@@ -40,7 +40,7 @@
   
    <!-- Record a rosbag of the visualization-->
   <node pkg="rosbag" type="record" name="rosbag" if="$(arg record_data)"
-       args="record -o $(arg output_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected "/>  
+       args="record -o $(arg output_dir)/ /rosout /clock /tf /tf_static /airsim_drone/ground_truth/pose /airsim_drone/Depth_cam /airsim_drone/Scene_cam /airsim_drone/Id_corrected /airsim_drone/Pointcloud"/>  
 <!--  /airsim_drone/Pointcloud     -->
 
   <!-- RVIZ Visualization -->

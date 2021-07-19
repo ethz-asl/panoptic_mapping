@@ -1,7 +1,9 @@
 #include "panoptic_mapping/map_management/map_manager.h"
 
+#include <algorithm>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -10,28 +12,44 @@ namespace panoptic_mapping {
 void MapManager::Config::checkParams() const {
   checkParamConfig(activity_manager_config);
   checkParamConfig(tsdf_registrator_config);
+  checkParamConfig(layer_manipulator_config);
 }
 
 void MapManager::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
 
+  // Frequency.
   setupParam("prune_active_blocks_frequency", &prune_active_blocks_frequency);
   setupParam("activity_management_frequency", &activity_management_frequency);
   setupParam("change_detection_frequency", &change_detection_frequency);
 
+  // Behavior.
+  setupParam("merge_deactivated_submaps_if_possible",
+             &merge_deactivated_submaps_if_possible);
+  setupParam("apply_class_layer_when_deactivating_submaps",
+             &apply_class_layer_when_deactivating_submaps);
+
+  // Member configs.
   setupParam("activity_manager_config", &activity_manager_config,
              "activity_manager");
   setupParam("tsdf_registrator_config", &tsdf_registrator_config,
              "tsdf_registrator");
+  setupParam("layer_manipulator_config", &layer_manipulator_config,
+             "layer_manipulator");
 }
 
 MapManager::MapManager(const Config& config,
                        std::shared_ptr<SubmapCollection> map)
-    : config_(config.checkValid()),
-      map_(std::move(map)),
-      activity_manager_(config_.activity_manager_config),
-      tsdf_registrator_(config_.tsdf_registrator_config) {
+    : config_(config.checkValid()), map_(std::move(map)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
+  // Setup members.
+  activity_manager_ =
+      std::make_shared<ActivityManager>(config_.activity_manager_config);
+  tsdf_registrator_ =
+      std::make_shared<TsdfRegistrator>(config_.tsdf_registrator_config);
+  layer_manipulator_ =
+      std::make_shared<LayerManipulator>(config_.layer_manipulator_config);
 
   // Add all requested tasks.
   if (config_.prune_active_blocks_frequency > 0) {
@@ -39,9 +57,8 @@ MapManager::MapManager(const Config& config,
                           [this] { pruneActiveBlocks(); });
   }
   if (config_.activity_management_frequency > 0) {
-    tickers_.emplace_back(config_.activity_management_frequency, [this] {
-      activity_manager_.processSubmaps(map_.get());
-    });
+    tickers_.emplace_back(config_.activity_management_frequency,
+                          [this] { manageSubmapActivity(); });
   }
   if (config_.change_detection_frequency > 0) {
     tickers_.emplace_back(config_.change_detection_frequency,
@@ -49,7 +66,7 @@ MapManager::MapManager(const Config& config,
   }
 }
 
-void MapManager::tickMapManagement() {
+void MapManager::tick() {
   // Increment counts for all tickers, which execute the requested actions.
   for (Ticker& ticker : tickers_) {
     ticker.tick();
@@ -89,13 +106,164 @@ void MapManager::pruneActiveBlocks() {
       << "ms." << info.str();
 }
 
-void MapManager::performChangeDetection() {
-  tsdf_registrator_.checkSubmapCollectionForChange(map_.get());
+void MapManager::manageSubmapActivity() {
+  std::unordered_set<int> active_submaps;
+  if (config_.merge_deactivated_submaps_if_possible) {
+    // Track de-activated submaps if requested.
+    for (const Submap& submap : *map_) {
+      if (submap.isActive()) {
+        active_submaps.insert(submap.getID());
+      }
+    }
+  }
+
+  // Perform activity management.
+  activity_manager_->processSubmaps(map_.get());
+
+  // Process de-activated submaps if requested.
+  if (config_.merge_deactivated_submaps_if_possible ||
+      config_.apply_class_layer_when_deactivating_submaps) {
+    std::unordered_set<int> deactivated_submaps;
+    for (Submap& submap : *map_) {
+      if (!submap.isActive() &&
+          active_submaps.find(submap.getID()) != active_submaps.end()) {
+        deactivated_submaps.insert(submap.getID());
+      }
+    }
+
+    // Apply the class layer if requested.
+    if (config_.apply_class_layer_when_deactivating_submaps) {
+      for (int id : deactivated_submaps) {
+        Submap* submap = map_->getSubmapPtr(id);
+        submap->applyClassLayer(*layer_manipulator_);
+      }
+    }
+
+    // Try to merge the submaps.
+    if (config_.merge_deactivated_submaps_if_possible) {
+      for (int id : deactivated_submaps) {
+        int merged_id;
+        int current_id = id;
+        while (mergeSubmapIfPossible(current_id, &merged_id)) {
+          current_id = merged_id;
+        }
+        if (current_id == id) {
+          std::cout << "Submap " << id
+                    << " was deactivated, could not be matched." << std::endl;
+        }
+      }
+    }
+  }
 }
 
-std::string MapManager::pruneBlocks(Submap* submap) {
+void MapManager::performChangeDetection() {
+  tsdf_registrator_->checkSubmapCollectionForChange(map_.get());
+}
+
+void MapManager::finishMapping() {
+  // TEST single_tsdf
+  // Remove all empty blocks since voxblox would not allocate these.
+  voxblox::BlockIndexList all_blocks;
+  voxblox::BlockIndexList empty_blocks;
+
+  Submap* map = &(*map_->begin());
+  map->getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
+  const int vps = std::pow(map->getConfig().voxels_per_side, 3);
+  int removed_blocks = 0;
+
+  for (const auto& block_i : all_blocks) {
+    const TsdfBlock& block = map->getTsdfLayer().getBlockByIndex(block_i);
+    bool has_data = false;
+    for (int i = 0; i < vps; ++i) {
+      if (block.getVoxelByLinearIndex(i).weight > 1e-6) {
+        has_data = true;
+        break;
+      }
+      if (has_data) {
+        break;
+      }
+    }
+    if (!has_data) {
+      map->getTsdfLayerPtr()->removeBlock(block_i);
+      removed_blocks++;
+    }
+  }
+  LOG(INFO) << "Removed " << removed_blocks << " block from the map.";
+  return;
+
+  // Deactivate last submaps.
+  for (Submap& submap : *map_) {
+    if (submap.isActive()) {
+      submap.finishActivePeriod();
+      mergeSubmapIfPossible(submap.getID());
+    }
+  }
+
+  // Merge what is possible.
+  bool merged_something = true;
+  while (merged_something) {
+    for (Submap& submap : *map_) {
+      merged_something = mergeSubmapIfPossible(submap.getID());
+      if (merged_something) {
+        continue;
+      }
+    }
+  }
+
+  // Finish submaps.
+  //  for (Submap& submap : *map_) {
+
+  //  }
+}
+
+bool MapManager::mergeSubmapIfPossible(int submap_id, int* merged_id) {
+  // Use on inactive submaps, checks for possible matches with other inactive
+  // submaps.
+  if (!map_->submapIdExists(submap_id)) {
+    return false;
+  }
+
+  // Setup.
+  Submap* submap = map_->getSubmapPtr(submap_id);
+  if (submap->isActive()) {
+    // Active submaps need first to be de-activated.
+    submap->finishActivePeriod();
+  }
+  const float acceptance_count =
+      std::min(static_cast<float>(
+                   config_.tsdf_registrator_config.match_acceptance_points),
+               config_.tsdf_registrator_config.match_acceptance_percentage *
+                   submap->getIsoSurfacePoints().size());
+
+  // Find all potential matches.
+  for (Submap& other : *map_) {
+    if (other.isActive() || other.getClassID() != submap->getClassID() ||
+        other.getID() == submap->getID() ||
+        !submap->getBoundingVolume().intersects(other.getBoundingVolume())) {
+      continue;
+    }
+
+    float matching_points;
+    if (!tsdf_registrator_->submapsConflict(*submap, other, &matching_points)) {
+      if (matching_points > acceptance_count) {
+        // It's a match, merge the submap into the candidate.
+        layer_manipulator_->mergeSubmapAintoB(*submap, &other);
+        std::cout << "Merged Submap " << submap->getID() << " into "
+                  << other.getID() << "." << std::endl;
+        map_->removeSubmap(submap_id);
+        if (merged_id) {
+          *merged_id = other.getID();
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+std::string MapManager::pruneBlocks(Submap* submap) const {
   // Only process maps with class data.
-  if (!submap->getConfig().use_class_layer) {
+  if (!submap->hasClassLayer()) {
     return "";
   }
   auto t1 = std::chrono::high_resolution_clock::now();
