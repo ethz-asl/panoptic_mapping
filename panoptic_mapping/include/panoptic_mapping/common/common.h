@@ -1,6 +1,7 @@
 #ifndef PANOPTIC_MAPPING_COMMON_COMMON_H_
 #define PANOPTIC_MAPPING_COMMON_COMMON_H_
 
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -12,6 +13,8 @@
 #include <voxblox/mesh/mesh_layer.h>
 #include <voxblox/utils/timing.h>
 
+#include "panoptic_mapping/common/class_voxel.h"
+
 namespace panoptic_mapping {
 // Type definitions to work with a voxblox map.
 using FloatingPoint = voxblox::FloatingPoint;
@@ -21,44 +24,11 @@ using Point = voxblox::Point;
 using Transformation = voxblox::Transformation;
 using Pointcloud = voxblox::Pointcloud;
 
-// Tsdf Maps.
+// Tsdf and class Maps.
 using TsdfVoxel = voxblox::TsdfVoxel;
 using TsdfBlock = voxblox::Block<TsdfVoxel>;
 using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
-
-// Classification Maps.
-struct ClassVoxel {
-  bool belongsToSubmap() const {
-    if (current_index < 0) {
-      return belongs_count > foreign_count;
-    } else {
-      return current_index == 0;
-    }
-  }
-
-  float getBelongingProbability() const {
-    if (current_index < 0) {
-      return static_cast<float>(belongs_count) /
-             (foreign_count + belongs_count);
-    } else {
-      int total_count = 0;
-      for (const auto& count : counts) {
-        total_count += count.second;
-      }
-      return static_cast<float>(counts.at(0)) / total_count;
-    }
-  }
-
-  // Binary classification.
-  uint belongs_count = 0u;
-  uint foreign_count = 0u;
-
-  // Class-wise classification (index 0 is reserved for the belonging submap).
-  std::unordered_map<int, int> counts{{0, 0}};
-  int current_count = -1;
-  int current_index = -1;
-};
 using ClassBlock = voxblox::Block<ClassVoxel>;
 using ClassLayer = voxblox::Layer<ClassVoxel>;
 

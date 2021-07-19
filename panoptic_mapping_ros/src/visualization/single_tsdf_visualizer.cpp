@@ -151,7 +151,10 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
     // Color the voxel by the certainty of classification from green 1.0 highest
     // to red 0.0.
     get_color = [](const ClassVoxel& voxel) {
-      const float probability = voxel.getBelongingProbability();
+      const float probability =
+          static_cast<float>(voxel.belongs_count) /
+          std::accumulate(voxel.counts.begin(), voxel.counts.end(),
+                          ClassVoxel::Counter(0));
       Color color;
       color.b = 0;
       if (probability > 0.5) {

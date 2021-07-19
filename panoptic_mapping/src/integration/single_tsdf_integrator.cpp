@@ -34,6 +34,8 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
       ProjectiveIntegrator(config.projective_integrator_config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+  // Cache num classes info.
+  num_classes_ = globals_->labelHandler()->numberOfClasses();
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
@@ -166,12 +168,12 @@ bool SingleTsdfIntegrator::updateVoxel(
 
     // Update the semantic information if requested.
     if (class_voxel) {
-      const int id = interpolator->interpolateID(input.idImage());
-      const int counts = ++(class_voxel->counts[id]);
-      if (counts > class_voxel->current_count) {
-        class_voxel->current_count = counts;
-        class_voxel->current_index = id;
+      if (class_voxel->current_index < 0) {
+        // This means the voxel is uninitialized.
+        class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
       }
+      classVoxelIncrementClass(class_voxel,
+                               interpolator->interpolateID(input.idImage()));
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);

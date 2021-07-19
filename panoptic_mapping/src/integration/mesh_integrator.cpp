@@ -79,26 +79,26 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
     use_class_layer_ = false;
     LOG(WARNING) << "Tried to use un-initialized class layer, will be ignored.";
   }
-  voxblox::BlockIndexList all_tsdf_blocks;
+  voxblox::BlockIndexList tsdf_blocks;
   if (only_mesh_updated_blocks) {
     tsdf_layer_->getAllUpdatedBlocks(voxblox::Update::Status::kMesh,
-                                     &all_tsdf_blocks);
+                                     &tsdf_blocks);
   } else {
-    tsdf_layer_->getAllAllocatedBlocks(&all_tsdf_blocks);
+    tsdf_layer_->getAllAllocatedBlocks(&tsdf_blocks);
   }
 
   // Allocate all the mesh memory.
-  for (const voxblox::BlockIndex& block_index : all_tsdf_blocks) {
+  for (const voxblox::BlockIndex& block_index : tsdf_blocks) {
     mesh_layer_->allocateMeshPtrByIndex(block_index);
   }
 
   std::unique_ptr<voxblox::ThreadSafeIndex> index_getter(
-      new voxblox::MixedThreadSafeIndex(all_tsdf_blocks.size()));
+      new voxblox::MixedThreadSafeIndex(tsdf_blocks.size()));
 
   std::list<std::thread> integration_threads;
   for (size_t i = 0; i < config_.integrator_threads; ++i) {
     integration_threads.emplace_back(
-        &MeshIntegrator::generateMeshBlocksFunction, this, all_tsdf_blocks,
+        &MeshIntegrator::generateMeshBlocksFunction, this, tsdf_blocks,
         clear_updated_flag, index_getter.get());
   }
 
@@ -108,13 +108,13 @@ void MeshIntegrator::generateMesh(bool only_mesh_updated_blocks,
 }
 
 void MeshIntegrator::generateMeshBlocksFunction(
-    const voxblox::BlockIndexList& all_tsdf_blocks, bool clear_updated_flag,
+    const voxblox::BlockIndexList& tsdf_blocks, bool clear_updated_flag,
     voxblox::ThreadSafeIndex* index_getter) {
   DCHECK(index_getter != nullptr);
 
   size_t list_idx;
   while (index_getter->getNextIndex(&list_idx)) {
-    const voxblox::BlockIndex& block_idx = all_tsdf_blocks[list_idx];
+    const voxblox::BlockIndex& block_idx = tsdf_blocks[list_idx];
     updateMeshForBlock(block_idx);
     if (clear_updated_flag) {
       tsdf_layer_->getBlockPtrByIndex(block_idx)->setUpdated(
@@ -232,8 +232,8 @@ void MeshIntegrator::extractMeshInsideBlock(
       break;
     }
     if (use_class_layer_) {
-      corner_belongs(i) =
-          class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
+      corner_belongs(i) = classVoxelBelongsToSubmap(
+          class_block->getVoxelByVoxelIndex(corner_index));
       if (corner_belongs(i)) {
         belonging_corners++;
       }
@@ -285,8 +285,8 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
         break;
       }
       if (use_class_layer_) {
-        corner_belongs(i) =
-            class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
+        corner_belongs(i) = classVoxelBelongsToSubmap(
+            class_block->getVoxelByVoxelIndex(corner_index));
         if (corner_belongs(i)) {
           belonging_corners++;
         }
@@ -327,9 +327,9 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
         if (use_class_layer_) {
           // We assume that the class blocks are always updated simultaneously
           // so existence of the class block is not checked here.
-          corner_belongs(i) = class_layer_->getBlockByIndex(neighbor_index)
-                                  .getVoxelByVoxelIndex(corner_index)
-                                  .belongsToSubmap();
+          corner_belongs(i) = classVoxelBelongsToSubmap(
+              class_layer_->getBlockByIndex(neighbor_index)
+                  .getVoxelByVoxelIndex(corner_index));
           if (corner_belongs(i)) {
             belonging_corners++;
           }

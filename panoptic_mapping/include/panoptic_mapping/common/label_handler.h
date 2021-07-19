@@ -35,7 +35,6 @@ class LabelHandler {
 
   // This returns true if the id was found.
   bool segmentationIdExists(int segmentation_id) const;
-  int getSegmentationIdFromMeshId(int mesh_id) const;
 
   // These acessors assume that the segmentation_id exists.
   int getClassID(int segmentation_id) const;
@@ -48,6 +47,8 @@ class LabelHandler {
   const std::string& getName(int segmentation_id) const;
   const std::string& getSuperCategory(int segmentation_id) const;
   const LabelEntry& getLabelEntry(int segmentation_id) const;
+
+  size_t numberOfClasses() const;
 
  private:
   // List of the labels associated with each segmentation id.

@@ -283,7 +283,8 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
 
     // Check all voxels.
     for (int voxel_index = 0; voxel_index < voxel_indices; ++voxel_index) {
-      if (class_block.getVoxelByLinearIndex(voxel_index).belongsToSubmap()) {
+      if (classVoxelBelongsToSubmap(
+              class_block.getVoxelByLinearIndex(voxel_index))) {
         has_beloning_voxels = true;
         break;
       }

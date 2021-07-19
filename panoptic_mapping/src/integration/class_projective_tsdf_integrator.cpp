@@ -133,9 +133,9 @@ void ClassProjectiveIntegrator::updateBlock(
           }
         }
         if (config_.use_accurate_classification) {
-          const int counts = ++(class_voxel.counts[id]);
-          if (counts > class_voxel.current_count) {
-            class_voxel.current_count = counts;
+          const ClassVoxel::Counter counts = ++(class_voxel.counts[id]);
+          if (counts > class_voxel.belongs_count) {
+            class_voxel.belongs_count = counts;
             class_voxel.current_index = id;
           }
         } else {

@@ -13,10 +13,14 @@ store_output = True
 # Note: supereight no color integration, no semantic integration.
 # supereight resolutions are roughly ~8,4,2,1 cm
 data = {
-    'supereight 256': [3.228, 7.2],  # 5.872 (without cropping)
-    'supereight 512': [2.119, 34.7],  # 3.559
-    'supereight 1024': [1.409, 190.6],  # 2.870
-    'supereight 2048': [1.058, 1100.6],  # 2.546
+    'supereight 10cm': [19.48, 8.9],
+    'supereight 5cm': [20.51, 37.4],
+    'supereight 2cm': [1.409, 190.6],
+    'supereight 1cm': [1.058, 1100.6],
+    'supereight_dense 10cm': [17.6, 3.6],
+    'supereight_dense 5cm': [2.119, 34.7],
+    'supereight_dense 2cm': [1.409, 190.6],
+    'supereight_dense 1cm': [1.058, 1100.6],
     'panmap single_tsdf 20cm': [2.332, 0.6],
     'panmap single_tsdf 10cm': [1.859, 4.5],
     'panmap single_tsdf 5cm': [1.409, 19.7],
@@ -25,6 +29,10 @@ data = {
     'voxblox 10cm': [2.284, 7.0],
     'voxblox 5cm': [1.832, 39.5],
     'voxblox 2cm': [1.205, 247.8],
+    'voxblox_uni 20cm': [3.114, 1.5],
+    'voxblox_uni 10cm': [2.284, 7.0],
+    'voxblox_uni 5cm': [1.832, 39.5],
+    'voxblox_uni 2cm': [1.205, 247.8],
     # 'panmap multi w/ GT': [0, 0],
     # 'panmap multi w/ Detectron': [0, 0],
 }

@@ -191,14 +191,7 @@ void PanopticMapper::inputCallback(const ros::TimerEvent&) {
 void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   Timer timer("input");
-
-  // Print total elapsed time between frames if required.
-  LOG_IF(INFO, config_.verbosity >= 3)
-      << "Total frame time: "
-      << static_cast<int>(
-             (ros::WallTime::now() - previous_frame_time_).toSec() * 1000)
-      << "ms.";
-  previous_frame_time_ = ros::WallTime::now();
+  frame_timer_ = std::make_unique<Timer>("frame");
 
   // Compute and store the validity image.
   if (compute_validity_image_) {
@@ -259,8 +252,12 @@ void PanopticMapper::processInput(InputData* input) {
     if (config_.visualization_interval <= 0.f) {
       info << " + visual: " << int((t4 - t3).toSec() * 1000);
     }
-    info << " = " << int((t4 - t0).toSec() * 1000) << "ms)";
+    info << " = " << int((t4 - t0).toSec() * 1000) << ", frame: "
+         << static_cast<int>(
+                (ros::WallTime::now() - previous_frame_time_).toSec() * 1000)
+         << "ms)";
   }
+  previous_frame_time_ = ros::WallTime::now();
   LOG_IF(INFO, config_.verbosity >= 2) << info.str();
   LOG_IF(INFO, config_.print_timing_interval < 0.0) << "\n" << Timing::Print();
 }

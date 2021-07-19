@@ -57,6 +57,8 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   static config_utilities::Factory::RegistrationRos<
       TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
       registration_;
+
+  int num_classes_;
 };
 
 }  // namespace panoptic_mapping

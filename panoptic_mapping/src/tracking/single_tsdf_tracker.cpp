@@ -65,9 +65,7 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
     map_id_ = map.getID();
   } else {
     // Allocate the single map.
-    Submap::Config config = config_.submap_config;
-    config.mesh_config.required_belonging_corners = 0;
-    Submap* new_submap = submaps->createSubmap(config);
+    Submap* new_submap = submaps->createSubmap(config_.submap_config);
     new_submap->setLabel(PanopticLabel::kBackground);
     map_id_ = new_submap->getID();
   }

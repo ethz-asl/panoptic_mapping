@@ -294,7 +294,7 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
           class_block.getVoxelByLinearIndex(linear_index);
 
       // Coloring.
-      float probability = class_voxel.getBelongingProbability();
+      float probability = classVoxelBelongingProbability(class_voxel);
       tsdf_voxel.color.b = 0;
       if (probability > 0.5) {
         tsdf_voxel.color.r = ((1.f - probability) * 2.f * 255.f);

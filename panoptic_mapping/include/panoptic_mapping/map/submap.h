@@ -147,12 +147,17 @@ class Submap {
    *
    * @param only_updated_blocks If false, recompute the mesh from scratch. If
    * true, update based on the updated(kMesh) flag of the TSDF layer.
+   * @param use_class_layer Set to true to use the class layer if it is
+   * available.
    */
-  void updateMesh(bool only_updated_blocks = true);
+  void updateMesh(bool only_updated_blocks = true, bool use_class_layer = true);
 
   /**
    * @brief Compute the iso-surface points of the submap based on its current
-   * mesh. Update the mesh before calling this function if it is out of date.
+   * mesh. Currently all surface points are computed from scratch every time,
+   * but since they are currently only computed when a submap is finished it
+   * should be fine. This function utilizes the stored mesh so make sure
+   * updateMesh is called earlier.
    */
   void computeIsoSurfacePoints();
 

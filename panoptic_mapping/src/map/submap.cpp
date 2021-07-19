@@ -189,17 +189,13 @@ void Submap::updateEverything(bool only_updated_blocks) {
   computeIsoSurfacePoints();
 }
 
-void Submap::updateMesh(bool only_updated_blocks) {
+void Submap::updateMesh(bool only_updated_blocks, bool use_class_layer) {
   // Use the default integrator config to have color always available.
-  mesh_integrator_->generateMesh(only_updated_blocks, true, has_class_layer_);
+  mesh_integrator_->generateMesh(only_updated_blocks, true,
+                                 has_class_layer_ && use_class_layer);
 }
 
 void Submap::computeIsoSurfacePoints() {
-  // NOTE(schmluk): Currently all surface points are computed from scratch every
-  // time, but since they are currently only computed when a submap is finished
-  // it should be fine.
-  // This function utilizes the stored mesh so make sure updateMesh is called
-  // earlier.
   iso_surface_points_ = std::vector<IsoSurfacePoint>();
 
   // Create an interpolator to interpolate the vertex weights from the TSDF.

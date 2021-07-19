@@ -51,7 +51,7 @@ void LayerManipulator::applyClassificationLayer(
       if (tsdf_voxel.weight <= 1.0e-6) {
         continue;
       }
-      if (!class_block->getVoxelByLinearIndex(i).belongsToSubmap()) {
+      if (!classVoxelBelongsToSubmap(class_block->getVoxelByLinearIndex(i))) {
         // TODO(schmluk): Could get proper distance by looking up the surface.
         // TODO(schmluk): Could use probability to change the weights?
         tsdf_voxel.distance = truncation_distance;
@@ -111,27 +111,27 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
         if (config_.use_instance_classification) {
           // Switch out the instance labels which are now the same.
           voxel_B.counts[0] += voxel_B.counts[A.getID() + 1];
-          voxel_B.counts.erase(A.getID() + 1);
-          for (const auto& id_count : voxel_A.counts) {
-            if (id_count.first == B->getID() + 1) {
-              voxel_B.counts[0] += id_count.second;
-            } else {
-              voxel_B.counts[id_count.first] += id_count.second;
-            }
-          }
-        } else {
-          for (const auto& id_count : voxel_A.counts) {
-            voxel_B.counts[id_count.first] += id_count.second;
-          }
-          voxel_B.belongs_count += voxel_A.belongs_count;
-          voxel_B.foreign_count += voxel_A.foreign_count;
-        }
-        voxel_B.current_count = 0;
-        for (auto& id_count : voxel_B.counts) {
-          if (id_count.second > voxel_B.current_count) {
-            voxel_B.current_index = id_count.first;
-            voxel_B.current_count = id_count.second;
-          }
+          voxel_B.counts[A.getID() + 1] = 0;
+          //   for (const auto& id_count : voxel_A.counts) {
+          //     if (id_count.first == B->getID() + 1) {
+          //       voxel_B.counts[0] += id_count.second;
+          //     } else {
+          //       voxel_B.counts[id_count.first] += id_count.second;
+          //     }
+          //   }
+          // } else {
+          //   for (const auto& id_count : voxel_A.counts) {
+          //     voxel_B.counts[id_count.first] += id_count.second;
+          //   }
+          //   voxel_B.belongs_count += voxel_A.belongs_count;
+          //   voxel_B.foreign_count += voxel_A.foreign_count;
+          // }
+          // voxel_B.current_count = 0;
+          // for (auto& id_count : voxel_B.counts) {
+          //   if (id_count.second > voxel_B.current_count) {
+          //     voxel_B.current_index = id_count.first;
+          //     voxel_B.current_count = id_count.second;
+          //   }
         }
       }
     }
