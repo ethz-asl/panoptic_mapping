@@ -7,7 +7,7 @@
   
   <!-- Flat Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
-  <arg name="play_rate" default="1.5"/>  <!-- Realtime factor -->
+  <arg name="play_rate" default="0.7"/>  <!-- Realtime factor -->
   <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
@@ -15,7 +15,7 @@
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="devel"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="single_tsdf"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>
