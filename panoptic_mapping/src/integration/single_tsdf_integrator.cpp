@@ -175,11 +175,12 @@ bool SingleTsdfIntegrator::updateVoxel(
 
       size_t class_id = interpolator->interpolateID(input.idImage());
 
-      if(class_id >= class_voxel->counts.size()) {
+      if (class_id >= class_voxel->counts.size()) {
         LOG_IF(WARNING, config_.verbosity >= 1)
-                      << "Got invalid class ID in tsdf integrator. Skipping class: " << class_id;
+            << "Got invalid class ID in tsdf integrator. Skipping class: "
+            << class_id;
       } else {
-          classVoxelIncrementClass(class_voxel, class_id);
+        classVoxelIncrementClass(class_voxel, class_id);
       }
     }
   } else {
