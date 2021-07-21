@@ -172,8 +172,15 @@ bool SingleTsdfIntegrator::updateVoxel(
         // This means the voxel is uninitialized.
         class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
       }
-      classVoxelIncrementClass(class_voxel,
-                               interpolator->interpolateID(input.idImage()));
+
+      size_t class_id = interpolator->interpolateID(input.idImage());
+
+      if(class_id >= class_voxel->counts.size()) {
+        LOG_IF(WARNING, config_.verbosity >= 1)
+                      << "Got invalid class ID in tsdf integrator. Skipping class: " << class_id;
+      } else {
+          classVoxelIncrementClass(class_voxel, class_id);
+      }
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);
