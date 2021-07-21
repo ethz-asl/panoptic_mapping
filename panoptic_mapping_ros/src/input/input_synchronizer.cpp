@@ -35,6 +35,7 @@ void InputSynchronizer::Config::setupParamsAndPrinting() {
   setupParam("global_frame_name", &global_frame_name);
   setupParam("sensor_frame_name", &sensor_frame_name);
   setupParam("transform_lookup_time", &transform_lookup_time);
+  setupParam("max_delay", &max_delay);
 }
 
 InputSynchronizer::InputSynchronizer(const Config& config,
@@ -110,9 +111,10 @@ bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
   if (timestamp < oldest_time_) {
     return false;
   }
+  double max_delay = config_.max_delay;
   auto it = find_if(
       data_queue_.begin(), data_queue_.end(),
-      [&timestamp](const auto& arg) { return arg->timestamp == timestamp; });
+      [&timestamp, &max_delay](const auto& arg) { return abs(arg->timestamp.toSec() - timestamp.toSec()) <= max_delay; });
   if (it != data_queue_.end()) {
     // There already exists a data point.
     if (!it->get()->valid) {
