@@ -44,10 +44,11 @@ id_tracker:
 #  debug: true
   
   # Single TSDF
-  voxel_size: 0.02
+  voxel_size: 0.05
   truncation_distance: -2
   voxels_per_side: 16
-  use_class_layer: false
+  use_class_layer: true
+  use_detectron: true
   use_instance_classification: false
 
 tsdf_integrator:  
@@ -72,7 +73,7 @@ visualization:
   submaps:
     type: single_tsdf  
     verbosity: 1
-    color_mode: color # color, normals, classes, instances, classification
+    color_mode: classes # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true

@@ -40,6 +40,12 @@ class SingleTSDFTracker : public IDTrackerBase {
 
   void processInput(SubmapCollection* submaps, InputData* input) override;
 
+ protected:
+  // Setup utility.
+  void setup(SubmapCollection* submaps);
+
+  void parseDetectronClasses(InputData* input);
+
  private:
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, SingleTSDFTracker, std::shared_ptr<Globals>>
@@ -48,9 +54,6 @@ class SingleTSDFTracker : public IDTrackerBase {
 
   int map_id_;
   bool is_setup_ = false;
-
-  // Setup utility.
-  void setup(SubmapCollection* submaps);
 };
 
 }  // namespace panoptic_mapping
