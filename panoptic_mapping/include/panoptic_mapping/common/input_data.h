@@ -56,12 +56,14 @@ class InputData {
         return "Vertex Map";
       case InputType::kValidityImage:
         return "Validity Image";
+      default:
+        return "Unknown Input";
     }
   }
 
   using InputTypes = std::unordered_set<InputType>;
 
-  /* Construction */
+  // Construction.
   InputData() = default;
   virtual ~InputData() = default;
 
@@ -96,7 +98,7 @@ class InputData {
     contained_inputs_.insert(InputType::kValidityImage);
   }
 
-  /* Access */
+  // Access.
   // Access to constant data.
   const Transformation& T_M_C() const { return T_M_C_; }
   const std::string& sensorFrameName() const { return sensor_frame_name_; }
@@ -112,13 +114,14 @@ class InputData {
   cv::Mat* idImagePtr() { return &id_image_; }
   cv::Mat* validityImagePtr() { return &validity_image_; }
 
-  /* Tools */
+  // Tools.
   bool has(InputType input_type) const {
     return contained_inputs_.find(input_type) != contained_inputs_.end();
   }
 
  private:
   friend InputDataUser;
+  friend class InputSynchronizer;
 
   // Permanent data.
   Transformation T_M_C_;  // Transform from Camera/Sensor (C) to Mission (M).

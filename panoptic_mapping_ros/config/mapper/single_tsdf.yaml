@@ -9,7 +9,7 @@ label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
-max_input_queue_length: 5
+max_input_queue_length: 50
 ros_spinning_threads: 4
 
 
@@ -48,6 +48,7 @@ id_tracker:
   truncation_distance: -2
   voxels_per_side: 16
   use_class_layer: true
+  use_detectron: true
   use_instance_classification: false
 
 tsdf_integrator:  
@@ -72,7 +73,7 @@ visualization:
   submaps:
     type: single_tsdf  
     verbosity: 1
-    color_mode: color # color, normals, classes, instances, classification
+    color_mode: classification # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true

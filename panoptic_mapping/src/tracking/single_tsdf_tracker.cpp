@@ -1,6 +1,7 @@
 #include "panoptic_mapping/tracking/single_tsdf_tracker.h"
 
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -44,6 +45,30 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   // Check whether the map is already allocated.
   if (!is_setup_) {
     setup(submaps);
+  }
+
+  if (config_.use_detectron) {
+    parseDetectronClasses(input);
+  }
+}
+
+void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
+  std::unordered_map<int, int> detectron_to_class_id;
+  for (auto it = input->idImagePtr()->begin<int>();
+       it != input->idImagePtr()->end<int>(); ++it) {
+    if (*it == 0) {
+      // Zero indicates unknown class / no prediction.
+      continue;
+    }
+    auto class_it = detectron_to_class_id.find(*it);
+    if (class_it == detectron_to_class_id.end()) {
+      // First time we encounter this ID, write to the map.
+      const int class_id = input->detectronLabels().at(*it).category_id;
+      detectron_to_class_id[*it] = class_id;
+      *it = class_id;
+    } else {
+      *it = class_it->second;
+    }
   }
 }
 

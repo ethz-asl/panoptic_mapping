@@ -7,7 +7,7 @@
   <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/10cm.panmap"/>
   
   <!-- Params -->
-  <arg name="maximum_distance" default="0.1"/>
+  <arg name="maximum_distance" default="100000"/>
   <arg name="evaluate" default="true"/>
   <arg name="compute_coloring" default="false"/>
   <arg name="color_by_max_error" default="false"/>
