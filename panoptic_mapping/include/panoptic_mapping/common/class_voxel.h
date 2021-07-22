@@ -78,7 +78,7 @@ inline void classVoxelIncrementBinary(ClassVoxel* voxel, bool belongs) {
   if (belongs) {
     voxel->belongs_count++;
 #ifdef PANOPTIC_MAPPING_USE_CLASS_VOXELS_AVERAGING
-    if (voxel->belongs_count = 255) {
+    if (voxel->belongs_count == 255u) {
       voxel->belongs_count /= 2u;
       voxel->foreign_count /= 2u;
     }
@@ -86,7 +86,7 @@ inline void classVoxelIncrementBinary(ClassVoxel* voxel, bool belongs) {
   } else {
     voxel->foreign_count++;
 #ifdef PANOPTIC_MAPPING_USE_CLASS_VOXELS_AVERAGING
-    if (voxel->foreign_count = 255) {
+    if (voxel->foreign_count == 255u) {
       voxel->belongs_count /= 2u;
       voxel->foreign_count /= 2u;
     }
@@ -109,7 +109,7 @@ inline void classVoxelIncrementClass(ClassVoxel* voxel, size_t class_id) {
     voxel->current_index = class_id;
   }
 #ifdef PANOPTIC_MAPPING_USE_CLASS_VOXELS_AVERAGING
-  if (voxel->belongs_count = 255) {
+  if (voxel->belongs_count == 255u) {
     voxel->belongs_count /= 2u;
     for (ClassVoxel::Counter& count : voxel->counts) {
       count /= 2u;

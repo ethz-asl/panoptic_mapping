@@ -73,7 +73,7 @@ visualization:
   submaps:
     type: single_tsdf  
     verbosity: 1
-    color_mode: classes # color, normals, classes, instances, classification
+    color_mode: classification # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true
