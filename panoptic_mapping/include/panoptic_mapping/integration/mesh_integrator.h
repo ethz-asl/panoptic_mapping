@@ -52,12 +52,26 @@ class MeshIntegrator {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
+  /**
+   * @brief Parameters used to mesh submaps.
+   *
+   * @param use_color Whether to use color information from the TSDF.
+   * @param min_weight Minimum TSDF weight required to mesh a voxel.
+   * @param required_belonging_corners If classification is used, how many of
+   * the corners of a mesh cube need to labeled as belonging to the submap to
+   * still be meshed. Values are [0-8].
+   * @param integrator_threads Number of threads used to mesh a layer in
+   * parallel.
+   * @param allocate_neighbor_blocks If true, allocate blocks where meshes would
+   * fall into that are not yet allocated. If false, mesh cubes where not all
+   * corners are observed will be ignored.
+   */
   struct Config : public config_utilities::Config<Config> {
     bool use_color = true;
-    float min_weight = 1e-4;
-    int required_belonging_corners = 4;  // Include voxels that have this many
-    // corners belonging to the submap to still be fully meshed [0-8]
+    float min_weight = 1e-6;
+    int required_belonging_corners = 4;
     int integrator_threads = std::thread::hardware_concurrency();
+    bool allocate_neighbor_blocks = false;
 
     Config() { setConfigName("MeshIntegrator"); }
 

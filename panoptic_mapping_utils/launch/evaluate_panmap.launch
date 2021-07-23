@@ -4,7 +4,7 @@
   <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>
   
   <!-- Source map -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/evaluations/fixed_resolution/10cm.panmap"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/pan_multires_eval/gt_medium.panmap"/>
   
   <!-- Params -->
   <arg name="maximum_distance" default="100000"/>
@@ -12,7 +12,7 @@
   <arg name="compute_coloring" default="false"/>
   <arg name="color_by_max_error" default="false"/>
   <arg name="visualize" default="false"/>
-  <arg name="ignore_truncated_points" default="true"/>
+  <arg name="ignore_truncated_points" default="false"/>
 
 <!-- ============ Evaluations ============ -->
   <node name="evaluator" pkg="panoptic_mapping_utils" type="single_map_evaluation" output="screen" required="true">

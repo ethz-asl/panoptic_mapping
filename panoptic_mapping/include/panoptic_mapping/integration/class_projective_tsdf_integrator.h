@@ -26,7 +26,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    bool use_accurate_classification = false;  // false: use binary
+    bool use_binary_classification = false;    // false: use binary
     bool use_instance_classification = false;  // false: use class id
 
     // Integration params.
@@ -51,6 +51,15 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
                    const Transformation& T_C_S,
                    const InputData& input) const override;
 
+  bool updateVoxel(InterpolatorBase* interpolator, TsdfVoxel* voxel,
+                   const Point& p_C, const InputData& input,
+                   const int submap_id, const bool is_free_space_submap,
+                   const float truncation_distance, const float voxel_size,
+                   ClassVoxel* class_voxel = nullptr) const override;
+
+  void updateClassVoxel(InterpolatorBase* interpolator, ClassVoxel* voxel,
+                        const InputData& input, const int submap_id) const;
+
  private:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
@@ -59,6 +68,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
 
   // Cached data.
   std::unordered_map<int, int> id_to_class_;
+  size_t num_classes_;
 };
 
 }  // namespace panoptic_mapping

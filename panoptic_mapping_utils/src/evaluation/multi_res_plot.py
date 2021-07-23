@@ -33,8 +33,11 @@ data = {
     'panmap single_tsdf 10cm': [2.792, 5.0, 707937],
     'panmap single_tsdf 5cm': [1.417, 29.2, 888050],
     # 'panmap single_tsdf 2cm': [1.056, 77.7]
-    # 'panmap multi w/ GT': [0, 0],
-    # 'panmap multi w/ Detectron': [0, 0],
+    'panmap multi GT small': [1.103, 9.7, 985201],
+    'panmap multi GT medium': [1.597, 4.7, 879226],
+    'panmap multi GT large': [2.383, 3.8, 769236],
+
+    # 'panmap multi Detectron': [0, 0],
 }
 
 # Plot
@@ -42,10 +45,11 @@ keylist = sorted(data.keys())
 styles = {
     'panmap single_tsdf ': 'xb',
     'supereight ': 'ok',
-    'supereight_dense ': 'xk',
+    'supereight_dense': 'xk',
     'voxblox ': 'og',
-    'voxblox_uni ': 'xg'
-}  # , 'panmap multi ': 'ob'}
+    'voxblox_uni ': 'xg',
+    'panmap multi ': 'ob'
+}
 styles = collections.OrderedDict(sorted(styles.items()))
 for k in keylist:
     for s in styles.keys():
@@ -62,6 +66,7 @@ for k in keylist:
 
 # Axes
 plt.semilogx()
+# plt.semilogy()
 plt.xlabel(keys[0])
 if plot_error:
     plt.ylabel(keys[1])

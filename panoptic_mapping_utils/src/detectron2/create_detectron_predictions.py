@@ -27,7 +27,14 @@ class Params:
 
 
 def create_labels(meta_data, output_file: str = ""):
-    sizes = []
+    sizes = [
+        'L', 'M', 'L', 'M', 'L', 'L', 'L', 'L', 'L', 'M', 'M', 'M', 'S', 'L',
+        'S', 'M', 'M', 'L', 'M', 'L', 'L', 'L', 'L', 'L', 'M', 'S', 'S', 'S',
+        'S', 'S', 'M', 'M', 'S', 'M', 'M', 'S', 'S', 'M', 'S', 'S', 'S', 'S',
+        'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S',
+        'M', 'L', 'M', 'L', 'M', 'M', 'M', 'S', 'S', 'S', 'S', 'S', 'M', 'M',
+        'S', 'M', 'L', 'S', 'M', 'M', 'S', 'M', 'S', 'S'
+    ]
     if (output_file):
         with open(output_file, 'w') as csvfile:
             writer = csv.writer(csvfile,
@@ -39,10 +46,10 @@ def create_labels(meta_data, output_file: str = ""):
             writer.writerow([0, 0, 0, "Unknown", "M"])
             id = 1
             for label in meta_data.stuff_classes:
-                writer.writerow([id, id, 0, label, ''])
+                writer.writerow([id, id, 0, label, 'L'])
                 id += 1
             for i, label in enumerate(meta_data.thing_classes):
-                writer.writerow([id, id, 1, label, ''])  # sizes[i]])
+                writer.writerow([id, id, 1, label, sizes[i]])
                 id += 1
         return len(meta_data.stuff_classes), "Saved %i labels in '%s'." % (
             id, output_file)

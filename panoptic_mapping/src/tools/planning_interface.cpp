@@ -108,6 +108,7 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
   float current_distance;
   *distance = std::numeric_limits<float>::max();
   bool observed = false;
+  float current_resolution = std::numeric_limits<float>::max();
 
   for (const auto& submap : *submaps_) {
     // Check activity.
@@ -117,6 +118,12 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
     if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_free_space) {
       continue;
     }
+    if (submap.isActive() &&
+        submap.getConfig().voxel_size > current_resolution) {
+      // Active submaps capture the full geometry so we take the highest
+      // resolution point.
+      continue;
+    }
 
     // Look up the voxel if it is observed.
     const Point position_S = submap.getT_S_M() * position;
@@ -124,6 +131,9 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
       voxblox::Interpolator<TsdfVoxel> interpolator(&(submap.getTsdfLayer()));
       if (interpolator.getDistance(position_S, &current_distance, true)) {
         *distance = std::min(*distance, current_distance);
+        if (submap.isActive()) {
+          current_resolution = submap.getConfig().voxel_size;
+        }
       }
     }
   }

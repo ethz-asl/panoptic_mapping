@@ -35,6 +35,7 @@ class MapRenderer {
   virtual ~MapRenderer() = default;
 
   // Tools.
+  // Approximate rendering.
   cv::Mat renderActiveSubmapIDs(const SubmapCollection& submaps,
                                 const Transformation& T_M_C);
   cv::Mat renderActiveSubmapClasses(const SubmapCollection& submaps,

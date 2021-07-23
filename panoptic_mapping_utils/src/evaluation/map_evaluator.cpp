@@ -175,33 +175,27 @@ void MapEvaluator::computeReconstructionError(
     const Point point(pcl_point.x, pcl_point.y, pcl_point.z);
     total_points++;
 
+    // Lookup the distance.
     float distance;
+    bool observed;
     if (use_voxblox_) {
-      if (interp->getDistance(point, &distance, true)) {
-        if (std::abs(distance) > request.maximum_distance) {
-          truncated_points++;
-          if (!request.ignore_truncated_points) {
-            abserror.push_back(request.maximum_distance);
-          }
-        } else {
-          abserror.push_back(std::abs(distance));
+      observed = interp->getDistance(point, &distance, true);
+    } else {
+      observed = planning_->getDistance(point, &distance, false, false);
+    }
+
+    // Compute the error.
+    if (observed) {
+      if (std::abs(distance) > request.maximum_distance) {
+        truncated_points++;
+        if (!request.ignore_truncated_points) {
+          abserror.push_back(request.maximum_distance);
         }
       } else {
-        unknown_points++;
+        abserror.push_back(std::abs(distance));
       }
     } else {
-      if (planning_->getDistance(point, &distance, false, false)) {
-        if (std::abs(distance) > request.maximum_distance) {
-          truncated_points++;
-          if (!request.ignore_truncated_points) {
-            abserror.push_back(request.maximum_distance);
-          }
-        } else {
-          abserror.push_back(std::abs(distance));
-        }
-      } else {
-        unknown_points++;
-      }
+      unknown_points++;
     }
 
     // Progress bar.

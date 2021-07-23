@@ -161,54 +161,37 @@ void MapManager::performChangeDetection() {
 }
 
 void MapManager::finishMapping() {
-  // TEST single_tsdf
-  // Remove all empty blocks since voxblox would not allocate these.
-  voxblox::BlockIndexList all_blocks;
-  voxblox::BlockIndexList empty_blocks;
+  // Apply Classification
+  // for (Submap& submap : *map_) {
+  //   submap.applyClassLayer(*layer_manipulator_);
+  // }
 
-  Submap* map = &(*map_->begin());
-  map->getTsdfLayer().getAllAllocatedBlocks(&all_blocks);
-  const int vps = std::pow(map->getConfig().voxels_per_side, 3);
-  int removed_blocks = 0;
-
-  for (const auto& block_i : all_blocks) {
-    const TsdfBlock& block = map->getTsdfLayer().getBlockByIndex(block_i);
-    bool has_data = false;
-    for (int i = 0; i < vps; ++i) {
-      if (block.getVoxelByLinearIndex(i).weight > 1e-6) {
-        has_data = true;
-        break;
-      }
-      if (has_data) {
-        break;
-      }
-    }
-    if (!has_data) {
-      map->getTsdfLayerPtr()->removeBlock(block_i);
-      removed_blocks++;
-    }
+  // Remove all empty blocks.
+  std::stringstream info;
+  info << "Finished mapping: ";
+  for (Submap& submap : *map_) {
+    info << pruneBlocks(&submap);
   }
-  LOG(INFO) << "Removed " << removed_blocks << " block from the map.";
-  return;
+  LOG(INFO) << info.str();
 
   // Deactivate last submaps.
-  for (Submap& submap : *map_) {
-    if (submap.isActive()) {
-      submap.finishActivePeriod();
-      mergeSubmapIfPossible(submap.getID());
-    }
-  }
+  // for (Submap& submap : *map_) {
+  //   if (submap.isActive()) {
+  //     submap.finishActivePeriod();
+  //     mergeSubmapIfPossible(submap.getID());
+  //   }
+  // }
 
   // Merge what is possible.
-  bool merged_something = true;
-  while (merged_something) {
-    for (Submap& submap : *map_) {
-      merged_something = mergeSubmapIfPossible(submap.getID());
-      if (merged_something) {
-        continue;
-      }
-    }
-  }
+  // bool merged_something = true;
+  // while (merged_something) {
+  //   for (Submap& submap : *map_) {
+  //     merged_something = mergeSubmapIfPossible(submap.getID());
+  //     if (merged_something) {
+  //       continue;
+  //     }
+  //   }
+  // }
 
   // Finish submaps.
   //  for (Submap& submap : *map_) {
@@ -262,37 +245,51 @@ bool MapManager::mergeSubmapIfPossible(int submap_id, int* merged_id) {
 }
 
 std::string MapManager::pruneBlocks(Submap* submap) const {
-  // Only process maps with class data.
-  if (!submap->hasClassLayer()) {
-    return "";
-  }
   auto t1 = std::chrono::high_resolution_clock::now();
   // Setup.
-  const std::shared_ptr<ClassLayer>& class_layer = submap->getClassLayerPtr();
-  const std::shared_ptr<TsdfLayer>& tsdf_layer = submap->getTsdfLayerPtr();
-  const std::shared_ptr<MeshLayer>& mesh_layer = submap->getMeshLayerPtr();
+  ClassLayer* class_layer = nullptr;
+  if (submap->hasClassLayer()) {
+    class_layer = submap->getClassLayerPtr().get();
+  }
+  TsdfLayer* tsdf_layer = submap->getTsdfLayerPtr().get();
+  MeshLayer* mesh_layer = submap->getMeshLayerPtr().get();
   const int voxel_indices = std::pow(submap->getConfig().voxels_per_side, 3);
   int count = 0;
 
   // Remove all blocks that don't have any belonging voxels.
   voxblox::BlockIndexList block_indices;
-  class_layer->getAllAllocatedBlocks(&block_indices);
+  tsdf_layer->getAllAllocatedBlocks(&block_indices);
   for (const auto& block_index : block_indices) {
-    ClassBlock& class_block = class_layer->getBlockByIndex(block_index);
+    const ClassBlock* class_block = nullptr;
+    if (class_layer) {
+      if (class_layer->hasBlock(block_index)) {
+        class_block = &class_layer->getBlockByIndex(block_index);
+      }
+    }
+    const TsdfBlock& tsdf_block = tsdf_layer->getBlockByIndex(block_index);
     bool has_beloning_voxels = false;
 
     // Check all voxels.
     for (int voxel_index = 0; voxel_index < voxel_indices; ++voxel_index) {
-      if (classVoxelBelongsToSubmap(
-              class_block.getVoxelByLinearIndex(voxel_index))) {
-        has_beloning_voxels = true;
-        break;
+      if (tsdf_block.getVoxelByLinearIndex(voxel_index).weight >= 1e-6) {
+        if (class_block) {
+          if (classVoxelBelongsToSubmap(
+                  class_block->getVoxelByLinearIndex(voxel_index))) {
+            has_beloning_voxels = true;
+            break;
+          }
+        } else {
+          has_beloning_voxels = true;
+          break;
+        }
       }
     }
 
     // Prune blocks.
     if (!has_beloning_voxels) {
-      class_layer->removeBlock(block_index);
+      if (class_layer) {
+        class_layer->removeBlock(block_index);
+      }
       tsdf_layer->removeBlock(block_index);
       mesh_layer->removeMesh(block_index);
       count++;

@@ -42,9 +42,9 @@ Submap* SemanticSubmapAllocator::allocateSubmap(
   // Setup the voxel size.
   switch (label.label) {
     case PanopticLabel::kInstance: {
-      if (strcasecmp(label.size.c_str(), "L")) {
+      if (label.size == "L") {
         config.voxel_size = config_.large_instance_voxel_size;
-      } else if (strcasecmp(label.size.c_str(), "S")) {
+      } else if (label.size == "S") {
         config.voxel_size = config_.small_instance_voxel_size;
       } else {
         config.voxel_size = config_.medium_instance_voxel_size;

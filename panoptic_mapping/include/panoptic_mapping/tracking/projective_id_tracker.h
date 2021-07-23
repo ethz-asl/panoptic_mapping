@@ -24,6 +24,10 @@ namespace panoptic_mapping {
  */
 class ProjectiveIDTracker : public IDTrackerBase {
  public:
+  /**
+   * @brief Parameters used to track new frames against the map.
+   *
+   */
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
@@ -32,6 +36,8 @@ class ProjectiveIDTracker : public IDTrackerBase {
     std::string tracking_metric = "IoU";  // IoU, overlap
     float match_acceptance_threshold = 0.5;
     bool use_class_data_for_matching = true;
+    bool use_approximate_rendering = false;
+    int rendering_subsampling = 1;
 
     // Allocation.
     int min_allocation_size = 0;  // #px required to allocate new submap.
@@ -63,9 +69,13 @@ class ProjectiveIDTracker : public IDTrackerBase {
   TrackingInfoAggregator computeTrackingData(SubmapCollection* submaps,
                                              InputData* input);
   TrackingInfo renderTrackingInfo(const Submap& submap,
-                                  const Transformation& T_M_C,
-                                  const cv::Mat& depth_image,
-                                  const cv::Mat& input_ids) const;
+                                  const InputData& input) const;
+
+  TrackingInfo renderTrackingInfoApproximate(const Submap& submap,
+                                             const InputData& input) const;
+
+  TrackingInfo renderTrackingInfoVertices(const Submap& submap,
+                                          const InputData& input) const;
 
  private:
   static config_utilities::Factory::RegistrationRos<
@@ -77,6 +87,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
 
  protected:
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
+  cv::Mat rendered_vis_;  // Store visualization data.
 };
 
 }  // namespace panoptic_mapping
