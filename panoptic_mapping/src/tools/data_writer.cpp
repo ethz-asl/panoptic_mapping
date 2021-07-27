@@ -7,6 +7,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <experimental/filesystem>
+
 namespace panoptic_mapping {
 
 void DataWriter::Config::setupParamsAndPrinting() {
@@ -15,6 +17,7 @@ void DataWriter::Config::setupParamsAndPrinting() {
   setupParam("file_name", &file_name);
   setupParam("evaluate_number_of_submaps", &evaluate_number_of_submaps);
   setupParam("evaluate_numer_of_objects", &evaluate_numer_of_objects);
+  setupParam("store_map_every_n_frames", &store_map_every_n_frames);
 }
 
 void DataWriter::Config::checkParams() const {
@@ -26,18 +29,34 @@ void DataWriter::Config::checkParams() const {
 
 DataWriter::DataWriter(const Config& config) : config_(config.checkValid()) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-
-  // Setup output file.
-  outfile_name_ = config_.file_name;
-  if (outfile_name_.back() != '_' && !outfile_name_.empty()) {
-    outfile_name_.append("_");
-  }
   auto t = std::time(nullptr);
   auto tm = *std::localtime(&t);
   std::stringstream timestamp;
   timestamp << std::put_time(&tm, "%Y_%m_%d-%H_%M_%S");
-  outfile_name_.append(timestamp.str());
-  outfile_name_ = config_.output_directory + "/" + outfile_name_ + ".csv";
+
+  // Setup output directory.
+  const bool create_directory = config_.store_map_every_n_frames > 0;
+  if (create_directory) {
+    // Setup a single directory named with the timestamp.
+    output_path_ = config_.output_directory + "/" + timestamp.str();
+    if (!std::experimental::filesystem::create_directory(output_path_)) {
+      LOG(ERROR) << "Could not create output directory '" << output_path_
+                 << "'.";
+    }
+    outfile_name_ = output_path_ + "/" +
+                    (config_.file_name.empty() ? "log" : config_.file_name) +
+                    ".csv";
+  } else {
+    // Setup the logfile with the timestamp.
+    outfile_name_ = config_.file_name;
+    if (outfile_name_.back() != '_' && !outfile_name_.empty()) {
+      outfile_name_.append("_");
+    }
+    outfile_name_.append(timestamp.str());
+    outfile_name_ = config_.output_directory + "/" + outfile_name_ + ".csv";
+  }
+
+  // Setup output file.
   outfile_.open(outfile_name_);
   if (!outfile_.is_open()) {
     LOG(ERROR) << "Could not open data output file '" << outfile_name_ << "'.";
@@ -73,6 +92,9 @@ void DataWriter::setupEvaluations() {
   if (config_.evaluate_numer_of_objects) {
     writeEntry("NoObjects [1]");
     evaluations_.emplace_back(&DataWriter::evaluateNumberOfObjects);
+  }
+  if (config_.store_map_every_n_frames > 0) {
+    evaluations_.emplace_back(&DataWriter::storeSubmaps);
   }
 
   outfile_ << std::endl;
@@ -128,6 +150,18 @@ void DataWriter::evaluateNumberOfObjects(const SubmapCollection& submaps) {
     instance_ids.insert(submap.getInstanceID());
   }
   writeEntry(std::to_string(instance_ids.size()));
+}
+
+void DataWriter::storeSubmaps(const SubmapCollection& submaps) {
+  store_submap_frame_++;
+  if (store_submap_frame_ < config_.store_map_every_n_frames) {
+    return;
+  }
+  store_submap_frame_ = 0;
+  std::stringstream ss;
+  ss << std::setw(6) << std::setfill('0') << store_submap_counter_;
+  store_submap_counter_++;
+  submaps.saveToFile(output_path_ + "/" + ss.str());
 }
 
 }  // namespace panoptic_mapping

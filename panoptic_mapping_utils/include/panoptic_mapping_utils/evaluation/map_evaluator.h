@@ -10,6 +10,7 @@
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_ros/visualization/submap_visualizer.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -76,9 +77,15 @@ class MapEvaluator {
   // Access.
   bool evaluate(const EvaluationRequest& request);
   void publishVisualization();
+  bool setupMultiMapEvaluation();
+
+  // Services.
+  bool evaluateMapCallback(
+      panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
+      panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
 
  private:
-  void computeReconstructionError(const EvaluationRequest& request);
+  std::string computeReconstructionError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
   void computeErrorHistogram(
       const EvaluationRequest& request);  // Placeholder atm
@@ -100,6 +107,10 @@ class MapEvaluator {
   std::string target_map_name_;
   std::unique_ptr<PlanningInterface> planning_;
   std::unique_ptr<SubmapVisualizer> visualizer_;
+
+  // Multi Map Evaluations.
+  ros::ServiceServer process_map_srv_;
+  EvaluationRequest request_;
 };
 
 }  // namespace panoptic_mapping

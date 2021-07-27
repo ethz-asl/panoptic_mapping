@@ -91,10 +91,15 @@ void SubmapCollection::updateInstanceToSubmapIDTable() {
 // Save load functionality was heavily adapted from cblox.
 bool SubmapCollection::saveToFile(const std::string& file_path) const {
   CHECK(!file_path.empty());
+
+  // Check for proper extensions.
+  const std::string file_name = checkMapFileExtension(file_path);
+
+  // Open the ouput file.
   std::fstream outfile;
-  outfile.open(file_path, std::fstream::out | std::fstream::binary);
+  outfile.open(file_name, std::fstream::out | std::fstream::binary);
   if (!outfile.is_open()) {
-    LOG(ERROR) << "Could not open file '" << file_path
+    LOG(ERROR) << "Could not open file '" << file_name
                << "' to save the submap collection.";
     return false;
   }
@@ -125,14 +130,16 @@ bool SubmapCollection::saveToFile(const std::string& file_path) const {
 bool SubmapCollection::loadFromFile(const std::string& file_path,
                                     bool recompute_data) {
   CHECK(!file_path.empty());
+  const std::string file_name = checkMapFileExtension(file_path);
+
   // Clear the current maps.
   submaps_.clear();
 
   // Open and check the file.
   std::ifstream proto_file;
-  proto_file.open(file_path, std::fstream::in);
+  proto_file.open(file_name, std::fstream::in);
   if (!proto_file.is_open()) {
-    LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";
+    LOG(ERROR) << "Could not open protobuf file '" << file_name << "'.";
     return false;
   }
 
@@ -170,6 +177,16 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
     }
   }
   return true;
+}
+
+std::string SubmapCollection::checkMapFileExtension(const std::string& file) {
+  const std::string extension = ".panmap";
+  if (!(file.size() >= extension.size() &&
+        file.compare(file.size() - extension.size(), extension.size(),
+                     extension) == 0)) {
+    return file + extension;
+  }
+  return file;
 }
 
 std::unique_ptr<SubmapCollection> SubmapCollection::clone() const {

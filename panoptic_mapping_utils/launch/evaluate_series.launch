@@ -1,0 +1,27 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <!-- Groundtruth -->
+  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run2/flat_2_gt_10000.ply"/>
+  
+  <!-- Source directory -->
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/pan_multires_eval"/>
+  
+  <!-- Params -->
+  <arg name="maximum_distance" default="100000"/>
+  <arg name="ignore_truncated_points" default="false"/>
+
+<!-- ============ Evaluations ============ -->
+  <node name="multi_map_evaluation" pkg="panoptic_mapping_utils" type="multi_map_evaluation" output="screen" required="true">
+    <param name="map_file" value="$(arg map_file)" /> 
+    <param name="ground_truth_pointcloud_file" value="$(arg ground_truth_pointcloud_file)" /> 
+    <param name="maximum_distance" value="$(arg maximum_distance)" />     
+    <param name="visualize" value="false" /> 
+    <param name="evaluate" value="true" /> 
+    <param name="compute_coloring" value="false" /> 
+    <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" /> 
+  </node>
+  
+  <node name="evaluation_manager" pkg="panoptic_mapping_utils" type="evaluation_manager.py" output="screen" required="true">
+    <param name="map_file" value="$(arg map_file)" /> 
+  </node>
+</launch>

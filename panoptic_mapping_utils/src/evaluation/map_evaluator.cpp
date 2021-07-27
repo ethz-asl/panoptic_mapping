@@ -39,6 +39,41 @@ MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
   visualizer_ = std::make_unique<SubmapVisualizer>(config, nullptr);
 }
 
+bool MapEvaluator::setupMultiMapEvaluation() {
+  // Get evaluation configuration.
+  request_ = config_utilities::getConfigFromRos<
+      panoptic_mapping::MapEvaluator::EvaluationRequest>(nh_private_);
+  if (!request_.isValid(true)) {
+    LOG(ERROR) << "Invalid evaluation request.";
+    return false;
+  }
+
+  // Load GT cloud.
+  gt_ptcloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
+  if (pcl::io::loadPLYFile<pcl::PointXYZ>(request_.ground_truth_pointcloud_file,
+                                          *gt_ptcloud_) != 0) {
+    LOG(ERROR) << "Could not load ground truth point cloud from '"
+               << request_.ground_truth_pointcloud_file << "'.";
+    return false;
+  }
+  LOG_IF(INFO, request_.verbosity >= 2) << "Loaded ground truth pointcloud";
+
+  // Setup Output File.
+  // NOTE(schmluk): The map_file is used to specify the target path here.
+  std::string out_file_name = request_.map_file + "/evaluation_data.csv";
+  output_file_.open(out_file_name, std::ios::out);
+  if (!output_file_.is_open()) {
+    LOG(ERROR) << "Failed to open output file '" << out_file_name << "'.";
+    return false;
+  }
+  output_file_ << "MeanError [m],StdError [m],RMSE [m],TotalPoints [1],"
+               << "UnknownPoints [1],TruncatedPoints [1]\n";
+
+  // Advertise evaluation service.
+  process_map_srv_ = nh_private_.advertiseService(
+      "process_map", &MapEvaluator::evaluateMapCallback, this);
+}
+
 bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   if (!request.isValid(true)) {
     return false;
@@ -115,7 +150,9 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
 
     // Evaluate.
     LOG_IF(INFO, request.verbosity >= 2) << "Computing reconstruction error:";
-    computeReconstructionError(request);
+    output_file_ << "MeanError [m],StdError [m],RMSE [m],TotalPoints [1],"
+                 << "UnknownPoints [1],TruncatedPoints [1]\n";
+    output_file_ << computeReconstructionError(request);
     output_file_.close();
   }
 
@@ -135,7 +172,7 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   return true;
 }
 
-void MapEvaluator::computeReconstructionError(
+std::string MapEvaluator::computeReconstructionError(
     const EvaluationRequest& request) {
   // Go through each point, use trilateral interpolation to figure out the
   // distance at that point.
@@ -225,10 +262,10 @@ void MapEvaluator::computeReconstructionError(
     stddev = sqrt(stddev / static_cast<float>(abserror.size() - 1));
   }
 
-  output_file_ << "MeanError [m],StdError [m],RMSE [m],TotalPoints [1],"
-               << "UnknownPoints [1],TruncatedPoints [1]\n";
-  output_file_ << mean << "," << stddev << "," << rmse << "," << total_points
-               << "," << unknown_points << "," << truncated_points << "\n";
+  std::stringstream ss;
+  ss << mean << "," << stddev << "," << rmse << "," << total_points << ","
+     << unknown_points << "," << truncated_points << "\n";
+  return ss.str();
 }
 
 void MapEvaluator::computeErrorHistogram(const EvaluationRequest& request) {
@@ -249,6 +286,27 @@ void MapEvaluator::computeErrorHistogram(const EvaluationRequest& request) {
   //      hist_file_ << "," << histogram[i];
   //    }
   //    hist_file_ << "\n";
+}
+
+bool MapEvaluator::evaluateMapCallback(
+    panoptic_mapping_msgs::SaveLoadMap::Request& request,
+    panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+  // Load map.
+  submaps_ = std::make_shared<SubmapCollection>();
+  if (!submaps_->loadFromFile(request.file_path)) {
+    LOG(ERROR) << "Could not load panoptic map from '" << request.file_path
+               << "'.";
+    submaps_.reset();
+    return false;
+  }
+  planning_ = std::make_unique<PlanningInterface>(submaps_);
+
+  // Evaluate.
+  output_file_ << computeReconstructionError(request_);
+  output_file_.flush();
+  LOG_IF(INFO, request_.verbosity >= 2)
+      << "Evaluated '" << request.file_path << "'.";
+  return true;
 }
 
 void MapEvaluator::visualizeReconstructionError(

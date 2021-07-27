@@ -10,7 +10,6 @@ catkin_package()
 ############
 # PROTOBUF #
 ############
-# Taken from voxblox
 set(PROTO_DEFNS
         proto/panoptic_mapping/Submap.proto
         proto/panoptic_mapping/SubmapCollection.proto)
@@ -53,7 +52,7 @@ cs_add_library(${PROJECT_NAME}
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp
         )
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
 
 ##########
 # Export #

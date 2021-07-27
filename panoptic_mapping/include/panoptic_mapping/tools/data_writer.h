@@ -12,8 +12,8 @@
 namespace panoptic_mapping {
 
 /**
- * Utility class that evaluates certain metrics during experiments and writes
- * them to file.
+ * @brief Utility class that evaluates certain metrics during experiments and
+ * writes them to a log file.
  */
 
 class DataWriter {
@@ -29,6 +29,7 @@ class DataWriter {
     bool evaluate_number_of_submaps = true;
     bool evaluate_number_of_active_submaps = true;
     bool evaluate_numer_of_objects = true;
+    int store_map_every_n_frames = 0;
 
     Config() { setConfigName("DataWriter"); }
 
@@ -45,9 +46,15 @@ class DataWriter {
  private:
   const Config config_;
 
+  // Data.
+  std::string output_path_;
   std::string outfile_name_;
   std::ofstream outfile_;
   std::vector<void (DataWriter::*)(const SubmapCollection&)> evaluations_;
+
+  // Tracking variables.
+  int store_submap_frame_ = 0;
+  int store_submap_counter_ = 0;
 
   // Methods.
   void setupEvaluations();
@@ -57,6 +64,7 @@ class DataWriter {
   void evaluateNumberOfSubmaps(const SubmapCollection& submaps);
   void evaluateNumberOfActiveSubmaps(const SubmapCollection& submaps);
   void evaluateNumberOfObjects(const SubmapCollection& submaps);
+  void storeSubmaps(const SubmapCollection& submaps);
 };
 
 }  // namespace panoptic_mapping

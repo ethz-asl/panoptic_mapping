@@ -97,6 +97,7 @@ data_writer:
   verbosity: 1
   output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
   file_name: ""
+  store_map_every_n_frames: 10  # Use 0 to ignore
 
   
 
