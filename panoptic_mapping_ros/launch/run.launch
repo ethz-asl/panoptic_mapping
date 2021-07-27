@@ -6,8 +6,9 @@
   <arg name="namespace" default="data"/> 
   
   <!-- Flat Dataset args -->
-  <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
+  <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run2"/> 
   <arg name="play_rate" default="1.5"/>  <!-- Realtime factor -->
+  <arg name="wait_time" default="2"/>  <!-- s -->
   <arg name="use_detectron" default="false"/>
   
   <!-- Rio Dataset args -->
@@ -18,10 +19,8 @@
   <arg name="config" default="single_tsdf"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
-  <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/flat/run1_gt.panmap"/>
-
-
+  <arg name="load_map" default = "true"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_single_tsdf.panmap"/>
 
 
 <!-- ============ Run ============ -->

@@ -4,8 +4,8 @@ use_threadsafe_submap_collection: true
 use_transform_caching: false
 transform_lookup_time: 0.1
 global_frame_name: world
-label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
-#label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
+#label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
+label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -47,8 +47,8 @@ id_tracker:
   voxel_size: 0.05
   truncation_distance: -2
   voxels_per_side: 16
-  use_class_layer: true
-  use_detectron: true
+  use_class_layer: false
+  use_detectron: false
   use_instance_classification: false
 
 tsdf_integrator:  
@@ -73,7 +73,7 @@ visualization:
   submaps:
     type: single_tsdf  
     verbosity: 1
-    color_mode: classes # color, normals, classes, instances, classification
+    color_mode: color # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true

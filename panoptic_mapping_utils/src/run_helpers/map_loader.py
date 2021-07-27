@@ -15,4 +15,4 @@ if __name__ == '__main__':
     rospy.sleep(delay)
     srv = rospy.ServiceProxy(srv_name, SaveLoadMap)
     srv(path)
-    rospy.loginfo("map_loader: Finished after calling service.")
+    rospy.loginfo("[map_loader] Finished after calling service.")

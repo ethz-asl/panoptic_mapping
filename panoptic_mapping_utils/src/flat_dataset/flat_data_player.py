@@ -27,6 +27,7 @@ class FlatDataPlayer(object):
                                                  "depth_cam")
         self.use_detectron = rospy.get_param('~use_detectron', False)
         self.play_rate = rospy.get_param('~play_rate', 1.0)
+        self.wait_time = rospy.get_param('~wait_time', 0.0)
         self.refresh_rate = 100  # Hz
 
         # ROS
@@ -59,10 +60,12 @@ class FlatDataPlayer(object):
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
         self.times = sorted(self.times)
         self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
-        self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
-                                 self.callback)
+
+        rospy.sleep(self.wait_time)
         self.running = True
         self.start_time = None
+        self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
+                                 self.callback)
 
     def callback(self, _):
         # Check we should be publishing.
