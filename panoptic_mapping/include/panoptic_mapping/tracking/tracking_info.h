@@ -38,7 +38,7 @@ class TrackingInfo {
   void insertVertexPoint(int input_id);
   void insertVertexVisualizationPoint(int u, int v) {
     points_.push_back({u, v});
-  };
+  }
   const std::vector<Eigen::Vector2i>& getPoints() const { return points_; }
   int getSubmapID() const { return submap_id_; }
 

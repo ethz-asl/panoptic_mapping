@@ -175,23 +175,23 @@ void MapManager::finishMapping() {
   LOG(INFO) << info.str();
 
   // Deactivate last submaps.
-  // for (Submap& submap : *map_) {
-  //   if (submap.isActive()) {
-  //     submap.finishActivePeriod();
-  //     mergeSubmapIfPossible(submap.getID());
-  //   }
-  // }
+  for (Submap& submap : *map_) {
+    if (submap.isActive()) {
+      submap.finishActivePeriod();
+      mergeSubmapIfPossible(submap.getID());
+    }
+  }
 
   // Merge what is possible.
-  // bool merged_something = true;
-  // while (merged_something) {
-  //   for (Submap& submap : *map_) {
-  //     merged_something = mergeSubmapIfPossible(submap.getID());
-  //     if (merged_something) {
-  //       continue;
-  //     }
-  //   }
-  // }
+  bool merged_something = true;
+  while (merged_something) {
+    for (Submap& submap : *map_) {
+      merged_something = mergeSubmapIfPossible(submap.getID());
+      if (merged_something) {
+        continue;
+      }
+    }
+  }
 
   // Finish submaps.
   //  for (Submap& submap : *map_) {

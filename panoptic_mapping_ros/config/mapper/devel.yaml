@@ -30,13 +30,17 @@ submap_allocator:
   # submaps
   voxels_per_side: &voxels_per_side 4
   truncation_distance: -2 # negative = #vs
-  use_class_layer: true 
+  use_class_layer: true
+  
+  # Meshing
+  clear_foreign_voxels: false
+  required_belonging_corners: 4
   
   # Semantic
-  small_instance_voxel_size: 0.02
-  medium_instance_voxel_size: 0.03
-  large_instance_voxel_size: 0.04
-  background_voxel_size: 0.05
+  small_instance_voxel_size: 0.05
+  medium_instance_voxel_size: 0.07
+  large_instance_voxel_size: 0.1
+  background_voxel_size: 0.1
   unknown_voxel_size: 0.1
   
 freespace_allocator:
@@ -57,7 +61,7 @@ id_tracker:
   min_allocation_size: 0 # px, for submap allocation. (2000)
   use_class_data_for_matching: true
   use_approximate_rendering: true
-  rendering_subsampling: 1
+  rendering_subsampling: 2
   
   impaint_voxel_size: true
   debug: true
@@ -101,10 +105,10 @@ map_management:
     verbosity: 3
     min_voxel_weight: 0.000001
     error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 100  
-    match_rejection_percentage: 0.2
-    match_acceptance_points: 100
-    match_acceptance_percentage: 0.2
+    match_rejection_points: 50  
+    match_rejection_percentage: 0.1
+    match_acceptance_points: 50
+    match_acceptance_percentage: 0.1
     normalize_by_voxel_weight: true
     allow_multiple_matches: false
     

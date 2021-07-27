@@ -62,16 +62,15 @@ class MeshIntegrator {
    * still be meshed. Values are [0-8].
    * @param integrator_threads Number of threads used to mesh a layer in
    * parallel.
-   * @param allocate_neighbor_blocks If true, allocate blocks where meshes would
-   * fall into that are not yet allocated. If false, mesh cubes where not all
-   * corners are observed will be ignored.
+   * @param clear_foreign_voxels If true, voxels not belonging to this submap
+   * will be set to the truncation distance.
    */
   struct Config : public config_utilities::Config<Config> {
     bool use_color = true;
     float min_weight = 1e-6;
     int required_belonging_corners = 4;
     int integrator_threads = std::thread::hardware_concurrency();
-    bool allocate_neighbor_blocks = false;
+    bool clear_foreign_voxels = false;
 
     Config() { setConfigName("MeshIntegrator"); }
 

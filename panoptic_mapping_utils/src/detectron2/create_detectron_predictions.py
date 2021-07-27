@@ -127,7 +127,7 @@ if __name__ == '__main__':
     # Params.
     params = Params()
     params.model = "COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"
-    params.target_path = '/home/lukas/Documents/Datasets/flat_dataset/run1'
+    params.target_path = '/home/lukas/Documents/Datasets/flat_dataset/run2'
     params.output_label_file = '/home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv'
 
     # Run.

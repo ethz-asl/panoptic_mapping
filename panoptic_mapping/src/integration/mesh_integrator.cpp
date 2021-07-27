@@ -26,6 +26,7 @@ void MeshIntegrator::Config::setupParamsAndPrinting() {
   setupParam("use_color", &use_color);
   setupParam("min_weight", &min_weight);
   setupParam("required_belonging_corners", &required_belonging_corners);
+  setupParam("clear_foreign_voxels", &clear_foreign_voxels);
   setupParam("integrator_threads", &integrator_threads);
 }
 
@@ -245,6 +246,10 @@ void MeshIntegrator::extractMeshInsideBlock(
   if (all_neighbors_observed) {
     if (use_class_layer_ &&
         belonging_corners <= config_.required_belonging_corners) {
+      return;
+    }
+
+    if (use_class_layer_ && config_.clear_foreign_voxels) {
       // Foreign voxels are set to truncation distance to close the mesh.
       for (unsigned int i = 0; i < 8; ++i) {
         if (!corner_belongs(i)) {
@@ -345,6 +350,10 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
   if (all_neighbors_observed) {
     if (use_class_layer_ &&
         belonging_corners <= config_.required_belonging_corners) {
+      return;
+    }
+
+    if (use_class_layer_ && config_.clear_foreign_voxels) {
       // Foreign voxels are set to truncation distance to close the mesh.
       for (unsigned int i = 0; i < 8; ++i) {
         if (!corner_belongs(i)) {
