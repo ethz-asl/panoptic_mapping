@@ -301,12 +301,13 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate(
   // vertex per voxel).
 
   // Setup.
-  TrackingInfo result(submap.getID(), globals_->camera()->getConfig());
+  const Camera& camera = *globals_->camera();
+  TrackingInfo result(submap.getID(), camera.getConfig());
   const Transformation T_C_S = input.T_M_C().inverse() * submap.getT_M_S();
-  const float size_factor_x = globals_->camera()->getConfig().fx *
-                              submap.getTsdfLayer().voxel_size() / 2.f;
-  const float size_factor_y = globals_->camera()->getConfig().fy *
-                              submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_x =
+      camera.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_y =
+      camera.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
   const float block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
   const float depth_tolerance =
@@ -319,8 +320,8 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate(
   voxblox::BlockIndexList index_list;
   submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
   for (const voxblox::BlockIndex& index : index_list) {
-    if (!globals_->camera()->blockIsInViewFrustum(
-            submap, index, T_C_S, block_size, block_diag_half)) {
+    if (!camera.blockIsInViewFrustum(submap, index, T_C_S, block_size,
+                                     block_diag_half)) {
       continue;
     }
     for (const Point& vertex :
@@ -328,7 +329,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate(
       // Project vertex and check depth value.
       const Point p_C = T_C_S * vertex;
       int u, v;
-      if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
+      if (!camera.projectPointToImagePlane(p_C, &u, &v)) {
         continue;
       }
       if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >= depth_tolerance) {
@@ -359,7 +360,8 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
 
   // TEST
   size_t subsampling_factor = 1;
-  limits = {0, cam_config.width, 0, cam_config.height};
+  limits = {0, static_cast<size_t>(cam_config.width), 0,
+            static_cast<size_t>(cam_config.height)};
   const Transformation T_S_C = T_C_S.inverse();
   const TsdfLayer& tsdf_layer = submap.getTsdfLayer();
   const float depth_tolerance =

@@ -25,6 +25,7 @@ void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("use_binary_classification", &use_binary_classification);
   setupParam("use_instance_classification", &use_instance_classification);
+  setupParam("update_only_tracked_submaps", &update_only_tracked_submaps);
   setupParam("projective_integrator_config", &pi_config);
 }
 
@@ -50,6 +51,7 @@ void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
   for (const Submap& submap : *submaps) {
     id_to_class_.emplace(submap.getID(), submap.getClassID());
   }
+  id_to_class_[-1] = -1;  // Used for unknown classes.
   if (config_.use_instance_classification &&
       !config_.use_binary_classification) {
     // Track the number of classes (where classes in this case are instances).
@@ -84,7 +86,8 @@ void ClassProjectiveIntegrator::updateBlock(
 
   // Allocate the class block if not yet existent and get it.
   ClassBlock::Ptr class_block = nullptr;
-  if (submap->hasClassLayer()) {
+  if (submap->hasClassLayer() &&
+      (!config_.update_only_tracked_submaps || submap->wasTracked())) {
     class_block =
         submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
   }

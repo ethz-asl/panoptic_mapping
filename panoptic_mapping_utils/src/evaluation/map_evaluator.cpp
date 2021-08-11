@@ -43,6 +43,7 @@ bool MapEvaluator::setupMultiMapEvaluation() {
   // Get evaluation configuration.
   request_ = config_utilities::getConfigFromRos<
       panoptic_mapping::MapEvaluator::EvaluationRequest>(nh_private_);
+  LOG_IF(INFO, request_.verbosity >= 1) << "\n" << request_.toString();
   if (!request_.isValid(true)) {
     LOG(ERROR) << "Invalid evaluation request.";
     return false;
@@ -72,6 +73,7 @@ bool MapEvaluator::setupMultiMapEvaluation() {
   // Advertise evaluation service.
   process_map_srv_ = nh_private_.advertiseService(
       "process_map", &MapEvaluator::evaluateMapCallback, this);
+  return true;
 }
 
 bool MapEvaluator::evaluate(const EvaluationRequest& request) {
@@ -304,8 +306,6 @@ bool MapEvaluator::evaluateMapCallback(
   // Evaluate.
   output_file_ << computeReconstructionError(request_);
   output_file_.flush();
-  LOG_IF(INFO, request_.verbosity >= 2)
-      << "Evaluated '" << request.file_path << "'.";
   return true;
 }
 
@@ -356,6 +356,9 @@ void MapEvaluator::visualizeReconstructionError(
     submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
     int block = 0;
     for (auto& block_index : block_list) {
+      if (!ros::ok()) {
+        return;
+      }
       voxblox::Block<TsdfVoxel>& block =
           submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
       for (size_t linear_index = 0; linear_index < num_voxels_per_block;

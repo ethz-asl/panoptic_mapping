@@ -60,7 +60,7 @@ void LayerManipulator::applyClassificationLayer(
         min_distance = std::min(tsdf_voxel.distance, min_distance);
       }
     }
-    if (min_distance > 0.f) {
+    if (min_distance == truncation_distance) {
       // This block does not contain useful data anymore.
       tsdf_layer->removeBlock(block_index);
     } else if (was_updated) {

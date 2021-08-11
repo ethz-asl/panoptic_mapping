@@ -26,8 +26,9 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    bool use_binary_classification = false;    // false: use binary
-    bool use_instance_classification = false;  // false: use class id
+    bool use_binary_classification = false;    // false: use a counter per id.
+    bool use_instance_classification = false;  // false: use class id.
+    bool update_only_tracked_submaps = true;
 
     // Integration params.
     ProjectiveIntegrator::Config pi_config;

@@ -262,7 +262,11 @@ void PanopticMapper::processInput(InputData* input) {
   LOG_IF(INFO, config_.print_timing_interval < 0.0) << "\n" << Timing::Print();
 }
 
-void PanopticMapper::finishMapping() { map_manager_->finishMapping(); }
+void PanopticMapper::finishMapping() {
+  map_manager_->finishMapping();
+  submap_visualizer_->visualizeAll(submaps_.get());
+  LOG_IF(INFO, config_.verbosity >= 2) << "Finished mapping.";
+}
 
 void PanopticMapper::publishVisualization() {
   Timer timer("visualization");

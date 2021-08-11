@@ -1,8 +1,6 @@
-import numpy as np
-from matplotlib import pyplot as plt
-from panoptic_data_reader import read_panoptic_mapper_data_log
 import collections
 import os
+from matplotlib import pyplot as plt
 
 # Params
 keys = ['Map Size [MB]', 'Reconstruction Error [cm]', 'Coverage [%]']  # x, y
@@ -84,9 +82,9 @@ plt.legend(artists, labels)
 
 # Save
 if plot_error:
-    output_name += "_error"
+    output_name += "_error.jpg"
 else:
-    output_name += "_coverage"
+    output_name += "_coverage.jpg"
 if store_output:
     plt.savefig(os.path.join(output_dir, output_name))
 plt.show()

@@ -1,19 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import json
-import csv
-
 import rospy
-from sensor_msgs.msg import Image
-from geometry_msgs.msg import PoseStamped
-from cv_bridge import CvBridge
-import cv2
-from PIL import Image as PilImage
-import numpy as np
-import tf
-
-from panoptic_mapping_msgs.msg import SaveLoadMap
+from panoptic_mapping_msgs.srv import SaveLoadMap
 
 
 class EvaluationManager(object):
@@ -35,14 +24,16 @@ class EvaluationManager(object):
         self.eval_srv = rospy.ServiceProxy(self.eval_srv_name, SaveLoadMap)
         print("Successfully setup the evaluation manager.")
 
-    def evaluate():
+    def evaluate(self):
         # Get target maps.
         files = [
-            x for x in os.listdir(self.data_path)
-            if os.path.isfile(x) and x.endswith('.panmap')
+            x for x in os.listdir(self.data_path) if x.endswith('.panmap')
         ]
-        print(files)
-        return 1
+
+        for i, f in enumerate(sorted(files)):
+            print("Evaluating map %i/%i:" % (i, len(files) - 1))
+            self.eval_srv(os.path.join(self.data_path, f))
+        print("Evaluation finished successfully.")
 
 
 if __name__ == '__main__':

@@ -9,8 +9,8 @@
 namespace panoptic_mapping {
 
 /**
- * This class performs all sort of submap and layer manipulations, such as
- * smoothing, merging, pruning, integrating classification into tsdf.
+ * @brief This class performs all sort of submap and layer manipulations, such
+ * as smoothing, merging, pruning, integrating classification into TSDF.
  */
 
 class LayerManipulator {

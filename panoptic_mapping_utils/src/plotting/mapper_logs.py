@@ -1,12 +1,12 @@
-import numpy as np
+import os
 from matplotlib import pyplot as plt
 from panoptic_data_reader import read_panoptic_mapper_data_log
-import os
 
 # Params
 dirs = [
     '/home/lukas/Documents/PanopticMapping/Data/saved_logs/run1_gt.csv',
-    '/home/lukas/Documents/PanopticMapping/Data/saved_logs/run1_detectron_int.csv'
+    '/home/lukas/Documents/PanopticMapping/Data/saved_logs/'
+    'run1_detectron_int.csv'
 ]
 names = ["Ground Truth Associations", "Detectron"]
 keys = ['Timestamp [s]', 'NoSubmaps [1]']  # x, y

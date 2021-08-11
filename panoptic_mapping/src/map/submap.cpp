@@ -92,6 +92,7 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_class_id(class_id_);
   proto->set_panoptic_label(static_cast<int>(label_));
   proto->set_name(name_);
+  proto->set_change_state(static_cast<int>(change_state_));
 
   // Store TSDF data.
   proto->set_num_blocks(tsdf_layer_->getNumberOfAllocatedBlocks());
@@ -204,6 +205,7 @@ void Submap::computeIsoSurfacePoints() {
   // Extract the vertices and verify.
   voxblox::BlockIndexList index_list;
   mesh_layer_->getAllAllocatedMeshes(&index_list);
+  int ignored_points = 0;
   for (const voxblox::BlockIndex& index : index_list) {
     const Pointcloud& vertices = mesh_layer_->getMeshByIndex(index).vertices;
     iso_surface_points_.reserve(iso_surface_points_.size() + vertices.size());
@@ -211,15 +213,19 @@ void Submap::computeIsoSurfacePoints() {
       // Try to interpolate the voxel weight and verify the distance.
       TsdfVoxel voxel;
       if (interpolator.getVoxel(vertex, &voxel, true)) {
-        if (voxel.distance > 1e-2 * config_.voxel_size) {
-          LOG(WARNING) << "IsoSurface Point has distance '" << voxel.distance
-                       << "' > " << 1e-2 * config_.voxel_size
-                       << ", will be ignored.";
+        if (voxel.distance > 0.1 * config_.voxel_size) {
+          ignored_points++;
         } else {
           iso_surface_points_.emplace_back(vertex, voxel.weight);
         }
       }
     }
+  }
+  if (ignored_points > 0) {
+    LOG(WARNING) << "Submap " << static_cast<int>(id_) << " (" << name_
+                 << ") has " << ignored_points
+                 << " iso-surface points with a distance > "
+                 << 0.1 * config_.voxel_size << ", these will be ignored.";
   }
 }
 

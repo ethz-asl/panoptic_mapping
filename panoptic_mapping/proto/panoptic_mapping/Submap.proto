@@ -10,6 +10,7 @@ message SubmapProto {
   optional int32 class_id = 6;
   optional int32 panoptic_label = 7;
   optional string name = 9;
+  optional int32 change_state = 11;
 
   // Tsdf Layer.
   optional uint32 num_blocks = 2;

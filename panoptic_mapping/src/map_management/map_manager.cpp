@@ -177,10 +177,11 @@ void MapManager::finishMapping() {
   // Deactivate last submaps.
   for (Submap& submap : *map_) {
     if (submap.isActive()) {
+      std::cout << "Deactivating submap " << submap.getID() << std::endl;
       submap.finishActivePeriod();
-      mergeSubmapIfPossible(submap.getID());
     }
   }
+  std::cout << "Merging Submaps:" << std::endl;
 
   // Merge what is possible.
   bool merged_something = true;
@@ -194,9 +195,19 @@ void MapManager::finishMapping() {
   }
 
   // Finish submaps.
-  //  for (Submap& submap : *map_) {
-
-  //  }
+  std::cout << "Applying class layers:" << std::endl;
+  std::vector<int> empty_submaps;
+  for (Submap& submap : *map_) {
+    if (submap.hasClassLayer()) {
+      if (!submap.applyClassLayer(*layer_manipulator_)) {
+        empty_submaps.emplace_back(submap.getID());
+      }
+    }
+  }
+  for (const int id : empty_submaps) {
+    map_->removeSubmap(id);
+    std::cout << "Removed submap " << id << " which was empty.";
+  }
 }
 
 bool MapManager::mergeSubmapIfPossible(int submap_id, int* merged_id) {
