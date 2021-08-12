@@ -11,11 +11,10 @@
 namespace panoptic_mapping {
 
 /**
- * This class directly compares TSDF volumes of two submaps with each other,
- * using the registration constraints adapted from voxgraph to detect matches
- * and solve for transformations using ceres.
- * Due to the current implementation this is also the de-facto change detection
- * module.
+ * @brief This class directly compares TSDF volumes of two submaps with each
+ * other, using the registration constraints adapted from voxgraph to detect
+ * matches and solve for transformations using ceres. Due to the current
+ * implementation this is also the de-facto change detection module.
  */
 
 class TsdfRegistrator {
@@ -33,9 +32,6 @@ class TsdfRegistrator {
     float match_acceptance_percentage = 0.1;
     bool normalize_by_voxel_weight = true;
 
-    // Behavior.
-    bool allow_multiple_matches = true;  // False: only 1-1 associations
-
     Config() { setConfigName("TsdfRegistrator"); }
 
    protected:
@@ -46,10 +42,10 @@ class TsdfRegistrator {
   explicit TsdfRegistrator(const Config& config);
   virtual ~TsdfRegistrator() = default;
 
-  // Check whether there is significant difference between the two submaps.
   void checkSubmapCollectionForChange(SubmapCollection* submaps) const;
   void mergeMatchingSubmaps(SubmapCollection* submaps);
 
+  // Check whether there is significant difference between the two submaps.
   bool submapsConflict(const Submap& reference, const Submap& other,
                        float* matching_points = nullptr) const;
 

@@ -107,12 +107,11 @@ map_management:
     verbosity: 3
     min_voxel_weight: 0.000001
     error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 100  
+    match_rejection_points: 200  
     match_rejection_percentage: 0.1
     match_acceptance_points: 50
     match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
-    allow_multiple_matches: false
     
   layer_manipulator:
       verbosity: 3
@@ -122,7 +121,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: submaps # submaps, instances, color, normals, classes, classification, change
+    color_mode: change # submaps, instances, color, normals, classes, classification, change
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true

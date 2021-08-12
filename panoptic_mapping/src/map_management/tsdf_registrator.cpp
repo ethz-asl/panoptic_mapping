@@ -30,7 +30,6 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("match_acceptance_points", &match_acceptance_points);
   setupParam("match_acceptance_percentage", &match_acceptance_percentage);
   setupParam("normalize_by_voxel_weight", &normalize_by_voxel_weight);
-  setupParam("allow_multiple_matches", &allow_multiple_matches);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
@@ -49,75 +48,49 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
       continue;
     }
 
-    // Check overlapping submaps for conflicts or matches and store best match.
-    std::vector<std::pair<int, float>> matching_ids_points;
-    if (!config_.allow_multiple_matches) {
-      matching_ids_points = {{0, -1.f}};  // empty initializer.
-    }
+    const float acceptance_count =
+        std::min(static_cast<float>(config_.match_acceptance_points),
+                 config_.match_acceptance_percentage *
+                     submap.getIsoSurfacePoints().size());
+    bool was_matched = false;
+    bool is_absent = false;
+
+    // Check overlapping submaps for conflicts or matches.
     for (const Submap& other : *submaps) {
       if (!other.isActive() ||
           !submap.getBoundingVolume().intersects(other.getBoundingVolume())) {
         continue;
       }
+      // TEST(schmluk): For the moment exclude free space for thin structures.
+      if (other.getLabel() == PanopticLabel::kFreeSpace &&
+          submap.getConfig().voxel_size < other.getConfig().voxel_size * 0.5) {
+        continue;
+      }
 
       float matching_points;
       if (submapsConflict(submap, other, &matching_points)) {
-        // No conflicts allowed, update also the matched submap if it
-        // exists.
+        // No conflicts allowed.
         if (submap.getChangeState() != ChangeState::kAbsent) {
           info << "\nSubmap " << submap.getID() << " (" << submap.getName()
                << ") conflicts with submap " << other.getID() << " ("
-               << other.getName() << ")";
-          if (submap.getChangeState() == ChangeState::kPersistent) {
-            if (!config_.allow_multiple_matches) {
-              for (Submap& matched : *submaps) {
-                if (matched.isActive() &&
-                    matched.getInstanceID() == submap.getInstanceID()) {
-                  matched.setChangeState(ChangeState::kNew);
-                  info << ", was matched with submap " << matched.getID()
-                       << " (" << matched.getName() << ")";
-                  break;
-                }
-              }
-              // Get a new instance id.
-              submap.setInstanceID(InstanceID());
-            }
-          }
+               << other.getName() << ").";
           submap.setChangeState(ChangeState::kAbsent);
-          info << ".";
         }
+        is_absent = true;
         break;
       } else if (submap.getClassID() == other.getClassID()) {
-        // Semantically match, so could be a candidate.
-        if (config_.allow_multiple_matches) {
-          matching_ids_points.emplace_back(other.getID(), matching_points);
-        } else if (matching_ids_points[0].second < matching_points) {
-          matching_ids_points[0] = {other.getID(), matching_points};
+        // Semantically match, check for sufficient alignment.
+        if (matching_points > acceptance_count) {
+          was_matched = true;
         }
       }
     }
-
-    // Check for sufficient alignment and match the most suitable
-    // candidate.
-    const float acceptance_count =
-        std::min(static_cast<float>(config_.match_acceptance_points),
-                 config_.match_acceptance_percentage *
-                     submap.getIsoSurfacePoints().size());
-    if (!config_.allow_multiple_matches) {
-      if (matching_ids_points[0].second > acceptance_count) {
-        Submap* other = submaps->getSubmapPtr(matching_ids_points[0].first);
-        if (other->getInstanceID() != submap.getInstanceID()) {
-          // Geometry and semantic class match, it's a new match.
-          submap.setChangeState(ChangeState::kPersistent);
-          submap.setInstanceID(other->getInstanceID());
-          other->setChangeState(ChangeState::kMatched);
-          info << "\nSubmap " << submap.getID() << " (" << submap.getName()
-               << ") was matched with submap " << other->getID() << " ("
-               << other->getName() << ").";
-        }
+    if (!is_absent) {
+      if (was_matched) {
+        submap.setChangeState(ChangeState::kPersistent);
+      } else {
+        submap.setChangeState(ChangeState::kUnobserved);
       }
-    } else {
-      LOG_FIRST_N(WARNING, 1) << "Multiple matches not yet supported.";
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
@@ -133,8 +106,8 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 bool TsdfRegistrator::submapsConflict(const Submap& reference,
                                       const Submap& other,
                                       float* matching_points) const {
-  // Reference is the finished submap (with Iso-surfce-points) that is compared
-  // to the active submap other.
+  // Reference is the finished submap (with Iso-surfce-points) that is
+  // compared to the active submap other.
   Transformation T_O_R = other.getT_S_M() * reference.getT_M_S();
   const float rejection_count =
       std::min(static_cast<float>(config_.match_rejection_points),
@@ -212,7 +185,8 @@ bool TsdfRegistrator::getDistanceAndWeightAtPoint(
 
 void TsdfRegistrator::mergeMatchingSubmaps(SubmapCollection* submaps) {
   // Merge all submaps of identical Instance ID into one.
-  // TODO(schmluk): This is a preliminary function for prototyping, update this.
+  // TODO(schmluk): This is a preliminary function for prototyping, update
+  // this.
   submaps->updateInstanceToSubmapIDTable();
   int merged_maps = 0;
   for (const auto& instance_submaps : submaps->getInstanceToSubmapIDTable()) {
