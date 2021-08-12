@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <voxblox/integrator/esdf_integrator.h>
 #include <voxblox/integrator/merge_integration.h>
 
 namespace panoptic_mapping {
@@ -138,6 +139,24 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
   }
 }
 
-void LayerManipulator::unprojectTsdfLayer(TsdfLayer* layer) const {}
+void LayerManipulator::unprojectTsdfLayer(TsdfLayer* tsdf_layer) const {
+  CHECK_NOTNULL(tsdf_layer);
+  voxblox::EsdfIntegrator::Config config;
+  voxblox::Layer<voxblox::EsdfVoxel> esdf_layer(tsdf_layer->voxel_size(),
+                                                tsdf_layer->voxels_per_side());
+  voxblox::EsdfIntegrator integrator(config, tsdf_layer, &esdf_layer);
+  integrator.updateFromTsdfLayerBatch();
+  voxblox::BlockIndexList block_indices;
+  tsdf_layer->getAllAllocatedBlocks(&block_indices);
+  for (const auto& block_index : block_indices) {
+    TsdfBlock& tsdf_block = tsdf_layer->getBlockByIndex(block_index);
+    const voxblox::Block<voxblox::EsdfVoxel>& esdf_block =
+        esdf_layer.getBlockByIndex(block_index);
+    for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
+      tsdf_block.getVoxelByLinearIndex(i).distance =
+          esdf_block.getVoxelByLinearIndex(i).distance;
+    }
+  }
+}
 
 }  // namespace panoptic_mapping
