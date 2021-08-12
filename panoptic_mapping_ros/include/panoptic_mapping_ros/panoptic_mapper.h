@@ -43,6 +43,9 @@ class PanopticMapper {
     bool use_threadsafe_submap_collection = false;
     int ros_spinner_threads = std::thread::hardware_concurrency();
     float check_input_interval = 0.01f;  // s
+    bool load_submaps_conservative =
+        true;  // True: loaded submaps are unknown, False: Loaded submaps are
+               // persistent until observed absent.
 
     Config() { setConfigName("PanopticMapper"); }
 

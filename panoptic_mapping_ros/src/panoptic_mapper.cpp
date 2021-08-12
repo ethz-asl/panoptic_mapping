@@ -29,6 +29,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
              &use_threadsafe_submap_collection);
   setupParam("ros_spinner_threads", &ros_spinner_threads);
   setupParam("check_input_interval", &check_input_interval);
+  setupParam("load_submaps_conservative", &load_submaps_conservative);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -292,7 +293,12 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   // Loaded submaps are 'from the past' so set them to inactive.
   for (Submap& submap : *loaded_map) {
     submap.finishActivePeriod();
-    submap.setChangeState(ChangeState::kUnobserved);
+    if (config_.load_submaps_conservative) {
+      submap.setChangeState(ChangeState::kUnobserved);
+
+    } else {
+      submap.setChangeState(ChangeState::kPersistent);
+    }
   }
 
   // Set the map.

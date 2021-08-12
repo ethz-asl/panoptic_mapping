@@ -52,8 +52,6 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
         std::min(static_cast<float>(config_.match_acceptance_points),
                  config_.match_acceptance_percentage *
                      submap.getIsoSurfacePoints().size());
-    bool was_matched = false;
-    bool is_absent = false;
 
     // Check overlapping submaps for conflicts or matches.
     for (const Submap& other : *submaps) {
@@ -76,20 +74,12 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
                << other.getName() << ").";
           submap.setChangeState(ChangeState::kAbsent);
         }
-        is_absent = true;
         break;
       } else if (submap.getClassID() == other.getClassID()) {
         // Semantically match, check for sufficient alignment.
         if (matching_points > acceptance_count) {
-          was_matched = true;
+          submap.setChangeState(ChangeState::kPersistent);
         }
-      }
-    }
-    if (!is_absent) {
-      if (was_matched) {
-        submap.setChangeState(ChangeState::kPersistent);
-      } else {
-        submap.setChangeState(ChangeState::kUnobserved);
       }
     }
   }

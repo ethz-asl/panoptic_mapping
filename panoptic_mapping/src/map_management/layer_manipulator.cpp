@@ -138,4 +138,6 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
   }
 }
 
+void LayerManipulator::unprojectTsdfLayer(TsdfLayer* layer) const {}
+
 }  // namespace panoptic_mapping

@@ -40,6 +40,14 @@ class LayerManipulator {
 
   void mergeSubmapAintoB(const Submap& A, Submap* B) const;
 
+  /**
+   * @brief Convert a TSDF into an ESDF layer, propagating shortest distances
+   * through the projective TSDF.
+   *
+   * @param layer Layer to ESDFify.
+   */
+  void unprojectTsdfLayer(TsdfLayer* layer) const;
+
  private:
   const Config config_;
 };
