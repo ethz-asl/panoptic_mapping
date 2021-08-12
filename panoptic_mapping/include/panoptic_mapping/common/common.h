@@ -67,10 +67,12 @@ enum class ChangeState {
   kPersistent
 };
 
-// Frame names are abbreviated consistently:
-/* S - Submap
- * M - Mission
- * C - Camera
+/**
+ * Frame names are abbreviated consistently (in paranthesesalternative
+ * explanations):
+ * S - Submap
+ * M - Mission (Map / World)
+ * C - Camera (Sensor)
  */
 
 // Timing.

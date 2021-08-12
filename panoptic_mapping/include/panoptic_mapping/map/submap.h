@@ -173,8 +173,8 @@ class Submap {
    * layer. Uses the provided manipulator to perform the class layer
    * integration.
    *
-   * @param manipulator Manipulator used to carry out the application of the
-   * class layer.
+   * @param manipulator Manipulator used to carry out the application
+   * of the class layer.
    * @param clear_class_layer True: erase the class layer. False: keep the class
    * layer for lookups, but no further manipulations.
    * @return True if any blocks remain, false if the TSDF map was cleared.

@@ -292,6 +292,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   // Loaded submaps are 'from the past' so set them to inactive.
   for (Submap& submap : *loaded_map) {
     submap.finishActivePeriod();
+    submap.setChangeState(ChangeState::kUnobserved);
   }
 
   // Set the map.

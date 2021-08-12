@@ -158,6 +158,14 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
           conflicting_points += 1.f;
         }
       } else {
+        // Check for class belonging.
+        if (other.hasClassLayer()) {
+          if (!classVoxelBelongsToSubmap(
+                  *other.getClassLayer().getVoxelPtrByCoordinates(
+                      point.position))) {
+            distance = other.getConfig().truncation_distance;
+          }
+        }
         if (distance <= -rejection_distance) {
           conflicting_points += 1.f;
         } else if (distance <= rejection_distance) {

@@ -161,11 +161,6 @@ void MapManager::performChangeDetection() {
 }
 
 void MapManager::finishMapping() {
-  // Apply Classification
-  // for (Submap& submap : *map_) {
-  //   submap.applyClassLayer(*layer_manipulator_);
-  // }
-
   // Remove all empty blocks.
   std::stringstream info;
   info << "Finished mapping: ";
@@ -189,7 +184,7 @@ void MapManager::finishMapping() {
     for (Submap& submap : *map_) {
       merged_something = mergeSubmapIfPossible(submap.getID());
       if (merged_something) {
-        continue;
+        break;
       }
     }
   }

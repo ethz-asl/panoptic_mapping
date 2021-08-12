@@ -20,7 +20,7 @@
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_single_tsdf.panmap"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_multi.panmap"/>
 
 
 <!-- ============ Run ============ -->

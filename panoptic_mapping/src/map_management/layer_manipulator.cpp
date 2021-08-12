@@ -99,6 +99,8 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
     voxblox::BlockIndexList block_indices;
     A.getClassLayer().getAllAllocatedBlocks(&block_indices);
     for (const auto& block_index : block_indices) {
+      const ClassVoxel::Counter normalization =
+          B->getClassLayer().hasBlock(block_index) ? 2u : 1u;
       ClassBlock::Ptr block_B =
           B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
       const ClassBlock::ConstPtr block_A =
@@ -112,9 +114,9 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
           // This means we use binary classification.
           // NOTE(schmluk): Average to make sure we stay in bounds.
           voxel_B.belongs_count =
-              (voxel_A.belongs_count + voxel_B.belongs_count) / 2u;
+              (voxel_A.belongs_count + voxel_B.belongs_count) / normalization;
           voxel_B.foreign_count =
-              (voxel_A.foreign_count + voxel_B.foreign_count) / 2u;
+              (voxel_A.foreign_count + voxel_B.foreign_count) / normalization;
         } else {
           int id_A, id_B;
           if (config_.use_instance_classification) {

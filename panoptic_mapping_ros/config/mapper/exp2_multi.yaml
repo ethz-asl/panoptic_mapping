@@ -58,7 +58,7 @@ id_tracker:
   depth_tolerance: -1  # m, negative = #vs
   tracking_metric: IoU  # IoU, overlap
   match_acceptance_threshold: 0.1  # (0.1)
-  min_allocation_size: 1000 # px, for submap allocation. (2000)
+  min_allocation_size: 500 # px, for submap allocation. (2000)
   use_class_data_for_matching: true
   use_approximate_rendering: true
   rendering_subsampling: 2
@@ -92,24 +92,25 @@ map_management:
   # Frequencies
   prune_active_blocks_frequency: 0 # 1
   activity_management_frequency: 1 # 1
-  change_detection_frequency: 0
+  change_detection_frequency: 10 # 10
   
   # Behavior
   merge_deactivated_submaps_if_possible: true
+#  required_merge_overlap: 0.5
   apply_class_layer_when_deactivating_submaps: false
   
   activity_manager:
-    required_reobservations: 5 # Consecutive observations to keep new submaps.
+    required_reobservations: 3 # Consecutive observations to keep new submaps.
     deactivate_after_missed_detections: 5  # Deactivate submaps when not observed for x frames.
   
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
     error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 50  
+    match_rejection_points: 100  
     match_rejection_percentage: 0.1
     match_acceptance_points: 50
-    match_acceptance_percentage: 0.1
+    match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
     allow_multiple_matches: false
     
@@ -121,7 +122,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: submaps # submaps, instances, color, normals, classes, change, classification
+    color_mode: submaps # submaps, instances, color, normals, classes, classification, change
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true

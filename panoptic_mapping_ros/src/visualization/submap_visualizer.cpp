@@ -630,6 +630,8 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kInstances;
   } else if (color_mode == "classes") {
     return ColorMode::kClasses;
+  } else if (color_mode == "change") {
+    return ColorMode::kChange;
   } else if (color_mode == "classification") {
     return ColorMode::kClassification;
   } else {

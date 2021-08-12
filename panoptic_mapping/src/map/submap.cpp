@@ -155,6 +155,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
   submap->setName(submap_proto.name());
+  submap->setChangeState(static_cast<ChangeState>(submap_proto.change_state()));
 
   // Load the TSDF layer.
   if (!voxblox::io::LoadBlocksFromStream(

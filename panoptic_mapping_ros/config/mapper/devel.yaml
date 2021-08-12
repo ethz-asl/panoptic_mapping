@@ -106,10 +106,10 @@ map_management:
     verbosity: 3
     min_voxel_weight: 0.000001
     error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 50  
+    match_rejection_points: 100  
     match_rejection_percentage: 0.1
     match_acceptance_points: 50
-    match_acceptance_percentage: 0.1
+    match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
     allow_multiple_matches: false
     
