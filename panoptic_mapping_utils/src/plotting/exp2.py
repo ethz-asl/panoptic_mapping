@@ -5,23 +5,25 @@ from matplotlib import pyplot as plt
 
 # Params
 keys = [
-    'MeanError [m]', 'StdError [m]', 'RMSE [m]', 'TotalPoints [1]',
-    'UnknownPoints [1]', 'TruncatedPoints [1]'
+    'MeanGTError [m]', 'StdGTError [m]', 'GTRMSE [m]', 'TotalPoints [1]',
+    'UnknownPoints [1]', 'TruncatedPoints [1]', 'GTInliers [1]',
+    'MeanMapError [m]', 'StdMapError [m]', 'MapRMSE [m]', 'MapInliers [1]',
+    'MapOutliers [1]'
 ]
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/exp2/'
 output_name = 'exp2'
 
-key = 2  # 0: MeanError, 1: Coverage, 2: Correct Points, 3: Incorrect Points
+key = 11  # 9: Map RMSE, 100: Coverage
 store_output = True
 use_percentage = False
 
 input_path = '/home/lukas/Documents/PanopticMapping/Exp2/SingleTsdf'
 input_dirs = ['run2_with_map', 'run2_no_map']
 legend = input_dirs
-labels = [
-    'MeanError [m]', 'Coverage [1]', 'Correct Points [1]',
-    'Incorrect Points [1]'
-]
+labels = keys  #[
+#     'MeanError [m]', 'Coverage [1]', 'Correct Points [1]',
+#     'Incorrect Points [1]'
+# ]
 styles = ['b-', 'g--', 'k-.']
 
 # Read data
@@ -33,7 +35,7 @@ for d in input_dirs:
         fields = []
         values = []
         for row in csv_reader:
-            if row[0] == "MeanError [m]":
+            if row[0] == "MeanGTError [m]":
                 fields = row
                 values = [[] for i in range(len(row))]
             else:
@@ -48,17 +50,10 @@ for d in input_dirs:
 x = np.arange(len(values[0])) * 10
 for i, d in enumerate(input_dirs):
     y = data[d][keys[key]]
-    if key == 1:
+    if key == 100:
         # Coverage
-        y = 3116562 - data[d]['UnknownPoints [1]']
-    elif key == 2:
-        # Correct Points
-        y = 3116562 - (data[d]['UnknownPoints [1]'] +
-                       data[d]['TruncatedPoints [1]'])
-    elif key == 3:
-        # Incorrect Points
-        y = data[d]['TruncatedPoints [1]']
-    if key in [1, 2, 3] and use_percentage:
+        y = data[d]['TotalPoints [1]'] - data[d]['UnknownPoints [1]']
+    if use_percentage:
         y = y / 31165.62
         str_list = list(labels[key])
         str_list[-2] = "%"

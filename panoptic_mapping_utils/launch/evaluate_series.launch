@@ -4,10 +4,11 @@
   <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run2/flat_2_gt_10000.ply"/>
   
   <!-- Source directory -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp2/SingleTsdf/run2_no_map"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp2/SingleTsdf/run2_with_map"/>
   
   <!-- Params -->
-  <arg name="maximum_distance" default="0.1"/>
+  <arg name="maximum_distance" default="10000"/>
+  <arg name="inlier_distance" default="0.05"/>
   <arg name="ignore_truncated_points" default="false"/>
 
 <!-- ============ Evaluations ============ -->
@@ -18,6 +19,7 @@
     <param name="visualize" value="false" /> 
     <param name="evaluate" value="true" /> 
     <param name="compute_coloring" value="false" /> 
+    <param name="inlier_distance" value="$(arg inlier_distance)" /> 
     <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" /> 
   </node>
   

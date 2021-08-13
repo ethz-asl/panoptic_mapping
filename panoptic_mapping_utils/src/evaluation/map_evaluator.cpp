@@ -29,7 +29,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("compute_coloring", &compute_coloring);
   setupParam("color_by_max_error", &color_by_max_error);
   setupParam("ignore_truncated_points", &ignore_truncated_points);
-  setupParam("correct_count_threshold", &correct_count_threshold);
+  setupParam("inlier_distance", &inlier_distance);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -49,6 +49,7 @@ bool MapEvaluator::setupMultiMapEvaluation() {
     LOG(ERROR) << "Invalid evaluation request.";
     return false;
   }
+  use_voxblox_ = false;
 
   // Load GT cloud.
   gt_ptcloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
@@ -58,6 +59,7 @@ bool MapEvaluator::setupMultiMapEvaluation() {
                << request_.ground_truth_pointcloud_file << "'.";
     return false;
   }
+  buildKdTree();
   LOG_IF(INFO, request_.verbosity >= 2) << "Loaded ground truth pointcloud";
 
   // Setup Output File.
@@ -68,8 +70,10 @@ bool MapEvaluator::setupMultiMapEvaluation() {
     LOG(ERROR) << "Failed to open output file '" << out_file_name << "'.";
     return false;
   }
-  output_file_ << "MeanError [m],StdError [m],RMSE [m],TotalPoints [1],"
-               << "UnknownPoints [1],TruncatedPoints [1]\n";
+  output_file_
+      << "MeanGTError [m],StdGTError [m],GTRMSE [m],TotalPoints [1],"
+      << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1],MeanMapError "
+         "[m],StdMapError [m],MapRMSE [m],MapInliers [1],MapOutliers [1]\n";
 
   // Advertise evaluation service.
   process_map_srv_ = nh_private_.advertiseService(
@@ -184,6 +188,7 @@ std::string MapEvaluator::computeReconstructionError(
   uint64_t total_points = 0;
   uint64_t unknown_points = 0;
   uint64_t truncated_points = 0;
+  uint64_t inliers = 0;
   std::vector<float> abserror;
   abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
 
@@ -234,6 +239,9 @@ std::string MapEvaluator::computeReconstructionError(
       } else {
         abserror.push_back(std::abs(distance));
       }
+      if (std::abs(distance) <= request_.inlier_distance) {
+        inliers++;
+      }
     } else {
       unknown_points++;
     }
@@ -267,7 +275,91 @@ std::string MapEvaluator::computeReconstructionError(
 
   std::stringstream ss;
   ss << mean << "," << stddev << "," << rmse << "," << total_points << ","
-     << unknown_points << "," << truncated_points << "\n";
+     << unknown_points << "," << truncated_points << "," << inliers;
+  return ss.str();
+}
+
+std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
+  // Setup progress bar.
+  float counter = 0.f;
+  float max_counter = 0.f;
+  ProgressBar bar;
+  for (auto& submap : *submaps_) {
+    voxblox::BlockIndexList block_list;
+    submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
+    max_counter += block_list.size();
+  }
+
+  // Setup error computation.
+  uint64_t inliers = 0;
+  uint64_t outliers = 0;
+  std::vector<float> errors;
+
+  // Parse all submaps
+  for (auto& submap : *submaps_) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
+      continue;
+    }
+
+    // Parse all mesh vertices.
+    voxblox::BlockIndexList block_list;
+    submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
+    int block = 0;
+    for (auto& block_index : block_list) {
+      if (!ros::ok()) {
+        return "";
+      }
+      for (const Point& point :
+           submap.getMeshLayer().getMeshByIndex(block_index).vertices) {
+        // Find closest GT point.
+        // Note(schmluk): Use N neighbor search wih increasing N since radius
+        // search is ridiculously slow.
+        float query_pt[3] = {point.x(), point.y(), point.z()};
+        std::vector<size_t> ret_index(1);
+        std::vector<float> out_dist_sqr(1);
+        int num_results = kdtree_->knnSearch(&query_pt[0], 1, &ret_index[0],
+                                             &out_dist_sqr[0]);
+
+        if (num_results != 0) {
+          const float error =
+              (kdtree_data_.points[ret_index[0]] - point).norm();
+          errors.emplace_back(error);
+          if (error <= request_.inlier_distance) {
+            inliers++;
+          } else {
+            outliers++;
+          }
+        }
+      }
+
+      // Show progress.
+      counter += 1.f;
+      bar.display(counter / max_counter);
+    }
+  }
+
+  // Compute result.
+  float mean = 0.0;
+  float rmse = 0.0;
+  for (auto value : errors) {
+    mean += value;
+    rmse += std::pow(value, 2);
+  }
+  if (!errors.empty()) {
+    mean /= static_cast<float>(errors.size());
+    rmse = std::sqrt(rmse / static_cast<float>(errors.size()));
+  }
+  float stddev = 0.0;
+  for (auto value : errors) {
+    stddev += std::pow(value - mean, 2.0);
+  }
+  if (errors.size() > 2) {
+    stddev = sqrt(stddev / static_cast<float>(errors.size() - 1));
+  }
+
+  std::stringstream ss;
+  ss << mean << "," << stddev << "," << rmse << "," << inliers << ","
+     << outliers;
   return ss.str();
 }
 
@@ -305,7 +397,8 @@ bool MapEvaluator::evaluateMapCallback(
   planning_ = std::make_unique<PlanningInterface>(submaps_);
 
   // Evaluate.
-  output_file_ << computeReconstructionError(request_);
+  output_file_ << computeReconstructionError(request_) << ","
+               << computeMeshError(request_) << "\n";
   output_file_.flush();
   return true;
 }
@@ -319,13 +412,7 @@ void MapEvaluator::visualizeReconstructionError(
   // metre depending on voxel size for faster nn search.
 
   // Build a Kd tree for point lookup.
-  TreeData kdtree_data;
-  kdtree_data.points.reserve(gt_ptcloud_->size());
-  for (const auto& point : *gt_ptcloud_) {
-    kdtree_data.points.emplace_back(point.x, point.y, point.z);
-  }
-  KDTree kdtree(3, kdtree_data, nanoflann::KDTreeSingleIndexAdaptorParams(10));
-  kdtree.buildIndex();
+  buildKdTree();
 
   // Setup progress bar.
   float counter = 0.f;
@@ -378,8 +465,8 @@ void MapEvaluator::visualizeReconstructionError(
         std::vector<size_t> ret_index(max_number_of_neighbors);
         std::vector<float> out_dist_sqr(max_number_of_neighbors);
         int num_results =
-            kdtree.knnSearch(&query_pt[0], max_number_of_neighbors,
-                             &ret_index[0], &out_dist_sqr[0]);
+            kdtree_->knnSearch(&query_pt[0], max_number_of_neighbors,
+                               &ret_index[0], &out_dist_sqr[0]);
 
         if (num_results == 0) {
           // No nearby surface.
@@ -398,7 +485,7 @@ void MapEvaluator::visualizeReconstructionError(
             continue;
           }
           voxblox::FloatingPoint distance;
-          if (interpolator.getDistance(kdtree_data.points[ret_index[i]],
+          if (interpolator.getDistance(kdtree_data_.points[ret_index[i]],
                                        &distance, true)) {
             const float error = std::abs(distance);
             total_error += error;
@@ -441,6 +528,17 @@ void MapEvaluator::visualizeReconstructionError(
       target_directory_ + "/" + target_map_name_ + "_evaluated_" +
       (request.color_by_max_error ? "max" : "mean") + ".panmap";
   submaps_->saveToFile(output_name);
+}
+
+void MapEvaluator::buildKdTree() {
+  kdtree_data_.points.clear();
+  kdtree_data_.points.reserve(gt_ptcloud_->size());
+  for (const auto& point : *gt_ptcloud_) {
+    kdtree_data_.points.emplace_back(point.x, point.y, point.z);
+  }
+  kdtree_.reset(new KDTree(3, kdtree_data_,
+                           nanoflann::KDTreeSingleIndexAdaptorParams(10)));
+  kdtree_->buildIndex();
 }
 
 void MapEvaluator::publishVisualization() {

@@ -96,10 +96,6 @@ void SubmapVisualizer::clearMesh() {
 }
 
 void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
-  for (const auto& s : *submaps) {
-    std::cout << "Submap: " << s.getID() << " (" << s.getName() << ")"
-              << std::endl;
-  }
   publishTfTransforms(*submaps);
   updateVisInfos(*submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.
