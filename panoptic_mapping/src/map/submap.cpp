@@ -130,8 +130,9 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   return true;
 }
 
-std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
-                                               uint64_t* tmp_byte_offset_ptr) {
+std::unique_ptr<Submap> Submap::loadFromStream(
+    std::istream* proto_file_ptr, uint64_t* tmp_byte_offset_ptr,
+    SubmapIDManager* id_manager, InstanceIDManager* instance_manager) {
   CHECK_NOTNULL(proto_file_ptr);
   CHECK_NOTNULL(tmp_byte_offset_ptr);
 
@@ -148,7 +149,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
-  auto submap = std::make_unique<Submap>(cfg);
+  auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
   submap->setInstanceID(submap_proto.instance_id());

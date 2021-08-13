@@ -45,7 +45,7 @@
   <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" if="$(arg load_map)">
      <param name="path" value="$(arg load_file)" /> 
      <param name="srv_name" value="/panoptic_mapper/load_map" /> 
-     <param name="delay" value="0.25" /> 
+     <param name="delay" value="0.1" /> 
   </node>  
   
   <!-- RVIZ Visualization-->

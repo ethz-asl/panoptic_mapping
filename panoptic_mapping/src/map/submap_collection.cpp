@@ -156,7 +156,8 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
   for (size_t sub_map_index = 0u;
        sub_map_index < submap_collection_proto.num_submaps(); ++sub_map_index) {
     std::unique_ptr<Submap> submap_ptr =
-        Submap::loadFromStream(&proto_file, &tmp_byte_offset);
+        Submap::loadFromStream(&proto_file, &tmp_byte_offset,
+                               &submap_id_manager_, &instance_id_manager_);
     if (submap_ptr == nullptr) {
       LOG(ERROR) << "Failed to load submap '" << sub_map_index
                  << "' from stream.";

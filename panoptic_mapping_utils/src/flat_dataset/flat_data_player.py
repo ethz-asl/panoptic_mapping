@@ -27,7 +27,7 @@ class FlatDataPlayer(object):
                                                  "depth_cam")
         self.use_detectron = rospy.get_param('~use_detectron', False)
         self.play_rate = rospy.get_param('~play_rate', 1.0)
-        self.wait_time = rospy.get_param('~wait_time', 0.0)
+        self.wait_time = rospy.get_param('~wait_time', 10.0)
         self.max_frames = rospy.get_param('~max_frames', 1e9)
         self.refresh_rate = 100  # Hz
 
@@ -62,7 +62,6 @@ class FlatDataPlayer(object):
         self.times = sorted(self.times)
         self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
 
-        rospy.sleep(self.wait_time)
         self.running = True
         self.start_time = None
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
@@ -82,6 +81,8 @@ class FlatDataPlayer(object):
         # Check the time.
         now = rospy.Time.now()
         if self.start_time is None:
+            # This is teh first callback so wait here.
+            rospy.sleep(self.wait_time)
             self.start_time = now
         if self.times[self.current_index] > (now - self.start_time).to_sec():
             return

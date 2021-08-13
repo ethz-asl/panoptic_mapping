@@ -29,6 +29,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("compute_coloring", &compute_coloring);
   setupParam("color_by_max_error", &color_by_max_error);
   setupParam("ignore_truncated_points", &ignore_truncated_points);
+  setupParam("correct_count_threshold", &correct_count_threshold);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,

@@ -33,6 +33,7 @@ class MapEvaluator {
 
     // Evaluation
     float maximum_distance = 0.2;  // m
+    float correct_count_threshold = 0.1;  // m
     bool visualize = true;
     bool evaluate = true;
     bool compute_coloring = false;  // Use map_file to load and display.
@@ -87,6 +88,7 @@ class MapEvaluator {
  private:
   std::string computeReconstructionError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
+  void computeMeshError(const EvaluationRequest& request);
   void computeErrorHistogram(
       const EvaluationRequest& request);  // Placeholder atm
 

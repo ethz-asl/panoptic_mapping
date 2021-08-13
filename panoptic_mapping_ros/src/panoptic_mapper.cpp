@@ -306,6 +306,7 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   // Reproduce the mesh and visualization.
   submap_visualizer_->clearMesh();
+  submap_visualizer_->reset();
   submap_visualizer_->visualizeAll(submaps_.get());
 
   LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";

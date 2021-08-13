@@ -96,7 +96,7 @@ map_management:
   change_detection_frequency: 10 # 10
   
   # Behavior
-  merge_deactivated_submaps_if_possible: true
+  merge_deactivated_submaps_if_possible: false
 #  required_merge_overlap: 0.5
   apply_class_layer_when_deactivating_submaps: false
   
@@ -122,7 +122,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: change # submaps, instances, color, normals, classes, classification, change
+    color_mode: submaps # submaps, instances, color, normals, classes, classification, change
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true
