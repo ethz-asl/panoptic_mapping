@@ -241,6 +241,12 @@ bool MapManager::mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,
     if (!tsdf_registrator_->submapsConflict(*submap, other, &matching_points)) {
       if (matching_points > acceptance_count) {
         // It's a match, merge the submap into the candidate.
+
+        // Make sure both maps have or don't have class layers.
+        if (!(submap->hasClassLayer() && other.hasClassLayer())) {
+          submap->applyClassLayer(*layer_manipulator_);
+          other.applyClassLayer(*layer_manipulator_);
+        }
         layer_manipulator_->mergeSubmapAintoB(*submap, &other);
         LOG_IF(INFO, config_.verbosity >= 4)
             << "Merged Submap " << submap->getID() << " into " << other.getID()

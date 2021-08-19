@@ -95,7 +95,7 @@ class MeshIntegrator {
       const voxblox::BlockIndexList& all_tsdf_blocks, bool clear_updated_flag,
       voxblox::ThreadSafeIndex* index_getter);
 
-  void updateMeshForBlock(const voxblox::BlockIndex& block_index);
+  bool updateMeshForBlock(const voxblox::BlockIndex& block_index);
 
   void extractBlockMesh(const TsdfBlock& tsdf_block,
                         const ClassBlock* class_block, voxblox::Mesh* mesh);
