@@ -13,7 +13,7 @@ keys = [
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/exp2/'
 output_name = 'exp2'
 
-key = 0  # 9: Map RMSE, 13: Coverage
+key = 9  # 0 MAD, 9: Map RMSE, 13: Coverage
 store_output = True
 use_percentage = False
 
@@ -62,18 +62,20 @@ for i, d in enumerate(input_dirs):
         y = data[d]['TotalPoints [1]'] - data[d]['UnknownPoints [1]']
     elif key == 13:
         # Coverage with inliers
-        y = data[d]['GTInliers [1]'] / data[d]['TotalPoints [1]'] * 100
+        y = data[d]['GTInliers [1]'] / data[d]['TotalPoints [1]']
     if use_percentage:
         y = y / 31165.62
         str_list = list(labels[key])
         str_list[-2] = "%"
         labels[key] = "".join(str_list)
-    x = np.arange(len(y)) * 10
+    y = y[1:] * 100
+    x = (np.arange(len(y)) + 1) * 10
     plt.plot(x, y, styles[i])
 
 # Axes
 plt.xlabel("Frame Number")
 plt.ylabel(labels[key])
+# plt.ylabel('Average Reconstruction Error [cm]')
 
 # Legend
 plt.legend(legend)
