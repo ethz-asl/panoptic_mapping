@@ -46,20 +46,21 @@ class MapManager {
     void checkParams() const override;
   };
 
-  MapManager(const Config& config, std::shared_ptr<SubmapCollection> map);
+  explicit MapManager(const Config& config);
   virtual ~MapManager() = default;
 
   // Perform all actions when with specified timings.
-  void tick();
+  void tick(SubmapCollection* submaps);
 
   // Perform specific tasks.
-  void pruneActiveBlocks();
-  void manageSubmapActivity();
-  void performChangeDetection();
-  void finishMapping();
+  void pruneActiveBlocks(SubmapCollection* submaps);
+  void manageSubmapActivity(SubmapCollection* submaps);
+  void performChangeDetection(SubmapCollection* submaps);
+  void finishMapping(SubmapCollection* submaps);
 
   // Tools.
-  bool mergeSubmapIfPossible(int submap_id, int* merged_id = nullptr);
+  bool mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,
+                             int* merged_id = nullptr);
 
  protected:
   std::string pruneBlocks(Submap* submap) const;
@@ -67,7 +68,6 @@ class MapManager {
  private:
   // Members.
   const Config config_;
-  const std::shared_ptr<SubmapCollection> map_;
 
   std::shared_ptr<ActivityManager> activity_manager_;
   std::shared_ptr<TsdfRegistrator> tsdf_registrator_;
@@ -76,14 +76,15 @@ class MapManager {
   // Action tick counters.
   class Ticker {
    public:
-    Ticker(unsigned int max_ticks, std::function<void()> action)
+    Ticker(unsigned int max_ticks,
+           std::function<void(SubmapCollection* submaps)> action)
         : max_ticks_(max_ticks), action_(std::move(action)) {}
-    void tick();
+    void tick(SubmapCollection* submaps);
 
    private:
     unsigned int current_tick_ = 0;
     const unsigned int max_ticks_;
-    const std::function<void()> action_;
+    const std::function<void(SubmapCollection* submaps)> action_;
   };
   std::vector<Ticker> tickers_;
 };

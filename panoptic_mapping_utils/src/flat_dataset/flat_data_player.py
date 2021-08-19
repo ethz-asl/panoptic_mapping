@@ -13,6 +13,7 @@ from PIL import Image as PilImage
 import numpy as np
 import tf
 
+from std_srvs.srv import Empty
 from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 
@@ -27,7 +28,7 @@ class FlatDataPlayer(object):
                                                  "depth_cam")
         self.use_detectron = rospy.get_param('~use_detectron', False)
         self.play_rate = rospy.get_param('~play_rate', 1.0)
-        self.wait_time = rospy.get_param('~wait_time', 0.0)
+        self.wait = rospy.get_param('~wait', False)
         self.max_frames = rospy.get_param('~max_frames', 1e9)
         self.refresh_rate = 100  # Hz
 
@@ -61,9 +62,15 @@ class FlatDataPlayer(object):
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
         self.times = sorted(self.times)
         self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
-
-        self.running = True
         self.start_time = None
+
+        if self.wait:
+            rospy.Service('~start', Empty, self.start)
+        else:
+            self.start(None)
+
+    def start(self, _):
+        self.running = True
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
                                  self.callback)
 
@@ -81,8 +88,6 @@ class FlatDataPlayer(object):
         # Check the time.
         now = rospy.Time.now()
         if self.start_time is None:
-            # This is teh first callback so wait here.
-            rospy.sleep(self.wait_time)
             self.start_time = now
         if self.times[self.current_index] > (now - self.start_time).to_sec():
             return

@@ -2,7 +2,7 @@
 <!-- ============ Arguments ============ -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>
   <arg name="play_rate" default="1"/>
-  <arg name="wait_time" default="0"/>
+  <arg name="wait" default="false"/>
   <arg name="namespace" default="data"/>
   <arg name="use_detectron" default="false"/>
   <arg name="global_frame_name" default="world"/>
@@ -17,7 +17,7 @@
     <param name="use_detectron" value="$(arg use_detectron)" /> 
     <param name="global_frame_name" value="$(arg global_frame_name)" /> 
     <param name="sensor_frame_name" value="$(arg sensor_frame_name)" /> 
-    <param name="wait_time" value="$(arg wait_time)" /> 
+    <param name="wait" value="$(arg wait)" /> 
             
     <remap from="~color_image" to="$(arg namespace)/color_image" />  
     <remap from="~depth_image" to="$(arg namespace)/depth_image" />  

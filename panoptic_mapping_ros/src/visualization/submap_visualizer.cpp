@@ -96,6 +96,13 @@ void SubmapVisualizer::clearMesh() {
 }
 
 void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
+  // for (const auto& s : *submaps) {
+  //   if (s.getName() == "SM_Ceiling_a") {
+  //     std::cout << "Submap " << s.getID() << " (" << s.getName()
+  //               << "): " << changeStateToString(s.getChangeState())
+  //               << std::endl;
+  //   }
+  // }
   publishTfTransforms(*submaps);
   updateVisInfos(*submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.

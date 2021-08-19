@@ -19,7 +19,7 @@
 
 namespace panoptic_mapping {
 
-// Evaluation tools in a ROS node for visualization. Largely based on the
+// @brief Evaluation tools in a ROS node for visualization. Based on the
 // voxblox_ros/voxblox_eval.cc code.
 class MapEvaluator {
  public:

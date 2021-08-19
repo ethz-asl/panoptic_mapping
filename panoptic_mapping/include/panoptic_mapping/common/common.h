@@ -67,6 +67,23 @@ enum class ChangeState {
   kPersistent
 };
 
+inline std::string changeStateToString(const ChangeState& state) {
+  switch (state) {
+    case ChangeState::kNew:
+      return "New";
+    case ChangeState::kMatched:
+      return "Mathced";
+    case ChangeState::kPersistent:
+      return "Persistent";
+    case ChangeState::kAbsent:
+      return "Absent";
+    case ChangeState::kUnobserved:
+      return "Unobserved";
+    default:
+      return "UnknownChangeState";
+  }
+}
+
 /**
  * Frame names are abbreviated consistently (in paranthesesalternative
  * explanations):

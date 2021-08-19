@@ -49,7 +49,7 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
     }
 
     const float acceptance_count =
-        std::min(static_cast<float>(config_.match_acceptance_points),
+        std::max(static_cast<float>(config_.match_acceptance_points),
                  config_.match_acceptance_percentage *
                      submap.getIsoSurfacePoints().size());
 
@@ -100,7 +100,7 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
   // compared to the active submap other.
   Transformation T_O_R = other.getT_S_M() * reference.getT_M_S();
   const float rejection_count =
-      std::min(static_cast<float>(config_.match_rejection_points),
+      std::max(static_cast<float>(config_.match_rejection_points),
                config_.match_rejection_percentage *
                    reference.getIsoSurfacePoints().size());
   const float rejection_distance =

@@ -131,12 +131,14 @@ void MeshIntegrator::updateMeshForBlock(
   // This block should already exist, otherwise it makes no sense to update
   // the mesh for it. ;)
   if (!tsdf_layer_->hasBlock(block_index)) {
-    LOG(ERROR) << "Trying to mesh a non-existent TSDF block at index: "
-               << block_index.transpose();
+    LOG(WARNING) << "Trying to mesh a non-existent TSDF block at index: "
+                 << block_index.transpose() << ", skipping block.";
+    return;
   }
   if (use_class_layer_ && !class_layer_->hasBlock(block_index)) {
-    LOG(ERROR) << "Trying to mesh a non-existent class block at index: "
-               << block_index.transpose();
+    LOG(WARNING) << "Trying to mesh a non-existent class block at index: "
+                 << block_index.transpose() << ", skipping block.";
+    return;
   }
   const TsdfBlock& tsdf_block = tsdf_layer_->getBlockByIndex(block_index);
   // The class is accessed by pointer since it's just a nullptr if the class

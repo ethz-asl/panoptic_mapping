@@ -32,11 +32,16 @@ submap_allocator:
   truncation_distance: -2 # negative = #vs
   use_class_layer: true 
   
+  # Meshing
+  clear_foreign_voxels: false
+  required_belonging_corners: 1
+  
+  
   # Semantic
-  small_instance_voxel_size: 0.03
-  medium_instance_voxel_size: 0.045
-  large_instance_voxel_size: 0.06
-  background_voxel_size: 0.075
+  small_instance_voxel_size: 0.01
+  medium_instance_voxel_size: 0.02
+  large_instance_voxel_size: 0.03
+  background_voxel_size: 0.04
   unknown_voxel_size: 0.1
   
 freespace_allocator:

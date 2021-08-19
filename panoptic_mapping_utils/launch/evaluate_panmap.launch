@@ -1,17 +1,17 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- Groundtruth -->
-  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run2/flat_2_gt_10000.ply"/>
+  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>
   
   <!-- Source map -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp2/SingleTsdf/run2_with_map.panmap"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp1/pan_multires/gt/gt_tiny.panmap"/>
   
   <!-- Params -->
-  <arg name="maximum_distance" default="0.10"/>
+  <arg name="maximum_distance" default="100000"/>
   <arg name="evaluate" default="true"/>
-  <arg name="compute_coloring" default="true"/>
+  <arg name="compute_coloring" default="false"/>
   <arg name="color_by_max_error" default="false"/>
-  <arg name="visualize" default="true"/>
+  <arg name="visualize" default="false"/>
   <arg name="ignore_truncated_points" default="false"/>
 
 <!-- ============ Evaluations ============ -->

@@ -9,8 +9,8 @@
 namespace panoptic_mapping {
 
 /**
- * This class implements high level interfaces for lookups on the submap
- * collection.
+ * @brief This class implements a high level interfaces for lookups on the
+ * submap collection.
  */
 class PlanningInterface {
  public:
@@ -32,7 +32,6 @@ class PlanningInterface {
                   bool include_inactive_maps = true) const;
   VoxelState getVoxelState(const Point& position) const;
   bool getDistance(const Point& position, float* distance,
-                   bool include_inactive_maps = true,
                    bool include_free_space = false) const;
 
  private:

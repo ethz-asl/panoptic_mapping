@@ -216,11 +216,11 @@ void Submap::computeIsoSurfacePoints() {
       // Try to interpolate the voxel weight and verify the distance.
       TsdfVoxel voxel;
       if (interpolator.getVoxel(vertex, &voxel, true)) {
-        if (voxel.distance > 0.1 * config_.voxel_size) {
-          ignored_points++;
-        } else {
-          iso_surface_points_.emplace_back(vertex, voxel.weight);
-        }
+        // if (voxel.distance > 0.1 * config_.voxel_size) {
+        //   ignored_points++;
+        // } else {
+        iso_surface_points_.emplace_back(vertex, voxel.weight);
+        // }
       }
     }
   }

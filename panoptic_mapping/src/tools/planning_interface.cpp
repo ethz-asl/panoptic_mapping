@@ -101,7 +101,6 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
 }
 
 bool PlanningInterface::getDistance(const Point& position, float* distance,
-                                    bool include_inactive_maps,
                                     bool include_free_space) const {
   // Get the Tsdf distance. Return whether the point was observed.
   CHECK_NOTNULL(distance);
@@ -111,8 +110,9 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
   float current_resolution = std::numeric_limits<float>::max();
 
   for (const auto& submap : *submaps_) {
-    // Check activity.
-    if (!submap.isActive() && !include_inactive_maps) {
+    // Check activity, only include submaps considered present.
+    if (submap.getChangeState() == ChangeState::kAbsent ||
+        submap.getChangeState() == ChangeState::kUnobserved) {
       continue;
     }
     if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_free_space) {

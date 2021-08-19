@@ -4,8 +4,8 @@ use_threadsafe_submap_collection: true
 use_transform_caching: true
 transform_lookup_time: 0.1
 global_frame_name: world
-#label_path: /home/lukas/Documents/Datasets/flat_dataset/run1/detectron_labels.csv
-label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
+#label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -52,7 +52,7 @@ freespace_allocator:
   voxel_size: 0.3
 
 id_tracker:
-  type: projective # ground_truth, projective, detectron, single_tsdf
+  type: detectron # ground_truth, projective, detectron, single_tsdf
   verbosity: 1
   
   # Projective ID tracker
@@ -93,10 +93,10 @@ map_management:
   # Frequencies
   prune_active_blocks_frequency: 0 # 1
   activity_management_frequency: 1 # 1
-  change_detection_frequency: 10 # 10
+  change_detection_frequency: 5 # 10
   
   # Behavior
-  merge_deactivated_submaps_if_possible: false
+  merge_deactivated_submaps_if_possible: true
 #  required_merge_overlap: 0.5
   apply_class_layer_when_deactivating_submaps: false
   
@@ -107,11 +107,11 @@ map_management:
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 200  
-    match_rejection_percentage: 0.1
-    match_acceptance_points: 50
-    match_acceptance_percentage: 0.05
+    error_threshold: -0.5 # m, negative = #vs
+    match_rejection_points: 20  
+    match_rejection_percentage: 0.02
+    match_acceptance_points: 20
+    match_acceptance_percentage: 0.02
     normalize_by_voxel_weight: true
     
   layer_manipulator:
@@ -144,7 +144,7 @@ visualization:
   
 data_writer:
   verbosity: 1
-  store_map_every_n_frames: 0
+  store_map_every_n_frames: 10
   output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
   file_name: ""
 

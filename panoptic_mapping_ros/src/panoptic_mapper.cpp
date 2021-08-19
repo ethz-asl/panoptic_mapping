@@ -86,8 +86,7 @@ void PanopticMapper::setupMembers() {
   // Map Manager.
   map_manager_ = std::make_unique<MapManager>(
       config_utilities::getConfigFromRos<MapManager::Config>(
-          ros::NodeHandle(nh_private_, "map_management")),
-      submaps_);
+          ros::NodeHandle(nh_private_, "map_management")));
 
   // Planning Interface.
   planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
@@ -223,7 +222,7 @@ void PanopticMapper::processInput(InputData* input) {
 
   // Perform all requested map management actions.
   Timer management_timer("input/map_management");
-  map_manager_->tick();
+  map_manager_->tick(submaps_.get());
   ros::WallTime t3 = ros::WallTime::now();
   management_timer.Stop();
 
@@ -264,7 +263,7 @@ void PanopticMapper::processInput(InputData* input) {
 }
 
 void PanopticMapper::finishMapping() {
-  map_manager_->finishMapping();
+  map_manager_->finishMapping(submaps_.get());
   submap_visualizer_->visualizeAll(submaps_.get());
   LOG_IF(INFO, config_.verbosity >= 2) << "Finished mapping.";
 }
@@ -295,7 +294,6 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     submap.finishActivePeriod();
     if (config_.load_submaps_conservative) {
       submap.setChangeState(ChangeState::kUnobserved);
-
     } else {
       submap.setChangeState(ChangeState::kPersistent);
     }

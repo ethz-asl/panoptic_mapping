@@ -7,25 +7,27 @@
   
   <!-- Flat Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run2"/> 
-  <arg name="play_rate" default="1.5"/>  <!-- Realtime factor -->
+  <arg name="play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="wait_time" default="2"/>  <!-- s -->
-  <arg name="use_detectron" default="false"/>
+  <arg name="use_detectron" default="true"/>
   
   <!-- Rio Dataset args -->
   <arg name="scan_id" default="1"/>
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="exp2_multi"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="exp2_detectron"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "true"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_multi.panmap"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_detectron.panmap"/>
+
 
 
 <!-- ============ Run ============ -->
   
   <!-- Play data -->
+  <arg name="wait" default = "true" if="$(arg load_map)"/>
   <include file="$(find panoptic_mapping_utils)/launch/play_flat_dataset.launch" pass_all_args="true" if="$(arg use_flat)" />
   <include file="$(find panoptic_mapping_utils)/launch/play_rio_dataset.launch" pass_all_args="true" if="$(arg use_rio)" />  
   
@@ -42,7 +44,7 @@
   </node>  
   
   <!-- Map loader -->
-  <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" if="$(arg load_map)">
+  <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" if="$(arg load_map)" output="screen">
      <param name="path" value="$(arg load_file)" /> 
      <param name="srv_name" value="/panoptic_mapper/load_map" /> 
      <param name="delay" value="0.1" /> 

@@ -17,6 +17,7 @@ namespace panoptic_mapping {
 
 void MapEvaluator::EvaluationRequest::checkParams() const {
   checkParamGT(maximum_distance, 0.f, "maximum_distance");
+  checkParamGT(inlier_distance, 0.f, "inlier_distance");
 }
 
 void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
@@ -192,18 +193,6 @@ std::string MapEvaluator::computeReconstructionError(
   std::vector<float> abserror;
   abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
 
-  // TEST
-  //  std::vector<int> inactive_ids;
-  //  for (auto& s : *submaps_) {
-  //    s->setIsActive(s->getInstanceID() == 0);
-  //    if (!s->isActive()) {
-  //      inactive_ids.push_back(s->getID());
-  //    }
-  //  }
-  //  for (int id : inactive_ids) {
-  //    submaps_->removeSubmap(id);
-  //  }
-
   // Setup progress bar.
   const uint64_t interval = gt_ptcloud_->size() / 100;
   uint64_t count = 0;
@@ -226,7 +215,7 @@ std::string MapEvaluator::computeReconstructionError(
     if (use_voxblox_) {
       observed = interp->getDistance(point, &distance, true);
     } else {
-      observed = planning_->getDistance(point, &distance, false, false);
+      observed = planning_->getDistance(point, &distance, false);
     }
 
     // Compute the error.
@@ -297,7 +286,9 @@ std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
 
   // Parse all submaps
   for (auto& submap : *submaps_) {
-    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace ||
+        submap.getChangeState() == ChangeState::kAbsent ||
+        submap.getChangeState() == ChangeState::kUnobserved) {
       continue;
     }
 
@@ -312,8 +303,6 @@ std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
       for (const Point& point :
            submap.getMeshLayer().getMeshByIndex(block_index).vertices) {
         // Find closest GT point.
-        // Note(schmluk): Use N neighbor search wih increasing N since radius
-        // search is ridiculously slow.
         float query_pt[3] = {point.x(), point.y(), point.z()};
         std::vector<size_t> ret_index(1);
         std::vector<float> out_dist_sqr(1);

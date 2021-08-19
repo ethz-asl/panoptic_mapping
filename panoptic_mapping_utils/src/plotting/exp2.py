@@ -13,14 +13,16 @@ keys = [
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/exp2/'
 output_name = 'exp2'
 
-key = 11  # 9: Map RMSE, 100: Coverage
+key = 11  # 9: Map RMSE, 12: Coverage
 store_output = True
 use_percentage = False
 
-input_path = '/home/lukas/Documents/PanopticMapping/Exp2/SingleTsdf'
-input_dirs = ['run2_with_map', 'run2_no_map']
+input_path = '/home/lukas/Documents/PanopticMapping/Exp2/'
+input_dirs = [
+    'Pan/conservative', 'SingleTsdf/run2_with_map', 'SingleTsdf/run2_no_map'
+]
 legend = input_dirs
-labels = keys  #[
+labels = keys + ["Coverage [1]"]  # [
 #     'MeanError [m]', 'Coverage [1]', 'Correct Points [1]',
 #     'Incorrect Points [1]'
 # ]
@@ -47,10 +49,10 @@ for d in input_dirs:
         data[d] = datum
 
 # Plot
-x = np.arange(len(values[0])) * 10
 for i, d in enumerate(input_dirs):
-    y = data[d][keys[key]]
-    if key == 100:
+    if key < 12:
+        y = data[d][keys[key]]
+    elif key == 12:
         # Coverage
         y = data[d]['TotalPoints [1]'] - data[d]['UnknownPoints [1]']
     if use_percentage:
@@ -58,7 +60,7 @@ for i, d in enumerate(input_dirs):
         str_list = list(labels[key])
         str_list[-2] = "%"
         labels[key] = "".join(str_list)
-
+    x = np.arange(len(y)) * 10
     plt.plot(x, y, styles[i])
 
 # Axes
