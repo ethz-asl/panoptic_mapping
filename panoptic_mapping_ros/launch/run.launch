@@ -7,7 +7,7 @@
   
   <!-- Flat Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run2"/> 
-  <arg name="play_rate" default="1"/>  <!-- Realtime factor -->
+  <arg name="play_rate" default="3"/>  <!-- Realtime factor -->
   <arg name="wait_time" default="2"/>  <!-- s -->
   <arg name="use_detectron" default="true"/>
   
@@ -16,11 +16,11 @@
   <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="exp2_single"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="exp2_detectron"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "true"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_single.panmap"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/exp2/run1_detectron_prob.panmap"/>
 
 
 

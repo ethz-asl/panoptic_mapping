@@ -192,19 +192,19 @@ void MapManager::finishMapping(SubmapCollection* submaps) {
   }
 
   // Finish submaps.
-  std::cout << "Applying class layers:" << std::endl;
-  std::vector<int> empty_submaps;
-  for (Submap& submap : *submaps) {
-    if (submap.hasClassLayer()) {
-      if (!submap.applyClassLayer(*layer_manipulator_)) {
-        empty_submaps.emplace_back(submap.getID());
-      }
-    }
-  }
-  for (const int id : empty_submaps) {
-    submaps->removeSubmap(id);
-    std::cout << "Removed submap " << id << " which was empty.";
-  }
+  // std::cout << "Applying class layers:" << std::endl;
+  // std::vector<int> empty_submaps;
+  // for (Submap& submap : *submaps) {
+  //   if (submap.hasClassLayer()) {
+  //     if (!submap.applyClassLayer(*layer_manipulator_)) {
+  //       empty_submaps.emplace_back(submap.getID());
+  //     }
+  //   }
+  // }
+  // for (const int id : empty_submaps) {
+  //   submaps->removeSubmap(id);
+  //   std::cout << "Removed submap " << id << " which was empty.";
+  // }
 }
 
 bool MapManager::mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,

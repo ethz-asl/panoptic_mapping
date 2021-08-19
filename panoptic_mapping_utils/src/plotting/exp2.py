@@ -13,14 +13,14 @@ keys = [
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/exp2/'
 output_name = 'exp2'
 
-key = 9  # 0 MAD, 9: Map RMSE, 13: Coverage
+key = 0  # 0 MAD, 9: Map RMSE, 13: Coverage
 store_output = True
 use_percentage = False
 
 input_path = '/home/lukas/Documents/PanopticMapping/Exp2/'
 input_dirs = [
     'SingleTsdf/run2_with_map', 'SingleTsdf/run2_no_map', 'longterm_pcl/10',
-    'GT/conservative', 'Detectron/detectron'
+    'GT/prob', 'Detectron/prob'
 ]
 legend = [
     'Monolithic with map', 'Monolithic no map', 'Long-term fusion',

@@ -127,6 +127,38 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     outfile_ptr->close();
     return false;
   }
+
+  // TEST save counts. Hacked as storing them in a tsdf layer.
+  TsdfLayer tmp(tsdf_layer);
+  voxblox::BlockIndexList blocks;
+  tmp.getAllAllocatedBlocks(&blocks);
+  for (const auto& index : blocks) {
+    ClassBlock* class_block = nullptr;
+    TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
+    if (hasClassLayer()) {
+      if (class_layer_->hasBlock(index)) {
+        class_block = &class_layer_->getBlockByIndex(index);
+      }
+    }
+    for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
+      TsdfVoxel& voxel = tsdf_block.getVoxelByLinearIndex(i);
+      if (class_block) {
+        voxel.distance = static_cast<float>(
+            class_block->getVoxelByLinearIndex(i).belongs_count);
+        voxel.weight = static_cast<float>(
+            class_block->getVoxelByLinearIndex(i).foreign_count);
+      } else {
+        voxel.distance = 0.f;
+        voxel.weight = 0.f;
+      }
+    }
+  }
+  if (!tmp.saveBlocksToStream(kIncludeAllBlocks, voxblox::BlockIndexList(),
+                              outfile_ptr)) {
+    LOG(ERROR) << "Could not write submap blocks to stream.";
+    outfile_ptr->close();
+    return false;
+  }
   return true;
 }
 
@@ -149,6 +181,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
+  cfg.use_class_layer = true;
   auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
@@ -164,6 +197,30 @@ std::unique_ptr<Submap> Submap::loadFromStream(
           proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
     LOG(ERROR) << "Could not load the tsdf blocks from stream.";
     return nullptr;
+  }
+
+  // TEST load counts. Hacked as storing them in a tsdf layer.
+  TsdfLayer tmp(cfg.voxel_size, cfg.voxels_per_side);
+  if (!voxblox::io::LoadBlocksFromStream(
+          submap_proto.num_blocks(), TsdfLayer::BlockMergingStrategy::kReplace,
+          proto_file_ptr, &tmp, tmp_byte_offset_ptr)) {
+    LOG(ERROR) << "Could not load the tsdf blocks from stream.";
+    return nullptr;
+  }
+  voxblox::BlockIndexList blocks;
+  tmp.getAllAllocatedBlocks(&blocks);
+  for (const auto& index : blocks) {
+    TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
+    ClassBlock* class_block =
+        submap->getClassLayerPtr()->allocateBlockPtrByIndex(index).get();
+    for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
+      ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
+      TsdfVoxel& tsdf_voxel = tsdf_block.getVoxelByLinearIndex(i);
+      class_voxel.belongs_count =
+          static_cast<ClassVoxel::Counter>(tsdf_voxel.distance);
+      class_voxel.foreign_count =
+          static_cast<ClassVoxel::Counter>(tsdf_voxel.weight);
+    }
   }
 
   // Load the transformation.

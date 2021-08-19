@@ -128,6 +128,14 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
     // Look up the voxel if it is observed.
     const Point position_S = submap.getT_S_M() * position;
     if (submap.getBoundingVolume().contains_S(position_S)) {
+      if (submap.hasClassLayer()) {
+        if (!submap.isActive() &&
+            !classVoxelBelongsToSubmap(
+                *submap.getClassLayer().getVoxelPtrByCoordinates(position_S))) {
+          continue;
+        }
+      }
+
       voxblox::Interpolator<TsdfVoxel> interpolator(&(submap.getTsdfLayer()));
       if (interpolator.getDistance(position_S, &current_distance, true)) {
         *distance = std::min(*distance, current_distance);
