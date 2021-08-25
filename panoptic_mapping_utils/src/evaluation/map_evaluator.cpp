@@ -198,6 +198,11 @@ std::string MapEvaluator::computeReconstructionError(
   uint64_t count = 0;
   ProgressBar bar;
 
+  // TEST
+  for (auto& s : *submaps_) {
+    s.setIsActive(true);
+  }
+
   // Evaluate gt pcl based(# gt points within < trunc_dist)
   std::unique_ptr<voxblox::Interpolator<voxblox::TsdfVoxel>> interp;
 
