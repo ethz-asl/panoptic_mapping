@@ -96,13 +96,6 @@ void SubmapVisualizer::clearMesh() {
 }
 
 void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
-  // for (const auto& s : *submaps) {
-  //   if (s.getName() == "SM_Ceiling_a") {
-  //     std::cout << "Submap " << s.getID() << " (" << s.getName()
-  //               << "): " << changeStateToString(s.getChangeState())
-  //               << std::endl;
-  //   }
-  // }
   publishTfTransforms(*submaps);
   updateVisInfos(*submaps);
   vis_infos_are_updated_ = true;  // Prevent repeated updates.
@@ -335,6 +328,11 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
       continue;
     }
 
+    // TEST
+    if (submap.getID() != 5) {
+      continue;
+    }
+
     // Setup submap.
     voxblox::BlockIndexList blocks;
     submap.getTsdfLayer().getAllAllocatedBlocks(&blocks);
@@ -351,9 +349,11 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
       color = vis_it->second.color;
     }
 
+    color = Color(0, 0, 255);
+
     for (auto& block_index : blocks) {
       visualization_msgs::Marker marker;
-      marker.header.frame_id = submap.getFrameName();
+      marker.header.frame_id = "world";  // submap.getFrameName();
       marker.header.stamp = ros::Time::now();
       marker.color.r = color.r;
       marker.color.g = color.g;
@@ -386,7 +386,8 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
   pcl::PointCloud<pcl::PointXYZI> result;
 
   // Create a pointcloud with distance = intensity. Taken from voxblox.
-  const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+  // TEST
+  const int free_space_id = 5;  // submaps.getActiveFreeSpaceSubmapID();
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);

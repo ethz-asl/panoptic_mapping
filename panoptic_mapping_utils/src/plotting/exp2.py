@@ -75,10 +75,10 @@ for i, d in enumerate(input_dirs):
 # Axes
 plt.xlabel("Frame Number")
 plt.ylabel(labels[key])
-# plt.ylabel('Average Reconstruction Error [cm]')
+plt.ylabel('Average Reconstruction Error [cm]')
 
 # Legend
-plt.legend(legend)
+# plt.legend(legend)
 plt.tight_layout()
 
 # Save

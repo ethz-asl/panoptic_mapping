@@ -23,17 +23,17 @@ def list_matching_scans():
             if not scan_exists(info['reference']):
                 continue
 
-            print "Ref scan %i (%s) exists. Rescans:" % (i, info['reference'])
+            print("Ref scan %i (%s) exists. Rescans:" % (i, info['reference']))
             num_rescans_max = len(info['scans'])
             num_rescans = 0
             for j in range(len(info['scans'])):
                 scan = info['scans'][j]
                 if scan_exists(scan['reference']):
                     num_rescans = num_rescans + 1
-                    print "  %i (%s) exists." % (j, scan['reference'])
+                    print("  %i (%s) exists." % (j, scan['reference']))
                 else:
-                    print "  -%i (%s) failed." % (j, scan['reference'])
-            print "  Found %i/%i rescans." % (num_rescans, num_rescans_max)
+                    print("  -%i (%s) failed." % (j, scan['reference']))
+            print("  Found %i/%i rescans." % (num_rescans, num_rescans_max))
 
 
 def produce_instance_images(scan_names):
@@ -54,7 +54,7 @@ def produce_instance_images(scan_names):
     for scan in scan_names:
         scan_dir = os.path.join(SOURCE_DIR, scan)
         if not os.path.isdir(scan_dir):
-            print "Warning: Cannot fid dir '%s'" % scan_dir
+            print("Warning: Cannot fid dir '%s'" % scan_dir)
             continue
 
         # Read objects
@@ -66,7 +66,7 @@ def produce_instance_images(scan_names):
                     object_index = index['objects']
                     break
         if object_index is None:
-            print "Warning: Could not find scan '%s' i object list." % scan
+            print("Warning: Could not find scan '%s' i object list." % scan)
             continue
 
         # Write objects to label list
