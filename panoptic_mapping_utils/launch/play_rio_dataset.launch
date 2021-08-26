@@ -1,7 +1,9 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/>
+  <arg name="scene_id" default="0"/>
   <arg name="scan_id" default="0"/>
+  <arg name="use_detectron" default="false"/>
   <arg name="rio_play_rate" default="5"/>
   <arg name="namespace" default=""/>
 
@@ -10,7 +12,9 @@
 <!-- ============ Play Data ============ -->
   <node name="rio_player" pkg="panoptic_mapping_utils" type="rio_player.py" output="screen">
     <param name="data_path" value="$(arg data_path)" /> 
+    <param name="scene_id" value="$(arg scene_id)" /> 
     <param name="scan_id" value="$(arg scan_id)" /> 
+    <param name="use_detectron" value="$(arg use_detectron)" /> 
     <param name="play_rate" value="$(arg rio_play_rate)" /> 
     
     <remap from="~color_image" to="$(arg namespace)/color_image" />
