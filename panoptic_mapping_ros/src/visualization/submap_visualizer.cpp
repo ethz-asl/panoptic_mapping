@@ -89,7 +89,7 @@ void SubmapVisualizer::clearMesh() {
     for (auto& info : vis_infos_) {
       voxblox_msgs::MultiMesh msg;
       msg.header.stamp = ros::Time::now();
-      msg.name_space = std::to_string(info.second.id);
+      msg.name_space = info.second.name_space;
       mesh_pub_.publish(msg);
     }
   }

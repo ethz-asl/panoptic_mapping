@@ -6,18 +6,19 @@
   <arg name="use_detectron" default="false"/>
   
   <!-- Flat Dataset args -->
-  <arg name="data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
+  <arg name="base_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
   <arg name="play_rate" default="3"/>  <!-- Realtime factor -->
   <arg name="wait_time" default="0"/>  <!-- s -->
   <arg name="max_frames" default="100000"/>
   
   <!-- Rio Dataset args -->
+  <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> 
   <arg name="scene_id" default="0"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
   <arg name="scan_id" default="0"/>
-  <arg name="rio_play_rate" default="5"/>  <!-- Hz -->
+  <arg name="rio_play_rate" default="10"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="exp2_gt"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="rio_gt"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Load maps -->
   <arg name="load_map" default = "false"/>

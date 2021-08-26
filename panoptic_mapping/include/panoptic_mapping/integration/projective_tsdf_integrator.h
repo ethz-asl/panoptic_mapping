@@ -21,44 +21,40 @@ namespace panoptic_mapping {
  */
 class ProjectiveIntegrator : public TsdfIntegratorBase {
  public:
-  /**
-   * @brief Configuration parameters for projective TSDF integration.
-   *
-   * @param use_weight_dropoff If true, drop off the weight behind the surface
-   * crossing.
-   * @param weight_dropoff_epsilon Distance in meters where the weight dropp off
-   * reaches zero. Negative values  are multiples of the voxel size.
-   * @param use_constant_weight If true, use unitary (w=1) weights to update the
-   * TSDF. Otherwise use weights as a function of the squared depth to
-   * approximate typical RGBD sensor confidence.
-   * @param max_weight Maximum weight used for TSDF updates. High max weight
-   * keeps information longer in memory, low max weight favors rapid updates.
-   * @param interpolation_method Interpolation method to be used when
-   * interpolating values in the images. Supported are {nearest, bilinear,
-   * adaptive}.
-   * @param foreign_rays_clear If true, rays that don't belong to the submap ID
-   * are treated as clearing rays.
-   * @param allocate_neighboring_blocks If false, allocate blocks where points
-   * fall directly into. If true, also allocate neighboring blocks if the voxels
-   * lie on the boundary of the block.
-   * @param integration_threads Number of threads used to perform integration.
-   * Integration is submap-parallel.
-   */
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // Integration params.
+    // If true, drop off the weight behind the surface crossing.
     bool use_weight_dropoff = true;
+
+    // Distance in meters where the weight dropp off reaches zero. Negative
+    // values  are multiples of the voxel size.
     float weight_dropoff_epsilon = -1.f;
+
+    // If true, use unitary (w=1) weights to update the TSDF. Otherwise use
+    // weights as a function of the squared depth to approximate typical RGBD
+    // sensor confidence.
     bool use_constant_weight = false;
+
+    // Maximum weight used for TSDF updates. High max weight keeps information
+    // longer in memory, low max weight favors rapid updates.
     float max_weight = 1e5;
+
+    // Interpolation method to be used when interpolating values in the images.
+    // Supported are {nearest, bilinear, adaptive}.
     std::string interpolation_method = "adaptive";
 
-    // Behavior
+    // If true, rays that don't belong to the submap ID are treated as clearing
+    // rays.
     bool foreign_rays_clear = true;
+
+    // If false, allocate blocks where points fall directly into. If true, also
+    // allocate neighboring blocks if the voxels lie on the boundary of the
+    // block.
     bool allocate_neighboring_blocks = false;
 
-    // System params.
+    // Number of threads used to perform integration. Integration is
+    // submap-parallel.
     int integration_threads = std::thread::hardware_concurrency();
 
     Config() { setConfigName("ProjectiveTsdfIntegrator"); }

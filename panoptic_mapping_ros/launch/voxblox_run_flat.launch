@@ -28,8 +28,8 @@
   <node name="voxblox_node" pkg="voxblox_ros" type="tsdf_server" output="screen" args="-alsologtostderr">
     <remap from="pointcloud" to="/data/pointcloud"/>
     <param name="use_tf_transforms" value="true"/>
-    <param name="tsdf_voxel_size" value="0.02" />
-    <param name="truncation_distance" value="0.04" />
+    <param name="tsdf_voxel_size" value="0.1" />
+    <param name="truncation_distance" value="0.2" />
     <param name="tsdf_voxels_per_side" value="16" />
     <param name="color_mode" value="color" />
     <param name="update_mesh_every_n_sec" value="3.0" />

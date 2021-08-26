@@ -42,6 +42,10 @@ bool SubmapCollection::submapIdExists(int id) const {
 }
 
 const Submap& SubmapCollection::getSubmap(int id) const {
+  auto it = id_to_index_.find(id);
+  if (it == id_to_index_.end()) {
+    LOG(FATAL) << "Tried to get inexistent submap " << id << ".";
+  }
   // This assumes we checked that the id exists.
   return *submaps_[id_to_index_.at(id)];
 }

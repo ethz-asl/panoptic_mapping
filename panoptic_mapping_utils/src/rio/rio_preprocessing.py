@@ -46,12 +46,13 @@ def produce_instance_images(scan_names, create_images):
         "InstanceID", "ClassID", "PanopticID", "MeshID", "InfraredID", "R",
         "G", "B", "Name", "RIOGlobalID"
     ]
-    labels = {}  # global_rio_id to label list above
+    labels = {}  # instance id to label list above
     name_counter = {}
     current_instance_id = 0
 
     # Parse scans
     for scan in scan_names:
+        print("Total labels: %i" % len(labels))
         scan_dir = os.path.join(SOURCE_DIR, scan)
         if not os.path.isdir(scan_dir):
             print("Warning: Cannot fid dir '%s'" % scan_dir)
@@ -71,29 +72,26 @@ def produce_instance_images(scan_names, create_images):
 
         # Write objects to label list
         color_to_id = {}
+        print("Found %i objects in scan '%s'." % (len(object_index), scan))
         for obj in object_index:
             h = obj['ply_color'].lstrip('#')
             color = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
 
-            instance_id = 255
-            rio_global_id = obj['global_id']
-            if rio_global_id in labels:
-                instance_id = labels[rio_global_id][0]
+            rio_global_id = int(obj['global_id'])
+            current_instance_id = current_instance_id + 1
+            instance_id = current_instance_id
+            nyu_label = int(obj['nyu40'])
+            is_instance = int(nyu_label not in [1, 2, 9, 22, 38])
+            name = obj['label']
+            if name not in name_counter:
+                name_counter[name] = 0
             else:
-                instance_id = current_instance_id
-                current_instance_id = current_instance_id + 1
-                nyu_label = int(obj['nyu40'])
-                is_instance = int(nyu_label not in [1, 2, 9, 22, 38])
-                name = obj['label']
-                if name not in name_counter:
-                    name_counter[name] = 0
-                else:
-                    name_counter[name] = name_counter[name] + 1
-                name = name + "_%i" % name_counter[name]
-                labels[rio_global_id] = [
-                    instance_id, nyu_label, is_instance, 0, 0, color[0],
-                    color[1], color[2], name, rio_global_id
-                ]
+                name_counter[name] = name_counter[name] + 1
+            name = name + "_%i" % name_counter[name]
+            labels[instance_id] = [
+                instance_id, nyu_label, is_instance, 0, 0, color[0], color[1],
+                color[2], name, rio_global_id
+            ]
             color_code = color[0] * 256 * 256 + color[1] * 256 + color[2]
             if color_code in color_to_id:
                 print("Warning: color '%s' of rio global label %i already "
@@ -113,7 +111,7 @@ def produce_instance_images(scan_names, create_images):
             img_in = cv2.imread(label_file)
             w = np.shape(img_in)[0]
             h = np.shape(img_in)[1]
-            img_out = np.ones((w, h)) * 255
+            img_out = np.zeros((w, h))
             found_codes = 0
             for x in range(w):
                 for y in range(h):
@@ -143,7 +141,7 @@ def produce_instance_images(scan_names, create_images):
 if __name__ == "__main__":
     # list_matching_scans()
 
-    create_images = False
+    create_images = True
     produce_instance_images([
         '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
         '2451c041-fae8-24f6-9213-b8b6af8d86c1',

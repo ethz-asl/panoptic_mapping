@@ -159,9 +159,14 @@ void ClassProjectiveIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
           voxel, interpolator->interpolateID(input.idImage()) == submap_id);
     } else {
       // Only the class needs to match.
-      classVoxelIncrementBinary(
-          voxel, id_to_class_.at(interpolator->interpolateID(
-                     input.idImage())) == id_to_class_.at(submap_id));
+      auto it = id_to_class_.find(submap_id);
+      auto it2 =
+          id_to_class_.find(interpolator->interpolateID(input.idImage()));
+      if (it != id_to_class_.end() && it2 != id_to_class_.end()) {
+        classVoxelIncrementBinary(voxel, it->second == it2->second);
+      } else {
+        classVoxelIncrementBinary(voxel, false);
+      }
     }
   } else {
     if (config_.use_instance_classification) {
@@ -178,6 +183,8 @@ void ClassProjectiveIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
         // This means the voxel is uninitialized.
         voxel->counts.resize(num_classes_);
       }
+      // TODO(schmluk): This might out_of_range for unknown classes or similar,
+      // how to handle these cases?
       int id = id_to_class_.at(interpolator->interpolateID(input.idImage()));
       if (id == id_to_class_.at(submap_id)) {
         id = 0;
