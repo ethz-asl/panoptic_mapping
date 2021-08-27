@@ -1,0 +1,103 @@
+# General Params
+verbosity: 3
+use_threadsafe_submap_collection: true
+use_transform_caching: false
+transform_lookup_time: 0.1
+global_frame_name: world
+#label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
+label_path: /home/lukas/Documents/Datasets/large_flat_dataset/labels.csv
+visualization_interval: -1.0
+data_logging_interval: -1.0
+print_timing_interval: 0.0
+max_input_queue_length: 100
+ros_spinning_threads: 8
+
+
+camera:
+  verbosity: 1
+  width: 224
+  height: 172
+  vx: 113.696
+  vy: 85.4004
+  fx: 176.523
+  fy: 240.667
+  max_range: 5  # m
+  min_range: 0.1
+  
+submap_allocator:
+  type: semantic
+freespace_allocator:
+  type: monolithic 
+
+id_tracker:
+  type: single_tsdf
+  verbosity: 1
+  
+  # Projective ID tracker
+#  depth_tolerance: -1  # m, negative = #vs
+#  tracking_metric: IoU  # IoU, overlap
+#  match_acceptance_threshold: 0.1  # (0.1)
+#  min_allocation_size: 2000 # px, for submap allocation. (2000)
+#  use_class_data_for_matching: true
+#  
+#  impaint_voxel_size: true
+#  debug: true
+  
+  # Single TSDF
+  voxel_size: 0.05
+  truncation_distance: -2
+  voxels_per_side: 16
+  use_class_layer: false
+  use_detectron: false
+  use_instance_classification: false
+
+tsdf_integrator:  
+  type: single_tsdf # projective, class_projective, single_tsdf
+  verbosity: 1     
+
+  # Projective
+  use_weight_dropoff: true
+  max_weight: 10000
+  interpolation_method: adaptive  # nearest, bilinear, adaptive
+  integration_threads: 8
+  
+map_management:
+  verbosity: 0
+  
+  # Frequencies
+  prune_active_blocks_frequency: 0 # 1
+  activity_management_frequency: 0 # 1
+  change_detection_frequency: 0
+  
+visualization:  
+  submaps:
+    type: single_tsdf  
+    verbosity: 1
+    color_mode: color # color, normals, classes, instances, classification
+    visualization_mode: all  # all
+    submap_color_discretization: 20
+    visualize_mesh: true
+    visualize_tsdf_blocks: true
+    visualize_free_space: true
+    visualize_bounding_volumes: true
+    include_free_space: true
+    mesh_min_weight: 0.000001
+  
+  planning:
+    verbosity: 1
+    visualize_slice: true
+    slice_resolution: 0.1
+    slice_height: -0.5
+  
+  tracking:
+    verbosity: 1
+    visualize_tracking: true
+  
+data_writer:
+  verbosity: 1
+  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
+  file_name: ""
+  store_map_every_n_frames: 10  # Use 0 to ignore
+
+  
+

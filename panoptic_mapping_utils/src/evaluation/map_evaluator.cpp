@@ -24,6 +24,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("map_file", &map_file);
   setupParam("ground_truth_pointcloud_file", &ground_truth_pointcloud_file);
+  setupParam("output_suffix", &output_suffix);
   setupParam("maximum_distance", &maximum_distance);
   setupParam("evaluate", &evaluate);
   setupParam("visualize", &visualize);
@@ -65,7 +66,8 @@ bool MapEvaluator::setupMultiMapEvaluation() {
 
   // Setup Output File.
   // NOTE(schmluk): The map_file is used to specify the target path here.
-  std::string out_file_name = request_.map_file + "/evaluation_data.csv";
+  std::string out_file_name =
+      request_.map_file + "/" + request_.output_suffix + ".csv";
   output_file_.open(out_file_name, std::ios::out);
   if (!output_file_.is_open()) {
     LOG(ERROR) << "Failed to open output file '" << out_file_name << "'.";
@@ -148,8 +150,8 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
 
   // Setup output file
   if (request.evaluate) {
-    std::string out_file_name =
-        target_directory_ + "/" + target_map_name_ + "_evaluation_data.csv";
+    std::string out_file_name = target_directory_ + "/" + target_map_name_ +
+                                "_" + request.output_suffix + ".csv";
     output_file_.open(out_file_name, std::ios::out);
     if (!output_file_.is_open()) {
       LOG(ERROR) << "Failed to open output file '" << out_file_name << "'.";
@@ -215,7 +217,8 @@ std::string MapEvaluator::computeReconstructionError(
     if (use_voxblox_) {
       observed = interp->getDistance(point, &distance, true);
     } else {
-      observed = planning_->getDistance(point, &distance, false);
+      observed =
+          planning_->getDistance(point, &distance, true, false);  // false, true
     }
 
     // Compute the error.

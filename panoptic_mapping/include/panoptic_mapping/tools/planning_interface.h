@@ -32,7 +32,8 @@ class PlanningInterface {
                   bool include_inactive_maps = true) const;
   VoxelState getVoxelState(const Point& position) const;
   bool getDistance(const Point& position, float* distance,
-                   bool include_free_space = false) const;
+                   bool include_free_space = false,
+                   bool consider_change_state = true) const;
 
  private:
   std::shared_ptr<const SubmapCollection> submaps_;

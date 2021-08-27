@@ -30,6 +30,7 @@ class MapEvaluator {
     // Data handling.
     std::string map_file;
     std::string ground_truth_pointcloud_file;
+    std::string output_suffix = "evaluation_data";
 
     // Evaluation
     float maximum_distance = 0.2;  // m

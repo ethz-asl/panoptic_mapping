@@ -111,6 +111,7 @@ class RioPlayer(object):
             with open(ref_file) as json_file:
                 index = json.load(json_file)
                 transform_found = False
+                transform_str = ""
                 for i in range(478):
                     info = index[i]
                     if transform_found:
@@ -125,11 +126,15 @@ class RioPlayer(object):
                             for r in range(4):
                                 for c in range(4):
                                     self.T_ref[r, c] = transform[c * 4 + r]
+                                    transform_str += "%f " % transform[c * 4 +
+                                                                       r]
                             transform_found = True
                             break
                 if transform_found:
                     rospy.loginfo(
-                        "[RIO Player] Initialized reference transform.")
+                        "[RIO Player] Initialized reference transform:")
+                    # print(transform_str)
+                    # return
 
                     self.static_tf = tf2_ros.StaticTransformBroadcaster()
                     msg = TransformStamped()
@@ -294,9 +299,6 @@ class RioPlayer(object):
             cv_seg = cv2.imread(seg_file)
             cv_seg = cv_seg[:, :, 0]
             cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            # if self.use_rendered_data:
-            #     cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            # elif self.adjust_image_size:
             seg_img = np.ones((self.depth_cam.height, self.depth_cam.width),
                               dtype=np.uint8) * 255
             for u in range(self.depth_cam.width):

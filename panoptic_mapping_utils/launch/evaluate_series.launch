@@ -5,6 +5,7 @@
   
   <!-- Source directory -->
   <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp2/GT/prob2"/>
+  <arg name="output_suffix" default=""/>
   
   <!-- Params -->
   <arg name="maximum_distance" default="10000"/>
@@ -14,7 +15,8 @@
 <!-- ============ Evaluations ============ -->
   <node name="multi_map_evaluation" pkg="panoptic_mapping_utils" type="multi_map_evaluation" output="screen" required="true">
     <param name="map_file" value="$(arg map_file)" /> 
-    <param name="ground_truth_pointcloud_file" value="$(arg ground_truth_pointcloud_file)" /> 
+    <param name="ground_truth_pointcloud_file" value="$(arg ground_truth_pointcloud_file)" />
+    <param name="output_suffix" value="$(arg output_suffix)" />  
     <param name="maximum_distance" value="$(arg maximum_distance)" />     
     <param name="visualize" value="false" /> 
     <param name="evaluate" value="true" /> 
