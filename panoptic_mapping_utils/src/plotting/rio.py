@@ -19,12 +19,16 @@ store_output = True
 use_percentage = [False, False]
 
 input_path = '/home/lukas/Documents/PanopticMapping/Rio/'
+scene_id = 0
 no_runs = 4
-input_dirs = [["single_0"] +
-              ["single_%i_with_map" % i for i in range(1, no_runs)],
-              ["single_%i" % i for i in range(no_runs)],
-              ["gt/pan_%i" % i for i in range(no_runs)],
-              ["detectron/pan_%i" % i for i in range(no_runs)]]
+input_dirs = [[
+    "scene_%i/single_with_map/pan_%i" % (scene_id, i) for i in range(no_runs)
+], ["scene_%i/single/pan_%i" % (scene_id, i) for i in range(no_runs)],
+              ["scene_%i/gt/pan_%i" % (scene_id, i) for i in range(no_runs)],
+              [
+                  "scene_%i/detectron/pan_%i" % (scene_id, i)
+                  for i in range(no_runs)
+              ]]
 legend = [
     'Monolithic with map', 'Monolithic no map', 'Ours (ground truth)',
     'Ours (detectron)'
@@ -131,11 +135,13 @@ for i, d in enumerate(input_dirs):
 # Day intersections
 days = []
 for d2 in input_dirs[0]:
-    days.append((len(data[d2][keys[key[0]]]) + 1) * 10)
+    days.append(len(data[d2][keys[key[0]]]) * 10)
+    if len(days) > 1:
+        days[-1] = days[-1] + days[-2]
 
 for x in days[:-1]:
-    ax[0].axvline(x, color='k', ls='--', lw=1)
-    ax[1].axvline(x, color='k', ls='--', lw=1)
+    ax[0].axvline(x + 10, color='k', ls='--', lw=1)
+    ax[1].axvline(x + 10, color='k', ls='--', lw=1)
 
 ax[0].label_outer()
 ax[1].set_xlabel("Frame Number")

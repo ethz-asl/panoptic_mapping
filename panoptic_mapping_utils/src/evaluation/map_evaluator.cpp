@@ -79,8 +79,13 @@ bool MapEvaluator::setupMultiMapEvaluation() {
   }
   output_file_
       << "MeanGTError [m],StdGTError [m],GTRMSE [m],TotalPoints [1],"
-      << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1],MeanMapError "
-         "[m],StdMapError [m],MapRMSE [m],MapInliers [1],MapOutliers [1]\n";
+      << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1]\n";  //,MeanMapError
+                                                                   //"
+                                                                   //"[m],StdMapError
+                                                                   //[m],MapRMSE
+                                                                   //[m],MapInliers
+                                                                   //[1],MapOutliers
+                                                                   //[1]\n";
 
   // Advertise evaluation service.
   process_map_srv_ = nh_private_.advertiseService(
@@ -393,8 +398,9 @@ bool MapEvaluator::evaluateMapCallback(
   planning_ = std::make_unique<PlanningInterface>(submaps_);
 
   // Evaluate.
-  output_file_ << computeReconstructionError(request_) << ","
-               << computeMeshError(request_) << "\n";
+  output_file_ << computeReconstructionError(request_)
+               << "\n";  // << ","
+                         // << computeMeshError(request_) << "\n";
   output_file_.flush();
   return true;
 }
