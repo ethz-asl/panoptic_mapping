@@ -4,6 +4,7 @@
 #include <limits>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <voxblox/interpolator/interpolator.h>
 
@@ -15,6 +16,7 @@ PlanningInterface::PlanningInterface(
 
 bool PlanningInterface::isObserved(const Point& position,
                                    bool include_inactive_maps) const {
+  // TODO(schmluk): Update this to latest convetions.
   for (const Submap& submap : *submaps_) {
     if (include_inactive_maps || submap.isActive()) {
       const Point position_S = submap.getT_S_M() * position;
@@ -35,6 +37,7 @@ bool PlanningInterface::isObserved(const Point& position,
 
 PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     const Point& position) const {
+  // TODO(schmluk): Update this to latest convetions.
   bool is_known_free = false;
   bool is_expected_free = false;
   bool is_expected_occupied = false;
@@ -101,35 +104,49 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
 }
 
 bool PlanningInterface::getDistance(const Point& position, float* distance,
-                                    bool include_free_space,
                                     bool consider_change_state) const {
   // Get the Tsdf distance. Return whether the point was observed.
   CHECK_NOTNULL(distance);
-  float current_distance;
-  *distance = std::numeric_limits<float>::max();
-  bool observed = false;
-  float current_resolution = std::numeric_limits<float>::max();
+  constexpr float max = std::numeric_limits<float>::max();
+  // Distances and observedness in order of priority: [active obj (max res),
+  // persistent obj (min sdf), free space (fallback)]
+  std::vector<float> current_distance(3, max);
+  std::vector<bool> observed(3, false);
+  float current_resolution = max;
 
   for (const auto& submap : *submaps_) {
-    // Check activity, only include submaps considered present.
+    // Only include submaps considered present.
     if (consider_change_state &&
         (submap.getChangeState() == ChangeState::kAbsent ||
          submap.getChangeState() == ChangeState::kUnobserved)) {
       continue;
     }
-    if (submap.getLabel() == PanopticLabel::kFreeSpace && !include_free_space) {
-      continue;
-    }
-    if (submap.isActive() &&
-        submap.getConfig().voxel_size > current_resolution) {
-      // Active submaps capture the full geometry so we take the highest
-      // resolution point.
-      continue;
+
+    // Check priority ordering to avoid duplicate lookups.
+    const bool is_free_space = submap.getLabel() == PanopticLabel::kFreeSpace;
+    if (is_free_space) {
+      if (observed[0] || observed[1]) {
+        // The point was already observed by an object map so ignore freespace.
+        continue;
+      }
+    } else {
+      if (submap.isActive()) {
+        if (submap.getConfig().voxel_size > current_resolution) {
+          // The point was already observed by a higher resolution active map.
+          continue;
+        }
+      } else {
+        if (observed[0]) {
+          // The point was already observed by an active map.
+          continue;
+        }
+      }
     }
 
     // Look up the voxel if it is observed.
     const Point position_S = submap.getT_S_M() * position;
     if (submap.getBoundingVolume().contains_S(position_S)) {
+      // Check classification for inactive submaps.
       if (submap.hasClassLayer()) {
         if (!submap.isActive() &&
             !classVoxelBelongsToSubmap(
@@ -137,17 +154,35 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
           continue;
         }
       }
-
+      float sdf;
       voxblox::Interpolator<TsdfVoxel> interpolator(&(submap.getTsdfLayer()));
-      if (interpolator.getDistance(position_S, &current_distance, true)) {
-        *distance = std::min(*distance, current_distance);
-        if (submap.isActive()) {
+      if (interpolator.getDistance(position_S, &sdf, true)) {
+        if (is_free_space) {
+          current_distance[2] = std::min(current_distance[2], sdf);
+          observed[2] = true;
+        } else if (submap.isActive()) {
+          // Active submaps reconstruct everything, take highest resolution
+          // observation. Lower resolution observations are filtered before.
+          current_distance[0] = sdf;
           current_resolution = submap.getConfig().voxel_size;
+          observed[0] = true;
+        } else {
+          // Inactive submaps capture only their own geometry, return min.
+          current_distance[1] = std::min(current_distance[1], sdf);
+          observed[1] = true;
         }
       }
     }
   }
-  return *distance < std::numeric_limits<float>::max();
+
+  // Aggregate result.
+  for (size_t i = 0; i < 3; ++i) {
+    if (observed[i]) {
+      *distance = current_distance[i];
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace panoptic_mapping

@@ -329,9 +329,9 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
     }
 
     // TEST
-    if (submap.getID() != 5) {
-      continue;
-    }
+    // if (submap.getID() != 5) {
+    //   continue;
+    // }
 
     // Setup submap.
     voxblox::BlockIndexList blocks;
@@ -387,7 +387,8 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
 
   // Create a pointcloud with distance = intensity. Taken from voxblox.
   // TEST
-  const int free_space_id = 5;  // submaps.getActiveFreeSpaceSubmapID();
+  // const int free_space_id = 5;
+  const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);

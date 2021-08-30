@@ -32,6 +32,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("color_by_max_error", &color_by_max_error);
   setupParam("ignore_truncated_points", &ignore_truncated_points);
   setupParam("inlier_distance", &inlier_distance);
+  setupParam("consider_change_state", &consider_change_state);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -43,7 +44,10 @@ MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
 }
 
 bool MapEvaluator::setupMultiMapEvaluation() {
-  // Get evaluation configuration.
+  // Get evaluation configuration (wait till set).
+  while (!nh_private_.hasParam("ground_truth_pointcloud_file")) {
+    ros::Duration(0.05).sleep();
+  }
   request_ = config_utilities::getConfigFromRos<
       panoptic_mapping::MapEvaluator::EvaluationRequest>(nh_private_);
   LOG_IF(INFO, request_.verbosity >= 1) << "\n" << request_.toString();
@@ -217,8 +221,8 @@ std::string MapEvaluator::computeReconstructionError(
     if (use_voxblox_) {
       observed = interp->getDistance(point, &distance, true);
     } else {
-      observed =
-          planning_->getDistance(point, &distance, true, false);  // false, true
+      observed = planning_->getDistance(point, &distance,
+                                        request.consider_change_state);
     }
 
     // Compute the error.

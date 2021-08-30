@@ -28,7 +28,7 @@ submap_allocator:
   verbosity: 1   
   
   # submaps
-  voxels_per_side: &voxels_per_side 4
+  voxels_per_side: &voxels_per_side 8
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
   
@@ -106,11 +106,11 @@ map_management:
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -0.5 # m, negative = #vs
-    match_rejection_points: 20  
-    match_rejection_percentage: 0.02
-    match_acceptance_points: 20
-    match_acceptance_percentage: 0.02
+    error_threshold: -1 # m, negative = #vs
+    match_rejection_points: 50  
+    match_rejection_percentage: 0.05
+    match_acceptance_points: 50
+    match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
     
   layer_manipulator:
@@ -121,7 +121,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: submaps # submaps, instances, color, normals, classes, classification, change
+    color_mode: change # submaps, instances, color, normals, classes, classification, change
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true

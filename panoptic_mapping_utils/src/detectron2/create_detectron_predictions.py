@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# /home/lukas/anaconda3/envs/detectron/bin/python
+# export PYTHONPATH=/home/lukas/anaconda3/envs/detectron/bin/python
 
 # import some common libraries
 from genericpath import isdir
@@ -100,6 +100,9 @@ def create_predictions(params: Params):
         print(msg + '%.1f%%' % (i / len(files) * 100, ), end='\r', flush=True)
         im = cv2.imread(os.path.join(params.target_path, im_file))
 
+        # TEST RIO
+        im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
+
         # Predict.
         t1 = time.perf_counter()
         panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
@@ -113,7 +116,7 @@ def create_predictions(params: Params):
             file_id = im_file[:6]
         id_img = panoptic_seg.numpy()
         cv2.imwrite(
-            os.path.join(params.target_path, file_id + "_predicted.png"),
+            os.path.join(params.target_path, file_id + "_predicted2.png"),
             id_img)
 
         for segment_info in segments_info:
@@ -138,7 +141,7 @@ if __name__ == '__main__':
     params.model = "COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"
     params.target_path = '/home/lukas/Documents/Datasets/flat_dataset/run2'
     params.output_label_file = ''  #'/home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv'
-    params.rio = False
+    params.rio = True
 
     # Run
     if params.rio:

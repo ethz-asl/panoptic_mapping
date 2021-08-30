@@ -266,12 +266,8 @@ class RioPlayer(object):
         # segmentation image
         if self.use_detectron:
             seg_file = os.path.join(self.base_path, self.data_id, "sequence",
-                                    frame_name + "_predicted.png")
-            cv_img = cv2.imread(seg_file)
-            img_msg = self.cv_bridge.cv2_to_imgmsg(cv_img[:, :, 0], "8UC1")
-            img_msg.header.stamp = time_stamp
-            img_msg.header.frame_id = self.frame_name
-            self.seg_pub.publish(img_msg)
+                                    frame_name + "_predicted2.png")
+            cv_seg = cv2.imread(seg_file)
 
             # Load and publish labels.
             labels_file = os.path.join(self.base_path, self.data_id,
@@ -297,19 +293,19 @@ class RioPlayer(object):
             seg_file = os.path.join(self.base_path, self.data_id, "rendered",
                                     frame_name + ".rendered.panlabels.png")
             cv_seg = cv2.imread(seg_file)
-            cv_seg = cv_seg[:, :, 0]
-            cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            seg_img = np.ones((self.depth_cam.height, self.depth_cam.width),
-                              dtype=np.uint8) * 255
-            for u in range(self.depth_cam.width):
-                for v in range(self.depth_cam.height):
-                    seg_img[v, u] = cv_seg[im_v[v, u], im_u[v, u]]
-            cv_seg = seg_img
+        cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        cv_seg = cv_seg[:, :, 0]
+        seg_img = np.zeros((self.depth_cam.height, self.depth_cam.width),
+                           dtype=np.uint8)
+        for u in range(self.depth_cam.width):
+            for v in range(self.depth_cam.height):
+                seg_img[v, u] = cv_seg[im_v[v, u], im_u[v, u]]
+        cv_seg = seg_img
 
-            seg_msg = self.cv_bridge.cv2_to_imgmsg(cv_seg, "mono8")
-            seg_msg.header.stamp = time_stamp
-            seg_msg.header.frame_id = self.frame_name
-            self.seg_pub.publish(seg_msg)
+        seg_msg = self.cv_bridge.cv2_to_imgmsg(cv_seg, "mono8")
+        seg_msg.header.stamp = time_stamp
+        seg_msg.header.frame_id = self.frame_name
+        self.seg_pub.publish(seg_msg)
 
         # Create pointcloud
         # get 3d cloud

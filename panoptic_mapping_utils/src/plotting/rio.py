@@ -13,26 +13,34 @@ keys = [
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/rio/'
 output_name = 'rio'
 
-key = 0  # 0 MAD, 9: Map RMSE, 13: Coverage
+key = [0, 12]  # 0 MAD, 9: Map RMSE, 12: Coverage
+datasets = [1, 2]  # 1: local, 2: complete
 store_output = True
-use_percentage = False
+use_percentage = [False, False]
 
 input_path = '/home/lukas/Documents/PanopticMapping/Rio/'
-input_dirs = [[
-    'single_0', 'single_1_with_map', 'single_2_with_map', 'single_3_with_map'
-], ['single_0', 'single_1', 'single_2', 'single_3']]
+no_runs = 4
+input_dirs = [["single_0"] +
+              ["single_%i_with_map" % i for i in range(1, no_runs)],
+              ["single_%i" % i for i in range(no_runs)],
+              ["gt/pan_%i" % i for i in range(no_runs)],
+              ["detectron/pan_%i" % i for i in range(no_runs)]]
 legend = [
-    'Monolithic with map', 'Monolithic no map', 'Long-term fusion',
-    'Ours (ground truth)', 'Ours (detectron)'
+    'Monolithic with map', 'Monolithic no map', 'Ours (ground truth)',
+    'Ours (detectron)'
 ]
 labels = keys + ["Coverage [1]", "Coverage [%]"]
-styles = ['g-', 'g--', 'k-.', 'b-', 'b--']
+styles = ['g-', 'g--', 'b-', 'b--']
 
 # Read data
-data = {}  # {dir: {field: values}}
+read_data_dirs = {}
 for d in input_dirs:
-    with open(os.path.join(input_path, d, 'evaluation_data.csv'),
-              'r') as read_obj:
+    for d2 in d:
+        read_data_dirs[d2] = d2
+
+data_1 = {}  # {dir: {field: values}}
+for d in read_data_dirs:
+    with open(os.path.join(input_path, d, 'eval_local.csv'), 'r') as read_obj:
         csv_reader = csv.reader(read_obj)
         fields = []
         values = []
@@ -46,11 +54,11 @@ for d in input_dirs:
         datum = {}
         for i, f in enumerate(fields):
             datum[f] = np.array(values[i], dtype=float)
-        data[d] = datum
+        data_1[d] = datum
 
 data_2 = {}  # {dir: {field: values}}
-for d in input_dirs:
-    with open(os.path.join(input_path, d, 'evaluation_data.csv'),
+for d in read_data_dirs:
+    with open(os.path.join(input_path, d, 'eval_complete.csv'),
               'r') as read_obj:
         csv_reader = csv.reader(read_obj)
         fields = []
@@ -68,40 +76,78 @@ for d in input_dirs:
         data_2[d] = datum
 
 # Plot
+fig, ax = plt.subplots(2)
 plt.rcParams.update({'font.size': 12})
+data = data_1
+if datasets[0] == 2:
+    data = data_2
 for i, d in enumerate(input_dirs):
-    if key < 12:
-        y = data[d][keys[key]]
-    elif key == 12:
-        # Coverage
-        y = data[d]['TotalPoints [1]'] - data[d]['UnknownPoints [1]']
-    elif key == 13:
-        # Coverage with inliers
-        y = data[d]['GTInliers [1]'] / data[d]['TotalPoints [1]']
-    if use_percentage:
-        y = y / 31165.62
-        str_list = list(labels[key])
-        str_list[-2] = "%"
-        labels[key] = "".join(str_list)
-    y = y[1:] * 100
+    y = []
+    for d2 in d:
+        if key[0] < 12:
+            [y.append(x) for x in data[d2][keys[key[0]]]]
+        elif key[0] == 12:
+            # Coverage
+            y += [(data[d2]['TotalPoints [1]'][j] -
+                   data[d2]['UnknownPoints [1]'][j]) /
+                  data[d2]['TotalPoints [1]'][j]
+                  for j in range(len(data[d2]['TotalPoints [1]']))]
+        elif key[0] == 13:
+            # Coverage with inliers
+            y += data[d2]['GTInliers [1]'] / data[d2]['TotalPoints [1]']
+        if use_percentage[0]:
+            y = [y2 / 8216.41 for y2 in y]
+            str_list = list(labels[key[0]])
+            str_list[-2] = "%"
+            labels[key[0]] = "".join(str_list)
     x = (np.arange(len(y)) + 1) * 10
-    plt.plot(x, y, styles[i])
+    ax[0].plot(x, y, styles[i])
 
-# Axes
-plt.xlabel("Frame Number")
-plt.ylabel(labels[key])
-plt.ylabel('Average Reconstruction Error [cm]')
+data = data_1
+if datasets[1] == 2:
+    data = data_2
+for i, d in enumerate(input_dirs):
+    y = []
+    for d2 in d:
+        if key[1] < 12:
+            [y.append(x) for x in data[d2][keys[key[0]]]]
+        elif key[1] == 12:
+            # Coverage
+            y += [(data[d2]['TotalPoints [1]'][j] -
+                   data[d2]['UnknownPoints [1]'][j]) /
+                  data[d2]['TotalPoints [1]'][j]
+                  for j in range(len(data[d2]['TotalPoints [1]']))]
+        elif key[1] == 13:
+            # Coverage with inliers
+            y += data[d2]['GTInliers [1]'] / data[d2]['TotalPoints [1]']
+        if use_percentage[1]:
+            y = [y2 / 8216.41 for y2 in y]
+            str_list = list(labels[key[1]])
+            str_list[-2] = "%"
+            labels[key[1]] = "".join(str_list)
+    x = (np.arange(len(y)) + 1) * 10
+    ax[1].plot(x, y, styles[i])
+
+# Day intersections
+days = []
+for d2 in input_dirs[0]:
+    days.append((len(data[d2][keys[key[0]]]) + 1) * 10)
+
+for x in days[:-1]:
+    ax[0].axvline(x, color='k', ls='--', lw=1)
+    ax[1].axvline(x, color='k', ls='--', lw=1)
+
+ax[0].label_outer()
+ax[1].set_xlabel("Frame Number")
+ax[0].set_ylabel('Average Error [cm]')
+ax[1].set_ylabel('Coverage [%]')
 
 # Legend
-# plt.legend(legend)
+ax[0].legend(legend)
 plt.tight_layout()
 
 # Save
 if store_output:
-    output_path = os.path.join(
-        output_dir, output_name + "_" + labels[key].split(" ", 1)[0])
-    if key in [1, 2, 3] and use_percentage:
-        output_path += "_perc"
-    output_path += ".jpg"
+    output_path = os.path.join(output_dir, output_name + ".jpg")
     plt.savefig(output_path)
 plt.show()

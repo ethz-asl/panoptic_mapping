@@ -43,7 +43,7 @@ struct ClassVoxel {
 inline bool classVoxelBelongsToSubmap(const ClassVoxel& voxel) {
   if (voxel.current_index < 0) {
     // This means binary classification is employed.
-    return voxel.belongs_count >= voxel.foreign_count;
+    return voxel.belongs_count > voxel.foreign_count;
   } else {
     return voxel.current_index == 0;
   }

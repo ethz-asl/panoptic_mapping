@@ -184,6 +184,21 @@ void PanopticMapper::inputCallback(const ros::TimerEvent&) {
     std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
     if (data) {
       processInput(data.get());
+      // TEST
+      last_input_ = ros::Time::now();
+      got_a_frame_ = true;
+    }
+  } else {
+    // TEST
+    if (got_a_frame_ && (ros::Time::now() - last_input_).toSec() >= 2.0) {
+      // No more frames, finish up.
+      LOG(INFO) << "No more frames, shutting down.";
+      std::string save_map_name;
+      nh_private_.param("save_map_name", save_map_name, std::string("new_run"));
+      finishMapping();
+      saveMap(save_map_name);
+      LOG(INFO) << "Done.";
+      ros::shutdown();
     }
   }
 }
