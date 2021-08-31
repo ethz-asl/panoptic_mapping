@@ -3,14 +3,14 @@
 # ================ Args ================
 # General args.
 target_map_dir="/home/lukas/Documents/PanopticMapping/Data/maps/rio"
-scene_id=2
-no_scans=2  # 0:4, 1:4, 2:2
-method="detectron" # gt, detectron, single, single_with_map
+scene_id=0
+no_scans=1  # 0:4, 1:4, 2:2
+method="gt" # gt, detectron, single, single_with_map
 visualize=true
 
 # What to evaluate.
-run_all_methods=true
-run_experiments=true
+run_all_methods=false
+run_experiments=false
 evaluate=true
 remove_maps=true
 
@@ -37,7 +37,8 @@ auto_generate_args() {
   elif [ $method == "single_with_map" ]
   then
     echo "Using Single TSDF with map config"
-    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/single_with_map"
+#    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/single_with_map"
+    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/fusion"
     config="rio_single"
     use_detectron="false"
   else
@@ -86,7 +87,7 @@ run_evaluations() {
   auto_generate_args
   if [ $run_experiments = true ]
   then
-#    run_experiments
+    run_experiments
     move_experiment_logs
   fi
   if [ $evaluate = true ]
@@ -106,28 +107,6 @@ then
   run_evaluations
   method="detectron" 
   run_evaluations
-#  method="single"
-#  run_evaluations
-#  method="single_with_map"
-#  run_evaluations
-  
-#  scene_id=0
-#  no_scans=4  # 0:4, 1:4, 2:2
-#  method="gt"
-#  run_evaluations
-#  method="detectron" 
-#  run_evaluations
-#  method="single"
-#  run_evaluations
-#  method="single_with_map"
-#  run_evaluations
-
-#  scene_id=1
-#  no_scans=4  # 0:4, 1:4, 2:2
-#  method="gt"
-#  run_evaluations
-#  method="detectron" 
-#  run_evaluations
 #  method="single"
 #  run_evaluations
 #  method="single_with_map"

@@ -21,8 +21,10 @@ void TsdfRegistrator::Config::checkParams() const {
   checkParamGE(min_voxel_weight, 0.f, "min_voxel_weight");
   checkParamGE(match_rejection_points, 0, "match_rejection_points");
   checkParamGE(match_rejection_percentage, 0.f, "match_rejection_percentage");
+  checkParamLE(match_rejection_percentage, 1.f, "match_rejection_percentage");
   checkParamGE(match_acceptance_points, 0, "match_acceptance_points");
   checkParamGE(match_acceptance_percentage, 0.f, "match_acceptance_percentage");
+  checkParamLE(match_acceptance_percentage, 1.f, "match_acceptance_percentage");
   if (normalize_by_voxel_weight) {
     checkParamGT(normalization_max_weight, 0.f, "normalization_max_weight");
   }

@@ -14,15 +14,15 @@
   
   <!-- Rio Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> 
-  <arg name="scene_id" default="2"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
-  <arg name="scan_id" default="1"/>
+  <arg name="scene_id" default="0"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
+  <arg name="scan_id" default="0"/>
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
   <arg name="config" default="rio_gt"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
 
   <!-- Save/Load maps -->
-  <arg name="load_map" default = "true"/>
+  <arg name="load_map" default = "false"/>
   <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/rio_gt-0.panmap"/>
   <arg name="save_map" default = "/home/lukas/Documents/PanopticMapping/Data/maps/new_map"/>
 

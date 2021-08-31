@@ -268,6 +268,13 @@ float ProjectiveIntegrator::computeWeight(const Point& p_C,
 void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
                                              const float weight,
                                              const Color* color) const {
+  // TEST Fusion
+  // if (std::abs(voxel->distance - sdf) > 0.05) {
+  //   voxel->distance = sdf;
+  //   voxel->weight = std::min(weight, config_.max_weight);
+  //   return;
+  // }
+
   // Weighted averaging fusion.
   voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
                     (voxel->weight + weight);

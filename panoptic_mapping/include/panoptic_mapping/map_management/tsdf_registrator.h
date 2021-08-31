@@ -24,15 +24,33 @@ class TsdfRegistrator {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // Change detection.
+    // Voxels and iso-surface points with lower weights are ignored.
     float min_voxel_weight = 1e-6;
-    float error_threshold = -1;  // m, negative values are multiples of
-    // the voxel_size.
+
+    // Allowed error distance in meters where a point is still considered
+    // belonging to the submap. Negative values are multiples of the voxel_size.
+    float error_threshold = -1;
+
+    // Minimum number of weight-adjusted points required for a submap to
+    // conflict.
     int match_rejection_points = 50;
+
+    // Minimum percentage of weight-adjusted points required for a submap to
+    // conflict.
     float match_rejection_percentage = 0.1;
+
+    // Minimum number of weight-adjusted points required for a submap to match.
     int match_acceptance_points = 50;
+
+    // Minimum percentage of weight-adjusted points required for a submap to
+    // match.
     float match_acceptance_percentage = 0.1;
+
+    // If true normalize all points by their combined TSDF weights.
     bool normalize_by_voxel_weight = true;
+
+    // Maximum weight used for weight normalization. Points with weights >
+    // normalization_max_weight will contribute a constant weight of 1.0.
     float normalization_max_weight = 5000.f;
 
     // Number of threads used to perform change detection. Change detection is

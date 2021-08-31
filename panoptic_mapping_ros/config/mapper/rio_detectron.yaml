@@ -100,17 +100,17 @@ map_management:
   apply_class_layer_when_deactivating_submaps: false
   
   activity_manager:
-    required_reobservations: 3 # Consecutive observations to keep new submaps.
+    required_reobservations: 1 # Consecutive observations to keep new submaps.
     deactivate_after_missed_detections: 5  # Deactivate submaps when not observed for x frames.
   
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 50
-    match_rejection_percentage: 0.05
-    match_acceptance_points: 50
-    match_acceptance_percentage: 0.05
+    error_threshold: -1.9 # m, negative = #vs
+    match_rejection_points: 20
+    match_rejection_percentage: 0.02
+    match_acceptance_points: 20
+    match_acceptance_percentage: 0.02
     normalize_by_voxel_weight: true
     normalization_max_weight: 100
     
