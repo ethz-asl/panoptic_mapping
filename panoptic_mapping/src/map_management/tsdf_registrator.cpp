@@ -1,12 +1,16 @@
 #include "panoptic_mapping/map_management/tsdf_registrator.h"
 
 #include <algorithm>
+#include <future>
+#include <limits>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include <voxblox/integrator/merge_integration.h>
 #include <voxblox/mesh/mesh_integrator.h>
 
+#include "panoptic_mapping/common/index_getter.h"
 #include "panoptic_mapping/map/submap.h"
 #include "panoptic_mapping/map/submap_collection.h"
 
@@ -22,6 +26,7 @@ void TsdfRegistrator::Config::checkParams() const {
   if (normalize_by_voxel_weight) {
     checkParamGT(normalization_max_weight, 0.f, "normalization_max_weight");
   }
+  checkParamGT(integration_threads, 0, "integration_threads");
 }
 
 void TsdfRegistrator::Config::setupParamsAndPrinting() {
@@ -34,6 +39,7 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("match_acceptance_percentage", &match_acceptance_percentage);
   setupParam("normalize_by_voxel_weight", &normalize_by_voxel_weight);
   setupParam("normalization_max_weight", &normalization_max_weight);
+  setupParam("integration_threads", &integration_threads);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
@@ -44,43 +50,36 @@ TsdfRegistrator::TsdfRegistrator(const Config& config)
 void TsdfRegistrator::checkSubmapCollectionForChange(
     SubmapCollection* submaps) const {
   auto t_start = std::chrono::high_resolution_clock::now();
-  std::stringstream info;
+  std::string info;
 
   // Check all inactive maps for alignment with the currently active ones.
-  for (Submap& submap : *submaps) {
-    if (submap.isActive() || submap.getLabel() == PanopticLabel::kFreeSpace ||
-        submap.getIsoSurfacePoints().empty()) {
-      continue;
+  std::vector<int> id_list;
+  for (const Submap& submap : *submaps) {
+    if (!submap.isActive() && submap.getLabel() != PanopticLabel::kFreeSpace &&
+        !submap.getIsoSurfacePoints().empty()) {
+      id_list.emplace_back(submap.getID());
     }
+  }
 
-    // Check overlapping submaps for conflicts or matches.
-    for (const Submap& other : *submaps) {
-      if (!other.isActive() ||
-          !submap.getBoundingVolume().intersects(other.getBoundingVolume())) {
-        continue;
-      }
-      // TEST(schmluk): For the moment exclude free space for thin structures.
-      // if (other.getLabel() == PanopticLabel::kFreeSpace &&
-      //     submap.getConfig().voxel_size < other.getConfig().voxel_size * 0.5)
-      //     {
-      //   continue;
-      // }
+  // Perform change detection in parallel.
+  SubmapIndexGetter index_getter(id_list);
+  std::vector<std::future<std::string>> threads;
+  for (int i = 0; i < config_.integration_threads; ++i) {
+    threads.emplace_back(
+        std::async(std::launch::async, [this, &index_getter, submaps]() {
+          int index;
+          std::string info;
+          while (index_getter.getNextIndex(&index)) {
+            info += this->checkSubmapForChange(*submaps,
+                                               submaps->getSubmapPtr(index));
+          }
+          return info;
+        }));
+  }
 
-      bool submaps_match;
-      if (submapsConflict(submap, other, &submaps_match)) {
-        // No conflicts allowed.
-        if (submap.getChangeState() != ChangeState::kAbsent) {
-          info << "\nSubmap " << submap.getID() << " (" << submap.getName()
-               << ") conflicts with submap " << other.getID() << " ("
-               << other.getName() << ").";
-          submap.setChangeState(ChangeState::kAbsent);
-        }
-        break;
-      } else if (submap.getClassID() == other.getClassID() && submaps_match) {
-        // Semantically and geometrically match.
-        submap.setChangeState(ChangeState::kPersistent);
-      }
-    }
+  // Join all threads.
+  for (auto& thread : threads) {
+    info += thread.get();
   }
   auto t_end = std::chrono::high_resolution_clock::now();
 
@@ -88,8 +87,40 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
       << "Performed change detection in "
       << std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start)
              .count()
-      << (config_.verbosity < 3 || info.str().empty() ? "ms."
-                                                      : "ms:" + info.str());
+      << (config_.verbosity < 3 || info.empty() ? "ms." : "ms:" + info);
+}
+
+std::string TsdfRegistrator::checkSubmapForChange(
+    const SubmapCollection& submaps, Submap* submap) const {
+  // Check overlapping submaps for conflicts or matches.
+  for (const Submap& other : submaps) {
+    if (!other.isActive() ||
+        !submap->getBoundingVolume().intersects(other.getBoundingVolume())) {
+      continue;
+    }
+    // TEST(schmluk): For the moment exclude free space for thin structures.
+    // if (other.getLabel() == PanopticLabel::kFreeSpace &&
+    //     submap.getConfig().voxel_size < other.getConfig().voxel_size * 0.5)
+    //     {
+    //   continue;
+    // }
+    bool submaps_match;
+    if (submapsConflict(*submap, other, &submaps_match)) {
+      // No conflicts allowed.
+      if (submap->getChangeState() != ChangeState::kAbsent) {
+        submap->setChangeState(ChangeState::kAbsent);
+      }
+      std::stringstream info;
+      info << "\nSubmap " << submap->getID() << " (" << submap->getName()
+           << ") conflicts with submap " << other.getID() << " ("
+           << other.getName() << ").";
+      return info.str();
+    } else if (submap->getClassID() == other.getClassID() && submaps_match) {
+      // Semantically and geometrically match.
+      submap->setChangeState(ChangeState::kPersistent);
+    }
+  }
+  return "";
 }
 
 bool TsdfRegistrator::submapsConflict(const Submap& reference,

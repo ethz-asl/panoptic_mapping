@@ -1,6 +1,8 @@
 #ifndef PANOPTIC_MAPPING_MAP_MANAGEMENT_TSDF_REGISTRATOR_H_
 #define PANOPTIC_MAPPING_MAP_MANAGEMENT_TSDF_REGISTRATOR_H_
 
+#include <string>
+
 #include <voxblox/interpolator/interpolator.h>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
@@ -33,6 +35,10 @@ class TsdfRegistrator {
     bool normalize_by_voxel_weight = true;
     float normalization_max_weight = 5000.f;
 
+    // Number of threads used to perform change detection. Change detection is
+    // submap-parallel.
+    int integration_threads = std::thread::hardware_concurrency();
+
     Config() { setConfigName("TsdfRegistrator"); }
 
    protected:
@@ -44,6 +50,7 @@ class TsdfRegistrator {
   virtual ~TsdfRegistrator() = default;
 
   void checkSubmapCollectionForChange(SubmapCollection* submaps) const;
+
   void mergeMatchingSubmaps(SubmapCollection* submaps);
 
   // Check whether there is significant difference between the two submaps.
@@ -60,6 +67,10 @@ class TsdfRegistrator {
       const voxblox::Interpolator<TsdfVoxel>& interpolator) const;
 
   float computeCombinedWeight(float w1, float w2) const;
+
+  // For parallel change detection.
+  std::string checkSubmapForChange(const SubmapCollection& submaps,
+                                   Submap* submap) const;
 };
 
 }  // namespace panoptic_mapping
