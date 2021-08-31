@@ -223,11 +223,6 @@ bool MapManager::mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,
   } else if (submap->getChangeState() == ChangeState::kAbsent) {
     return false;
   }
-  const float acceptance_count =
-      std::max(static_cast<float>(
-                   config_.tsdf_registrator_config.match_acceptance_points),
-               config_.tsdf_registrator_config.match_acceptance_percentage *
-                   submap->getIsoSurfacePoints().size());
 
   // Find all potential matches.
   for (Submap& other : *submaps) {
@@ -237,9 +232,9 @@ bool MapManager::mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,
       continue;
     }
 
-    float matching_points;
-    if (!tsdf_registrator_->submapsConflict(*submap, other, &matching_points)) {
-      if (matching_points > acceptance_count) {
+    bool submaps_match;
+    if (!tsdf_registrator_->submapsConflict(*submap, other, &submaps_match)) {
+      if (submaps_match) {
         // It's a match, merge the submap into the candidate.
 
         // Make sure both maps have or don't have class layers.

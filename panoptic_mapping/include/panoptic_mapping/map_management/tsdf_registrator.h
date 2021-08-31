@@ -31,6 +31,7 @@ class TsdfRegistrator {
     int match_acceptance_points = 50;
     float match_acceptance_percentage = 0.1;
     bool normalize_by_voxel_weight = true;
+    float normalization_max_weight = 5000.f;
 
     Config() { setConfigName("TsdfRegistrator"); }
 
@@ -47,7 +48,7 @@ class TsdfRegistrator {
 
   // Check whether there is significant difference between the two submaps.
   bool submapsConflict(const Submap& reference, const Submap& other,
-                       float* matching_points = nullptr) const;
+                       bool* submaps_match = nullptr) const;
 
  private:
   const Config config_;
@@ -57,6 +58,8 @@ class TsdfRegistrator {
       float* distance, float* weight, const IsoSurfacePoint& point,
       const Transformation& T_P_S,
       const voxblox::Interpolator<TsdfVoxel>& interpolator) const;
+
+  float computeCombinedWeight(float w1, float w2) const;
 };
 
 }  // namespace panoptic_mapping

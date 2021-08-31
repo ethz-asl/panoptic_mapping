@@ -5,7 +5,6 @@ use_transform_caching: true
 transform_lookup_time: 0.1
 global_frame_name: world
 label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
-#label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -29,7 +28,7 @@ submap_allocator:
   verbosity: 1   
   
   # submaps
-  voxels_per_side: &voxels_per_side 8
+  voxels_per_side: &voxels_per_side 16
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
   
@@ -108,11 +107,12 @@ map_management:
     verbosity: 3
     min_voxel_weight: 0.000001
     error_threshold: -1 # m, negative = #vs
-    match_rejection_points: 50  
+    match_rejection_points: 50
     match_rejection_percentage: 0.05
     match_acceptance_points: 50
     match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
+    normalization_max_weight: 100
     
   layer_manipulator:
       verbosity: 3

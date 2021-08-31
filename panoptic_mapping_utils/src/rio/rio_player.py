@@ -46,8 +46,8 @@ class RioPlayer(object):
                               '1776ad84-4db7-2333-8aa7-2cc9126d5f71'
                           ],
                           [
-                              'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26',
-                              '20c9939d-698f-29c5-85c6-3c618e00061f'
+                              '20c9939d-698f-29c5-85c6-3c618e00061f',
+                              'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26'
                           ]])
         self.scene_id = rospy.get_param('~scene_id', 0)
         self.scan_id = rospy.get_param('~scan_id', 0)

@@ -11,10 +11,9 @@ src = sys.argv[1]
 dst = sys.argv[2]
 num = int(sys.argv[3])
 
-folders = sorted([
-    d for d in os.listdir(src) if os.path.isdir(os.path.join(sys.argv[1], d))
-],
-                 reverse=True)
+folders = sorted(
+    [d for d in os.listdir(src) if os.path.isdir(os.path.join(src, d))],
+    reverse=True)
 
 if len(folders) < num:
     print("Found fewer than %i entries in '%s'. Exiting." % (num, src))
@@ -23,6 +22,8 @@ if len(folders) < num:
 for i in range(num):
     source = os.path.join(src, folders[i])
     target = os.path.join(dst, "pan_%i" % (num - i - 1))
+    if os.path.isdir(target):
+        shutil.rmtree(target)
     shutil.move(source, target)
     print("Moved '%s' to '%s'." % (source, target))
 

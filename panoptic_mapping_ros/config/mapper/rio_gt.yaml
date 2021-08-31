@@ -28,7 +28,7 @@ submap_allocator:
   verbosity: 1   
   
   # submaps
-  voxels_per_side: &voxels_per_side 8
+  voxels_per_side: &voxels_per_side 16
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
   
@@ -112,6 +112,7 @@ map_management:
     match_acceptance_points: 50
     match_acceptance_percentage: 0.05
     normalize_by_voxel_weight: true
+    normalization_max_weight: 100
     
   layer_manipulator:
       verbosity: 3

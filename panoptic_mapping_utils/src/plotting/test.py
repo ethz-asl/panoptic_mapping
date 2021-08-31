@@ -2,8 +2,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import sys
 
-from numpy.core.numeric import roll
-
 
 def p(f):
     return np.floor(f / 2**(np.floor(f / 128)))

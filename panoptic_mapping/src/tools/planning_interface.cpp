@@ -104,7 +104,8 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
 }
 
 bool PlanningInterface::getDistance(const Point& position, float* distance,
-                                    bool consider_change_state) const {
+                                    bool consider_change_state,
+                                    bool include_free_space) const {
   // Get the Tsdf distance. Return whether the point was observed.
   CHECK_NOTNULL(distance);
   constexpr float max = std::numeric_limits<float>::max();
@@ -124,6 +125,10 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
 
     // Check priority ordering to avoid duplicate lookups.
     const bool is_free_space = submap.getLabel() == PanopticLabel::kFreeSpace;
+    if (is_free_space && !include_free_space) {
+      continue;
+    }
+
     if (is_free_space) {
       if (observed[0] || observed[1]) {
         // The point was already observed by an object map so ignore freespace.
@@ -131,7 +136,7 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
       }
     } else {
       if (submap.isActive()) {
-        if (submap.getConfig().voxel_size > current_resolution) {
+        if (submap.getConfig().voxel_size >= current_resolution) {
           // The point was already observed by a higher resolution active map.
           continue;
         }

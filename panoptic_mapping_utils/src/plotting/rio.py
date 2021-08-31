@@ -13,22 +13,21 @@ keys = [
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/rio/'
 output_name = 'rio'
 
-key = [0, 12]  # 0 MAD, 9: Map RMSE, 12: Coverage
+# 0 MAD, 6: GTInliers, 12: Coverage (observed), 13: Coverage (inliers)
+key = [0, 13]
 datasets = [1, 2]  # 1: local, 2: complete
 store_output = True
 use_percentage = [False, False]
 
 input_path = '/home/lukas/Documents/PanopticMapping/Rio/'
-scene_id = 0
-no_runs = 4
+scene_id = 2  # 0:4, 1:4, 2:2
+no_runs = [4, 4, 2][scene_id]
+run_range = range(1, no_runs)
 input_dirs = [[
-    "scene_%i/single_with_map/pan_%i" % (scene_id, i) for i in range(no_runs)
-], ["scene_%i/single/pan_%i" % (scene_id, i) for i in range(no_runs)],
-              ["scene_%i/gt/pan_%i" % (scene_id, i) for i in range(no_runs)],
-              [
-                  "scene_%i/detectron/pan_%i" % (scene_id, i)
-                  for i in range(no_runs)
-              ]]
+    "scene_%i/single_with_map/pan_%i" % (scene_id, i) for i in run_range
+], ["scene_%i/single/pan_%i" % (scene_id, i) for i in run_range],
+              ["scene_%i/gt/pan_%i" % (scene_id, i) for i in run_range],
+              ["scene_%i/detectron/pan_%i" % (scene_id, i) for i in run_range]]
 legend = [
     'Monolithic with map', 'Monolithic no map', 'Ours (ground truth)',
     'Ours (detectron)'
@@ -98,9 +97,12 @@ for i, d in enumerate(input_dirs):
                   for j in range(len(data[d2]['TotalPoints [1]']))]
         elif key[0] == 13:
             # Coverage with inliers
-            y += data[d2]['GTInliers [1]'] / data[d2]['TotalPoints [1]']
+            y += [
+                data[d2]['GTInliers [1]'][j] / data[d2]['TotalPoints [1]'][j]
+                for j in range(len(data[d2]['TotalPoints [1]']))
+            ]
         if use_percentage[0]:
-            y = [y2 / 8216.41 for y2 in y]
+            y = [y2 / data[d2]['TotalPoints [1]'][0] * 100.0 for y2 in y]
             str_list = list(labels[key[0]])
             str_list[-2] = "%"
             labels[key[0]] = "".join(str_list)
@@ -114,7 +116,7 @@ for i, d in enumerate(input_dirs):
     y = []
     for d2 in d:
         if key[1] < 12:
-            [y.append(x) for x in data[d2][keys[key[0]]]]
+            [y.append(x) for x in data[d2][keys[key[1]]]]
         elif key[1] == 12:
             # Coverage
             y += [(data[d2]['TotalPoints [1]'][j] -
@@ -123,9 +125,12 @@ for i, d in enumerate(input_dirs):
                   for j in range(len(data[d2]['TotalPoints [1]']))]
         elif key[1] == 13:
             # Coverage with inliers
-            y += data[d2]['GTInliers [1]'] / data[d2]['TotalPoints [1]']
+            y += [
+                data[d2]['GTInliers [1]'][j] / data[d2]['TotalPoints [1]'][j]
+                for j in range(len(data[d2]['TotalPoints [1]']))
+            ]
         if use_percentage[1]:
-            y = [y2 / 8216.41 for y2 in y]
+            y = [y2 / data[d2]['TotalPoints [1]'][0] * 100.0 for y2 in y]
             str_list = list(labels[key[1]])
             str_list[-2] = "%"
             labels[key[1]] = "".join(str_list)
@@ -154,6 +159,6 @@ plt.tight_layout()
 
 # Save
 if store_output:
-    output_path = os.path.join(output_dir, output_name + ".jpg")
+    output_path = os.path.join(output_dir, output_name + "_%i.jpg" % scene_id)
     plt.savefig(output_path)
 plt.show()

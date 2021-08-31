@@ -19,6 +19,9 @@ void TsdfRegistrator::Config::checkParams() const {
   checkParamGE(match_rejection_percentage, 0.f, "match_rejection_percentage");
   checkParamGE(match_acceptance_points, 0, "match_acceptance_points");
   checkParamGE(match_acceptance_percentage, 0.f, "match_acceptance_percentage");
+  if (normalize_by_voxel_weight) {
+    checkParamGT(normalization_max_weight, 0.f, "normalization_max_weight");
+  }
 }
 
 void TsdfRegistrator::Config::setupParamsAndPrinting() {
@@ -30,6 +33,7 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
   setupParam("match_acceptance_points", &match_acceptance_points);
   setupParam("match_acceptance_percentage", &match_acceptance_percentage);
   setupParam("normalize_by_voxel_weight", &normalize_by_voxel_weight);
+  setupParam("normalization_max_weight", &normalization_max_weight);
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
@@ -44,14 +48,10 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
   // Check all inactive maps for alignment with the currently active ones.
   for (Submap& submap : *submaps) {
-    if (submap.isActive() || submap.getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.isActive() || submap.getLabel() == PanopticLabel::kFreeSpace ||
+        submap.getIsoSurfacePoints().empty()) {
       continue;
     }
-
-    const float acceptance_count =
-        std::max(static_cast<float>(config_.match_acceptance_points),
-                 config_.match_acceptance_percentage *
-                     submap.getIsoSurfacePoints().size());
 
     // Check overlapping submaps for conflicts or matches.
     for (const Submap& other : *submaps) {
@@ -60,13 +60,14 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
         continue;
       }
       // TEST(schmluk): For the moment exclude free space for thin structures.
-      if (other.getLabel() == PanopticLabel::kFreeSpace &&
-          submap.getConfig().voxel_size < other.getConfig().voxel_size * 0.5) {
-        continue;
-      }
+      // if (other.getLabel() == PanopticLabel::kFreeSpace &&
+      //     submap.getConfig().voxel_size < other.getConfig().voxel_size * 0.5)
+      //     {
+      //   continue;
+      // }
 
-      float matching_points;
-      if (submapsConflict(submap, other, &matching_points)) {
+      bool submaps_match;
+      if (submapsConflict(submap, other, &submaps_match)) {
         // No conflicts allowed.
         if (submap.getChangeState() != ChangeState::kAbsent) {
           info << "\nSubmap " << submap.getID() << " (" << submap.getName()
@@ -75,11 +76,9 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
           submap.setChangeState(ChangeState::kAbsent);
         }
         break;
-      } else if (submap.getClassID() == other.getClassID()) {
-        // Semantically match, check for sufficient alignment.
-        if (matching_points > acceptance_count) {
-          submap.setChangeState(ChangeState::kPersistent);
-        }
+      } else if (submap.getClassID() == other.getClassID() && submaps_match) {
+        // Semantically and geometrically match.
+        submap.setChangeState(ChangeState::kPersistent);
       }
     }
   }
@@ -95,20 +94,23 @@ void TsdfRegistrator::checkSubmapCollectionForChange(
 
 bool TsdfRegistrator::submapsConflict(const Submap& reference,
                                       const Submap& other,
-                                      float* matching_points) const {
+                                      bool* submaps_match) const {
   // Reference is the finished submap (with Iso-surfce-points) that is
   // compared to the active submap other.
   Transformation T_O_R = other.getT_S_M() * reference.getT_M_S();
   const float rejection_count =
-      std::max(static_cast<float>(config_.match_rejection_points),
-               config_.match_rejection_percentage *
-                   reference.getIsoSurfacePoints().size());
+      config_.normalize_by_voxel_weight
+          ? std::numeric_limits<float>::max()
+          : std::max(static_cast<float>(config_.match_rejection_points),
+                     config_.match_rejection_percentage *
+                         reference.getIsoSurfacePoints().size());
   const float rejection_distance =
-      config_.error_threshold > 0
+      config_.error_threshold > 0.f
           ? config_.error_threshold
-          : config_.error_threshold * -1.f * other.getTsdfLayer().voxel_size();
-  float conflicting_points = 0;
-  float matched_points = 0;
+          : config_.error_threshold * -other.getTsdfLayer().voxel_size();
+  float conflicting_points = 0.f;
+  float matched_points = 0.f;
+  float total_weight = 0.f;
   voxblox::Interpolator<TsdfVoxel> interpolator(&(other.getTsdfLayer()));
 
   // Check for disagreement.
@@ -116,9 +118,18 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
   for (const auto& point : reference.getIsoSurfacePoints()) {
     if (getDistanceAndWeightAtPoint(&distance, &weight, point, T_O_R,
                                     interpolator)) {
+      // Compute the weight to be used for counting.
+      if (config_.normalize_by_voxel_weight) {
+        weight = computeCombinedWeight(weight, point.weight);
+        total_weight += weight;
+      } else {
+        weight = 1.f;
+      }
+
+      // Count.
       if (other.getLabel() == PanopticLabel::kFreeSpace) {
         if (distance >= rejection_distance) {
-          conflicting_points += 1.f;
+          conflicting_points += weight;
         }
       } else {
         // Check for class belonging.
@@ -130,22 +141,61 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
           }
         }
         if (distance <= -rejection_distance) {
-          conflicting_points += 1.f;
+          conflicting_points += weight;
         } else if (distance <= rejection_distance) {
-          matched_points += 1.f;
+          matched_points += weight;
         }
       }
 
-      if (conflicting_points >= rejection_count) {
+      if (conflicting_points > rejection_count) {
+        // If the rejection count is known and reached submaps conflict.
+        if (submaps_match) {
+          *submaps_match = false;
+        }
+        std::cout << "Rejection count reached early." << std::endl;
         return true;
       }
     }
   }
-  if (matching_points) {
-    *matching_points = matched_points;
+  // Evaluate the result.
+  if (config_.normalize_by_voxel_weight) {
+    const float rejection_weight =
+        std::max(static_cast<float>(config_.match_rejection_points) /
+                     reference.getIsoSurfacePoints().size(),
+                 config_.match_rejection_percentage) *
+        total_weight;
+    if (conflicting_points > rejection_weight) {
+      if (submaps_match) {
+        *submaps_match = false;
+      }
+      std::cout << "Conflict: " << conflicting_points << " > "
+                << rejection_weight << std::endl;
+      return true;
+    } else if (submaps_match) {
+      const float acceptance_weight =
+          std::max(static_cast<float>(config_.match_acceptance_points) /
+                       reference.getIsoSurfacePoints().size(),
+                   config_.match_acceptance_percentage) *
+          total_weight;
+      if (matched_points > acceptance_weight) {
+        std::cout << "Match: " << matched_points << " > " << acceptance_weight
+                  << std::endl;
+        *submaps_match = true;
+      } else {
+        *submaps_match = false;
+      }
+    }
+  } else {
+    if (submaps_match) {
+      const float acceptance_count =
+          std::max(static_cast<float>(config_.match_acceptance_points),
+                   config_.match_acceptance_percentage *
+                       reference.getIsoSurfacePoints().size());
+      *submaps_match = matched_points > acceptance_count;
+    }
   }
   return false;
-}
+}  // namespace panoptic_mapping
 
 bool TsdfRegistrator::getDistanceAndWeightAtPoint(
     float* distance, float* weight, const IsoSurfacePoint& point,
@@ -171,6 +221,18 @@ bool TsdfRegistrator::getDistanceAndWeightAtPoint(
   *distance = voxel.distance;
   *weight = voxel.weight;
   return true;
+}
+
+float TsdfRegistrator::computeCombinedWeight(float w1, float w2) const {
+  if (w1 <= 0.f || w2 <= 0.f) {
+    return 0.f;
+  } else if (w1 >= config_.normalization_max_weight &&
+             w2 >= config_.normalization_max_weight) {
+    return 1.f;
+  } else {
+    return std::sqrt(std::min(w1 / config_.normalization_max_weight, 1.f) *
+                     std::min(w2 / config_.normalization_max_weight, 1.f));
+  }
 }
 
 void TsdfRegistrator::mergeMatchingSubmaps(SubmapCollection* submaps) {

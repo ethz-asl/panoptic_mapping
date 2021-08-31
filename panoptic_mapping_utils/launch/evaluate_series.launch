@@ -14,7 +14,7 @@
   <arg name="maximum_distance" default="10000"/>
   <arg name="inlier_distance" default="0.05"/>
   <arg name="ignore_truncated_points" default="false"/>
-  <arg name="consider_change_state" default="false"/>
+  <arg name="is_single_tsdf" default="true"/>
 
 <!-- ============ Evaluations ============ -->
   <node name="multi_map_evaluation" pkg="panoptic_mapping_utils" type="multi_map_evaluation" output="screen" required="true">
@@ -27,7 +27,7 @@
     <param name="compute_coloring" value="false" /> 
     <param name="inlier_distance" value="$(arg inlier_distance)" /> 
     <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" />
-    <param name="consider_change_state" value="$(arg consider_change_state)" /> 
+    <param name="is_single_tsdf" value="$(arg is_single_tsdf)" /> 
   </node>
   
   <node name="evaluation_manager" pkg="panoptic_mapping_utils" type="evaluation_manager.py" output="screen" required="true">

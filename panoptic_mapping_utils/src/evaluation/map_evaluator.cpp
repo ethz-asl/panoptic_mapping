@@ -32,7 +32,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("color_by_max_error", &color_by_max_error);
   setupParam("ignore_truncated_points", &ignore_truncated_points);
   setupParam("inlier_distance", &inlier_distance);
-  setupParam("consider_change_state", &consider_change_state);
+  setupParam("is_single_tsdf", &is_single_tsdf);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -79,13 +79,8 @@ bool MapEvaluator::setupMultiMapEvaluation() {
   }
   output_file_
       << "MeanGTError [m],StdGTError [m],GTRMSE [m],TotalPoints [1],"
-      << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1]\n";  //,MeanMapError
-                                                                   //"
-                                                                   //"[m],StdMapError
-                                                                   //[m],MapRMSE
-                                                                   //[m],MapInliers
-                                                                   //[1],MapOutliers
-                                                                   //[1]\n";
+      << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1],MeanMapError [m],"
+      << "StdMapError [m],MapRMSE[m],MapInliers[1],MapOutliers[1]\n ";
 
   // Advertise evaluation service.
   process_map_srv_ = nh_private_.advertiseService(
@@ -226,8 +221,11 @@ std::string MapEvaluator::computeReconstructionError(
     if (use_voxblox_) {
       observed = interp->getDistance(point, &distance, true);
     } else {
-      observed = planning_->getDistance(point, &distance,
-                                        request.consider_change_state);
+      if (request.is_single_tsdf) {
+        observed = planning_->getDistance(point, &distance, false, true);
+      } else {
+        observed = planning_->getDistance(point, &distance, true, false);
+      }
     }
 
     // Compute the error.
@@ -298,10 +296,16 @@ std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
 
   // Parse all submaps
   for (auto& submap : *submaps_) {
-    if (submap.getLabel() == PanopticLabel::kFreeSpace ||
-        submap.getChangeState() == ChangeState::kAbsent ||
-        submap.getChangeState() == ChangeState::kUnobserved) {
-      continue;
+    if (!request.is_single_tsdf) {
+      if (submap.getLabel() == PanopticLabel::kFreeSpace ||
+          submap.getChangeState() == ChangeState::kAbsent ||
+          submap.getChangeState() == ChangeState::kUnobserved) {
+        voxblox::BlockIndexList block_list;
+        submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
+        counter += block_list.size();
+        bar.display(counter / max_counter);
+        continue;
+      }
     }
 
     // Parse all mesh vertices.
@@ -398,9 +402,8 @@ bool MapEvaluator::evaluateMapCallback(
   planning_ = std::make_unique<PlanningInterface>(submaps_);
 
   // Evaluate.
-  output_file_ << computeReconstructionError(request_)
-               << "\n";  // << ","
-                         // << computeMeshError(request_) << "\n";
+  output_file_ << computeReconstructionError(request_) << ","
+               << computeMeshError(request_) << "\n";
   output_file_.flush();
   return true;
 }
