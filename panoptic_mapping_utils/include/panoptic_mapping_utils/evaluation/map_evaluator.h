@@ -40,6 +40,8 @@ class MapEvaluator {
     bool compute_coloring = false;  // Use map_file to load and display.
     bool ignore_truncated_points = false;
     bool color_by_max_error = false;  // false: color by average error
+    bool color_by_mesh_distance =
+        true;  // true: iterate through mesh, false: iterate over gt points.
     bool is_single_tsdf = true;
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }

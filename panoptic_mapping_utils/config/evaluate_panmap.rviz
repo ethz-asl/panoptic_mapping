@@ -55,11 +55,12 @@ Visualization Manager:
     - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
       Enabled: true
       Name: VoxbloxMultiMesh
+      Toggle Visibility All: true
       Topic: /evaluator/mesh
       Unreliable: false
       Value: true
       Visible:
-        0_: true
+        0_Unknown: true
         Value: true
   Enabled: true
   Global Options:
@@ -89,7 +90,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 11.599961280822754
+      Distance: 13.73078441619873
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -104,10 +105,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1747976541519165
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.015385284088551998
+      Yaw: 5.173565864562988
     Saved: ~
 Window Geometry:
   Displays:

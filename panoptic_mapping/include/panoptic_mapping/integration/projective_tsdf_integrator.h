@@ -53,6 +53,9 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
     // block.
     bool allocate_neighboring_blocks = false;
 
+    // If true, overwrite voxels that have a distance update larger than 0.05 m.
+    bool use_longterm_fusion = false;
+
     // Number of threads used to perform integration. Integration is
     // submap-parallel.
     int integration_threads = std::thread::hardware_concurrency();

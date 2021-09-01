@@ -93,70 +93,86 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
     block_B->setUpdatedAll();
     const TsdfBlock::ConstPtr block_A =
         A.getTsdfLayer().getBlockPtrByIndex(block_index);
-    auto class_A = A.getClassLayer().getBlockPtrByIndex(block_index);
-    auto class_B = B->getClassLayer().getBlockPtrByIndex(block_index);
+    ClassBlock::ConstPtr class_A =
+        A.getClassLayer().getBlockPtrByIndex(block_index);
+    ClassBlock::Ptr class_B =
+        B->getClassLayerPtr()->getBlockPtrByIndex(block_index);
 
     for (size_t i = 0; i < block_B->num_voxels(); ++i) {
       // Merge the voxels.
       const TsdfVoxel& voxel_A = block_A->getVoxelByLinearIndex(i);
       TsdfVoxel& voxel_B = block_B->getVoxelByLinearIndex(i);
+      const ClassVoxel* class_voxel_A = nullptr;
+      ClassVoxel* class_voxel_B = nullptr;
       bool belongs_A = true;
       if (class_A) {
-        belongs_A =
-            classVoxelBelongsToSubmap(class_A->getVoxelByLinearIndex(i));
+        class_voxel_A = &class_A->getVoxelByLinearIndex(i);
+        belongs_A = classVoxelBelongsToSubmap(*class_voxel_A);
       }
       bool belongs_B = true;
       if (class_B) {
-        belongs_B =
-            classVoxelBelongsToSubmap(class_B->getVoxelByLinearIndex(i));
+        class_voxel_B = &class_B->getVoxelByLinearIndex(i);
+        belongs_B = classVoxelBelongsToSubmap(*class_voxel_B);
       }
       if (belongs_A && belongs_B) {
         voxblox::mergeVoxelAIntoVoxelB(voxel_A, &voxel_B);
+        if (class_voxel_A && class_voxel_B) {
+          class_voxel_B->belongs_count =
+              (class_voxel_A->belongs_count + class_voxel_B->belongs_count) /
+              2u;
+          class_voxel_B->foreign_count =
+              (class_voxel_A->foreign_count + class_voxel_B->foreign_count) /
+              2u;
+        }
       } else if (belongs_A) {
         voxel_B.distance = voxel_A.distance;
         voxel_B.weight = voxel_A.weight;
+        if (class_voxel_A && class_voxel_B) {
+          class_voxel_B->belongs_count = class_voxel_A->belongs_count;
+          class_voxel_B->foreign_count = class_voxel_A->foreign_count;
+        }
       }
     }
   }
 
-  A.getClassLayer().getAllAllocatedBlocks(&block_indices);
-  for (const auto& block_index : block_indices) {
-    const ClassVoxel::Counter normalization =
-        B->getClassLayer().hasBlock(block_index) ? 2u : 1u;
-    ClassBlock::Ptr block_B =
-        B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
-    const ClassBlock::ConstPtr block_A =
-        A.getClassLayer().getBlockPtrByIndex(block_index);
-    for (size_t i = 0; i < block_B->num_voxels(); ++i) {
-      // Merge the voxels (Just add all counts since it's integer math).
-      // NOTE(schmluk): Merging makes only sense for accurate classification.
-      const ClassVoxel& voxel_A = block_A->getVoxelByLinearIndex(i);
-      ClassVoxel& voxel_B = block_B->getVoxelByLinearIndex(i);
-      if (voxel_A.current_index < 0) {
-        // This means we use binary classification.
-        // NOTE(schmluk): Average to make sure we stay in bounds.
-        voxel_B.belongs_count =
-            (voxel_A.belongs_count + voxel_B.belongs_count) / normalization;
-        voxel_B.foreign_count =
-            (voxel_A.foreign_count + voxel_B.foreign_count) / normalization;
-      } else {
-        int id_A, id_B;
-        if (config_.use_instance_classification) {
-          // Get submap IDs.
-          id_A = A.getID();
-          id_B = B->getID();
-        } else {
-          // Get class IDs.
-          id_A = A.getClassID();
-          id_B = B->getClassID();
-        }
-        // Switch out the instance labels which are now the same.
-        voxel_B.counts[0] += voxel_B.counts[A.getID() + 1];
-        voxel_B.counts[A.getID() + 1] = 0;
-        // TODO(schmluk): Finish this logic.
-      }
-    }
-  }
+  // A.getClassLayer().getAllAllocatedBlocks(&block_indices);
+  // for (const auto& block_index : block_indices) {
+  //   const bool B_has_block =
+  //       B->getClassLayer().hasBlock(block_index) ? 2u : 1u;
+  //   ClassBlock::Ptr block_B =
+  //       B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
+  //   const ClassBlock::ConstPtr block_A =
+  //       A.getClassLayer().getBlockPtrByIndex(block_index);
+  //   for (size_t i = 0; i < block_B->num_voxels(); ++i) {
+  //     // Merge the voxels (Just add all counts since it's integer math).
+  //     // NOTE(schmluk): Merging makes only sense for accurate classification.
+  //     const ClassVoxel& voxel_A = block_A->getVoxelByLinearIndex(i);
+  //     ClassVoxel& voxel_B = block_B->getVoxelByLinearIndex(i);
+  //     if (voxel_A.current_index < 0) {
+  //       // This means we use binary classification.
+  //       // NOTE(schmluk): Average to make sure we stay in bounds.
+  //       voxel_B.belongs_count =
+  //           (voxel_A.belongs_count + voxel_B.belongs_count) / normalization;
+  //       voxel_B.foreign_count =
+  //           (voxel_A.foreign_count + voxel_B.foreign_count) / normalization;
+  //     } else {
+  //       int id_A, id_B;
+  //       if (config_.use_instance_classification) {
+  //         // Get submap IDs.
+  //         id_A = A.getID();
+  //         id_B = B->getID();
+  //       } else {
+  //         // Get class IDs.
+  //         id_A = A.getClassID();
+  //         id_B = B->getClassID();
+  //       }
+  //       // Switch out the instance labels which are now the same.
+  //       voxel_B.counts[0] += voxel_B.counts[A.getID() + 1];
+  //       voxel_B.counts[A.getID() + 1] = 0;
+  //       // TODO(schmluk): Finish this logic.
+  //     }
+  //   }
+  // }
 }
 
 void LayerManipulator::unprojectTsdfLayer(TsdfLayer* tsdf_layer) const {

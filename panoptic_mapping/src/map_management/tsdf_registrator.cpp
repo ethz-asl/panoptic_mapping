@@ -185,7 +185,6 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
         if (submaps_match) {
           *submaps_match = false;
         }
-        std::cout << "Rejection count reached early." << std::endl;
         return true;
       }
     }
@@ -201,8 +200,6 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
       if (submaps_match) {
         *submaps_match = false;
       }
-      std::cout << "Conflict: " << conflicting_points << " > "
-                << rejection_weight << std::endl;
       return true;
     } else if (submaps_match) {
       const float acceptance_weight =
@@ -211,8 +208,6 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
                    config_.match_acceptance_percentage) *
           total_weight;
       if (matched_points > acceptance_weight) {
-        std::cout << "Match: " << matched_points << " > " << acceptance_weight
-                  << std::endl;
         *submaps_match = true;
       } else {
         *submaps_match = false;

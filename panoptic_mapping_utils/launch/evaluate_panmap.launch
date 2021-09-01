@@ -1,17 +1,21 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <!-- Groundtruth -->
-  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>
+<!--  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>-->
+<!--  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/3RScan/scene0.ply"/>-->
+ <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/3RScan/f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26/gt_10000.ply"/>
   
   <!-- Source map -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp1/pan_multires/detectron/detectron_small.panmap"/>
+<!--  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp1/pan_multires/detectron/detectron_small.panmap"/>-->
+<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/single_with_map.panmap"/>
   
   <!-- Params -->
-  <arg name="maximum_distance" default="100000"/>
-  <arg name="evaluate" default="true"/>
-  <arg name="compute_coloring" default="false"/>
+  <arg name="maximum_distance" default="0.05"/>
+  <arg name="evaluate" default="false"/>
+  <arg name="compute_coloring" default="true"/>
   <arg name="color_by_max_error" default="false"/>
-  <arg name="visualize" default="false"/>
+  <arg name="color_by_mesh_distance" default="false"/>
+  <arg name="visualize" default="true"/>
   <arg name="ignore_truncated_points" default="false"/>
 
 <!-- ============ Evaluations ============ -->
@@ -23,7 +27,21 @@
     <param name="evaluate" value="$(arg evaluate)" /> 
     <param name="compute_coloring" value="$(arg compute_coloring)" /> 
     <param name="color_by_max_error" value="$(arg color_by_max_error)" /> 
+    <param name="color_by_mesh_distance" value="$(arg color_by_mesh_distance)" /> 
     <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" /> 
+    
+    <!-- Visualization -->
+<!--    type: submaps  # submaps, single_tsdf-->
+<!--    verbosity: 1-->
+<!--    color_mode: change # submaps, instances, color, normals, classes, classification, change-->
+<!--    visualization_mode: active  # all, active, active_only, inactive-->
+<!--    submap_color_discretization: 20-->
+<!--    visualize_mesh: true-->
+<!--    visualize_tsdf_blocks: true-->
+<!--    visualize_free_space: true-->
+<!--    visualize_bounding_volumes: true-->
+<!--    include_free_space: false-->
+<!--    mesh_min_weight: 0.000001-->
   </node>
   
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_utils)/config/evaluate_panmap.rviz" if="$(arg visualize)"/>

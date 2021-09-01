@@ -30,6 +30,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("visualize", &visualize);
   setupParam("compute_coloring", &compute_coloring);
   setupParam("color_by_max_error", &color_by_max_error);
+  setupParam("color_by_mesh_distance", &color_by_mesh_distance);
   setupParam("ignore_truncated_points", &ignore_truncated_points);
   setupParam("inlier_distance", &inlier_distance);
   setupParam("is_single_tsdf", &is_single_tsdf);
@@ -415,9 +416,21 @@ void MapEvaluator::visualizeReconstructionError(
 
   constexpr int max_number_of_neighbors_factor = 25000;  // points per cubic
   // metre depending on voxel size for faster nn search.
-
-  // Build a Kd tree for point lookup.
   buildKdTree();
+
+  // Remove inactive maps.
+  if (!request.is_single_tsdf) {
+    std::vector<int> submaps_to_remove;
+    for (const Submap& submap : *submaps_) {
+      if (submap.getLabel() == PanopticLabel::kFreeSpace ||
+          submap.getChangeState() != ChangeState::kPersistent) {
+        submaps_to_remove.emplace_back(submap.getID());
+      }
+    }
+    for (int id : submaps_to_remove) {
+      submaps_->removeSubmap(id);
+    }
+  }
 
   // Setup progress bar.
   float counter = 0.f;
@@ -425,114 +438,154 @@ void MapEvaluator::visualizeReconstructionError(
   ProgressBar bar;
   for (auto& submap : *submaps_) {
     voxblox::BlockIndexList block_list;
-    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    if (request.color_by_mesh_distance) {
+      submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
+    } else {
+      submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    }
     max_counter += block_list.size();
   }
 
-  // Parse all submaps
-  for (auto& submap : *submaps_) {
-    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
-      continue;
-    }
-    const size_t num_voxels_per_block =
-        std::pow(submap.getTsdfLayer().voxels_per_side(), 3);
-    const float voxel_size = submap.getTsdfLayer().voxel_size();
-    const float voxel_size_sqr = voxel_size * voxel_size;
-    const float truncation_distance = submap.getConfig().truncation_distance;
-    const int max_number_of_neighbors =
-        max_number_of_neighbors_factor / std::pow(1.f / voxel_size, 2.f);
-    voxblox::Interpolator<TsdfVoxel> interpolator(
-        submap.getTsdfLayerPtr().get());
+  if (request.color_by_mesh_distance) {
+    for (auto& submap : *submaps_) {
+      submap.updateMesh(false);
+      voxblox::BlockIndexList block_list;
+      submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
 
-    // Parse all voxels.
-    voxblox::BlockIndexList block_list;
-    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
-    int block = 0;
-    for (auto& block_index : block_list) {
-      if (!ros::ok()) {
-        return;
+      for (auto& block_id : block_list) {
+        auto& mesh = submap.getMeshLayerPtr()->getMeshByIndex(block_id);
+        const size_t size = mesh.vertices.size();
+        mesh.colors.resize(size);
+        for (size_t i = 0; i < size; ++i) {
+          const float query_pt[3] = {mesh.vertices[i].x(), mesh.vertices[i].y(),
+                                     mesh.vertices[i].z()};
+          size_t ret_index;
+          float out_dist_sqr;
+          int num_results =
+              kdtree_->knnSearch(&query_pt[0], 1, &ret_index, &out_dist_sqr);
+
+          const float distance = std::sqrt(out_dist_sqr);
+          const float frac = std::min(distance, request.maximum_distance) /
+                             request.maximum_distance;
+          const float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
+          float g = (1.f - frac) * 2.f * 255.f;
+          if (frac <= 0.5f) {
+            g = 190.f + 130.f * frac;
+          }
+          mesh.colors[i] = Color(r, g, 0);
+        }
+
+        mesh.updated = false;
+        bar.display(++counter / max_counter);
       }
-      voxblox::Block<TsdfVoxel>& block =
-          submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
-      for (size_t linear_index = 0; linear_index < num_voxels_per_block;
-           ++linear_index) {
-        TsdfVoxel& voxel = block.getVoxelByLinearIndex(linear_index);
-        if (voxel.distance > truncation_distance ||
-            voxel.distance < -truncation_distance) {
-          continue;  // these voxels can never be surface.
+    }
+
+    // Store colored submaps.
+    submaps_->saveToFile(target_directory_ + "/" + target_map_name_ +
+                         "_evaluated.panmap");
+  } else {
+    // Parse all submaps
+    for (auto& submap : *submaps_) {
+      const size_t num_voxels_per_block =
+          std::pow(submap.getTsdfLayer().voxels_per_side(), 3);
+      const float voxel_size = submap.getTsdfLayer().voxel_size();
+      const float voxel_size_sqr = voxel_size * voxel_size;
+      const float truncation_distance = submap.getConfig().truncation_distance;
+      const int max_number_of_neighbors =
+          max_number_of_neighbors_factor / std::pow(1.f / voxel_size, 2.f);
+      voxblox::Interpolator<TsdfVoxel> interpolator(
+          submap.getTsdfLayerPtr().get());
+
+      // Parse all voxels.
+      voxblox::BlockIndexList block_list;
+      submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
+      int block = 0;
+      for (auto& block_index : block_list) {
+        if (!ros::ok()) {
+          return;
         }
-        Point center = block.computeCoordinatesFromLinearIndex(linear_index);
+        voxblox::Block<TsdfVoxel>& block =
+            submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
+        for (size_t linear_index = 0; linear_index < num_voxels_per_block;
+             ++linear_index) {
+          TsdfVoxel& voxel = block.getVoxelByLinearIndex(linear_index);
+          if (voxel.distance > truncation_distance ||
+              voxel.distance < -truncation_distance) {
+            continue;  // these voxels can never be surface.
+          }
+          Point center = block.computeCoordinatesFromLinearIndex(linear_index);
 
-        // Find surface points within 1 voxel size.
-        // Note(schmluk): Use N neighbor search wih increasing N since radius
-        // search is ridiculously slow.
-        float query_pt[3] = {center.x(), center.y(), center.z()};
-        std::vector<size_t> ret_index(max_number_of_neighbors);
-        std::vector<float> out_dist_sqr(max_number_of_neighbors);
-        int num_results =
-            kdtree_->knnSearch(&query_pt[0], max_number_of_neighbors,
-                               &ret_index[0], &out_dist_sqr[0]);
+          // Find surface points within 1 voxel size.
+          // Note(schmluk): Use N neighbor search wih increasing N since radius
+          // search is ridiculously slow.
+          float query_pt[3] = {center.x(), center.y(), center.z()};
+          std::vector<size_t> ret_index(max_number_of_neighbors);
+          std::vector<float> out_dist_sqr(max_number_of_neighbors);
+          int num_results =
+              kdtree_->knnSearch(&query_pt[0], max_number_of_neighbors,
+                                 &ret_index[0], &out_dist_sqr[0]);
 
-        if (num_results == 0) {
-          // No nearby surface.
-          voxel.color = Color(128, 128, 128);
-          continue;
-        }
-
-        // Get average error.
-        float total_error = 0.f;
-        float max_error = 0.f;
-        int counted_voxels = 0;
-        float min_dist_sqr = 1000.f;
-        for (int i = 0; i < num_results; ++i) {
-          min_dist_sqr = std::min(min_dist_sqr, out_dist_sqr[i]);
-          if (out_dist_sqr[i] > voxel_size_sqr) {
+          if (num_results == 0) {
+            // No nearby surface.
+            voxel.color = Color(128, 128, 128);
             continue;
           }
-          voxblox::FloatingPoint distance;
-          if (interpolator.getDistance(kdtree_data_.points[ret_index[i]],
-                                       &distance, true)) {
-            const float error = std::abs(distance);
-            total_error += error;
-            max_error = std::max(max_error, error);
-            counted_voxels++;
+
+          // Get average error.
+          float total_error = 0.f;
+          float max_error = 0.f;
+          int counted_voxels = 0;
+          float min_dist_sqr = 1000.f;
+          for (int i = 0; i < num_results; ++i) {
+            min_dist_sqr = std::min(min_dist_sqr, out_dist_sqr[i]);
+            if (out_dist_sqr[i] > voxel_size_sqr) {
+              continue;
+            }
+            voxblox::FloatingPoint distance;
+            if (interpolator.getDistance(kdtree_data_.points[ret_index[i]],
+                                         &distance, true)) {
+              const float error = std::abs(distance);
+              total_error += error;
+              max_error = std::max(max_error, error);
+              counted_voxels++;
+            }
           }
-        }
-        // Coloring.
-        if (counted_voxels == 0) {
-          counted_voxels = 1;
-          total_error += std::sqrt(min_dist_sqr);
-        }
-        float frac;
-        if (request.color_by_max_error) {
-          frac = std::min(max_error, request.maximum_distance) /
-                 request.maximum_distance;
-        } else {
-          frac =
-              std::min(total_error / counted_voxels, request.maximum_distance) /
-              request.maximum_distance;
+          // Coloring.
+          if (counted_voxels == 0) {
+            counted_voxels = 1;
+            total_error += std::sqrt(min_dist_sqr);
+          }
+          float frac;
+          if (request.color_by_max_error) {
+            frac = std::min(max_error, request.maximum_distance) /
+                   request.maximum_distance;
+          } else {
+            frac = std::min(total_error / counted_voxels,
+                            request.maximum_distance) /
+                   request.maximum_distance;
+          }
+
+          float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
+          float g = (1.f - frac) * 2.f * 255.f;
+          if (frac <= 0.5f) {
+            g = 190.f + 130.f * frac;
+          }
+          voxel.color = voxblox::Color(r, g, 0);
         }
 
-        float r = std::min((frac - 0.5f) * 2.f + 1.f, 1.f) * 255.f;
-        float g = (1.f - frac) * 2.f * 255.f;
-        if (frac <= 0.5f) {
-          g = 190.f + 130.f * frac;
-        }
-        voxel.color = voxblox::Color(r, g, 0);
+        // Show progress.
+        counter += 1.f;
+        bar.display(counter / max_counter);
       }
-
-      // Show progress.
-      counter += 1.f;
-      bar.display(counter / max_counter);
+      submap.updateMesh(false);
     }
-    submap.updateMesh(false);
-  }
 
-  // Store colored submaps.
-  std::string output_name =
-      target_directory_ + "/" + target_map_name_ + "_evaluated_" +
-      (request.color_by_max_error ? "max" : "mean") + ".panmap";
-  submaps_->saveToFile(output_name);
+    // Store colored submaps.
+    std::string output_name =
+        target_directory_ + "/" + target_map_name_ + "_evaluated_" +
+        (request.color_by_max_error ? "max" : "mean") + ".panmap";
+    submaps_->saveToFile(output_name);
+  }
 }
 
 void MapEvaluator::buildKdTree() {

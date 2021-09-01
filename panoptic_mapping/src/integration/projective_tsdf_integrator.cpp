@@ -36,6 +36,7 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("max_weight", &max_weight);
   setupParam("interpolation_method", &interpolation_method);
   setupParam("allocate_neighboring_blocks", &allocate_neighboring_blocks);
+  setupParam("use_longterm_fusion", &use_longterm_fusion);
   setupParam("integration_threads", &integration_threads);
 }
 
@@ -268,22 +269,21 @@ float ProjectiveIntegrator::computeWeight(const Point& p_C,
 void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
                                              const float weight,
                                              const Color* color) const {
-  // TEST Fusion
-  // if (std::abs(voxel->distance - sdf) > 0.05) {
-  //   voxel->distance = sdf;
-  //   voxel->weight = std::min(weight, config_.max_weight);
-  //   return;
-  // }
-
-  // Weighted averaging fusion.
-  voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
-                    (voxel->weight + weight);
-  voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
+  // TEST Longterm fusion
+  if (config_.use_longterm_fusion && std::abs(voxel->distance - sdf) > 0.05) {
+    voxel->distance = sdf;
+    voxel->weight = std::min(weight, config_.max_weight);
+  } else {
+    // Weighted averaging fusion.
+    voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
+                      (voxel->weight + weight);
+    voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
+  }
   if (color != nullptr) {
     voxel->color =
         Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
   }
-}
+}  // namespace panoptic_mapping
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const InputData& input) {

@@ -3,16 +3,16 @@
 # ================ Args ================
 # General args.
 target_map_dir="/home/lukas/Documents/PanopticMapping/Data/maps/rio"
-scene_id=0
-no_scans=1  # 0:4, 1:4, 2:2
-method="gt" # gt, detectron, single, single_with_map
+scene_id=2
+no_scans=2  # 0:4, 1:4, 2:2
+method="detectron" # gt, detectron, single, single_with_map, fusion
 visualize=true
 
 # What to evaluate.
 run_all_methods=false
-run_experiments=false
-evaluate=true
-remove_maps=true
+run_experiments=true
+evaluate=false
+remove_maps=false
 
 # ================ Functions ================
 auto_generate_args() {
@@ -37,9 +37,14 @@ auto_generate_args() {
   elif [ $method == "single_with_map" ]
   then
     echo "Using Single TSDF with map config"
-#    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/single_with_map"
-    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/fusion"
+    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/single_with_map"
     config="rio_single"
+    use_detectron="false"
+  elif [ $method == "fusion" ]
+  then
+    echo "Using Single TSDF with long term fusion config"
+    target_data_dir="/home/lukas/Documents/PanopticMapping/Rio/scene_$scene_id/fusion"
+    config="rio_fusion"
     use_detectron="false"
   else
     echo "Unknown method '$method', exiting."
@@ -56,7 +61,7 @@ run_experiments() {
     else
       load="true"
     fi
-    roslaunch panoptic_mapping_ros run.launch use_rio:=true use_detectron:=$use_detectron scene_id:=$scene_id scan_id:=$i load_map:=$load config:=$config save_map:=$target_map_dir/$config-$i load_file:=$target_map_dir/$config-$(($i-1)) visualize:=$visualize
+    roslaunch panoptic_mapping_ros run.launch use_rio:=true use_detectron:=$use_detectron scene_id:=$scene_id scan_id:=$i load_map:=$load config:=$config save_map:=$target_map_dir/scene_$scene_id/$method$i load_file:=$target_map_dir/scene_$scene_id/$method$(($i-1)) visualize:=$visualize
   done
 }
 
@@ -107,10 +112,12 @@ then
   run_evaluations
   method="detectron" 
   run_evaluations
-#  method="single"
-#  run_evaluations
-#  method="single_with_map"
-#  run_evaluations
+  method="single"
+  run_evaluations
+  method="single_with_map"
+  run_evaluations
+  method="fusion"
+  run_evaluations
 else
   run_evaluations
 fi
