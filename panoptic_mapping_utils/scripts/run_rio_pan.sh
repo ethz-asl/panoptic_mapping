@@ -70,7 +70,7 @@ move_experiment_logs() {
 }
 
 evaluate_experiments() {
-  if [[ $method == "single" || $method == "single_with_map" ]]
+  if [[ $method == "single" || $method == "single_with_map" || $method == "fusion" ]]
   then
     is_single_tsdf="true"
   else
