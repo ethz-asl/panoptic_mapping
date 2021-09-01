@@ -9,10 +9,10 @@ method="detectron" # gt, detectron, single, single_with_map, fusion
 visualize=true
 
 # What to evaluate.
-run_all_methods=false
+run_all_methods=true
 run_experiments=true
-evaluate=false
-remove_maps=false
+evaluate=true
+remove_maps=true
 
 # ================ Functions ================
 auto_generate_args() {

@@ -96,7 +96,7 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
     ClassBlock::ConstPtr class_A =
         A.getClassLayer().getBlockPtrByIndex(block_index);
     ClassBlock::Ptr class_B =
-        B->getClassLayerPtr()->getBlockPtrByIndex(block_index);
+        B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
 
     for (size_t i = 0; i < block_B->num_voxels(); ++i) {
       // Merge the voxels.
