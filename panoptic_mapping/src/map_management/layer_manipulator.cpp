@@ -139,6 +139,7 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
           class_voxel_B->belongs_count = class_voxel_A->belongs_count;
           class_voxel_B->foreign_count = class_voxel_A->foreign_count;
         }
+        voxel_B.color = voxel_A.color;
       }
     }
   }

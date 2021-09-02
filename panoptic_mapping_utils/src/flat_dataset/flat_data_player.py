@@ -65,7 +65,7 @@ class FlatDataPlayer(object):
         self.start_time = None
 
         if self.wait:
-            rospy.Service('~start', Empty, self.start)
+            self.start_srv = rospy.Service('~start', Empty, self.start)
         else:
             self.start(None)
 

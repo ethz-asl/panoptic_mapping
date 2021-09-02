@@ -12,16 +12,23 @@ keys = [
 ]
 output_dir = '/home/lukas/Documents/PanopticMapping/Results/rio/'
 output_name = 'rio'
+store_output = True
+
+setting = 0  # 0: Local eval (exp2), 1: Global eval
+scene_id = 0  # 0: 4 days, (1), 2: 2 days
 
 # 0 MAD, 6: GTInliers, 12: Coverage (observed), 13: Coverage (inliers)
-key = [7, 12]  # 7-12, 1-13
-datasets = [2, 2]  # 1: local, 2: complete
-store_output = True
-use_percentage = [False, False]
+if setting == 0:
+    key = [0, 13]  # 7-12 (2), 0-13 (1)
+    datasets = [1, 1]  # 1: local, 2: complete
+    use_percentage = [False, False]
+else:
+    key = [7, 12]
+    datasets = [2, 2]
+    use_percentage = [False, False]
 
 input_path = '/home/lukas/Documents/PanopticMapping/Rio/'
-scene_id = 0  # 0:4, 1:4, 2:2
-no_runs = [4, 4, 2][scene_id]
+no_runs = [4, 4, 2][scene_id]  # 0:4, 1:4, 2:2
 run_range = range(0, no_runs)
 input_dirs = [[
     "scene_%i/single_with_map/pan_%i" % (scene_id, i) for i in run_range
@@ -165,8 +172,12 @@ ax[1].legend(legend,
 plt.tight_layout()
 
 # Save
-plt.gcf().set_size_inches(8, 6, forward=True)
+plt.gcf().set_size_inches(7, 5, forward=True)
 if store_output:
-    output_path = os.path.join(output_dir, output_name + "_%i.jpg" % scene_id)
+    suffix = "loc"
+    if setting == 1:
+        suffix = "glob"
+    output_path = os.path.join(output_dir,
+                               output_name + "_%i_%s.jpg" % (scene_id, suffix))
     plt.savefig(output_path)
 plt.show()

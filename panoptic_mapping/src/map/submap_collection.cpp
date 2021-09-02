@@ -1,5 +1,7 @@
 #include "panoptic_mapping/map/submap_collection.h"
 
+#include <sys/stat.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -135,6 +137,13 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
                                     bool recompute_data) {
   CHECK(!file_path.empty());
   const std::string file_name = checkMapFileExtension(file_path);
+
+  // Check the file exists.
+  struct stat buffer;
+  if (stat(file_name.c_str(), &buffer) == 0) {
+    LOG(ERROR) << "Target file '" << file_name << "' does not exist.";
+    return false;
+  }
 
   // Clear the current maps.
   submaps_.clear();

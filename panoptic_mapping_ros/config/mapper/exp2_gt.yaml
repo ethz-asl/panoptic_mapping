@@ -29,7 +29,7 @@ submap_allocator:
   verbosity: 1   
   
   # submaps
-  voxels_per_side: &voxels_per_side 4
+  voxels_per_side: &voxels_per_side 8
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
   
@@ -88,16 +88,15 @@ tsdf_integrator:
   # Single TSDF
   
 map_management:
-  verbosity: 4
+  verbosity: 2
   
   # Frequencies
-  prune_active_blocks_frequency: 0 # 1
+  prune_active_blocks_frequency: 1 # 1
   activity_management_frequency: 1 # 1
   change_detection_frequency: 5 # 10
   
   # Behavior
   merge_deactivated_submaps_if_possible: true
-#  required_merge_overlap: 0.5
   apply_class_layer_when_deactivating_submaps: false
   
   activity_manager:
@@ -107,7 +106,7 @@ map_management:
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -0.5 # m, negative = #vs
+    error_threshold: -1 # m, negative = #vs
     match_rejection_points: 20  
     match_rejection_percentage: 0.02
     match_acceptance_points: 20

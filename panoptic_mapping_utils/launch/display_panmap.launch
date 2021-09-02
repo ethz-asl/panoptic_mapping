@@ -1,6 +1,6 @@
 <launch>
 <!-- ============ Arguments ============ -->
-<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/single_with_map.panmap"/>
+<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/scene_0/gt.panmap"/>  <!-- gt, detectron, single, wingle_with_map, _evaluated -->
   
 
 <!-- ============ Display ============ -->
@@ -8,10 +8,11 @@
     <param name="map_file" value="$(arg map_file)" />     
     <param name="visualize" value="true" /> 
     <param name="evaluate" value="false" /> 
+    <param name="compute_coloring" value="false" /> 
     
     <!-- Visualization Params-->
     <param name="color_mode" value="color" /> <!-- submaps, instances, color, normals, classes, classification, change -->
-    <param name="visualization_mode" value="active" /> <!-- sall, active, active_only, inactive -->
+    <param name="visualization_mode" value="persistent" /> <!-- sall, active, active_only, inactive, persistent -->
 
 <!--    submap_color_discretization: 20-->
 <!--    visualize_mesh: true-->
@@ -22,6 +23,6 @@
 <!--    mesh_min_weight: 0.000001-->
   </node>
   
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_utils)/config/evaluate_panmap.rviz" if="$(arg visualize)"/>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_utils)/config/evaluate_panmap.rviz"/>
   
 </launch>
