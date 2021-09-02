@@ -3,8 +3,8 @@
 # ================ Args ================
 # General args.
 target_map_dir="/home/lukas/Documents/PanopticMapping/Data/maps/rio"
-scene_id=2
-no_scans=2  # 0:4, 1:4, 2:2
+scene_id=0
+no_scans=4  # 0:4, 1:4, 2:2
 method="detectron" # gt, detectron, single, single_with_map, fusion
 visualize=false
 
@@ -13,7 +13,7 @@ run_all_methods=true
 run_experiments=true
 move_experiment_logs = false
 evaluate=false
-remove_maps=true
+remove_maps=false
 
 # ================ Functions ================
 auto_generate_args() {

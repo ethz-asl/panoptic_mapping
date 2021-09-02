@@ -140,7 +140,7 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
 
   // Check the file exists.
   struct stat buffer;
-  if (stat(file_name.c_str(), &buffer) == 0) {
+  if (stat(file_name.c_str(), &buffer) != 0) {
     LOG(ERROR) << "Target file '" << file_name << "' does not exist.";
     return false;
   }
