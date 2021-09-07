@@ -7,7 +7,7 @@ Panels:
         - /Global Options1
         - /VoxbloxMultiMesh1
       Splitter Ratio: 0.5
-    Tree Height: 726
+    Tree Height: 728
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -60,7 +60,133 @@ Visualization Manager:
       Unreliable: false
       Value: true
       Visible:
-        0_Unknown: true
+        0_SM_Kitchen_a: true
+        100_SM_Dimmer_b: true
+        101_SM_Door_b: true
+        102_SM_Tumblr_b: true
+        103_SM_TV_a: true
+        104_SM_Windows_Windows_a: true
+        105_SM_Remote_a: true
+        106_SM_Journal_c: true
+        107_SM_Coffee_table_a: true
+        108_SM_Ceiling_lamp_g: true
+        109_SM_Sofa_a: true
+        10_SM_Table_a: true
+        110_SM_Ceiling_lamp_h: true
+        111_SM_Cup_a: true
+        112_SM_Plate_b: true
+        113_SM_Picture_c: true
+        114_SM_Picture_a: true
+        115_SM_Ceiling_lamp_f: true
+        116_SM_Bed_lamp_b: true
+        117_SM_Ceiling_lamp_l: true
+        118_SM_Plant_a: true
+        119_SM_Journal_a: true
+        11_SM_Cup_b: true
+        120_SM_Stack_of_Books_e: true
+        121_SM_Stack_of_Books_b: true
+        122_SM_Stack_of_Books_a: true
+        123_SM_Stack_of_Books_c: true
+        124_SM_Decor_a: true
+        125_SM_Stack_of_Books_d: true
+        126_SM_Digital_Clock_a: true
+        127_SM_Decor_b: true
+        128_SM_Ceiling_lamp_c: true
+        12_SM_Wall_Clock_a: true
+        13_SM_Table_Decor_a: true
+        14_SM_Cup_c: true
+        15_SM_Plate_c: true
+        16_SM_Chair_b: true
+        17_SM_Picture_d: true
+        18_SM_Picture_b: true
+        19_SM_Sofa_a: true
+        1_SM_Door_a: true
+        20_SM_Ceiling_lamp_b: true
+        21_SM_TV_Wall_a: true
+        22_SM_Bed_table_b: true
+        23_SM_Ceiling_lamp_i: true
+        24_SM_Bed_a: true
+        25_SM_Ceiling_lamp_j: true
+        26_SM_Bed_table_a: true
+        27_SM_Ceiling_lamp_k: true
+        28_SM_Stack_of_Books_f: true
+        29_SM_Bed_lamp_a: true
+        2_SM_Tumblr_a: true
+        30_SM_Picture_g: true
+        31_SM_Bed_lamp_b: true
+        32_SM_Journal_c: true
+        33_SM_TV_a: true
+        34_SM_Coffee_table_a: true
+        35_SM_Ceiling_lamp_c: true
+        36_SM_Ceiling_lamp_e: true
+        37_SM_Ceiling_lamp_d: true
+        38_SM_Ceiling_lamp_f: true
+        39_SM_Cup_a: true
+        3_SM_Dimmer_a: true
+        40_SM_Plate_b: true
+        41_SM_Picture_c: true
+        42_SM_Remote_a: true
+        43_SM_Picture_a: true
+        44_SM_Journal_b: true
+        45_SM_Ceiling_lamp_h: true
+        46_SM_Ceiling_lamp_g: true
+        47_SM_Floor_Lamp_a: true
+        48_SM_Windows_Windows_a: true
+        49_SM_Dimmer_b: true
+        4_SM_Floor_a: true
+        50_SM_Tumblr_b: true
+        51_SM_Door_b: true
+        52_SM_Ceiling_lamp_a: true
+        53_SM_Stack_of_Books_b: true
+        54_SM_Journal_a: true
+        55_SM_Digital_Clock_a: true
+        56_SM_Stack_of_Books_c: true
+        57_SM_Decor_b: true
+        58_SM_Stack_of_Books_a: true
+        59_SM_Stack_of_Books_d: true
+        5_SM_Chair_a: true
+        60_SM_Decor_a: true
+        61_SM_Stack_of_Books_e: true
+        62_SM_Plant_a: true
+        63_SM_Ceiling_lamp_l: true
+        64_SM_Kitchen_a: true
+        65_SM_Door_a: true
+        66_SM_Tumblr_a: true
+        67_SM_Dimmer_a: true
+        68_SM_Floor_a: true
+        69_SM_Walls_a: true
+        6_SM_Walls_a: true
+        70_SM_Chair_a: true
+        72_SM_Ceiling_a: true
+        73_SM_Ceiling_lamp_a: true
+        74_SM_Ceiling_lamp_b: true
+        75_SM_Wall_Clock_a: true
+        76_SM_Table_a: true
+        77_SM_Table_Decor_a: true
+        78_SM_Cup_c: true
+        79_SM_Plate_c: true
+        80_SM_Picture_d: true
+        81_SM_Chair_b: true
+        82_SM_Picture_b: true
+        83_SM_Floor_Lamp_a: true
+        84_SM_Coffee_Machine_a: true
+        85_SM_Ceiling_lamp_i: true
+        86_SM_Picture_g: true
+        87_SM_Bed_table_a: true
+        88_SM_Table_b: true
+        89_SM_Picture_e: true
+        8_SM_Ceiling_a: true
+        90_SM_Office_Chair_base_a: true
+        91_SM_Ceiling_lamp_k: true
+        92_SM_Bed_table_b: true
+        93_SM_TV_Wall_a: true
+        94_SM_Laptop_a: true
+        95_SM_Ceiling_lamp_j: true
+        96_SM_Bed_b: true
+        97_SM_Bed_lamp_a: true
+        98_SM_Stack_of_Books_f: true
+        99_SM_Picture_f: true
+        9_SM_Plate_a: true
         Value: true
   Enabled: true
   Global Options:
@@ -90,33 +216,33 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 13.73078441619873
+      Distance: 1.1213728189468384
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.437249779701233
-        Y: -1.8437423706054688
-        Z: 0.44619831442832947
+        X: -3.213893175125122
+        Y: -1.989364504814148
+        Z: 2.209240674972534
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 0.7397967576980591
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.168565273284912
+      Yaw: 5.0299248695373535
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1023
+  Height: 1025
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000015600000361fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000361000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000361fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d00000361000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005930000003efc0100000002fb0000000800540069006d0065010000000000000593000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000003220000036100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015600000363fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000363000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000363fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d00000363000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007450000003efc0100000002fb0000000800540069006d0065010000000000000745000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000004d40000036300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -125,6 +251,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1427
-  X: 60
+  Width: 1861
+  X: 59
   Y: 27

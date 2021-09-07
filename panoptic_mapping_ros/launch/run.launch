@@ -3,28 +3,29 @@
   <!-- General -->
   <arg name="namespace" default="data"/> 
   <arg name="use_rio" default="true"/>
-  <arg name="use_detectron" default="false"/>
+  <arg name="use_detectron" default="true"/>
   <arg name="visualize" default="true"/> 
   
   <!-- Flat Dataset args -->
   <arg name="base_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
   <arg name="play_rate" default="3"/>  <!-- Realtime factor -->
   <arg name="wait_time" default="0"/>  <!-- s -->
-  <arg name="max_frames" default="100000"/>
+  <arg name="max_frames" default="10000"/>
   
   <!-- Rio Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> 
-  <arg name="scene_id" default="0"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
-  <arg name="scan_id" default="3"/>
+  <arg name="scene_id" default="2"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
+  <arg name="scan_id" default="1"/>
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="rio_single"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
-
+  <arg name="config" default="rio_detectron"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="shutdown_when_finished" default="false"/> 
+  
   <!-- Save/Load maps -->
-  <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/rio/rio_gt-0.panmap"/>
-  <arg name="save_map" default = "/home/lukas/Documents/PanopticMapping/Data/maps/new_map"/>
+  <arg name="load_map" default = "true"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/timing/rio_2.panmap"/>
+  <arg name="save_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/new_map"/>
 
 
 
@@ -36,11 +37,12 @@
   <include file="$(find panoptic_mapping_utils)/launch/play_rio_dataset.launch" pass_all_args="true" if="$(arg use_rio)" />  
   
   <!-- Mapper -->
-  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="true">
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" ><!--required="true"-->
     <!-- Config -->
     <rosparam file="$(find panoptic_mapping_ros)/config/mapper/$(arg config).yaml"/>
-    <param name="save_map_name" value="$(arg save_map)" /> <!-- TEST --> 
-
+    <param name="save_map_path_when_finished" value="$(arg save_file)" />  
+    <param name="shutdown_when_finished" value="$(arg shutdown_when_finished)" /> 
+     
     <!-- Input -->
     <remap from="color_image_in" to="$(arg namespace)/color_image"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>

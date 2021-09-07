@@ -1,18 +1,20 @@
 <launch>
 <!-- ============ Arguments ============ -->
-<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/scene_0/gt.panmap"/>  <!-- gt, detectron, single, wingle_with_map, _evaluated -->
-  
+<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/maps/qual_flat/ours"/> 
+<!--ours, mono -->
 
-<!-- ============ Display ============ -->
+<!--  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Data/maps/flat/qual_vis"/> -->
+
+<!-- ============ Display ============ --> 
   <node name="evaluator" pkg="panoptic_mapping_utils" type="single_map_evaluation" output="screen" required="true">
-    <param name="map_file" value="$(arg map_file)" />     
+    <param name="map_file" value="$(arg map_file).panmap" />     
     <param name="visualize" value="true" /> 
     <param name="evaluate" value="false" /> 
     <param name="compute_coloring" value="false" /> 
     
     <!-- Visualization Params-->
     <param name="color_mode" value="color" /> <!-- submaps, instances, color, normals, classes, classification, change -->
-    <param name="visualization_mode" value="persistent" /> <!-- sall, active, active_only, inactive, persistent -->
+    <param name="visualization_mode" value="active" /> <!-- all, active, active_only, inactive, persistent -->
 
 <!--    submap_color_discretization: 20-->
 <!--    visualize_mesh: true-->

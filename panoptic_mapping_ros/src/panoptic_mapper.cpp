@@ -30,6 +30,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("ros_spinner_threads", &ros_spinner_threads);
   setupParam("check_input_interval", &check_input_interval);
   setupParam("load_submaps_conservative", &load_submaps_conservative);
+  setupParam("shutdown_when_finished", &shutdown_when_finished);
+  setupParam("save_map_path_when_finished", &save_map_path_when_finished);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -88,9 +90,6 @@ void PanopticMapper::setupMembers() {
       config_utilities::getConfigFromRos<MapManager::Config>(
           ros::NodeHandle(nh_private_, "map_management")));
 
-  // Planning Interface.
-  planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
-
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
 
@@ -99,18 +98,14 @@ void PanopticMapper::setupMembers() {
       ros::NodeHandle(visualization_nh, "submaps"), globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
-  // Planning.
-  planning_visualizer_ = std::make_unique<PlanningVisualizer>(
-      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
-          ros::NodeHandle(visualization_nh, "planning")),
-      planning_interface_);
-  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
-
   // Tracking.
   tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
       config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
           ros::NodeHandle(visualization_nh, "tracking")));
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
+
+  // Planning.
+  setupCollectionDependentMembers();
 
   // Data Logging.
   data_logger_ = std::make_unique<DataWriter>(
@@ -139,6 +134,19 @@ void PanopticMapper::setupMembers() {
           nh_private_),
       nh_);
   input_synchronizer_->requestInputs(requested_inputs);
+}
+
+void PanopticMapper::setupCollectionDependentMembers() {
+  // Planning Interface.
+  planning_interface_ = std::make_shared<PlanningInterface>(submaps_);
+
+  // Planning Visualizer.
+  planning_visualizer_ = std::make_unique<PlanningVisualizer>(
+      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
+          ros::NodeHandle(ros::NodeHandle(nh_private_, "visualization"),
+                          "planning")),
+      planning_interface_);
+  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
 
 void PanopticMapper::setupRos() {
@@ -184,20 +192,22 @@ void PanopticMapper::inputCallback(const ros::TimerEvent&) {
     std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
     if (data) {
       processInput(data.get());
-      // TEST
-      last_input_ = ros::Time::now();
-      got_a_frame_ = true;
+      if (config_.shutdown_when_finished) {
+        last_input_ = ros::Time::now();
+        got_a_frame_ = true;
+      }
     }
   } else {
-    // TEST
-    if (got_a_frame_ && (ros::Time::now() - last_input_).toSec() >= 2.0) {
+    if (config_.shutdown_when_finished && got_a_frame_ &&
+        (ros::Time::now() - last_input_).toSec() >= 3.0) {
       // No more frames, finish up.
-      LOG(INFO) << "No more frames, shutting down.";
-      std::string save_map_name;
-      nh_private_.param("save_map_name", save_map_name, std::string("new_run"));
+      LOG_IF(INFO, config_.verbosity >= 1)
+          << "No more frames received for 3 seconds, shutting down.";
       finishMapping();
-      saveMap(save_map_name);
-      LOG(INFO) << "Done.";
+      if (!config_.save_map_path_when_finished.empty()) {
+        saveMap(config_.save_map_path_when_finished);
+      }
+      LOG_IF(INFO, config_.verbosity >= 1) << "Finished.";
       ros::shutdown();
     }
   }
@@ -317,12 +327,16 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   // Set the map.
   submaps_ = loaded_map;
 
+  // Setup the interfaces that use the new collection.
+  setupCollectionDependentMembers();
+
   // Reproduce the mesh and visualization.
   submap_visualizer_->clearMesh();
   submap_visualizer_->reset();
   submap_visualizer_->visualizeAll(submaps_.get());
 
-  LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
+  LOG_IF(INFO, config_.verbosity >= 1)
+      << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;
 }
 

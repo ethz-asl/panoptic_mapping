@@ -14,8 +14,8 @@ output_dir = '/home/lukas/Documents/PanopticMapping/Results/rio/'
 output_name = 'rio'
 store_output = True
 
-setting = 0  # 0: Local eval (exp2), 1: Global eval
-scene_id = 0  # 0: 4 days, (1), 2: 2 days
+setting = 1  # 0: Local eval (exp2), 1: Global eval
+scene_id = 2  # 0: 4 days, (1), 2: 2 days
 
 # 0 MAD, 6: GTInliers, 12: Coverage (observed), 13: Coverage (inliers)
 if setting == 0:
@@ -164,15 +164,15 @@ ax[0].set_ylabel('Average Error [cm]')
 ax[1].set_ylabel('Coverage [%]')
 
 # Legend
-ax[1].legend(legend,
-             loc='upper center',
-             bbox_to_anchor=(0.45, -.2),
-             ncol=3,
-             fontsize=11)
+# ax[1].legend(legend,
+#  loc='upper center',
+#  bbox_to_anchor=(0.45, -.2),
+#  ncol=3,
+#  fontsize=11)
 plt.tight_layout()
 
 # Save
-plt.gcf().set_size_inches(7, 5, forward=True)
+plt.gcf().set_size_inches(7, 3.5, forward=True)
 if store_output:
     suffix = "loc"
     if setting == 1:

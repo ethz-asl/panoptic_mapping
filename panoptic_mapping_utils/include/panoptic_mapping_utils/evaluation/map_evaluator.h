@@ -42,7 +42,7 @@ class MapEvaluator {
     bool color_by_max_error = false;  // false: color by average error
     bool color_by_mesh_distance =
         true;  // true: iterate through mesh, false: iterate over gt points.
-    bool is_single_tsdf = true;
+    bool is_single_tsdf = false;
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 

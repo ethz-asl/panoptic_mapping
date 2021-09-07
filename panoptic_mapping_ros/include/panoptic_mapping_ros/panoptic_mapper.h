@@ -43,9 +43,16 @@ class PanopticMapper {
     bool use_threadsafe_submap_collection = false;
     int ros_spinner_threads = std::thread::hardware_concurrency();
     float check_input_interval = 0.01f;  // s
-    bool load_submaps_conservative =
-        true;  // True: loaded submaps are unknown, False: Loaded submaps are
-               // persistent until observed absent.
+    // True: loaded submaps are unknown, False: Loaded submaps are persistent.
+    bool load_submaps_conservative = true;
+
+    // True: finish mapping and shutdown the panoptic mapper when no frames are
+    // received for 3 seconds after the first frame was received.
+    bool shutdown_when_finished = false;
+
+    // Set this string to automatically save the map when shutting down when
+    // finished.
+    std::string save_map_path_when_finished = "";
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -54,11 +61,11 @@ class PanopticMapper {
     void checkParams() const override;
   };
 
-  /* Construction */
+  // Construction.
   PanopticMapper(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private);
   virtual ~PanopticMapper() = default;
 
-  /* ROS callbacks */
+  // ROS callbacks.
   // Timers.
   void publishVisualizationCallback(const ros::TimerEvent&);
   void dataLoggingCallback(const ros::TimerEvent&);
@@ -81,7 +88,7 @@ class PanopticMapper {
   bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
                              std_srvs::Empty::Response& response);  // NOLINT
 
-  /* Processing */
+  // Processing.
   // Integrate a set of input images. The input is usually gathered from ROS
   // topics and provided by the InputSynchronizer.
   void processInput(InputData* input);
@@ -90,18 +97,18 @@ class PanopticMapper {
   // NOTE(schmluk): This is currently a preliminary tool to play around with.
   void finishMapping();
 
-  /* IO */
+  // IO.
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
 
-  /* Utilities */
+  // Utilities.
   // Print all timings (from voxblox::timing) to console.
   void printTimings() const;
 
   // Update the meshes and publish the all visualizations of the current map.
   void publishVisualization();
 
-  /* Access */
+  // Access.
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
   const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
     return *thread_safe_submaps_;
@@ -115,6 +122,7 @@ class PanopticMapper {
  private:
   // Setup.
   void setupMembers();
+  void setupCollectionDependentMembers();
   void setupRos();
 
  private:

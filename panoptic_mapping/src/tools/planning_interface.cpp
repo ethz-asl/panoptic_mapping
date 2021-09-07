@@ -16,6 +16,7 @@ PlanningInterface::PlanningInterface(
 
 bool PlanningInterface::isObserved(const Point& position,
                                    bool include_inactive_maps) const {
+  Timer timer("planning_interface/is_observed");
   // TODO(schmluk): Update this to latest convetions.
   for (const Submap& submap : *submaps_) {
     if (include_inactive_maps || submap.isActive()) {
@@ -37,10 +38,11 @@ bool PlanningInterface::isObserved(const Point& position,
 
 PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     const Point& position) const {
-  // TODO(schmluk): Update this to latest convetions.
+  Timer timer("planning_interface/get_voxel_state");
   bool is_known_free = false;
   bool is_expected_free = false;
   bool is_expected_occupied = false;
+  bool is_persistent_occupied = false;
   for (const auto& submap : *submaps_) {
     // Filter out irrelevant submaps.
     if (submap.getChangeState() == ChangeState::kAbsent) {
@@ -50,8 +52,14 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
       if (is_known_free || (is_expected_free && !submap.isActive())) {
         continue;
       }
-    } else if (!submap.isActive() && is_expected_occupied) {
-      continue;
+    } else if (!submap.isActive()) {
+      if (is_persistent_occupied) {
+        continue;
+      }
+      if (submap.getChangeState() == ChangeState::kUnobserved &&
+          is_expected_occupied) {
+        continue;
+      }
     }
 
     // Check the state.
@@ -67,8 +75,9 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     if (voxel.weight <= kObservedMinWeight_) {
       continue;
     }
+    const float voxel_size = submap.getConfig().voxel_size;
     if (submap.getLabel() == PanopticLabel::kFreeSpace) {
-      if (voxel.distance > 0.f) {
+      if (voxel.distance > voxel_size) {
         if (submap.isActive()) {
           is_known_free = true;
         } else {
@@ -76,10 +85,12 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
         }
       }
     } else {
-      if (voxel.distance <= 0.f) {
+      if (voxel.distance <= voxel_size) {
         if (submap.isActive()) {
           return VoxelState::kKnownOccupied;
-        } else {
+        } else if (submap.getChangeState() == ChangeState::kPersistent) {
+          is_persistent_occupied = true;
+        } else if (submap.getChangeState() == ChangeState::kUnobserved) {
           is_expected_occupied = true;
         }
       } else {
@@ -95,17 +106,20 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
   // Aggregate result.
   if (is_known_free) {
     return VoxelState::kKnownFree;
+  } else if (is_persistent_occupied) {
+    return VoxelState::kPersistentOccupied;
   } else if (is_expected_occupied) {
     return VoxelState::kExpectedOccupied;
   } else if (is_expected_free) {
     return VoxelState::kExpectedFree;
   }
   return VoxelState::kUnknown;
-}
+}  // namespace panoptic_mapping
 
 bool PlanningInterface::getDistance(const Point& position, float* distance,
                                     bool consider_change_state,
                                     bool include_free_space) const {
+  Timer timer("planning_interface/get_distance");
   // Get the Tsdf distance. Return whether the point was observed.
   CHECK_NOTNULL(distance);
   constexpr float max = std::numeric_limits<float>::max();

@@ -13,7 +13,7 @@ from PIL import Image as PilImage
 import numpy as np
 import tf
 
-from std_srvs.srv import Empty
+from std_srvs.srv import Empty, EmptyResponse
 from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 
@@ -73,6 +73,7 @@ class FlatDataPlayer(object):
         self.running = True
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
                                  self.callback)
+        return EmptyResponse()
 
     def callback(self, _):
         # Check we should be publishing.

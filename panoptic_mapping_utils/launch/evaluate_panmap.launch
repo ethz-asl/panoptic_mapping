@@ -2,12 +2,12 @@
 <!-- ============ Arguments ============ -->
   <!-- Groundtruth -->
 <!--  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/flat_dataset/ground_truth/run1/flat_1_gt_10000.ply"/>-->
-  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/3RScan/scene0.ply"/>
+  <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/3RScan/scene2.ply"/>
 <!-- <arg name="ground_truth_pointcloud_file" default="/home/lukas/Documents/Datasets/3RScan/f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26/gt_10000.ply"/>-->
   
   <!-- Source map -->
 <!--  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp1/pan_multires/detectron/detectron_small.panmap"/>-->
-<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/scene_0/single_with_map.panmap"/>
+<arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Rio/qualitative/scene_2/single.panmap"/>
   
   <!-- Params -->
   <arg name="maximum_distance" default="0.05"/>
@@ -16,7 +16,8 @@
   <arg name="color_by_max_error" default="false"/>
   <arg name="color_by_mesh_distance" default="true"/>
   <arg name="visualize" default="true"/>
-  <arg name="ignore_truncated_points" default="false"/>
+  <arg name="ignore_truncated_points" default="true"/>
+  <arg name="is_single_tsdf" default="true"/>
 
 <!-- ============ Evaluations ============ -->
   <node name="evaluator" pkg="panoptic_mapping_utils" type="single_map_evaluation" output="screen" required="true">
@@ -29,6 +30,7 @@
     <param name="color_by_max_error" value="$(arg color_by_max_error)" /> 
     <param name="color_by_mesh_distance" value="$(arg color_by_mesh_distance)" /> 
     <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" /> 
+    <param name="is_single_tsdf" value="$(arg is_single_tsdf)" /> 
     
     <!-- Visualization -->
 <!--    type: submaps  # submaps, single_tsdf-->

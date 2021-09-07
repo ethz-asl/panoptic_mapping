@@ -122,8 +122,8 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: change # submaps, instances, color, normals, classes, classification, change
-    visualization_mode: active  # all, active, active_only, inactive
+    color_mode: color # submaps, instances, color, normals, classes, classification, change
+    visualization_mode: persistent  # all, active, active_only, inactive,
     submap_color_discretization: 20
     visualize_mesh: true
     visualize_tsdf_blocks: true

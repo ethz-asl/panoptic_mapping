@@ -38,11 +38,11 @@ submap_allocator:
   required_belonging_corners: 1
   
   # Semantic
-  small_instance_voxel_size: 0.04
-  medium_instance_voxel_size: 0.06
-  large_instance_voxel_size: 0.08
-  background_voxel_size: 0.1
-  unknown_voxel_size: 0.1
+  small_instance_voxel_size: 0.02
+  medium_instance_voxel_size: 0.03
+  large_instance_voxel_size: 0.04
+  background_voxel_size: 0.05
+  unknown_voxel_size: 0.05
   
 freespace_allocator:
   type: monolithic  # monolithic

@@ -3,15 +3,15 @@
 # ================ Args ================
 # General args.
 target_map_dir="/home/lukas/Documents/PanopticMapping/Data/maps/rio"
-scene_id=0
-no_scans=4  # 0:4, 1:4, 2:2
+scene_id=2
+no_scans=2  # 0:4, 1:4, 2:2
 method="detectron" # gt, detectron, single, single_with_map, fusion
-visualize=false
+visualize=true
 
 # What to evaluate.
-run_all_methods=true
+run_all_methods=false
 run_experiments=true
-move_experiment_logs = false
+move_experiment_logs=false
 evaluate=false
 remove_maps=false
 

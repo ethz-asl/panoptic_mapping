@@ -75,25 +75,24 @@ plt.semilogx()
 plt.xlabel(keys[0])
 if plot_error:
     plt.ylabel(keys[1])
+    plt.ylim((0, 4))
 else:
     plt.ylabel(keys[2])
     plt.ylim((60, 100))
 
 # Legend
 artists = []
-labels = {
-    'Voxblox': 'og',
-    'Supereight (multires)': 'ok',
-    'Supereight (dense)': 'xk',
-    'Ours (ground truth)': 'ob',
-    'Ours (detectron)': 'xb'
-}
+labels = [['Voxblox', 'og'], ['Supereight (multires)', 'ok'],
+          ['Supereight (dense)', 'xk'], ['Ours (ground truth)', 'ob'],
+          ['Ours (detectron)', 'xb]']]
+# labels = sorted(labels, reverse=True)
 for l in labels:
-    artists.append(plt.scatter(0, 0, c=labels[l][1], marker=labels[l][0]))
-plt.legend(artists, labels.keys())
-plt.tight_layout()
+    artists.append(plt.scatter(0, 0, c=l[1][1], marker=l[1][0]))
+plt.legend(artists, [l[0] for l in labels])
 
 # Save
+plt.gcf().set_size_inches(6, 3.7, forward=True)
+plt.tight_layout()
 if plot_error:
     output_name += "_error.jpg"
 else:

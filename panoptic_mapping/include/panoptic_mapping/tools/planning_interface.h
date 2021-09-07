@@ -20,8 +20,9 @@ class PlanningInterface {
     kUnknown = 0,
     kKnownFree,
     kKnownOccupied,
+    kPersistentOccupied,
     kExpectedFree,
-    kExpectedOccupied
+    kExpectedOccupied,
   };
 
   // Access.

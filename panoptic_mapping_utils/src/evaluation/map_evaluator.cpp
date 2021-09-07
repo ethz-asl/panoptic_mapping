@@ -312,7 +312,6 @@ std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
     // Parse all mesh vertices.
     voxblox::BlockIndexList block_list;
     submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
-    int block = 0;
     for (auto& block_index : block_list) {
       if (!ros::ok()) {
         return "";
@@ -499,11 +498,12 @@ void MapEvaluator::visualizeReconstructionError(
       // Parse all voxels.
       voxblox::BlockIndexList block_list;
       submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
-      int block = 0;
+      int block_count = 0;
       for (auto& block_index : block_list) {
         if (!ros::ok()) {
           return;
         }
+
         voxblox::Block<TsdfVoxel>& block =
             submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
         for (size_t linear_index = 0; linear_index < num_voxels_per_block;
@@ -552,8 +552,11 @@ void MapEvaluator::visualizeReconstructionError(
           }
           // Coloring.
           if (counted_voxels == 0) {
-            counted_voxels = 1;
-            total_error += std::sqrt(min_dist_sqr);
+            // TEST
+            voxel.color = Color(128, 128, 128);
+            continue;
+            // counted_voxels = 1;
+            // total_error += std::sqrt(min_dist_sqr);
           }
           float frac;
           if (request.color_by_max_error) {
@@ -601,7 +604,6 @@ void MapEvaluator::buildKdTree() {
 
 void MapEvaluator::publishVisualization() {
   // Make sure the tfs arrive otherwise the mesh will be discarded.
-  visualizer_->reset();
   visualizer_->visualizeAll(submaps_.get());
 }
 
