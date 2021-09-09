@@ -105,7 +105,7 @@ map_management:
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -1.5 # m, negative = #vs
+    error_threshold: -1.2 # m, negative = #vs
     match_rejection_points: 5  
     match_rejection_percentage: 0.005
     match_acceptance_points: 5
@@ -121,8 +121,8 @@ visualization:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
     color_mode: color # submaps, instances, color, normals, classes, classification, change, persistent
-    visualization_mode: active  # all, active, active_only, inactive
-    submap_color_discretization: 20
+    visualization_mode: persistent  # all, active, active_only, inactive, persistent
+    submap_color_discretization: 30
     visualize_mesh: true
     visualize_tsdf_blocks: true
     visualize_free_space: true

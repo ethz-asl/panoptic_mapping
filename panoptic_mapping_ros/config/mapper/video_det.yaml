@@ -4,7 +4,7 @@ use_threadsafe_submap_collection: true
 use_transform_caching: true
 transform_lookup_time: 0.1
 global_frame_name: world
-label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -51,7 +51,7 @@ freespace_allocator:
   voxel_size: 0.3 
 
 id_tracker:
-  type: projective # ground_truth, projective, detectron, single_tsdf
+  type: detectron # ground_truth, projective, detectron, single_tsdf
   verbosity: 1
   
   # Projective ID tracker
@@ -90,9 +90,9 @@ map_management:
   verbosity: 2
   
   # Frequencies
-  prune_active_blocks_frequency: 0 # 1
+  prune_active_blocks_frequency: 1 # 1
   activity_management_frequency: 1 # 1
-  change_detection_frequency: 5 # 10
+  change_detection_frequency: 0 # 10
   
   # Behavior
   merge_deactivated_submaps_if_possible: true
@@ -120,7 +120,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: color # submaps, instances, color, normals, classes, classification, change, persistent
+    color_mode: change # submaps, instances, color, normals, classes, classification, change, persistent
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true

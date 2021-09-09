@@ -4,7 +4,7 @@ use_threadsafe_submap_collection: true
 use_transform_caching: true
 transform_lookup_time: 0.1
 global_frame_name: world
-label_path: /home/lukas/Documents/Datasets/flat_dataset/labels.csv
+label_path: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 visualization_interval: -1.0
 data_logging_interval: -1.0
 print_timing_interval: 0.0
@@ -14,12 +14,12 @@ load_submaps_conservative: true
 
 camera:
   verbosity: 1
-  width: 640  # Px
-  height: 480
-  vx: 320
-  vy: 240
-  fx: 320
-  fy: 320
+  width: 224
+  height: 172
+  vx: 113.696
+  vy: 85.4004
+  fx: 176.523
+  fy: 240.667
   max_range: 5  # m
   min_range: 0.1
   
@@ -28,7 +28,7 @@ submap_allocator:
   verbosity: 1   
   
   # submaps
-  voxels_per_side: &voxels_per_side 16
+  voxels_per_side: &voxels_per_side 8
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
   
@@ -48,10 +48,10 @@ freespace_allocator:
   verbosity: 1  
   voxels_per_side: *voxels_per_side 
   truncation_distance: -2   
-  voxel_size: 0.3 
+  voxel_size: 0.3
 
 id_tracker:
-  type: projective # ground_truth, projective, detectron, single_tsdf
+  type: detectron # ground_truth, projective, detectron, single_tsdf
   verbosity: 1
   
   # Projective ID tracker
@@ -87,7 +87,7 @@ tsdf_integrator:
   # Single TSDF
   
 map_management:
-  verbosity: 2
+  verbosity: 4
   
   # Frequencies
   prune_active_blocks_frequency: 0 # 1
@@ -96,21 +96,23 @@ map_management:
   
   # Behavior
   merge_deactivated_submaps_if_possible: true
+#  required_merge_overlap: 0.5
   apply_class_layer_when_deactivating_submaps: false
   
   activity_manager:
-    required_reobservations: 3 # Consecutive observations to keep new submaps.
+    required_reobservations: 1 # Consecutive observations to keep new submaps.
     deactivate_after_missed_detections: 5  # Deactivate submaps when not observed for x frames.
   
   tsdf_registrator:
     verbosity: 3
     min_voxel_weight: 0.000001
-    error_threshold: -1.5 # m, negative = #vs
-    match_rejection_points: 5  
-    match_rejection_percentage: 0.005
-    match_acceptance_points: 5
-    match_acceptance_percentage: 0.005
+    error_threshold: -1.9 # m, negative = #vs
+    match_rejection_points: 20
+    match_rejection_percentage: 0.02
+    match_acceptance_points: 20
+    match_acceptance_percentage: 0.02
     normalize_by_voxel_weight: true
+    normalization_max_weight: 100
     
   layer_manipulator:
       verbosity: 3
@@ -120,7 +122,7 @@ visualization:
   submaps:
     type: submaps  # submaps, single_tsdf
     verbosity: 1
-    color_mode: color # submaps, instances, color, normals, classes, classification, change, persistent
+    color_mode: submaps # submaps, instances, color, normals, classes, classification, change
     visualization_mode: active  # all, active, active_only, inactive
     submap_color_discretization: 20
     visualize_mesh: true
@@ -133,8 +135,8 @@ visualization:
   planning:
     verbosity: 1
     visualize_slice: true
-    slice_resolution: 0.05
-    slice_height: -0.8 #-0.5
+    slice_resolution: 0.1
+    slice_height: -0.5
   
   tracking:
     verbosity: 1
