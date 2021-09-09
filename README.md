@@ -6,13 +6,15 @@ A panoptic, submap-based approach towards volumetric spatio-temporally consisten
 ## Table of Contents
 * [Credits](#Credits)
 * [Installation](#Installation)
-* [Demo](#Demo)
+* **To come soon:**
+  * Download the datasets.
+  * Run a demo.
 
 # Credits
 * **Author:** Lukas Schmid <schmluk@mavt.ethz.ch>
 * **Affiliation:** Autonomous Systems Lab (ASL), ETH Zürich.
-* **Version:** Pre-release Beta
-* **License:** The project is work in progress and not yet licensed or open-sourced. By working with this project you agree to keep any code, ideas, or other, confidential until the project is published.
+* **Version:** Pre-release Gamma
+* **License:** The project is work in progress and not yet licensed or open-sourced. It will be upon publication. By working with this project you agree to keep any code, ideas, or other, confidential until the project is published.
 
 
 # Installation
@@ -69,21 +71,3 @@ Installation instructions for Linux.
     catkin build panoptic_mapping_utils
     source ../devel/setup.bash
     ```
-
-# Examples
-## Demo
-Uses the `run1.bag` dataset, ask the authors for access. This dataset contains sythetic color, depth and segmentation images for an indoor scene.
-Update line 5 of `panoptic_mapping_ros/config/demo_mapper.yaml` to the destination of the downloaded labels file.
-
-Then launch the demo by running: 
-```
-roslaunch panoptic_mapping_ros demo.launch bag_name:=/path/to/run1.bag
-```
-
-An RVIZ window should show up visualizing the scene being reconstructed, where each object lives in it's own submap with varying resolutions.
-
-The submaps, representing the segmentation, can be visualized by changing the coloring:
-```
-rosservice call /panoptic_mapper/set_visualization_mode "visualization_mode: '' color_mode: 'submaps'" 
-```
-![combined](https://user-images.githubusercontent.com/36043993/110769139-2ab26780-8258-11eb-8b7a-ed4f2e050ea4.png)
