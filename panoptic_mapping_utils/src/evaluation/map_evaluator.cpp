@@ -534,7 +534,7 @@ void MapEvaluator::visualizeReconstructionError(
           if (counted_voxels == 0) {
             counted_voxels = 1;
             total_error += std::sqrt(min_dist_sqr);
-            max_error = min_dist_sqr:
+            max_error = min_dist_sqr;
           }
           float frac;
           if (request.color_by_max_error) {
