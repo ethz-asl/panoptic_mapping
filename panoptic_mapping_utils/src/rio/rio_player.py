@@ -160,11 +160,6 @@ class RioPlayer(object):
         self.timer = rospy.Timer(rospy.Duration(1. / self.rate), self.timer_cb)
 
     def timer_cb(self, _):
-        # TEST
-        # if self.frame_no > 100:
-        #     rospy.signal_shutdown("test")
-        #     return
-
         frame_name = "frame-%06d" % self.frame_no
         time_stamp = rospy.Time.now()
 

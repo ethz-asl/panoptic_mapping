@@ -552,11 +552,9 @@ void MapEvaluator::visualizeReconstructionError(
           }
           // Coloring.
           if (counted_voxels == 0) {
-            // TEST
-            voxel.color = Color(128, 128, 128);
-            continue;
-            // counted_voxels = 1;
-            // total_error += std::sqrt(min_dist_sqr);
+            counted_voxels = 1;
+            total_error += std::sqrt(min_dist_sqr);
+            max_error = min_dist_sqr:
           }
           float frac;
           if (request.color_by_max_error) {

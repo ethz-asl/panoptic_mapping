@@ -100,8 +100,8 @@ def create_predictions(params: Params):
         print(msg + '%.1f%%' % (i / len(files) * 100, ), end='\r', flush=True)
         im = cv2.imread(os.path.join(params.target_path, im_file))
 
-        # TEST RIO
-        im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
+        if params.rio:
+            im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
 
         # Predict.
         t1 = time.perf_counter()

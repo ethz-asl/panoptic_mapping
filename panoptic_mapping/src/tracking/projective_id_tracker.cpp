@@ -354,13 +354,12 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
   const Transformation T_C_S = input.T_M_C().inverse() * submap.getT_M_S();
   const Point origin_C = T_C_S * submap.getBoundingVolume().getCenter();
   std::vector<size_t> limits(4);  // x_min, x_max, y_min, y_max
-  const float r_sq = submap.getBoundingVolume().getRadius() *
-                     submap.getBoundingVolume().getRadius();
   const Camera::Config& cam_config = globals_->camera()->getConfig();
 
-  // TEST
+  // NOTE(schmluk): Currently just iterate over the whole frame since the sphere
+  // tangent computation was not robustly implemented.
   size_t subsampling_factor = 1;
-  limits = {0, static_cast<size_t>(cam_config.width), 0,
+  limits = {0u, static_cast<size_t>(cam_config.width), 0u,
             static_cast<size_t>(cam_config.height)};
   const Transformation T_S_C = T_C_S.inverse();
   const TsdfLayer& tsdf_layer = submap.getTsdfLayer();
@@ -403,77 +402,6 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
     }
   }
   return result;
-
-  // float dist_sq = origin_C.x() * origin_C.x() + origin_C.z() * origin_C.z();
-  // if (dist_sq <= r_sq) {
-  //   // Imaginary solution means we're inside the bounding sphere.
-  //   limits = {0, cam_config.width, 0, cam_config.height};
-  // } else if (origin_C.z() < 0.f) {
-  //   // The submap is behind the sensor.
-  //   return result;
-  // } else {
-  //   // Tangent to circle.
-  //   // X Limits.
-  //   Eigen::Vector2f P1 =
-  //       r_sq / dist_sq * Eigen::Vector2f(-origin_C.x(), -origin_C.z());
-  //   Eigen::Vector2f P2 = submap.getBoundingVolume().getRadius() / dist_sq *
-  //                        std::sqrt(dist_sq - r_sq) *
-  //                        Eigen::Vector2f(origin_C.z(), -origin_C.x());
-  //   float x_1 = cam_config.fx * ((P1 + P2).x() + origin_C.x()) /
-  //                   ((P1 + P2).y() + origin_C.z()) +
-  //               cam_config.vx;
-  //   float x_2 = cam_config.fx * ((P1 - P2).x() + origin_C.x()) /
-  //                   ((P1 - P2).y() + origin_C.z()) +
-  //               cam_config.vx;
-  //   limits[0] = std::max(std::min(std::floor(x_1), std::floor(x_2)), 0.f);
-  //   limits[1] = std::min(std::max(std::ceil(x_1), std::ceil(x_2)),
-  //                        static_cast<float>(cam_config.width));
-
-  //   // Y Limits.
-  //   P1 = r_sq / dist_sq * Eigen::Vector2f(-origin_C.y(), -origin_C.z());
-  //   P2 = submap.getBoundingVolume().getRadius() / dist_sq *
-  //        std::sqrt(dist_sq - r_sq) *
-  //        Eigen::Vector2f(origin_C.z(), -origin_C.y());
-  //   x_1 = cam_config.fy * ((P1 + P2).x() + origin_C.y()) /
-  //             ((P1 + P2).y() + origin_C.z()) +
-  //         cam_config.vy;
-  //   x_2 = cam_config.fy * ((P1 - P2).x() + origin_C.y()) /
-  //             ((P1 - P2).y() + origin_C.z()) +
-  //         cam_config.vy;
-  //   limits[2] = std::max(std::min(std::floor(x_1), std::floor(x_2)), 0.f);
-  //   limits[3] = std::min(std::max(std::ceil(x_1), std::ceil(x_2)),
-  //                        static_cast<float>(cam_config.height));
-  // }
-
-  // // Lookup vertices.
-  // const Transformation T_S_C = T_C_S.inverse();
-  // const TsdfLayer& tsdf_layer = submap.getTsdfLayer();
-  // const float depth_tolerance =
-  //     config_.depth_tolerance > 0
-  //         ? config_.depth_tolerance
-  //         : -config_.depth_tolerance * submap.getTsdfLayer().voxel_size();
-  // for (size_t u = limits[0]; u < limits[1]; ++u) {
-  //   for (size_t v = limits[2]; v < limits[3]; ++v) {
-  //     const float depth = input.depthImage().at<float>(v, u);
-  //     if (depth < cam_config.min_range || depth > cam_config.max_range) {
-  //       continue;
-  //     }
-  //     const cv::Vec3f& vertex = input.vertexMap().at<cv::Vec3f>(v, u);
-  //     const Point P_S = T_S_C * Point(vertex[0], vertex[1], vertex[2]);
-  //     const auto block = tsdf_layer.getBlockPtrByCoordinates(P_S);
-  //     if (block) {
-  //       const TsdfVoxel& voxel = block->getVoxelByCoordinates(P_S);
-  //       if (voxel.weight > 1e-6 && std::abs(voxel.distance) <
-  //       depth_tolerance) {
-  //         result.insertVertexPoint(input.idImage().at<int>(v, u));
-  //         if (visualizationIsOn()) {
-  //           result.insertVertexVisualizationPoint(u, v);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-  // return result;
 }
 
 }  // namespace panoptic_mapping

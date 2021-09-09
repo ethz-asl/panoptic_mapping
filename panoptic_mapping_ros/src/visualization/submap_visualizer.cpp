@@ -170,9 +170,6 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
       continue;
     }
 
-    // TEST
-    // if (submap.getName() != "dining table") {continue;}
-
     // Find the corresponding info.
     auto it = vis_infos_.find(submap.getID());
     if (it == vis_infos_.end()) {
@@ -333,11 +330,6 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
         !config_.include_free_space) {
       continue;
     }
-
-    // TEST
-    // if (submap.getID() != 5) {
-    //   continue;
-    // }
 
     // Setup submap.
     voxblox::BlockIndexList blocks;

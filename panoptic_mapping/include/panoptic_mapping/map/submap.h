@@ -73,9 +73,6 @@ class Submap {
   const SubmapBoundingVolume& getBoundingVolume() const {
     return bounding_volume_;
   }
-  const std::unordered_map<int, int>& getClassificationCounts() const {
-    return classification_counts_;
-  }
 
   // Modifying accessors.
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
@@ -85,9 +82,6 @@ class Submap {
     return &iso_surface_points_;
   }
   SubmapBoundingVolume* getBoundingVolumePtr() { return &bounding_volume_; }
-  std::unordered_map<int, int>& getClassificationCounts() {
-    return classification_counts_;
-  }
 
   // Setters.
   void setT_M_S(const Transformation& T_M_S);
@@ -221,7 +215,6 @@ class Submap {
   int class_id_ = -1;
   PanopticLabel label_ = PanopticLabel::kUnknown;
   std::string name_ = "Unknown";
-  std::unordered_map<int, int> classification_counts_;  // TEST
 
   // State.
   bool is_active_ = true;

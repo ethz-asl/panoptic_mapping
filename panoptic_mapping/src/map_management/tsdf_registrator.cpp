@@ -100,11 +100,14 @@ std::string TsdfRegistrator::checkSubmapForChange(
         !submap->getBoundingVolume().intersects(other.getBoundingVolume())) {
       continue;
     }
-    // TEST(schmluk): For the moment exclude free space for thin structures.
+
+    // Note(schmluk): Exclude free space for thin structures. Although there's
+    // potentially a nicer way of solving this.
     if (other.getLabel() == PanopticLabel::kFreeSpace &&
         submap->getConfig().voxel_size < other.getConfig().voxel_size * 0.5) {
       continue;
     }
+
     bool submaps_match;
     if (submapsConflict(*submap, other, &submaps_match)) {
       // No conflicts allowed.

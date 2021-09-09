@@ -172,8 +172,6 @@ class PanopticMapper {
   // Tracking variables.
   ros::WallTime previous_frame_time_ = ros::WallTime::now();
   std::unique_ptr<Timer> frame_timer_;
-
-  // TEST
   ros::Time last_input_;
   bool got_a_frame_ = false;
 };

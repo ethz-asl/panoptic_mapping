@@ -269,16 +269,10 @@ float ProjectiveIntegrator::computeWeight(const Point& p_C,
 void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
                                              const float weight,
                                              const Color* color) const {
-  // TEST Longterm fusion
-  if (config_.use_longterm_fusion && std::abs(voxel->distance - sdf) > 0.05) {
-    voxel->distance = sdf;
-    voxel->weight = std::min(weight, config_.max_weight);
-  } else {
-    // Weighted averaging fusion.
-    voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
-                      (voxel->weight + weight);
-    voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
-  }
+  // Weighted averaging fusion.
+  voxel->distance = (voxel->distance * voxel->weight + sdf * weight) /
+                    (voxel->weight + weight);
+  voxel->weight = std::min(voxel->weight + weight, config_.max_weight);
   if (color != nullptr) {
     voxel->color =
         Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
