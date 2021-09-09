@@ -7,14 +7,14 @@
   <arg name="scan_id" default="0"/>
   
   <!-- Source directory -->
-  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping/Exp2/GT/prob2"/>
+  <arg name="map_file" default="/home/lukas/Documents/PanopticMapping"/>
   <arg name="output_suffix" default=""/>
   
   <!-- Evaluation Params -->
   <arg name="maximum_distance" default="10000"/>
   <arg name="inlier_distance" default="0.05"/>
   <arg name="ignore_truncated_points" default="false"/>
-  <arg name="is_single_tsdf" default="true"/>
+  <arg name="is_single_tsdf" default="false"/>
 
 <!-- ============ Evaluations ============ -->
   <node name="multi_map_evaluation" pkg="panoptic_mapping_utils" type="multi_map_evaluation" output="screen" required="true">

@@ -19,8 +19,10 @@
 
 namespace panoptic_mapping {
 
-// @brief Evaluation tools in a ROS node for visualization. Based on the
-// voxblox_ros/voxblox_eval.cc code.
+/**
+ * @brief Evaluation tools in a ROS node. Initially based on the
+ * voxblox_ros/voxblox_eval.cc code.
+ */
 class MapEvaluator {
  public:
   struct EvaluationRequest
@@ -93,8 +95,6 @@ class MapEvaluator {
   std::string computeReconstructionError(const EvaluationRequest& request);
   std::string computeMeshError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
-  void computeErrorHistogram(
-      const EvaluationRequest& request);  // Placeholder atm
   void buildKdTree();
 
  private:

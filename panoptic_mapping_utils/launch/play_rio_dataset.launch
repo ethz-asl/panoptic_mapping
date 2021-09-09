@@ -23,5 +23,4 @@
     <remap from="~labels" to="$(arg namespace)/segmentation_labels" />
   </node>
   
-
 </launch>

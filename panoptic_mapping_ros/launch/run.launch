@@ -2,8 +2,8 @@
 <!-- ============ Arguments ============ -->
   <!-- General -->
   <arg name="namespace" default="data"/> 
-  <arg name="use_rio" default="true"/>
-  <arg name="use_detectron" default="true"/>
+  <arg name="use_rio" default="false"/>
+  <arg name="use_detectron" default="false"/>
   <arg name="visualize" default="true"/> 
   
   <!-- Flat Dataset args -->
@@ -14,8 +14,8 @@
   
   <!-- Rio Dataset args -->
   <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> 
-  <arg name="scene_id" default="2"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
-  <arg name="scan_id" default="1"/>
+  <arg name="scene_id" default="0"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
+  <arg name="scan_id" default="0"/>
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
@@ -23,14 +23,13 @@
   <arg name="shutdown_when_finished" default="false"/> 
   
   <!-- Save/Load maps -->
-  <arg name="load_map" default = "true"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/video/rio.panmap"/>
+  <arg name="load_map" default = "false"/>
+  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/run1.panmap"/>
   <arg name="save_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/new_map"/>
 
 
 
 <!-- ============ Run ============ -->
-  
   <!-- Play data -->
   <arg name="wait" default = "true" if="$(arg load_map)"/>
   <include file="$(find panoptic_mapping_utils)/launch/play_flat_dataset.launch" pass_all_args="true" unless="$(arg use_rio)" />
@@ -56,13 +55,6 @@
      <param name="srv_name" value="/panoptic_mapper/load_map" /> 
      <param name="delay" value="0.1" /> 
   </node>  
-
-  <!-- Path visualization -->
-  <node name="path_visualizer" pkg="panoptic_mapping_utils" type="path_visualizer.py" output="screen">
-    <remap from="~pose_in" to="$(arg namespace)/pose" />
-    <param name="use_arrow" value="false" /> 
-    <param name="length" value="0.5" />
-  </node>
   
   <!-- RVIZ Visualization-->
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/rviz/devel.rviz" output="screen" if="$(arg visualize)"/>

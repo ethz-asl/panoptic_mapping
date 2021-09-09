@@ -24,28 +24,41 @@ namespace panoptic_mapping {
  */
 class ProjectiveIDTracker : public IDTrackerBase {
  public:
-  /**
-   * @brief Parameters used to track new frames against the map.
-   *
-   */
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // Tracking.
-    float depth_tolerance = -1.0;  // m, negative for multiples of voxel size
-    std::string tracking_metric = "IoU";  // IoU, overlap
+    // Count iso-surfaces points as valid whose projected depth is within this
+    // distance in meters of the measured depth. Negative values indicate
+    // multiples of the voxel size.
+    float depth_tolerance = -1.0;
+
+    // Which tracking metric to compute. Supported are 'IoU' and 'overlap'.
+    std::string tracking_metric = "IoU";
+
+    // Accept matches that have at least this value in the computed trackign
+    // metric.
     float match_acceptance_threshold = 0.5;
+
+    // True: Only match submaps and masks that have identical class labels.
+    // False: Match any mask to the highest metric submap.
     bool use_class_data_for_matching = true;
-    bool use_approximate_rendering = false;
+
+    // True: Compute masks by projecting the iso-surface poitns into the frame
+    // and account for voxel size. False (experimental): look up each vertex of
+    // the depth map in the submap.
+    bool use_approximate_rendering = true;
+
+    // Subsample the number of looked up vertices when using
+    // 'use_approximate_rendering=false' by this factor squared.
     int rendering_subsampling = 1;
 
-    // Allocation.
-    int min_allocation_size = 0;  // #px required to allocate new submap.
+    // Only allocate new submaps for masks that have at least this many pixels.
+    int min_allocation_size = 0;
 
-    // System params.
+    // Number of threads to use to track submaps in parallel.
     int rendering_threads = std::thread::hardware_concurrency();
 
-    // Renderer settings.
+    // Renderer settings. The renderer is only used for visualization purposes.
     MapRenderer::Config renderer;
 
     Config() { setConfigName("ProjectiveIDTracker"); }

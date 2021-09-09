@@ -368,26 +368,6 @@ std::string MapEvaluator::computeMeshError(const EvaluationRequest& request) {
   return ss.str();
 }
 
-void MapEvaluator::computeErrorHistogram(const EvaluationRequest& request) {
-  // create histogram of error distribution
-  //    std::vector<int> histogram(hist_bins_);
-  //    float bin_size = truncation_distance / ((float) hist_bins_ - 1.0);
-  //    for (int i = 0; i < abserror.size(); ++i) {
-  //      int bin = (int) floor(abserror[i] / bin_size);
-  //      if (bin < 0 || bin >= hist_bins_) {
-  //        std::cout << "Bin Error at bin " << bin << ", value " << abserror[i]
-  //                  << std::endl;
-  //        continue;
-  //      }
-  //      histogram[bin] += 1;
-  //    }
-  //    hist_file_ << map_name;
-  //    for (int i = 0; i < histogram.size(); ++i) {
-  //      hist_file_ << "," << histogram[i];
-  //    }
-  //    hist_file_ << "\n";
-}
-
 bool MapEvaluator::evaluateMapCallback(
     panoptic_mapping_msgs::SaveLoadMap::Request& request,
     panoptic_mapping_msgs::SaveLoadMap::Response& response) {
