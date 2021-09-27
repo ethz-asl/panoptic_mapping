@@ -394,7 +394,7 @@ void MapEvaluator::visualizeReconstructionError(
   // purple -> truncated to max error.
 
   constexpr int max_number_of_neighbors_factor = 25000;  // points per cubic
-  // metre depending on voxel size for faster nn search.
+  // meter depending on voxel size for faster nn search.
   buildKdTree();
 
   // Remove inactive maps.
@@ -496,8 +496,6 @@ void MapEvaluator::visualizeReconstructionError(
           Point center = block.computeCoordinatesFromLinearIndex(linear_index);
 
           // Find surface points within 1 voxel size.
-          // Note(schmluk): Use N neighbor search wih increasing N since radius
-          // search is ridiculously slow.
           float query_pt[3] = {center.x(), center.y(), center.z()};
           std::vector<size_t> ret_index(max_number_of_neighbors);
           std::vector<float> out_dist_sqr(max_number_of_neighbors);
