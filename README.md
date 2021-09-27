@@ -7,8 +7,11 @@ A panoptic, submap-based approach towards volumetric spatio-temporally consisten
 * [Credits](#Credits)
 * [Installation](#Installation)
 * **To come soon:**
+  * Video
   * Download the datasets.
   * Run a demo.
+  * Monolithic Mapper.
+  * Contributing.
 
 # Credits
 * **Author:** Lukas Schmid <schmluk@mavt.ethz.ch>
