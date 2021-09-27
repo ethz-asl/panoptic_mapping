@@ -19,7 +19,7 @@
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="video_rio_det"/> <!-- devel, detectron, rio, gt_seg, single_tsdf -->
+  <arg name="config" default="flat_groundtruth"/> <!-- flat_groundtruth, flat_detectron, rio_groundtruth, rio_detectron -->
   <arg name="shutdown_when_finished" default="false"/> 
   
   <!-- Save/Load maps -->

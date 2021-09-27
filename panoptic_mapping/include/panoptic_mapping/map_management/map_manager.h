@@ -12,26 +12,31 @@
 #include "panoptic_mapping/map/submap_collection.h"
 #include "panoptic_mapping/map_management/activity_manager.h"
 #include "panoptic_mapping/map_management/layer_manipulator.h"
+#include "panoptic_mapping/map_management/map_manager_base.h"
 #include "panoptic_mapping/map_management/tsdf_registrator.h"
 
 namespace panoptic_mapping {
 
 /**
- * High level class that wraps all map management actions and tools.
+ * @brief High level class that wraps all map management actions and tools.
  */
-
-class MapManager {
+class MapManager : public MapManagerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // Perform actions every n ticks, 0 to ignore.
+    // Perform actions every n ticks (frames), set 0 to turn off.
     int prune_active_blocks_frequency = 0;
     int change_detection_frequency = 0;
     int activity_management_frequency = 0;
 
-    // Behavior.
+    // If true, submaps that are deactivated are checked for alignment with
+    // inactive maps and merged together if a match is found.
     bool merge_deactivated_submaps_if_possible = false;
+
+    // If true, the class layer will be integrated into the TSDF layer and
+    // discraded afterwards when submaps are deactivated. This saves memory at
+    // the loss of classification information.
     bool apply_class_layer_when_deactivating_submaps = false;
 
     // Member configs.
@@ -50,13 +55,13 @@ class MapManager {
   virtual ~MapManager() = default;
 
   // Perform all actions when with specified timings.
-  void tick(SubmapCollection* submaps);
+  void tick(SubmapCollection* submaps) override;
+  void finishMapping(SubmapCollection* submaps) override;
 
   // Perform specific tasks.
   void pruneActiveBlocks(SubmapCollection* submaps);
   void manageSubmapActivity(SubmapCollection* submaps);
   void performChangeDetection(SubmapCollection* submaps);
-  void finishMapping(SubmapCollection* submaps);
 
   // Tools.
   bool mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,
@@ -66,6 +71,8 @@ class MapManager {
   std::string pruneBlocks(Submap* submap) const;
 
  private:
+  static config_utilities::Factory::RegistrationRos<MapManagerBase, MapManager>
+      registration_;
   // Members.
   const Config config_;
 

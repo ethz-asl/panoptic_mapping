@@ -9,6 +9,9 @@
 
 namespace panoptic_mapping {
 
+config_utilities::Factory::RegistrationRos<MapManagerBase, MapManager>
+    MapManager::registration_("submaps");
+
 void MapManager::Config::checkParams() const {
   checkParamConfig(activity_manager_config);
   checkParamConfig(tsdf_registrator_config);
@@ -17,19 +20,13 @@ void MapManager::Config::checkParams() const {
 
 void MapManager::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-
-  // Frequency.
   setupParam("prune_active_blocks_frequency", &prune_active_blocks_frequency);
   setupParam("activity_management_frequency", &activity_management_frequency);
   setupParam("change_detection_frequency", &change_detection_frequency);
-
-  // Behavior.
   setupParam("merge_deactivated_submaps_if_possible",
              &merge_deactivated_submaps_if_possible);
   setupParam("apply_class_layer_when_deactivating_submaps",
              &apply_class_layer_when_deactivating_submaps);
-
-  // Member configs.
   setupParam("activity_manager_config", &activity_manager_config,
              "activity_manager");
   setupParam("tsdf_registrator_config", &tsdf_registrator_config,
@@ -150,8 +147,9 @@ void MapManager::manageSubmapActivity(SubmapCollection* submaps) {
           current_id = merged_id;
         }
         if (current_id == id) {
-          std::cout << "Submap " << id
-                    << " was deactivated, could not be matched." << std::endl;
+          LOG_IF(INFO, config_.verbosity >= 4)
+              << "Submap " << id << " was deactivated, could not be matched."
+              << std::endl;
         }
       }
     }
@@ -169,16 +167,17 @@ void MapManager::finishMapping(SubmapCollection* submaps) {
   for (Submap& submap : *submaps) {
     info << pruneBlocks(&submap);
   }
-  LOG(INFO) << info.str();
+  LOG_IF(INFO, config_.verbosity >= 3) << info.str();
 
   // Deactivate last submaps.
   for (Submap& submap : *submaps) {
     if (submap.isActive()) {
-      std::cout << "Deactivating submap " << submap.getID() << std::endl;
+      LOG_IF(INFO, config_.verbosity >= 3)
+          << "Deactivating submap " << submap.getID();
       submap.finishActivePeriod();
     }
   }
-  std::cout << "Merging Submaps:" << std::endl;
+  LOG_IF(INFO, config_.verbosity >= 3) << "Merging Submaps:";
 
   // Merge what is possible.
   bool merged_something = true;
@@ -192,19 +191,22 @@ void MapManager::finishMapping(SubmapCollection* submaps) {
   }
 
   // Finish submaps.
-  // std::cout << "Applying class layers:" << std::endl;
-  // std::vector<int> empty_submaps;
-  // for (Submap& submap : *submaps) {
-  //   if (submap.hasClassLayer()) {
-  //     if (!submap.applyClassLayer(*layer_manipulator_)) {
-  //       empty_submaps.emplace_back(submap.getID());
-  //     }
-  //   }
-  // }
-  // for (const int id : empty_submaps) {
-  //   submaps->removeSubmap(id);
-  //   std::cout << "Removed submap " << id << " which was empty.";
-  // }
+  if (config_.apply_class_layer_when_deactivating_submaps) {
+    LOG_IF(INFO, config_.verbosity >= 3) << "Applying class layers:";
+    std::vector<int> empty_submaps;
+    for (Submap& submap : *submaps) {
+      if (submap.hasClassLayer()) {
+        if (!submap.applyClassLayer(*layer_manipulator_)) {
+          empty_submaps.emplace_back(submap.getID());
+        }
+      }
+    }
+    for (const int id : empty_submaps) {
+      submaps->removeSubmap(id);
+      LOG_IF(INFO, config_.verbosity >= 3)
+          << "Removed submap " << id << " which was empty.";
+    }
+  }
 }
 
 bool MapManager::mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,

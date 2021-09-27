@@ -45,12 +45,15 @@ cs_add_library(${PROJECT_NAME}
         src/integration/projection_interpolators.cpp
         src/integration/mesh_integrator.cpp
         src/map_management/map_manager.cpp
+        src/map_management/null_map_manager.cpp
         src/map_management/activity_manager.cpp
         src/map_management/tsdf_registrator.cpp
         src/map_management/layer_manipulator.cpp
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
-        src/tools/data_writer.cpp
+        src/tools/null_data_writer.cpp
+        src/tools/log_data_writer.cpp
+        src/tools/evaluation_data_writer.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
 

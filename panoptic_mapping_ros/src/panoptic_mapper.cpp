@@ -1,8 +1,10 @@
 #include "panoptic_mapping_ros/panoptic_mapper.h"
 
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
@@ -11,6 +13,21 @@
 #include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
 namespace panoptic_mapping {
+
+// Modules that don't have a default type will be required to be explicitly set.
+// Entries: <key, <ros_namespace, default type parameter>.
+const std::map<std::string, std::pair<std::string, std::string>>
+    PanopticMapper::default_names_and_types_ = {
+        {"camera", {"camera", ""}},
+        {"submap_allocator", {"submap_allocator", "semantic"}},
+        {"freespace_allocator", {"freespace_allocator", "monolithic"}},
+        {"id_tracker", {"id_tracker", ""}},
+        {"tsdf_integrator", {"tsdf_integrator", ""}},
+        {"map_management", {"map_management", "null"}},
+        {"vis_submaps", {"visualization/submaps", "submaps"}},
+        {"vis_tracking", {"visualization/tracking", ""}},
+        {"vis_planning", {"visualization/planning", ""}},
+        {"data_writer", {"data_writer", "null"}}};
 
 void PanopticMapper::Config::checkParams() const {
   checkParamCond(!global_frame_name.empty(),
@@ -22,16 +39,18 @@ void PanopticMapper::Config::checkParams() const {
 void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("global_frame_name", &global_frame_name);
-  setupParam("visualization_interval", &visualization_interval);
-  setupParam("data_logging_interval", &data_logging_interval);
-  setupParam("print_timing_interval", &print_timing_interval);
+  setupParam("visualization_interval", &visualization_interval, "s");
+  setupParam("data_logging_interval", &data_logging_interval, "s");
+  setupParam("print_timing_interval", &print_timing_interval, "s");
   setupParam("use_threadsafe_submap_collection",
              &use_threadsafe_submap_collection);
   setupParam("ros_spinner_threads", &ros_spinner_threads);
-  setupParam("check_input_interval", &check_input_interval);
+  setupParam("check_input_interval", &check_input_interval, "s");
   setupParam("load_submaps_conservative", &load_submaps_conservative);
   setupParam("shutdown_when_finished", &shutdown_when_finished);
   setupParam("save_map_path_when_finished", &save_map_path_when_finished);
+  setupParam("display_config_units", &display_config_units);
+  setupParam("indicate_default_values", &indicate_default_values);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -41,7 +60,15 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
       config_(
           config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
               .checkValid()) {
+  // Setup printing of configs. NOTE(schmluk): These settings are global so
+  // multiple panoptic mappers in the same process might interfere.
+  config_utilities::GlobalSettings().indicate_default_values =
+      config_.indicate_default_values;
+  config_utilities::GlobalSettings().indicate_units =
+      config_.display_config_units;
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
+  // Setup all components of the panoptic mapper.
   setupMembers();
   setupRos();
 }
@@ -55,8 +82,7 @@ void PanopticMapper::setupMembers() {
 
   // Camera.
   auto camera = std::make_shared<Camera>(
-      config_utilities::getConfigFromRos<Camera::Config>(
-          ros::NodeHandle(nh_private_, "camera")));
+      config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
 
   // Labels.
   std::string label_path;
@@ -70,47 +96,45 @@ void PanopticMapper::setupMembers() {
   // Submap Allocation.
   std::shared_ptr<SubmapAllocatorBase> submap_allocator =
       config_utilities::FactoryRos::create<SubmapAllocatorBase>(
-          ros::NodeHandle(nh_private_, "submap_allocator"));
+          defaultNh("submap_allocator"));
   std::shared_ptr<FreespaceAllocatorBase> freespace_allocator =
       config_utilities::FactoryRos::create<FreespaceAllocatorBase>(
-          ros::NodeHandle(nh_private_, "freespace_allocator"));
+          defaultNh("freespace_allocator"));
 
   // ID Tracking.
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
-      ros::NodeHandle(nh_private_, "id_tracker"), globals_);
+      defaultNh("id_tracker"), globals_);
   id_tracker_->setSubmapAllocator(submap_allocator);
   id_tracker_->setFreespaceAllocator(freespace_allocator);
 
   // Tsdf Integrator.
   tsdf_integrator_ = config_utilities::FactoryRos::create<TsdfIntegratorBase>(
-      ros::NodeHandle(nh_private_, "tsdf_integrator"), globals_);
+      defaultNh("tsdf_integrator"), globals_);
 
   // Map Manager.
-  map_manager_ = std::make_unique<MapManager>(
-      config_utilities::getConfigFromRos<MapManager::Config>(
-          ros::NodeHandle(nh_private_, "map_management")));
+  map_manager_ = config_utilities::FactoryRos::create<MapManagerBase>(
+      defaultNh("map_management"));
 
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
 
   // Submaps.
   submap_visualizer_ = config_utilities::FactoryRos::create<SubmapVisualizer>(
-      ros::NodeHandle(visualization_nh, "submaps"), globals_);
+      defaultNh("vis_submaps"), globals_);
   submap_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
   // Tracking.
   tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
       config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
-          ros::NodeHandle(visualization_nh, "tracking")));
+          defaultNh("vis_tracking")));
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
 
   // Planning.
   setupCollectionDependentMembers();
 
   // Data Logging.
-  data_logger_ = std::make_unique<DataWriter>(
-      config_utilities::getConfigFromRos<DataWriter::Config>(
-          ros::NodeHandle(nh_private_, "data_writer")));
+  data_logger_ = config_utilities::FactoryRos::create<DataWriterBase>(
+      defaultNh("data_writer"));
 
   // Setup all requested inputs from all modules.
   InputData::InputTypes requested_inputs;
@@ -143,8 +167,7 @@ void PanopticMapper::setupCollectionDependentMembers() {
   // Planning Visualizer.
   planning_visualizer_ = std::make_unique<PlanningVisualizer>(
       config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
-          ros::NodeHandle(ros::NodeHandle(nh_private_, "visualization"),
-                          "planning")),
+          defaultNh("vis_planning")),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 }
@@ -421,6 +444,19 @@ bool PanopticMapper::finishMappingCallback(
     std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
   finishMapping();
   return true;
+}
+
+ros::NodeHandle PanopticMapper::defaultNh(const std::string& key) const {
+  // Essentially just read the default namespaces list and type params.
+  // NOTE(schmluk): Since these lookups are quasi-static we don't check for
+  // correct usage here.
+  const std::pair<std::string, std::string>& ns_and_type =
+      default_names_and_types_.at(key);
+  ros::NodeHandle nh_out(nh_private_, ns_and_type.first);
+  if (!ns_and_type.second.empty() && !nh_out.hasParam("type")) {
+    nh_out.setParam("type", ns_and_type.second);
+  }
+  return nh_out;
 }
 
 }  // namespace panoptic_mapping

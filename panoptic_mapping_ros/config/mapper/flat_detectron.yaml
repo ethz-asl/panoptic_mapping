@@ -78,6 +78,7 @@ tsdf_integrator:
   update_only_tracked_submaps: true
   
 map_management:
+  type: submaps
   verbosity: 4
   
   # Frequencies
@@ -130,11 +131,3 @@ visualization:
   tracking:
     verbosity: 1
     visualize_tracking: true
-  
-data_writer:
-  verbosity: 1
-  output_directory: /home/lukas/Documents/PanopticMapping/Data/run_logs
-  file_name: ""
-
-  
-

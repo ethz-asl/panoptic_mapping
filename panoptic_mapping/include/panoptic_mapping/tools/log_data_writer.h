@@ -1,13 +1,15 @@
-#ifndef PANOPTIC_MAPPING_TOOLS_DATA_WRITER_H_
-#define PANOPTIC_MAPPING_TOOLS_DATA_WRITER_H_
+#ifndef PANOPTIC_MAPPING_TOOLS_LOG_DATA_WRITER_H_
+#define PANOPTIC_MAPPING_TOOLS_LOG_DATA_WRITER_H_
 
 #include <fstream>
+#include <functional>
 #include <string>
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap_collection.h"
+#include "panoptic_mapping/tools/data_writer_base.h"
 
 namespace panoptic_mapping {
 
@@ -15,58 +17,58 @@ namespace panoptic_mapping {
  * @brief Utility class that evaluates certain metrics during experiments and
  * writes them to a log file.
  */
-
-class DataWriter {
+class LogDataWriter : public DataWriterBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 4;
 
-    // Output.
-    std::string output_directory = "";  // Target directory needs to exist.
-    std::string file_name = "panoptic_mapping_data";  // Filename without suffix
+    // Target directory to write the output to. This needs to exist already.
+    std::string output_directory = "";
 
-    // Evaluation Fields.
+    // File name of the log file without suffix.
+    std::string file_name = "panoptic_mapping_data";
+
+    // Which fields to evaluate Fields.
     bool evaluate_number_of_submaps = true;
     bool evaluate_number_of_active_submaps = true;
     bool evaluate_numer_of_objects = true;
-    int store_map_every_n_frames = 0;
 
-    Config() { setConfigName("DataWriter"); }
+    Config() { setConfigName("LogDataWriter"); }
 
    protected:
     void setupParamsAndPrinting() override;
     void checkParams() const override;
   };
 
-  explicit DataWriter(const Config& config);
-  virtual ~DataWriter();
+  explicit LogDataWriter(const Config& config, bool print_config = true);
+  ~LogDataWriter() override;
 
-  void writeData(double time_stamp, const SubmapCollection& submaps);
+  void writeData(double time_stamp, const SubmapCollection& submaps) override;
 
  private:
+  static config_utilities::Factory::RegistrationRos<DataWriterBase,
+                                                    LogDataWriter>
+      registration_;
   const Config config_;
 
+ protected:
   // Data.
   std::string output_path_;
   std::string outfile_name_;
   std::ofstream outfile_;
-  std::vector<void (DataWriter::*)(const SubmapCollection&)> evaluations_;
-
-  // Tracking variables.
-  int store_submap_frame_ = 0;
-  int store_submap_counter_ = 0;
+  std::vector<std::function<void(const SubmapCollection&)>> evaluations_;
 
   // Methods.
-  void setupEvaluations();
+  virtual void setupLogFile();
+  virtual void setupEvaluations();
   void writeEntry(const std::string& value);
 
   // Evaluations. The data are always preceded by a separating comma.
   void evaluateNumberOfSubmaps(const SubmapCollection& submaps);
   void evaluateNumberOfActiveSubmaps(const SubmapCollection& submaps);
   void evaluateNumberOfObjects(const SubmapCollection& submaps);
-  void storeSubmaps(const SubmapCollection& submaps);
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_TOOLS_DATA_WRITER_H_
+#endif  // PANOPTIC_MAPPING_TOOLS_LOG_DATA_WRITER_H_
