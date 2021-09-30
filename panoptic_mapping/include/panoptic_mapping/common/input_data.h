@@ -39,7 +39,8 @@ class InputData {
     kSegmentationImage,
     kDetectronLabels,
     kVertexMap,
-    kValidityImage
+    kValidityImage,
+    kUncertaintyImage
   };
 
   static std::string inputTypeToString(InputType type) {
@@ -52,16 +53,20 @@ class InputData {
         return "Segmentation Image";
       case InputType::kDetectronLabels:
         return "Detectron Labels";
+      case InputType::kUncertaintyImage:
+        return "Uncertainty Image";
       case InputType::kVertexMap:
         return "Vertex Map";
       case InputType::kValidityImage:
         return "Validity Image";
+      default:
+        return "Unknown Input";
     }
   }
 
   using InputTypes = std::unordered_set<InputType>;
 
-  /* Construction */
+  // Construction.
   InputData() = default;
   virtual ~InputData() = default;
 
@@ -96,7 +101,12 @@ class InputData {
     contained_inputs_.insert(InputType::kValidityImage);
   }
 
-  /* Access */
+  void setUncertaintyImage(const cv::Mat& uncertainty_image) {
+    uncertainty_image_ = uncertainty_image;
+    contained_inputs_.insert(InputType::kUncertaintyImage);
+  }
+
+  // Access.
   // Access to constant data.
   const Transformation& T_M_C() const { return T_M_C_; }
   const std::string& sensorFrameName() const { return sensor_frame_name_; }
@@ -107,18 +117,20 @@ class InputData {
   const cv::Mat& vertexMap() const { return vertex_map_; }
   const cv::Mat& idImage() const { return id_image_; }
   const cv::Mat& validityImage() const { return validity_image_; }
+  const cv::Mat& uncertaintyImage() const { return uncertainty_image_; }
 
   // Access to modifyable data.
   cv::Mat* idImagePtr() { return &id_image_; }
   cv::Mat* validityImagePtr() { return &validity_image_; }
 
-  /* Tools */
+  // Tools.
   bool has(InputType input_type) const {
     return contained_inputs_.find(input_type) != contained_inputs_.end();
   }
 
  private:
   friend InputDataUser;
+  friend class InputSynchronizer;
 
   // Permanent data.
   Transformation T_M_C_;  // Transform from Camera/Sensor (C) to Mission (M).
@@ -129,6 +141,7 @@ class InputData {
   cv::Mat depth_image_;  // Float depth image (CV_32FC1).
   cv::Mat color_image_;  // BGR (CV_8U).
   cv::Mat id_image_;     // Mutable assigned ids as ints (CV_32SC1).
+  cv::Mat uncertainty_image_; // Float image containing uncertainty information (CV_32FC1)
 
   // Common derived data.
   cv::Mat vertex_map_;      // XYZ points (CV32FC3), can be compute via camera.

@@ -1,6 +1,7 @@
 #ifndef PANOPTIC_MAPPING_ROS_INPUT_INPUT_SYNCHRONIZER_H_
 #define PANOPTIC_MAPPING_ROS_INPUT_INPUT_SYNCHRONIZER_H_
 
+#include <atomic>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -71,8 +72,19 @@ class InputSynchronizer : public InputSynchronizerBase {
    */
   std::shared_ptr<InputData> getInputData();
 
-  // Setup tools. Add all inputs and then advertise to finish setup.
+  // Setup.
+  /**
+   * @brief Setup tool. Adds inputs types to the list of required inputs. First
+   * add all inputs, then call 'advertiseInputTopics()'.
+   *
+   * @param types List of types to add to the required inputs.
+   */
   void requestInputs(const InputData::InputTypes& types);
+
+  /**
+   * @brief Setup tool. Subscribes to all required inputs. Use 'requestInputs()'
+   * first to add inputs, then advertise them.
+   */
   void advertiseInputTopics();
 
  private:
@@ -85,9 +97,9 @@ class InputSynchronizer : public InputSynchronizerBase {
    * to input data.
    */
   template <typename MsgT>
-  void addQueue(
-      InputData::InputType type,
-      std::function<void(const MsgT&, InputData*)> extraction_function) {
+  void addQueue(InputData::InputType type,
+                std::function<void(const MsgT&, InputSynchronizerData*)>
+                    extraction_function) {
     subscribers_.emplace_back(std::make_unique<InputSubscriber<MsgT>>(
         nh_, kDefaultTopicNames_.at(type), config_.max_input_queue_length,
         extraction_function, this));
@@ -107,7 +119,6 @@ class InputSynchronizer : public InputSynchronizerBase {
                        const std::string& child_frame,
                        Transformation* transformation) const;
 
-  // These 3 methods modify the data queue so acquire the data_lock_ first.
   bool getDataInQueue(const ros::Time& timestamp,
                       InputSynchronizerData** data) override;
 
@@ -137,9 +148,10 @@ class InputSynchronizer : public InputSynchronizerBase {
       kDefaultTopicNames_;
 
   // Variables.
-  bool data_is_ready_ = false;
+  std::atomic<bool> data_is_ready_;
   ros::Time oldest_time_ = ros::Time(0);
   std::string used_sensor_frame_name_;
+  std::mutex data_mutex_;
 };
 
 }  // namespace panoptic_mapping

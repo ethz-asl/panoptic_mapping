@@ -14,6 +14,7 @@ from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog, DatasetCatalog
+from detectron2.utils.visualizer import Visualizer
 
 from dataclasses import dataclass
 
@@ -35,17 +36,18 @@ def create_labels(meta_data, output_file: str = ""):
                                 quoting=csv.QUOTE_MINIMAL)
             writer.writerow(
                 ["InstanceID", "ClassID", "PanopticID", "Name", "Size"])
-            id = 0
+            writer.writerow([0, 0, 0, "Unknown", "M"])
+            id = 1
             for label in meta_data.stuff_classes:
                 writer.writerow([id, id, 0, label, ''])
                 id += 1
             for i, label in enumerate(meta_data.thing_classes):
-                writer.writerow([id, id, 1, label, ''])  #sizes[i]])
+                writer.writerow([id, id, 1, label, ''])  # sizes[i]])
                 id += 1
-        return len(meta_data.thing_classes), "Saved %i labels in '%s'." % (
+        return len(meta_data.stuff_classes), "Saved %i labels in '%s'." % (
             id, output_file)
     else:
-        return len(meta_data.thing_classes), ""
+        return len(meta_data.stuff_classes), ""
 
 
 def create_predictions(params: Params):
@@ -96,10 +98,12 @@ def create_predictions(params: Params):
         id_img = panoptic_seg.numpy()
         cv2.imwrite(
             os.path.join(params.target_path, file_id + "_predicted.png"),
-            panoptic_seg.numpy())
+            id_img)
+
         for segment_info in segments_info:
             if segment_info['isthing']:
                 segment_info['category_id'] += label_offset
+            segment_info['category_id'] += 1  # Compensate for unknown class.
         with open(os.path.join(params.target_path, file_id + "_labels.json"),
                   'w') as json_file:
             json.dump(segments_info, json_file)

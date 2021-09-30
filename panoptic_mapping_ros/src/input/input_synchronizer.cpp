@@ -40,7 +40,7 @@ void InputSynchronizer::Config::setupParamsAndPrinting() {
 
 InputSynchronizer::InputSynchronizer(const Config& config,
                                      const ros::NodeHandle& nh)
-    : config_(config.checkValid()), nh_(nh) {
+    : config_(config.checkValid()), nh_(nh), data_is_ready_(false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   if (!config_.sensor_frame_name.empty()) {
     used_sensor_frame_name_ = config_.sensor_frame_name;
@@ -57,46 +57,66 @@ void InputSynchronizer::advertiseInputTopics() {
   // Parse all required inputs and allocate an input queue for each.
   // NOTE(schmluk): Image copies appear to be necessary since some of the data
   // is mutable and they get corrupted sometimes otherwise. Better be safe.
+  // NOTE(schmluk): each input writes to a different image so we can do this
+  // concurrently, only lock the mutex when writing to the contained inputs.
   subscribers_.clear();
   subscribed_inputs_.clear();
   for (const InputData::InputType type : requested_inputs_) {
     switch (type) {
       case InputData::InputType::kDepthImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
-        addQueue<MsgT>(type, [this](const MsgT& msg, InputData* data) {
-          cv_bridge::CvImageConstPtr depth = cv_bridge::toCvCopy(msg, "32FC1");
-          data->setDepthImage(depth->image);
-          // NOTE(schmluk): If the sensor frame name is not set recover it from
-          // the depth images.
-          if (this->used_sensor_frame_name_.empty()) {
-            this->used_sensor_frame_name_ = msg->header.frame_id;
-          }
-        });
+        addQueue<MsgT>(
+            type, [this](const MsgT& msg, InputSynchronizerData* data) {
+              const cv_bridge::CvImageConstPtr depth =
+                  cv_bridge::toCvCopy(msg, "32FC1");
+              data->data->depth_image_ = depth->image;
+
+              // NOTE(schmluk): If the sensor frame name is not set
+              // recover it from the depth image.
+              if (this->used_sensor_frame_name_.empty()) {
+                this->used_sensor_frame_name_ = msg->header.frame_id;
+              }
+
+              const std::lock_guard<std::mutex> lock(data->write_mutex_);
+              data->data->contained_inputs_.insert(
+                  InputData::InputType::kDepthImage);
+            });
         subscribed_inputs_.insert(InputData::InputType::kDepthImage);
         break;
       }
       case InputData::InputType::kColorImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
-        addQueue<MsgT>(type, [](const MsgT& msg, InputData* data) {
-          cv_bridge::CvImageConstPtr color = cv_bridge::toCvCopy(msg, "bgr8");
-          data->setColorImage(color->image);
+        addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
+          const cv_bridge::CvImageConstPtr color =
+              cv_bridge::toCvCopy(msg, "bgr8");
+          data->data->color_image_ = color->image;
+          const std::lock_guard<std::mutex> lock(data->write_mutex_);
+          data->data->contained_inputs_.insert(
+              InputData::InputType::kColorImage);
         });
         subscribed_inputs_.insert(InputData::InputType::kColorImage);
         break;
       }
       case InputData::InputType::kSegmentationImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
-        addQueue<MsgT>(type, [](const MsgT& msg, InputData* data) {
-          cv_bridge::CvImageConstPtr seg = cv_bridge::toCvCopy(msg, "32SC1");
-          data->setIdImage(seg->image);
+        addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
+          const cv_bridge::CvImageConstPtr seg =
+              cv_bridge::toCvCopy(msg, "32SC1");
+          data->data->id_image_ = seg->image;
+          const std::lock_guard<std::mutex> lock(data->write_mutex_);
+          data->data->contained_inputs_.insert(
+              InputData::InputType::kSegmentationImage);
         });
         subscribed_inputs_.insert(InputData::InputType::kSegmentationImage);
         break;
       }
       case InputData::InputType::kDetectronLabels: {
         using MsgT = panoptic_mapping_msgs::DetectronLabels;
-        addQueue<MsgT>(type, [](const MsgT& msg, InputData* data) {
-          data->setDetectronLabels(detectronLabelsFromMsg(msg));
+        addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
+          data->data->detectron_labels_ = detectronLabelsFromMsg(msg);
+          const std::lock_guard<std::mutex> lock(data->write_mutex_);
+          data->data->contained_inputs_.insert(
+              InputData::InputType::kDetectronLabels);
         });
         subscribed_inputs_.insert(InputData::InputType::kDetectronLabels);
         break;
@@ -107,6 +127,10 @@ void InputSynchronizer::advertiseInputTopics() {
 
 bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
                                        InputSynchronizerData** data) {
+  // These are common operations for all subscribers so mutex them to avoid race
+  // conditions.
+  std::lock_guard<std::mutex> lock(data_mutex_);
+
   // Check the data is still relevant to the queue.
   if (timestamp < oldest_time_) {
     return false;
@@ -133,6 +157,8 @@ bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
 }
 
 bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
+  // NOTE(schmluk): This obviously modifies the queue but the data_mutex_ should
+  // already be locked from the calling getDataInQueue().
   // Check max queue size.
   if (data_queue_.size() > config_.max_input_queue_length) {
     std::sort(data_queue_.begin(), data_queue_.end(),
@@ -175,6 +201,7 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
 }
 
 void InputSynchronizer::checkDataIsReady(InputSynchronizerData* data) {
+  const std::lock_guard<std::mutex> lock(data->write_mutex_);
   for (const InputData::InputType input : subscribed_inputs_) {
     if (!data->data->has(input)) {
       return;
@@ -187,7 +214,7 @@ void InputSynchronizer::checkDataIsReady(InputSynchronizerData* data) {
 
 std::shared_ptr<InputData> InputSynchronizer::getInputData() {
   std::shared_ptr<InputData> result = nullptr;
-  std::lock_guard<std::mutex> lock(data_lock_);
+  std::lock_guard<std::mutex> lock(data_mutex_);
   // Get the first datum that is ready.
   std::sort(data_queue_.begin(), data_queue_.end(),
             [](const auto& lhs, const auto& rhs) -> bool {
