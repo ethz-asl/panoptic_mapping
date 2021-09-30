@@ -15,6 +15,24 @@ from sensor_msgs.msg import Image, PointCloud2, PointField
 from geometry_msgs.msg import Pose, TransformStamped
 from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
+# These are the standard data-hashes used. Can be replaced via ROS-param.
+DATA_IDS = [[
+    '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
+    '2451c041-fae8-24f6-9213-b8b6af8d86c1',
+    'ddc73793-765b-241a-9ecd-b0cebb7cf916',
+    'ddc73795-765b-241a-9c5d-b97744afe077'
+],
+            [
+                '1776ad7e-4db7-2333-89e1-66854e82170c',
+                '1776ad82-4db7-2333-89e4-d73159ac81d0',
+                '1776ad86-4db7-2333-8935-240e44ccb16d',
+                '1776ad84-4db7-2333-8aa7-2cc9126d5f71'
+            ],
+            [
+                '20c9939d-698f-29c5-85c6-3c618e00061f',
+                'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26'
+            ]]
+
 
 class CameraIntrinsics(object):
     def __init__(self):
@@ -32,23 +50,7 @@ class RioPlayer(object):
         # params
         self.base_path = rospy.get_param(
             '~base_path', '/home/lukas/Documents/Datasets/3RScan')
-        self.data_ids = rospy.get_param(
-            '~data_ids', [[
-                '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
-                '2451c041-fae8-24f6-9213-b8b6af8d86c1',
-                'ddc73793-765b-241a-9ecd-b0cebb7cf916',
-                'ddc73795-765b-241a-9c5d-b97744afe077'
-            ],
-                          [
-                              '1776ad7e-4db7-2333-89e1-66854e82170c',
-                              '1776ad82-4db7-2333-89e4-d73159ac81d0',
-                              '1776ad86-4db7-2333-8935-240e44ccb16d',
-                              '1776ad84-4db7-2333-8aa7-2cc9126d5f71'
-                          ],
-                          [
-                              '20c9939d-698f-29c5-85c6-3c618e00061f',
-                              'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26'
-                          ]])
+        self.data_ids = rospy.get_param('~data_ids', DATA_IDS)
         self.scene_id = rospy.get_param('~scene_id', 0)
         self.scan_id = rospy.get_param('~scan_id', 0)
         self.rate = float(rospy.get_param('~play_rate', 5))  # Hz
@@ -266,7 +268,7 @@ class RioPlayer(object):
         # segmentation image
         if self.use_detectron:
             seg_file = os.path.join(self.base_path, self.data_id, "sequence",
-                                    frame_name + "_predicted2.png")
+                                    frame_name + "_predicted.png")
             cv_seg = cv2.imread(seg_file)
 
             # Load and publish labels.

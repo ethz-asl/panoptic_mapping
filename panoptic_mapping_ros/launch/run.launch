@@ -2,7 +2,7 @@
 <!-- ============ Arguments ============ -->
   <!-- General -->
   <arg name="namespace" default="data"/> 
-  <arg name="use_rio" default="false"/>
+  <arg name="use_rio" default="true"/>
   <arg name="use_detectron" default="false"/>
   <arg name="visualize" default="true"/> 
   
@@ -19,7 +19,7 @@
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="flat_groundtruth"/> <!-- flat_groundtruth, flat_detectron, rio_groundtruth, rio_detectron -->
+  <arg name="config" default="rio_groundtruth"/> <!-- flat_groundtruth, flat_detectron, rio_groundtruth, rio_detectron -->
   <arg name="shutdown_when_finished" default="false"/> 
   
   <!-- Save/Load maps -->
