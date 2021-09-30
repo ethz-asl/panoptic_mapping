@@ -14,11 +14,11 @@ namespace panoptic_mapping {
 #define PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
 
 // How many decimal points of the uncertainty value should be used.
-// note value is converted to <int|ushort> using uncertainty_value * accuracy.
+// note value is converted to <int|short> using uncertainty_value * accuracy.
 // Thus if uncertainty_value * accuracy > max_size(<int32|short>) an overflow
-// occures Using ushort as datatype to save memory and having uncertainty values
-// <= 1 limits accuracy to max 10^4 Using uint as datatype limits accuracy to
-// 10^8
+// occurs.
+// Using short as datatype to save memory and having uncertainty values <= 1
+// limits accuracy to: 10^-4 sing short   and   10^-8 Using int
 #define UNCERTAINTY_ACCURACY int(1000)
 // Uncertainty is updated as UNCERTAINTY_DECAY_RATE * old_value +
 // (1-UNCERTAINTY_DECAY_RATE) * new_value Setting this to 0 will always fully
