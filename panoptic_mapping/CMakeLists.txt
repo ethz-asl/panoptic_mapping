@@ -52,8 +52,18 @@ cs_add_library(${PROJECT_NAME}
         src/tools/planning_interface.cpp
         src/tools/map_renderer.cpp
         src/tools/data_writer.cpp
+        src/tools/serialization.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto)
+
+##########
+# Tests #
+##########
+
+if (CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(serialization_tests tests/serialization_tests.cpp)
+    target_link_libraries(serialization_tests ${catkin_LIBRARIES} ${PROJECT_NAME})
+endif()
 
 ##########
 # Export #
