@@ -89,7 +89,7 @@ void SubmapVisualizer::clearMesh() {
     for (auto& info : vis_infos_) {
       voxblox_msgs::MultiMesh msg;
       msg.header.stamp = ros::Time::now();
-      msg.name_space = std::to_string(info.second.id);
+      msg.name_space = info.second.name_space;
       mesh_pub_.publish(msg);
     }
   }
@@ -169,6 +169,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
+
     // Find the corresponding info.
     auto it = vis_infos_.find(submap.getID());
     if (it == vis_infos_.end()) {
@@ -201,7 +202,9 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     // Set the voxblox internal color mode. Gray will be used for overwriting.
     voxblox::ColorMode color_mode_voxblox = voxblox::ColorMode::kGray;
     if (color_mode_ == ColorMode::kColor ||
-        color_mode_ == ColorMode::kClassification) {
+        color_mode_ == ColorMode::kClassification ||
+        (color_mode_ == ColorMode::kPersistent &&
+         submap.getChangeState() != ChangeState::kAbsent)) {
       color_mode_voxblox = voxblox::ColorMode::kColor;
     } else if (color_mode_ == ColorMode::kNormals) {
       color_mode_voxblox = voxblox::ColorMode::kNormals;
@@ -343,6 +346,8 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
     if (vis_it != vis_infos_.end()) {
       color = vis_it->second.color;
     }
+
+    color = Color(0, 0, 255);
 
     for (auto& block_index : blocks) {
       visualization_msgs::Marker marker;
@@ -508,8 +513,8 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
 
   // Update according to color mode.
   if (info->change_color || color_mode_ == ColorMode::kChange) {
-    // NOTE(schmluk): Modes 'color' and 'normals' are handled by the mesher,
-    // so no need to set here.
+    // NOTE(schmluk): Modes 'color', 'normals' are handled by
+    // the mesher, so no need to set here.
     switch (color_mode_) {
       case ColorMode::kInstances: {
         if (globals_->labelHandler()->segmentationIdExists(
@@ -563,12 +568,18 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
         }
         break;
       }
+      case ColorMode::kPersistent: {
+        // The color will only be applied to absent submaps.
+        info->color = Color(255, 0, 0);
+        break;
+      }
     }
   }
 
   // Update according to visualization mode.
   if (info->change_color || visualization_mode_ == VisualizationMode::kActive ||
-      visualization_mode_ == VisualizationMode::kInactive) {
+      visualization_mode_ == VisualizationMode::kInactive ||
+      visualization_mode_ == VisualizationMode::kPersistent) {
     switch (visualization_mode_) {
       case VisualizationMode::kAll: {
         info->alpha = 1.f;
@@ -595,6 +606,21 @@ void SubmapVisualizer::setSubmapVisColor(const Submap& submap,
           }
           info->republish_everything = true;
           info->was_active = submap.isActive();
+        }
+        break;
+      }
+      case VisualizationMode::kPersistent: {
+        const bool is_persistent =
+            submap.isActive() ||
+            submap.getChangeState() == ChangeState::kPersistent;
+        if (info->was_active != is_persistent || info->change_color) {
+          if (is_persistent) {
+            info->alpha = 1.0f;
+          } else {
+            info->alpha = 0.4f;
+          }
+          info->republish_everything = true;
+          info->was_active = is_persistent;
         }
         break;
       }
@@ -630,8 +656,12 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kInstances;
   } else if (color_mode == "classes") {
     return ColorMode::kClasses;
+  } else if (color_mode == "change") {
+    return ColorMode::kChange;
   } else if (color_mode == "classification") {
     return ColorMode::kClassification;
+  } else if (color_mode == "persistent") {
+    return ColorMode::kPersistent;
   } else {
     LOG(WARNING) << "Unknown ColorMode '" << color_mode
                  << "', using 'color' instead.";
@@ -655,8 +685,11 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
       return "change";
     case ColorMode::kClassification:
       return "classification";
+    case ColorMode::kPersistent:
+      return "persistent";
+    default:
+      return "unknown";
   }
-  return "unknown";
 }
 
 SubmapVisualizer::VisualizationMode
@@ -670,6 +703,8 @@ SubmapVisualizer::visualizationModeFromString(
     return VisualizationMode::kActiveOnly;
   } else if (visualization_mode == "inactive") {
     return VisualizationMode::kInactive;
+  } else if (visualization_mode == "persistent") {
+    return VisualizationMode::kPersistent;
   } else {
     LOG(WARNING) << "Unknown VisualizationMode '" << visualization_mode
                  << "', using 'all' instead.";
@@ -688,8 +723,11 @@ std::string SubmapVisualizer::visualizationModeToString(
       return "active_only";
     case VisualizationMode::kInactive:
       return "inactive";
+    case VisualizationMode::kPersistent:
+      return "persistent";
+    default:
+      return "unknown";
   }
-  return "unknown";
 }
 
 }  // namespace panoptic_mapping

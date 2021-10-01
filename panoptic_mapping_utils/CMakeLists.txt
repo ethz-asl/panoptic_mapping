@@ -23,6 +23,11 @@ cs_add_executable(single_map_evaluation
         )
 target_link_libraries(single_map_evaluation ${PROJECT_NAME})
 
+cs_add_executable(multi_map_evaluation
+        app/multi_map_evaluation.cpp
+        )
+target_link_libraries(multi_map_evaluation ${PROJECT_NAME})
+
 ##########
 # Export #
 ##########

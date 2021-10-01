@@ -13,6 +13,7 @@ from PIL import Image as PilImage
 import numpy as np
 import tf
 
+from std_srvs.srv import Empty, EmptyResponse
 from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 
@@ -27,6 +28,8 @@ class FlatDataPlayer(object):
                                                  "depth_cam")
         self.use_detectron = rospy.get_param('~use_detectron', False)
         self.play_rate = rospy.get_param('~play_rate', 1.0)
+        self.wait = rospy.get_param('~wait', False)
+        self.max_frames = rospy.get_param('~max_frames', 1e9)
         self.refresh_rate = 100  # Hz
 
         # ROS
@@ -59,10 +62,18 @@ class FlatDataPlayer(object):
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
         self.times = sorted(self.times)
         self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
+        self.start_time = None
+
+        if self.wait:
+            self.start_srv = rospy.Service('~start', Empty, self.start)
+        else:
+            self.start(None)
+
+    def start(self, _):
+        self.running = True
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate),
                                  self.callback)
-        self.running = True
-        self.start_time = None
+        return EmptyResponse()
 
     def callback(self, _):
         # Check we should be publishing.
@@ -168,6 +179,9 @@ class FlatDataPlayer(object):
         self.pose_pub.publish(pose_msg)
 
         self.current_index += 1
+        if self.current_index > self.max_frames:
+            rospy.signal_shutdown("Played reached max frames (%i)" %
+                                  self.max_frames)
 
 
 if __name__ == '__main__':

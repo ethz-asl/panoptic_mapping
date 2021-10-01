@@ -23,8 +23,9 @@ void ClassProjectiveIntegrator::Config::checkParams() const {
 
 void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("use_accurate_classification", &use_accurate_classification);
+  setupParam("use_binary_classification", &use_binary_classification);
   setupParam("use_instance_classification", &use_instance_classification);
+  setupParam("update_only_tracked_submaps", &update_only_tracked_submaps);
   setupParam("projective_integrator_config", &pi_config);
 }
 
@@ -33,6 +34,13 @@ ClassProjectiveIntegrator::ClassProjectiveIntegrator(
     : config_(config.checkValid()),
       ProjectiveIntegrator(config.pi_config, std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
+  // Store class count.
+  if (!config_.use_binary_classification &&
+      !config_.use_instance_classification) {
+    // The +1 is added because 0 is reserved for the belonging submap.
+    num_classes_ = globals_->labelHandler()->numberOfLabels() + 1;
+  }
 }
 
 void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
@@ -42,6 +50,14 @@ void ClassProjectiveIntegrator::processInput(SubmapCollection* submaps,
   id_to_class_.clear();
   for (const Submap& submap : *submaps) {
     id_to_class_.emplace(submap.getID(), submap.getClassID());
+  }
+  id_to_class_[-1] = -1;  // Used for unknown classes.
+  if (config_.use_instance_classification &&
+      !config_.use_binary_classification) {
+    // Track the number of classes (where classes in this case are instances).
+    // NOTE(schmluk): This is dangerous if submaps are de-allocated and can grow
+    // arbitrarily large.
+    num_classes_ = id_to_class_.size() + 1;
   }
 
   // Run the integration.
@@ -53,99 +69,127 @@ void ClassProjectiveIntegrator::updateBlock(
     const voxblox::BlockIndex& block_index, const Transformation& T_C_S,
     const InputData& input) const {
   CHECK_NOTNULL(submap);
-  // set up preliminaries
+  // Set up preliminaries.
   if (!submap->getTsdfLayer().hasBlock(block_index)) {
-    LOG(WARNING) << "Tried to access inexistent block '"
-                 << block_index.transpose() << "' in submap " << submap->getID()
-                 << ".";
+    LOG_IF(WARNING, config_.verbosity >= 1)
+        << "Tried to access inexistent block '" << block_index.transpose()
+        << "' in submap " << submap->getID() << ".";
     return;
   }
-  const bool use_class_layer = submap->hasClassLayer();
-  const bool is_free_space_submap =
-      submap->getLabel() == PanopticLabel::kFreeSpace;
-  voxblox::Block<TsdfVoxel>& block =
-      submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
-  block.setUpdatedAll();
-  // Allocate if not yet existent the class block
-  ClassBlock::Ptr class_block;
-  if (use_class_layer) {
-    class_block =
-        submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
-  }
-
+  TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
+  const bool is_free_space_submap =
+      submap->getLabel() == PanopticLabel::kFreeSpace;
+  bool was_updated = false;
+
+  // Allocate the class block if not yet existent and get it.
+  ClassBlock::Ptr class_block = nullptr;
+  if (submap->hasClassLayer() &&
+      (!config_.update_only_tracked_submaps || submap->wasTracked())) {
+    class_block =
+        submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
+  }
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
-                                  i);  // voxel center in camera frame
-
-    // Compute the signed distance. This also sets up the interpolator.
-    float sdf;
-    if (!computeSignedDistance(p_C, interpolator, &sdf)) {
-      continue;
-    }
-    if (sdf < -truncation_distance) {
-      continue;
+                                  i);  // Voxel center in camera frame.
+    ClassVoxel* class_voxel = nullptr;
+    if (class_block) {
+      class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
 
-    // Check whether this is a clearing or an updating measurement.
-    int id = interpolator->interpolateID(input.idImage());
+    if (updateVoxel(interpolator, &voxel, p_C, input, submap_id,
+                    is_free_space_submap, truncation_distance, voxel_size,
+                    class_voxel)) {
+      was_updated = true;
+    }
+  }
+  if (was_updated) {
+    block.setUpdatedAll();
+  }
+}
 
-    // Compute the weight of the measurement.
-    const float weight =
-        computeWeight(p_C, voxel_size, truncation_distance, sdf);
+bool ClassProjectiveIntegrator::updateVoxel(
+    InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
+    const InputData& input, const int submap_id,
+    const bool is_free_space_submap, const float truncation_distance,
+    const float voxel_size, ClassVoxel* class_voxel) const {
+  // Compute the signed distance. This also sets up the interpolator.
+  float sdf;
+  if (!computeSignedDistance(p_C, interpolator, &sdf)) {
+    return false;
+  }
+  if (sdf < -truncation_distance) {
+    return false;
+  }
 
-    // Truncate the sdf to the truncation band.
-    sdf = std::min(truncation_distance, sdf);
+  // Compute the weight of the measurement.
+  const float weight = computeWeight(p_C, voxel_size, truncation_distance, sdf);
 
-    // Only merge color and class information near the surface and if point
-    // belongs to the submap.
-    if (std::abs(sdf) > truncation_distance) {
-      updateVoxelValues(&voxel, sdf, weight);
+  // Truncate the sdf to the truncation band.
+  sdf = std::min(sdf, truncation_distance);
+
+  // Only merge color and classification data near the surface.
+  if (std::abs(sdf) >= truncation_distance || is_free_space_submap) {
+    updateVoxelValues(voxel, sdf, weight);
+  } else {
+    const Color color = interpolator->interpolateColor(input.colorImage());
+    updateVoxelValues(voxel, sdf, weight, &color);
+
+    // Update the class voxel.
+    if (class_voxel) {
+      updateClassVoxel(interpolator, class_voxel, input, submap_id);
+    }
+  }
+  return true;
+}
+
+void ClassProjectiveIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
+                                                 ClassVoxel* voxel,
+                                                 const InputData& input,
+                                                 const int submap_id) const {
+  if (config_.use_binary_classification) {
+    if (config_.use_instance_classification) {
+      // Just count how often the assignments were right.
+      classVoxelIncrementBinary(
+          voxel, interpolator->interpolateID(input.idImage()) == submap_id);
     } else {
-      const Color color = interpolator->interpolateColor(input.colorImage());
-      updateVoxelValues(&voxel, sdf, weight, &color);
-      // Update class tracking.
-      if (use_class_layer) {
-        ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
-        // The id 0 is reserved for the belonging submap, others are offset
-        // by 1.
-        if (config_.use_instance_classification) {
-          if (id == submap_id) {
-            id = 0;
-          } else {
-            id++;
-          }
-        } else {
-          // Use class labels.
-          auto it = id_to_class_.find(id);
-          if (it == id_to_class_.end()) {
-            // Unknown labels will be ignored.
-            continue;
-          }
-          id = it->second;
-          if (id == submap->getClassID()) {
-            id = 0;
-          }
-        }
-        if (config_.use_accurate_classification) {
-          const ClassVoxel::Counter counts = ++(class_voxel.counts[id]);
-          if (counts > class_voxel.belongs_count) {
-            class_voxel.belongs_count = counts;
-            class_voxel.current_index = id;
-          }
-        } else {
-          if (id == 0) {
-            class_voxel.belongs_count++;
-          } else {
-            class_voxel.foreign_count++;
-          }
-        }
+      // Only the class needs to match.
+      auto it = id_to_class_.find(submap_id);
+      auto it2 =
+          id_to_class_.find(interpolator->interpolateID(input.idImage()));
+      if (it != id_to_class_.end() && it2 != id_to_class_.end()) {
+        classVoxelIncrementBinary(voxel, it->second == it2->second);
+      } else {
+        classVoxelIncrementBinary(voxel, false);
       }
+    }
+  } else {
+    if (config_.use_instance_classification) {
+      if (voxel->counts.size() < num_classes_) {
+        voxel->counts.resize(num_classes_);
+      }
+      int id = interpolator->interpolateID(input.idImage());
+      if (id == submap_id) {
+        id = 0;
+      }
+      classVoxelIncrementClass(voxel, id);
+    } else {
+      if (voxel->current_index < 0) {
+        // This means the voxel is uninitialized.
+        voxel->counts.resize(num_classes_);
+      }
+      // TODO(schmluk): This might out_of_range for unknown classes or similar,
+      // how to handle these cases?
+      int id = id_to_class_.at(interpolator->interpolateID(input.idImage()));
+      if (id == id_to_class_.at(submap_id)) {
+        id = 0;
+      }
+      classVoxelIncrementClass(voxel, id);
     }
   }
 }

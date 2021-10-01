@@ -4,6 +4,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -48,34 +49,6 @@ class Submap {
       InstanceIDManager* instance_id_manager =
           InstanceIDManager::getGlobalInstance());
   virtual ~Submap() = default;
-
-  // IO.
-  /**
-   * @brief Serialize the submap to protobuf.
-   *
-   * @param proto The output protobuf object.
-   */
-  void getProto(SubmapProto* proto) const;
-
-  /**
-   * @brief Save the submap to file.
-   *
-   * @param outfile_ptr The file to write the protobuf data to.
-   * @return Success of the saving operation.
-   */
-  bool saveToStream(std::fstream* outfile_ptr) const;
-
-  /**
-   * @brief Load the submap from file.
-   *
-   * @param proto_file_ptr File from where to read the protobuf data.
-   * @param tmp_byte_offset_ptr Byte offset result, used to keep track where we
-   * are in the file if necessary. NOTE(schmluk): Mostly unused, initialize to
-   * 0.
-   * @return Unique pointer to the loaded submap.
-   */
-  static std::unique_ptr<Submap> loadFromStream(std::istream* proto_file_ptr,
-                                                uint64_t* tmp_byte_offset_ptr);
 
   // Const accessors.
   const Config& getConfig() const { return config_; }
@@ -166,8 +139,8 @@ class Submap {
    * layer. Uses the provided manipulator to perform the class layer
    * integration.
    *
-   * @param manipulator Manipulator used to carry out the application of the
-   * class layer.
+   * @param manipulator Manipulator used to carry out the application
+   * of the class layer.
    * @param clear_class_layer True: erase the class layer. False: keep the class
    * layer for lookups, but no further manipulations.
    * @return True if any blocks remain, false if the TSDF map was cleared.
@@ -200,6 +173,41 @@ class Submap {
 
   // Setup.
   void initialize();
+
+  // IO.
+  /**
+   * @brief Serialize the submap to protobuf.
+   *
+   * @param proto The output protobuf object.
+   */
+  void getProto(SubmapProto* proto) const;
+
+  /**
+   * @brief Save the submap to file.
+   *
+   * @param outfile_ptr The file to write the protobuf data to.
+   * @return Success of the saving operation.
+   */
+  bool saveToStream(std::fstream* outfile_ptr) const;
+
+  /**
+   * @brief Load the submap from file.
+   *
+   * @param proto_file_ptr File from where to read the protobuf data.
+   * @param tmp_byte_offset_ptr Byte offset result, used to keep track where we
+   * are in the file if necessary. NOTE(schmluk): Mostly unused, initialize to
+   * 0.
+   * @param id_manager Submap ID manager of the collection to laod the submap
+   * into.
+   * @param instance_manager Instance ID manager of the collection to laod the
+   * submap into.
+   * @return Unique pointer to the loaded submap.
+   */
+  static std::unique_ptr<Submap> loadFromStream(
+      std::istream* proto_file_ptr, uint64_t* tmp_byte_offset_ptr,
+      SubmapIDManager* id_manager = SubmapIDManager::getGlobalInstance(),
+      InstanceIDManager* instance_manager =
+          InstanceIDManager::getGlobalInstance());
 
   // Labels.
   const SubmapID id_;       // UUID

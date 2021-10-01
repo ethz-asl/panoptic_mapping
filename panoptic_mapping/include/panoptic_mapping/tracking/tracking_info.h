@@ -26,19 +26,34 @@ class TrackingInfoAggregator;
 
 class TrackingInfo {
  public:
-  explicit TrackingInfo(int submap_id, Camera::Config camera);
+  explicit TrackingInfo(int submap_id) : submap_id_(submap_id) {}
+  TrackingInfo(int submap_id, Camera::Config camera);
   ~TrackingInfo() = default;
 
+  // Approximate rendering.
   void insertRenderedPoint(int u, int v, int size_x, int size_y);
   void evaluate(const cv::Mat& id_image, const cv::Mat& depth_image);
+
+  // Vertex rendering.
+  void insertVertexPoint(int input_id);
+  void insertVertexVisualizationPoint(int u, int v) {
+    points_.push_back({u, v});
+  }
+  const std::vector<Eigen::Vector2i>& getPoints() const { return points_; }
+  int getSubmapID() const { return submap_id_; }
 
  private:
   friend TrackingInfoAggregator;
   const int submap_id_;
+  std::unordered_map<int, int> counts_;  // <input_id, count>
+
+  // Approximate rendering.
   const Camera::Config camera_;
   int u_min_, u_max_, v_min_, v_max_;
   cv::Mat image_;
-  std::unordered_map<int, int> counts_;  // <input_id, count>
+
+  // Visualization data vertex rendering.
+  std::vector<Eigen::Vector2i> points_;
 };
 
 // Summarize the final tracking data.
@@ -51,7 +66,8 @@ class TrackingInfoAggregator {
   void insertTrackingInfos(const std::vector<TrackingInfo>& infos);
   void insertTrackingInfo(const TrackingInfo& info);
   void insertInputImage(const cv::Mat& id_image, const cv::Mat& depth_image,
-                        const Camera::Config& camera);
+                        const Camera::Config& camera,
+                        int rendering_subsampling);
 
   // Get results. Requires that all input data is already set.
   std::vector<int> getInputIDs() const;

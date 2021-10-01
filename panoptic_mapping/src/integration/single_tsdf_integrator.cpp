@@ -35,7 +35,7 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   // Cache num classes info.
-  num_classes_ = globals_->labelHandler()->numberOfClasses();
+  num_classes_ = globals_->labelHandler()->numberOfLabels();
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
@@ -170,7 +170,7 @@ bool SingleTsdfIntegrator::updateVoxel(
     if (class_voxel) {
       if (class_voxel->current_index < 0) {
         // This means the voxel is uninitialized.
-        class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+        class_voxel->counts.resize(num_classes_);
       }
       classVoxelIncrementClass(class_voxel,
                                interpolator->interpolateID(input.idImage()));

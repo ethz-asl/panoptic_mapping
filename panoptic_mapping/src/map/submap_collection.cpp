@@ -1,5 +1,7 @@
 #include "panoptic_mapping/map/submap_collection.h"
 
+#include <sys/stat.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -42,6 +44,10 @@ bool SubmapCollection::submapIdExists(int id) const {
 }
 
 const Submap& SubmapCollection::getSubmap(int id) const {
+  auto it = id_to_index_.find(id);
+  if (it == id_to_index_.end()) {
+    LOG(FATAL) << "Tried to get inexistent submap " << id << ".";
+  }
   // This assumes we checked that the id exists.
   return *submaps_[id_to_index_.at(id)];
 }
@@ -91,10 +97,15 @@ void SubmapCollection::updateInstanceToSubmapIDTable() {
 // Save load functionality was heavily adapted from cblox.
 bool SubmapCollection::saveToFile(const std::string& file_path) const {
   CHECK(!file_path.empty());
+
+  // Check for proper extensions.
+  const std::string file_name = checkMapFileExtension(file_path);
+
+  // Open the ouput file.
   std::fstream outfile;
-  outfile.open(file_path, std::fstream::out | std::fstream::binary);
+  outfile.open(file_name, std::fstream::out | std::fstream::binary);
   if (!outfile.is_open()) {
-    LOG(ERROR) << "Could not open file '" << file_path
+    LOG(ERROR) << "Could not open file '" << file_name
                << "' to save the submap collection.";
     return false;
   }
@@ -125,14 +136,23 @@ bool SubmapCollection::saveToFile(const std::string& file_path) const {
 bool SubmapCollection::loadFromFile(const std::string& file_path,
                                     bool recompute_data) {
   CHECK(!file_path.empty());
+  const std::string file_name = checkMapFileExtension(file_path);
+
+  // Check the file exists.
+  struct stat buffer;
+  if (stat(file_name.c_str(), &buffer) != 0) {
+    LOG(ERROR) << "Target file '" << file_name << "' does not exist.";
+    return false;
+  }
+
   // Clear the current maps.
   submaps_.clear();
 
   // Open and check the file.
   std::ifstream proto_file;
-  proto_file.open(file_path, std::fstream::in);
+  proto_file.open(file_name, std::fstream::in);
   if (!proto_file.is_open()) {
-    LOG(ERROR) << "Could not open protobuf file '" << file_path << "'.";
+    LOG(ERROR) << "Could not open protobuf file '" << file_name << "'.";
     return false;
   }
 
@@ -149,7 +169,8 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
   for (size_t sub_map_index = 0u;
        sub_map_index < submap_collection_proto.num_submaps(); ++sub_map_index) {
     std::unique_ptr<Submap> submap_ptr =
-        Submap::loadFromStream(&proto_file, &tmp_byte_offset);
+        Submap::loadFromStream(&proto_file, &tmp_byte_offset,
+                               &submap_id_manager_, &instance_id_manager_);
     if (submap_ptr == nullptr) {
       LOG(ERROR) << "Failed to load submap '" << sub_map_index
                  << "' from stream.";
@@ -170,6 +191,16 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
     }
   }
   return true;
+}
+
+std::string SubmapCollection::checkMapFileExtension(const std::string& file) {
+  const std::string extension = ".panmap";
+  if (!(file.size() >= extension.size() &&
+        file.compare(file.size() - extension.size(), extension.size(),
+                     extension) == 0)) {
+    return file + extension;
+  }
+  return file;
 }
 
 std::unique_ptr<SubmapCollection> SubmapCollection::clone() const {

@@ -92,12 +92,14 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_class_id(class_id_);
   proto->set_panoptic_label(static_cast<int>(label_));
   proto->set_name(name_);
+  proto->set_change_state(static_cast<int>(change_state_));
 
   // Store TSDF data.
   proto->set_num_blocks(tsdf_layer_->getNumberOfAllocatedBlocks());
   proto->set_voxel_size(config_.voxel_size);
   proto->set_voxels_per_side(config_.voxels_per_side);
   proto->set_truncation_distance(config_.truncation_distance);
+  proto->set_has_class_layer(has_class_layer_);
 
   // Store transformation data.
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
@@ -126,11 +128,48 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     outfile_ptr->close();
     return false;
   }
+
+  // Save class data.
+  // NOTE(schmluk): Currently only supports binary classification. Hacked as
+  // storing them in a tsdf layer.
+  if (has_class_layer_) {
+    TsdfLayer tmp(tsdf_layer);
+    voxblox::BlockIndexList blocks;
+    tmp.getAllAllocatedBlocks(&blocks);
+    for (const auto& index : blocks) {
+      ClassBlock* class_block = nullptr;
+      TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
+      if (hasClassLayer()) {
+        if (class_layer_->hasBlock(index)) {
+          class_block = &class_layer_->getBlockByIndex(index);
+        }
+      }
+      for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
+        TsdfVoxel& voxel = tsdf_block.getVoxelByLinearIndex(i);
+        if (class_block) {
+          voxel.distance = static_cast<float>(
+              class_block->getVoxelByLinearIndex(i).belongs_count);
+          voxel.weight = static_cast<float>(
+              class_block->getVoxelByLinearIndex(i).foreign_count);
+        } else {
+          voxel.distance = 0.f;
+          voxel.weight = 0.f;
+        }
+      }
+    }
+    if (!tmp.saveBlocksToStream(kIncludeAllBlocks, voxblox::BlockIndexList(),
+                                outfile_ptr)) {
+      LOG(ERROR) << "Could not write submap blocks to stream.";
+      outfile_ptr->close();
+      return false;
+    }
+  }
   return true;
 }
 
-std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
-                                               uint64_t* tmp_byte_offset_ptr) {
+std::unique_ptr<Submap> Submap::loadFromStream(
+    std::istream* proto_file_ptr, uint64_t* tmp_byte_offset_ptr,
+    SubmapIDManager* id_manager, InstanceIDManager* instance_manager) {
   CHECK_NOTNULL(proto_file_ptr);
   CHECK_NOTNULL(tmp_byte_offset_ptr);
 
@@ -147,13 +186,15 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
-  auto submap = std::make_unique<Submap>(cfg);
+  cfg.use_class_layer = submap_proto.has_class_layer();
+  auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
   submap->setInstanceID(submap_proto.instance_id());
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
   submap->setName(submap_proto.name());
+  submap->setChangeState(static_cast<ChangeState>(submap_proto.change_state()));
 
   // Load the TSDF layer.
   if (!voxblox::io::LoadBlocksFromStream(
@@ -161,6 +202,33 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
           proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
     LOG(ERROR) << "Could not load the tsdf blocks from stream.";
     return nullptr;
+  }
+
+  // Load classification data. See note when saving.
+  if (cfg.use_class_layer) {
+    TsdfLayer tmp(cfg.voxel_size, cfg.voxels_per_side);
+    if (!voxblox::io::LoadBlocksFromStream(
+            submap_proto.num_blocks(),
+            TsdfLayer::BlockMergingStrategy::kReplace, proto_file_ptr, &tmp,
+            tmp_byte_offset_ptr)) {
+      LOG(ERROR) << "Could not load the class blocks from stream.";
+      return nullptr;
+    }
+    voxblox::BlockIndexList blocks;
+    tmp.getAllAllocatedBlocks(&blocks);
+    for (const auto& index : blocks) {
+      TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
+      ClassBlock* class_block =
+          submap->getClassLayerPtr()->allocateBlockPtrByIndex(index).get();
+      for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
+        ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
+        TsdfVoxel& tsdf_voxel = tsdf_block.getVoxelByLinearIndex(i);
+        class_voxel.belongs_count =
+            static_cast<ClassVoxel::Counter>(tsdf_voxel.distance);
+        class_voxel.foreign_count =
+            static_cast<ClassVoxel::Counter>(tsdf_voxel.weight);
+      }
+    }
   }
 
   // Load the transformation.
@@ -179,7 +247,8 @@ void Submap::finishActivePeriod() {
     return;
   }
   is_active_ = false;
-  change_state_ = ChangeState::kUnobserved;
+  // Since the submap was active just before we assume it still exists.
+  change_state_ = ChangeState::kPersistent;
   updateEverything();
 }
 
@@ -204,6 +273,7 @@ void Submap::computeIsoSurfacePoints() {
   // Extract the vertices and verify.
   voxblox::BlockIndexList index_list;
   mesh_layer_->getAllAllocatedMeshes(&index_list);
+  int ignored_points = 0;
   for (const voxblox::BlockIndex& index : index_list) {
     const Pointcloud& vertices = mesh_layer_->getMeshByIndex(index).vertices;
     iso_surface_points_.reserve(iso_surface_points_.size() + vertices.size());
@@ -211,15 +281,19 @@ void Submap::computeIsoSurfacePoints() {
       // Try to interpolate the voxel weight and verify the distance.
       TsdfVoxel voxel;
       if (interpolator.getVoxel(vertex, &voxel, true)) {
-        if (voxel.distance > 1e-2 * config_.voxel_size) {
-          LOG(WARNING) << "IsoSurface Point has distance '" << voxel.distance
-                       << "' > " << 1e-2 * config_.voxel_size
-                       << ", will be ignored.";
-        } else {
-          iso_surface_points_.emplace_back(vertex, voxel.weight);
-        }
+        // if (voxel.distance > 0.1 * config_.voxel_size) {
+        //   ignored_points++;
+        // } else {
+        iso_surface_points_.emplace_back(vertex, voxel.weight);
+        // }
       }
     }
+  }
+  if (ignored_points > 0) {
+    LOG(WARNING) << "Submap " << static_cast<int>(id_) << " (" << name_
+                 << ") has " << ignored_points
+                 << " iso-surface points with a distance > "
+                 << 0.1 * config_.voxel_size << ", these will be ignored.";
   }
 }
 

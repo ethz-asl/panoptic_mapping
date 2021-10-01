@@ -6,12 +6,26 @@ import json
 
 import numpy as np
 import rospy
-from sensor_msgs.msg import Image, PointCloud2, PointField
-from geometry_msgs.msg import Pose, TransformStamped
 from cv_bridge import CvBridge
 import tf
 import tf2_ros
 import cv2
+
+from sensor_msgs.msg import Image, PointCloud2, PointField
+from geometry_msgs.msg import Pose, TransformStamped
+from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
+
+# These are the standard data-hashes used. Can be replaced via ROS-param.
+DATA_IDS = [[
+    '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
+    '2451c041-fae8-24f6-9213-b8b6af8d86c1',
+    'ddc73793-765b-241a-9ecd-b0cebb7cf916',
+    'ddc73795-765b-241a-9c5d-b97744afe077'
+],
+            [
+                '20c9939d-698f-29c5-85c6-3c618e00061f',
+                'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26'
+            ]]
 
 
 class CameraIntrinsics(object):
@@ -28,16 +42,13 @@ class RioPlayer(object):
     def __init__(self):
         """  Initialize ros node and read params """
         # params
-        self.data_path = rospy.get_param(
-            '~data_path', '/home/lukas/Documents/PanopticMapping/Data/3RScan')
-        self.data_ids = rospy.get_param('~data_ids', [
-            '0cac7578-8d6f-2d13-8c2d-bfa7a04f8af3',
-            '2451c041-fae8-24f6-9213-b8b6af8d86c1',
-            'ddc73793-765b-241a-9ecd-b0cebb7cf916',
-            'ddc73795-765b-241a-9c5d-b97744afe077'
-        ])
+        self.base_path = rospy.get_param(
+            '~base_path', '/home/lukas/Documents/Datasets/3RScan')
+        self.data_ids = rospy.get_param('~data_ids', DATA_IDS)
+        self.scene_id = rospy.get_param('~scene_id', 0)
         self.scan_id = rospy.get_param('~scan_id', 0)
         self.rate = float(rospy.get_param('~play_rate', 5))  # Hz
+        self.use_detectron = rospy.get_param('~use_detectron', 0)
         self.frame_name = rospy.get_param('~frame_name', 'rio')
         self.global_frame_name = rospy.get_param('~global_frame_name', 'world')
         self.use_rendered_data = rospy.get_param('~use_rendered_data', False)
@@ -54,12 +65,20 @@ class RioPlayer(object):
         self.pcl_pub = rospy.Publisher("~pointcloud",
                                        PointCloud2,
                                        queue_size=10)
+        if self.use_detectron:
+            self.label_pub = rospy.Publisher("~labels",
+                                             DetectronLabels,
+                                             queue_size=100)
+
+        # Get target path
+        self.data_id = self.data_ids[self.scene_id][self.scan_id]
 
         # Read intrinsics
-        info_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
-                                 "sequence", "_info.txt")
+        info_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                 "_info.txt")
         if not os.path.isfile(info_file):
-            rospy.logerr("[RIO Player] Info file '%s' does not exist.")
+            rospy.logerr("[RIO Player] Info file '%s' does not exist." %
+                         info_file)
         else:
             lines = open(info_file, 'r').readlines()
             self.color_cam = CameraIntrinsics()
@@ -79,33 +98,37 @@ class RioPlayer(object):
             self.depth_cam.fy = float(lines[9][30:].split()[5])
 
         # Get transform to reference
-        ref_file = os.path.join(self.data_path, "3RScan.json")
+        ref_file = os.path.join(self.base_path, "3RScan.json")
         self.T_ref = np.eye(4)
         if not os.path.isfile(ref_file):
-            rospy.logerr("[RIO Player] Meta data file '%s' does not exist.")
+            rospy.logerr("[RIO Player] Meta data file '%s' does not exist." %
+                         ref_file)
         else:
             with open(ref_file) as json_file:
                 index = json.load(json_file)
                 transform_found = False
+                transform_str = ""
                 for i in range(478):
                     info = index[i]
                     if transform_found:
                         break
-                    if info['reference'] == self.data_ids[self.scan_id]:
+                    if info['reference'] == self.data_id:
                         # It's a reference scan
                         transform_found = True
 
                     for scan in info['scans']:
-                        if scan['reference'] == self.data_ids[self.scan_id]:
+                        if scan['reference'] == self.data_id:
                             transform = scan['transform']
                             for r in range(4):
                                 for c in range(4):
                                     self.T_ref[r, c] = transform[c * 4 + r]
+                                    transform_str += "%f " % transform[c * 4 +
+                                                                       r]
                             transform_found = True
                             break
                 if transform_found:
                     rospy.loginfo(
-                        "[RIO Player] Initialized reference transform.")
+                        "[RIO Player] Initialized reference transform:")
 
                     self.static_tf = tf2_ros.StaticTransformBroadcaster()
                     msg = TransformStamped()
@@ -135,8 +158,8 @@ class RioPlayer(object):
         time_stamp = rospy.Time.now()
 
         # use color to check for existence.
-        color_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
-                                  "sequence", frame_name + ".color.jpg")
+        color_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                  frame_name + ".color.jpg")
         if not os.path.isfile(color_file):
             rospy.logwarn("[RIO Player] No more frames found (published %i)." %
                           self.frame_no)
@@ -144,8 +167,8 @@ class RioPlayer(object):
             return
 
         # transformation
-        pose_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
-                                 "sequence", frame_name + ".pose.txt")
+        pose_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                 frame_name + ".pose.txt")
         pose_data = [float(x) for x in open(pose_file, 'r').read().split()]
 
         transform = np.eye(4)
@@ -168,8 +191,7 @@ class RioPlayer(object):
 
         # depth image
         if self.use_rendered_data:
-            depth_file = os.path.join(self.data_path,
-                                      self.data_ids[self.scan_id], "rendered",
+            depth_file = os.path.join(self.base_path, self.data_id, "sequence",
                                       frame_name + ".rendered.depth.png")
             cv_depth = cv2.imread(depth_file, -1)
             cv_depth = cv2.rotate(cv_depth, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -185,8 +207,7 @@ class RioPlayer(object):
             im_x = (cols - self.color_cam.center_x) / self.color_cam.fx
             im_y = (rows - self.color_cam.center_y) / self.color_cam.fy
         else:
-            depth_file = os.path.join(self.data_path,
-                                      self.data_ids[self.scan_id], "sequence",
+            depth_file = os.path.join(self.base_path, self.data_id, "sequence",
                                       frame_name + ".depth.pgm")
             cv_depth = cv2.imread(depth_file, -1)
             cv_depth = np.array(cv_depth, dtype=np.float32) / 1000
@@ -208,8 +229,7 @@ class RioPlayer(object):
 
         # color image
         if self.use_rendered_data:
-            color_file = os.path.join(self.data_path,
-                                      self.data_ids[self.scan_id], "rendered",
+            color_file = os.path.join(self.base_path, self.data_id, "sequence",
                                       frame_name + ".rendered.color.jpg")
             cv_img = cv2.imread(color_file)
             cv_img = cv2.rotate(cv_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -238,18 +258,40 @@ class RioPlayer(object):
         self.color_pub.publish(color_msg)
 
         # segmentation image
-        seg_file = os.path.join(self.data_path, self.data_ids[self.scan_id],
-                                "rendered",
-                                frame_name + ".rendered.panlabels.png")
-        cv_seg = cv2.imread(seg_file)
-        cv_seg = cv_seg[:, :, 0]
-        cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        if self.use_detectron:
+            seg_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                    frame_name + ".predicted.png")
+            cv_seg = cv2.imread(seg_file)
 
-        # if self.use_rendered_data:
-        #     cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        # elif self.adjust_image_size:
-        seg_img = np.ones((self.depth_cam.height, self.depth_cam.width),
-                          dtype=np.uint8) * 255
+            # Load and publish labels.
+            labels_file = os.path.join(self.base_path, self.data_id,
+                                       "sequence",
+                                       frame_name + ".detectronlabels.json")
+            label_msg = DetectronLabels()
+            label_msg.header.stamp = time_stamp
+            with open(labels_file) as json_file:
+                data = json.load(json_file)
+                for d in data:
+                    if 'instance_id' not in d:
+                        d['instance_id'] = 0
+                    if 'score' not in d:
+                        d['score'] = 0
+                    label = DetectronLabel()
+                    label.id = d['id']
+                    label.instance_id = d['instance_id']
+                    label.is_thing = d['isthing']
+                    label.category_id = d['category_id']
+                    label.score = d['score']
+                    label_msg.labels.append(label)
+            self.label_pub.publish(label_msg)
+        else:
+            seg_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                    frame_name + ".panlabels.png")
+            cv_seg = cv2.imread(seg_file)
+        cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        cv_seg = cv_seg[:, :, 0]
+        seg_img = np.zeros((self.depth_cam.height, self.depth_cam.width),
+                           dtype=np.uint8)
         for u in range(self.depth_cam.width):
             for v in range(self.depth_cam.height):
                 seg_img[v, u] = cv_seg[im_v[v, u], im_u[v, u]]

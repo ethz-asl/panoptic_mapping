@@ -35,6 +35,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("foreign_rays_clear", &foreign_rays_clear);
   setupParam("max_weight", &max_weight);
   setupParam("interpolation_method", &interpolation_method);
+  setupParam("allocate_neighboring_blocks", &allocate_neighboring_blocks);
+  setupParam("use_longterm_fusion", &use_longterm_fusion);
   setupParam("integration_threads", &integration_threads);
 }
 
@@ -118,26 +120,25 @@ void ProjectiveIntegrator::updateSubmap(
     const voxblox::BlockIndexList& block_indices,
     const InputData& input) const {
   Transformation T_C_S = input.T_M_C().inverse() * submap->getT_M_S();
-  for (const auto& index : block_indices) {
-    updateBlock(submap, interpolator, index, T_C_S, input);
+  for (const auto& block_index : block_indices) {
+    updateBlock(submap, interpolator, block_index, T_C_S, input);
   }
 }
 
 void ProjectiveIntegrator::updateBlock(Submap* submap,
                                        InterpolatorBase* interpolator,
-                                       const voxblox::BlockIndex& index,
+                                       const voxblox::BlockIndex& block_index,
                                        const Transformation& T_C_S,
                                        const InputData& input) const {
   CHECK_NOTNULL(submap);
   // Set up preliminaries.
-  if (!submap->getTsdfLayer().hasBlock(index)) {
+  if (!submap->getTsdfLayer().hasBlock(block_index)) {
     LOG_IF(WARNING, config_.verbosity >= 1)
-        << "Tried to access inexistent block '" << index.transpose()
+        << "Tried to access inexistent block '" << block_index.transpose()
         << "' in submap " << submap->getID() << ".";
     return;
   }
-  voxblox::Block<TsdfVoxel>& block =
-      submap->getTsdfLayerPtr()->getBlockByIndex(index);
+  TsdfBlock& block = submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
@@ -147,7 +148,7 @@ void ProjectiveIntegrator::updateBlock(Submap* submap,
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
-    voxblox::TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
+    TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
     if (updateVoxel(interpolator, &voxel, p_C, input, submap_id,
@@ -276,7 +277,7 @@ void ProjectiveIntegrator::updateVoxelValues(TsdfVoxel* voxel, const float sdf,
     voxel->color =
         Color::blendTwoColors(voxel->color, voxel->weight, *color, weight);
   }
-}
+}  // namespace panoptic_mapping
 
 void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                                              const InputData& input) {
@@ -300,14 +301,39 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
       const int id = input.idImage().at<int>(v, u);
       if (submaps->submapIdExists(id)) {
         Submap* submap = submaps->getSubmapPtr(id);
+        const int voxels_per_side = submap->getConfig().voxels_per_side;
         const Point p_S = submap->getT_S_M() * input.T_M_C() * p_C;
-        const voxblox::BlockIndex index =
+        const voxblox::BlockIndex block_index =
             submap->getTsdfLayer().computeBlockIndexFromCoordinates(p_S);
-        submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(index);
+        const auto block =
+            submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
         if (submap->hasClassLayer()) {
           // NOTE(schmluk): The projective integrator does not use the class
           // layer but was added here for simplicity.
-          submap->getClassLayerPtr()->allocateBlockPtrByIndex(index);
+          submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
+        }
+
+        // If required, check whether the point is on the boudnary of a block
+        // and allocate the neighboring blocks.
+        if (config_.allocate_neighboring_blocks) {
+          for (float sign : {-1.f, 1.f}) {
+            const Point p_neighbor_S =
+                submap->getT_S_M() * input.T_M_C() *
+                (p_C *
+                 (1.f + sign * submap->getConfig().voxel_size / p_C.norm()));
+            const voxblox::BlockIndex neighbor_index =
+                submap->getTsdfLayer().computeBlockIndexFromCoordinates(
+                    p_neighbor_S);
+            if (neighbor_index != block_index) {
+              const auto block =
+                  submap->getTsdfLayerPtr()->allocateBlockPtrByIndex(
+                      neighbor_index);
+              if (submap->hasClassLayer()) {
+                submap->getClassLayerPtr()->allocateBlockPtrByIndex(
+                    neighbor_index);
+              }
+            }
+          }
         }
         touched_submaps.insert(submap);
       }

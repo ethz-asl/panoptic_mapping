@@ -9,8 +9,8 @@
 namespace panoptic_mapping {
 
 /**
- * Interface for freespace allocators. Allocators are called by the ID Trackers
- * to create new submaps if suitable.
+ * @brief Interface for freespace allocators. Allocators are called by the ID
+ * Trackers to create new submaps if suitable.
  */
 class FreespaceAllocatorBase : public InputDataUser {
  public:

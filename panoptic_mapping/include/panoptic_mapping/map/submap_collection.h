@@ -119,6 +119,15 @@ class SubmapCollection {
   // fused back to the original collection.
   std::unique_ptr<SubmapCollection> clone() const;
 
+  /**
+   * @brief Creates a filename that matches the map file extension (.panmap) if
+   * that's not already the case.
+   *
+   * @param file Filename to check.
+   * @return The new filename.
+   */
+  static std::string checkMapFileExtension(const std::string& file);
+
  private:
   // IDs are managed within a submap collection.
   SubmapIDManager submap_id_manager_;

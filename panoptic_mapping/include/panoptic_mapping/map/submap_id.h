@@ -6,8 +6,8 @@
 namespace panoptic_mapping {
 
 /**
- * Class for ID management. Default uses a global singleton but e.g. individual
- * submap collections are allowed to have separate.
+ * @brief Class for ID management. Default uses a global singleton but e.g.
+ * individual submap collections are allowed to have separate.
  */
 class SubmapIDManager {
  public:
@@ -35,7 +35,7 @@ class SubmapIDManager {
 };
 
 /**
- * This class instantiates and tracks unique submap IDs.
+ * @brief This class instantiates and tracks unique submap IDs.
  */
 class SubmapID {
  public:

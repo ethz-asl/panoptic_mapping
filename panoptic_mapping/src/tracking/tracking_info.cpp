@@ -66,6 +66,10 @@ void TrackingInfo::evaluate(const cv::Mat& id_image,
   }
 }
 
+void TrackingInfo::insertVertexPoint(int input_id) {
+  incrementMap(&counts_, input_id);
+}
+
 void TrackingInfoAggregator::insertTrackingInfos(
     const std::vector<TrackingInfo>& infos) {
   for (const TrackingInfo& info : infos) {
@@ -81,8 +85,8 @@ void TrackingInfoAggregator::insertTrackingInfo(const TrackingInfo& info) {
     auto it = overlap_.find(id_count_pair.first);
     if (it == overlap_.end()) {
       it = overlap_
-               .insert(std::pair(id_count_pair.first,
-                                 std::unordered_map<int, int>()))
+               .insert(std::pair<int, std::unordered_map<int, int>>(
+                   id_count_pair.first, std::unordered_map<int, int>()))
                .first;
     }
     it->second[info.submap_id_] = id_count_pair.second;
@@ -91,9 +95,10 @@ void TrackingInfoAggregator::insertTrackingInfo(const TrackingInfo& info) {
 
 void TrackingInfoAggregator::insertInputImage(const cv::Mat& id_image,
                                               const cv::Mat& depth_image,
-                                              const Camera::Config& camera) {
-  for (int u = 0; u < id_image.cols; ++u) {
-    for (int v = 0; v < id_image.rows; ++v) {
+                                              const Camera::Config& camera,
+                                              int rendering_subsampling) {
+  for (int u = 0; u < id_image.cols; u += rendering_subsampling) {
+    for (int v = 0; v < id_image.rows; v += rendering_subsampling) {
       const float depth = depth_image.at<float>(v, u);
       if (depth >= camera.min_range && depth <= camera.max_range) {
         incrementMap(&total_input_count_, id_image.at<int>(v, u));
