@@ -7,10 +7,10 @@
 #include <utility>
 #include <vector>
 
+#include <panoptic_mapping/common/camera.h>
+#include <panoptic_mapping/labels/label_handler_base.h>
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
-
-#include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
 namespace panoptic_mapping {
 
@@ -19,8 +19,9 @@ namespace panoptic_mapping {
 const std::map<std::string, std::pair<std::string, std::string>>
     PanopticMapper::default_names_and_types_ = {
         {"camera", {"camera", ""}},
-        {"submap_allocator", {"submap_allocator", "semantic"}},
-        {"freespace_allocator", {"freespace_allocator", "monolithic"}},
+        {"label_handler", {"labels", "null"}},
+        {"submap_allocator", {"submap_allocator", "null"}},
+        {"freespace_allocator", {"freespace_allocator", "null"}},
         {"id_tracker", {"id_tracker", ""}},
         {"tsdf_integrator", {"tsdf_integrator", ""}},
         {"map_management", {"map_management", "null"}},
@@ -60,8 +61,9 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
       config_(
           config_utilities::getConfigFromRos<PanopticMapper::Config>(nh_private)
               .checkValid()) {
-  // Setup printing of configs. NOTE(schmluk): These settings are global so
-  // multiple panoptic mappers in the same process might interfere.
+  // Setup printing of configs.
+  // NOTE(schmluk): These settings are global so multiple panoptic mappers in
+  // the same process might interfere.
   config_utilities::GlobalSettings().indicate_default_values =
       config_.indicate_default_values;
   config_utilities::GlobalSettings().indicate_units =
@@ -84,11 +86,10 @@ void PanopticMapper::setupMembers() {
   auto camera = std::make_shared<Camera>(
       config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
 
-  // Labels.
-  std::string label_path;
-  nh_private_.param("label_path", label_path, std::string(""));
-  auto label_handler = std::make_shared<LabelHandler>();
-  label_handler->readLabelsFromFile(label_path);
+  // Label Handler.
+  std::shared_ptr<LabelHandlerBase> label_handler =
+      config_utilities::FactoryRos::create<LabelHandlerBase>(
+          defaultNh("label_handler"));
 
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);

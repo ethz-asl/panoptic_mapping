@@ -57,7 +57,7 @@ Submap* DetectronIDTracker::allocateSubmap(int input_id,
   }
 
   // Parse detectron label.
-  LabelHandler::LabelEntry label;
+  LabelEntry label;
   const int class_id = it->second.category_id;
   if (globals_->labelHandler()->segmentationIdExists(class_id)) {
     label = globals_->labelHandler()->getLabelEntry(input_id);

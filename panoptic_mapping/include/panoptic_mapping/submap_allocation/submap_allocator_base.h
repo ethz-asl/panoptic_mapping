@@ -3,15 +3,15 @@
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/common/input_data_user.h"
-#include "panoptic_mapping/common/label_handler.h"
+#include "panoptic_mapping/labels/label_entry.h"
 #include "panoptic_mapping/map/submap.h"
 #include "panoptic_mapping/map/submap_collection.h"
 
 namespace panoptic_mapping {
 
 /**
- * Interface for submap allocators. Allocators are called by the ID Trackers to
- * create new submaps if suitable.
+ * @brief Interface for submap allocators. Allocators are called by the ID
+ * Trackers to create new submaps if suitable.
  */
 class SubmapAllocatorBase : public InputDataUser {
  public:
@@ -31,8 +31,7 @@ class SubmapAllocatorBase : public InputDataUser {
    * failed.
    */
   virtual Submap* allocateSubmap(SubmapCollection* submaps, InputData* input,
-                                 int input_id,
-                                 const LabelHandler::LabelEntry& label) = 0;
+                                 int input_id, const LabelEntry& label) = 0;
 };
 
 }  // namespace panoptic_mapping

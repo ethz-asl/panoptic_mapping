@@ -1,5 +1,5 @@
 # Panoptic Mapping
-A panoptic, submap-based approach towards volumetric spatio-temporally consistent mapping for robot interaction.
+This package contains **panoptic_mapping**, a submap-based approach that leverages panoptic scene understanding towards adaptive spatio-temporally consistent volumetric mapping.
 
 ![combined](https://user-images.githubusercontent.com/36043993/110769139-2ab26780-8258-11eb-8b7a-ed4f2e050ea4.png)
 

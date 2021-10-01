@@ -2,7 +2,7 @@
 <package format="2">
   <name>panoptic_mapping_ros</name>
   <version>0.0.0</version>
-  <description>Panoptic metric mapping for long term scene understanding and consistency. </description>
+  <description>Panoptic mapping for long term scene understanding and consistency. </description>
   
   <author email="schmluk@mavt.ethz.ch">Lukas Schmid</author>
   <maintainer email="schmluk@mavt.ethz.ch">Lukas Schmid</maintainer>

@@ -39,7 +39,7 @@ ClassProjectiveIntegrator::ClassProjectiveIntegrator(
   if (!config_.use_binary_classification &&
       !config_.use_instance_classification) {
     // The +1 is added because 0 is reserved for the belonging submap.
-    num_classes_ = globals_->labelHandler()->numberOfClasses() + 1;
+    num_classes_ = globals_->labelHandler()->numberOfLabels() + 1;
   }
 }
 

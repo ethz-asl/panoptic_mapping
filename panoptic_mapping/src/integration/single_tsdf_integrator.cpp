@@ -35,7 +35,7 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   // Cache num classes info.
-  num_classes_ = globals_->labelHandler()->numberOfClasses();
+  num_classes_ = globals_->labelHandler()->numberOfLabels();
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,

@@ -220,7 +220,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 Submap* ProjectiveIDTracker::allocateSubmap(int input_id,
                                             SubmapCollection* submaps,
                                             InputData* input) {
-  LabelHandler::LabelEntry label;
+  LabelEntry label;
   if (globals_->labelHandler()->segmentationIdExists(input_id)) {
     label = globals_->labelHandler()->getLabelEntry(input_id);
   }

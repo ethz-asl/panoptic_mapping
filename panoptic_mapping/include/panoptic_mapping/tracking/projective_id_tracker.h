@@ -11,7 +11,7 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/camera.h"
-#include "panoptic_mapping/common/label_handler.h"
+#include "panoptic_mapping/labels/label_handler_base.h"
 #include "panoptic_mapping/tools/map_renderer.h"
 #include "panoptic_mapping/tracking/id_tracker_base.h"
 #include "panoptic_mapping/tracking/tracking_info.h"

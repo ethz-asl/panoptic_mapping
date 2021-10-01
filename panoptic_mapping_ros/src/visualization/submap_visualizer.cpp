@@ -351,7 +351,7 @@ visualization_msgs::MarkerArray SubmapVisualizer::generateBlockMsgs(
 
     for (auto& block_index : blocks) {
       visualization_msgs::Marker marker;
-      marker.header.frame_id = "world";  // submap.getFrameName();
+      marker.header.frame_id = submap.getFrameName();
       marker.header.stamp = ros::Time::now();
       marker.color.r = color.r;
       marker.color.g = color.g;

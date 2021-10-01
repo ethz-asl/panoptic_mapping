@@ -34,9 +34,10 @@ SemanticSubmapAllocator::SemanticSubmapAllocator(const Config& config,
                                                        << config_.toString();
 }
 
-Submap* SemanticSubmapAllocator::allocateSubmap(
-    SubmapCollection* submaps, InputData* /* input */, int input_id,
-    const LabelHandler::LabelEntry& label) {
+Submap* SemanticSubmapAllocator::allocateSubmap(SubmapCollection* submaps,
+                                                InputData* /* input */,
+                                                int input_id,
+                                                const LabelEntry& label) {
   Submap::Config config = config_.submap_config;
 
   // Setup the voxel size.

@@ -2,7 +2,7 @@
 #define PANOPTIC_MAPPING_SUBMAP_ALLOCATION_SEMANTIC_SUBMAP_ALLOCATOR_H_
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/common/label_handler.h"
+#include "panoptic_mapping/labels/label_entry.h"
 #include "panoptic_mapping/submap_allocation/submap_allocator_base.h"
 
 namespace panoptic_mapping {
@@ -45,8 +45,7 @@ class SemanticSubmapAllocator : public SubmapAllocatorBase {
   ~SemanticSubmapAllocator() override = default;
 
   Submap* allocateSubmap(SubmapCollection* submaps, InputData* /* input */,
-                         int /* input_id */,
-                         const LabelHandler::LabelEntry& label) override;
+                         int /* input_id */, const LabelEntry& label) override;
 
  private:
   static config_utilities::Factory::RegistrationRos<SubmapAllocatorBase,

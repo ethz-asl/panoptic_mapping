@@ -9,10 +9,8 @@
 #include <vector>
 
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
-#include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/common/globals.h>
-#include <panoptic_mapping/common/label_handler.h>
 #include <panoptic_mapping/integration/tsdf_integrator_base.h>
 #include <panoptic_mapping/map/submap.h>
 #include <panoptic_mapping/map/submap_collection.h>
