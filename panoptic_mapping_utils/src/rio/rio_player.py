@@ -23,12 +23,6 @@ DATA_IDS = [[
     'ddc73795-765b-241a-9c5d-b97744afe077'
 ],
             [
-                '1776ad7e-4db7-2333-89e1-66854e82170c',
-                '1776ad82-4db7-2333-89e4-d73159ac81d0',
-                '1776ad86-4db7-2333-8935-240e44ccb16d',
-                '1776ad84-4db7-2333-8aa7-2cc9126d5f71'
-            ],
-            [
                 '20c9939d-698f-29c5-85c6-3c618e00061f',
                 'f62fd5f8-9a3f-2f44-8b1e-1289a3a61e26'
             ]]
@@ -135,8 +129,6 @@ class RioPlayer(object):
                 if transform_found:
                     rospy.loginfo(
                         "[RIO Player] Initialized reference transform:")
-                    # print(transform_str)
-                    # return
 
                     self.static_tf = tf2_ros.StaticTransformBroadcaster()
                     msg = TransformStamped()
@@ -199,7 +191,7 @@ class RioPlayer(object):
 
         # depth image
         if self.use_rendered_data:
-            depth_file = os.path.join(self.base_path, self.data_id, "rendered",
+            depth_file = os.path.join(self.base_path, self.data_id, "sequence",
                                       frame_name + ".rendered.depth.png")
             cv_depth = cv2.imread(depth_file, -1)
             cv_depth = cv2.rotate(cv_depth, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -237,7 +229,7 @@ class RioPlayer(object):
 
         # color image
         if self.use_rendered_data:
-            color_file = os.path.join(self.base_path, self.data_id, "rendered",
+            color_file = os.path.join(self.base_path, self.data_id, "sequence",
                                       frame_name + ".rendered.color.jpg")
             cv_img = cv2.imread(color_file)
             cv_img = cv2.rotate(cv_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -268,12 +260,13 @@ class RioPlayer(object):
         # segmentation image
         if self.use_detectron:
             seg_file = os.path.join(self.base_path, self.data_id, "sequence",
-                                    frame_name + "_predicted.png")
+                                    frame_name + ".predicted.png")
             cv_seg = cv2.imread(seg_file)
 
             # Load and publish labels.
             labels_file = os.path.join(self.base_path, self.data_id,
-                                       "sequence", frame_name + "_labels.json")
+                                       "sequence",
+                                       frame_name + ".detectronlabels.json")
             label_msg = DetectronLabels()
             label_msg.header.stamp = time_stamp
             with open(labels_file) as json_file:
@@ -292,8 +285,8 @@ class RioPlayer(object):
                     label_msg.labels.append(label)
             self.label_pub.publish(label_msg)
         else:
-            seg_file = os.path.join(self.base_path, self.data_id, "rendered",
-                                    frame_name + ".rendered.panlabels.png")
+            seg_file = os.path.join(self.base_path, self.data_id, "sequence",
+                                    frame_name + ".panlabels.png")
             cv_seg = cv2.imread(seg_file)
         cv_seg = cv2.rotate(cv_seg, cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv_seg = cv_seg[:, :, 0]
