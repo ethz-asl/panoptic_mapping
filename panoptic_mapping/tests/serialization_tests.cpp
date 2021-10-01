@@ -241,12 +241,12 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
       bool skip_voxel = dis(gen) > 0.8;  // Leave 20% uninitialized
 
       if (!skip_voxel) {
-        bool use_binary = dis(gen) > 20.8;  // Use binary 20% of the time
+        bool use_binary = dis(gen) > 0.8;  // Use binary 20% of the time
         auto* voxel = block_to_save.getVoxelPtrByCoordinates(
             block_to_save.computeCoordinatesFromLinearIndex(i));
 
         if (use_binary) {
-          int num_votes = static_cast<int>(dis(gen) * 100);
+          int num_votes = static_cast<int>(dis(gen) * 100) + 1;
           for (int vote = 0; vote < num_votes; vote++) {
             panoptic_mapping::classVoxelIncrementBinary(voxel, dis(gen) > 0.5);
           }
