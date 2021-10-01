@@ -1,24 +1,41 @@
 # Panoptic Mapping
 This package contains **panoptic_mapping**, a submap-based approach that leverages panoptic scene understanding towards adaptive spatio-temporally consistent volumetric mapping.
 
-![combined](https://user-images.githubusercontent.com/36043993/110769139-2ab26780-8258-11eb-8b7a-ed4f2e050ea4.png)
+![combined](https://user-images.githubusercontent.com/36043993/135645102-e5798e36-e2b0-4611-9260-ec9d54d38e47.png)
 
-## Table of Contents
-* [Credits](#Credits)
+3D Reconstruction, active and inactive panoptic submaps, change detection, and more.
+
+# Table of Contents
+**Credits**
+* [Paper](#Paper)
+* [Video](#Video)
+
+**Setup**
 * [Installation](#Installation)
-* **To come soon:**
-  * Video
-  * Download the datasets.
-  * Run a demo.
-  * Monolithic Mapper.
-  * Contributing.
+* [Datasets](#Datasets)
 
-# Credits
-* **Author:** Lukas Schmid <schmluk@mavt.ethz.ch>
-* **Affiliation:** Autonomous Systems Lab (ASL), ETH Zürich.
-* **Version:** Pre-release Gamma
-* **License:** The project is work in progress and not yet licensed or open-sourced. It will be upon publication. By working with this project you agree to keep any code, ideas, or other, confidential until the project is published.
+**Examples**
+* [Running the Panoptic Mapper](#Running-the-Panoptic-Mapper)
+* [Monolithic Semantic Mapping](#Monolithic-Semantic-Mapping)
 
+
+
+# Paper
+If you find this package useful for your research, please consider citing our paper:
+
+* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" arXiv preprint arXiv:2109.10165 (2021).
+\[[ArXiv](https://arxiv.org/abs/2010.09859)\]
+  ```bibtex
+  @ARTICLE{schmid2021panoptic,
+    title={Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency},
+    author={Schmid, Lukas and Delmerico, Jeffrey and Sch{\"o}nberger, Johannes and Nieto, Juan and Pollefeys, Marc and Siegwart, Roland and Cadena, Cesar},
+    journal={arXiv preprint arXiv:2109.10165},
+    year={2021}
+  }
+  ```
+  
+# Video
+A short video overview explaining the approach will be released upon publication.
 
 # Installation
 Installation instructions for Linux.
@@ -35,7 +52,7 @@ Installation instructions for Linux.
     cd ~/catkin_ws
     catkin init
     catkin config --extend /opt/ros/$ROS_DISTRO
-    catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+    catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
     catkin config --merge-devel
     ```
 
@@ -53,7 +70,7 @@ Installation instructions for Linux.
 
 3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh):
     ```shell script
-    git clone git@github.com:ethz-asl/panoptic_mapping.git -b release/alpha
+    git clone git@github.com:ethz-asl/panoptic_mapping.git
     ```
 
 4. Download and install package dependencies using ros install:
@@ -74,3 +91,14 @@ Installation instructions for Linux.
     catkin build panoptic_mapping_utils
     source ../devel/setup.bash
     ```
+# Datasets
+The datasets described in the paper and used for the demo can be downloaded from the [ASL Datasets](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
+
+Additional data to run the mapper on the 3RScan dataset will follow.
+
+
+# Examples
+## Running the Panoptic Mapper
+
+## Monolithic Semantic Mapping
+This example will follow shortly.
