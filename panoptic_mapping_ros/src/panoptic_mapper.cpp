@@ -106,6 +106,12 @@ void PanopticMapper::setupMembers() {
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
 
+  // Camera Visualizer
+  camera_renderer_ = std::make_unique<CameraRenderer>(
+          config_utilities::getConfigFromRos<CameraRenderer::Config>(
+                  ros::NodeHandle(visualization_nh, "camera_renderer")),
+          globals_, camera, submaps_);
+
   // Tracking.
   tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
       config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
