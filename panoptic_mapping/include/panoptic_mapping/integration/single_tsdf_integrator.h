@@ -60,9 +60,9 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
 
   int num_classes_;
 
-  template <typename VoxelType>
-  void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
-                        VoxelType* class_voxel) const;
+  template<typename VoxelType>
+  void updateClassVoxel(InterpolatorBase *interpolator, const InputData& input, VoxelType *class_voxel) const;
+
 };
 
 }  // namespace panoptic_mapping

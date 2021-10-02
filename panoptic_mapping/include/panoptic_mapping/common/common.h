@@ -33,9 +33,9 @@ using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
 
 #ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-using ClassVoxelType = ClassUncertaintyVoxel;
+    using ClassVoxelType = ClassUncertaintyVoxel;
 #else
-using ClassVoxelType = ClassVoxel;
+    using ClassVoxelType = ClassVoxel;
 #endif
 
 using ClassBlock = voxblox::Block<ClassVoxelType>;
