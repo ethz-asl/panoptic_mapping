@@ -34,9 +34,9 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
       ProjectiveIntegrator(config.projective_integrator_config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-    #ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-        addRequiredInputs({InputData::InputType::kUncertaintyImage});
-    #endif
+#ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
+  addRequiredInputs({InputData::InputType::kUncertaintyImage});
+#endif
   // Request all inputs.
   // Cache num classes info.
   num_classes_ = globals_->labelHandler()->numberOfClasses();
@@ -144,53 +144,62 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     block.setUpdatedAll();
   }
 }
-template<>
-void SingleTsdfIntegrator::updateClassVoxel<panoptic_mapping::ClassVoxel>(InterpolatorBase* interpolator, const InputData& input, panoptic_mapping::ClassVoxel* class_voxel) const {
-    // Do not update voxels which are assigned as groundtruth
-    if (class_voxel->is_gt) {
-        return;
-    }
+template <>
+void SingleTsdfIntegrator::updateClassVoxel<panoptic_mapping::ClassVoxel>(
+    InterpolatorBase* interpolator, const InputData& input,
+    panoptic_mapping::ClassVoxel* class_voxel) const {
+  // Do not update voxels which are assigned as groundtruth
+  if (class_voxel->is_gt) {
+    return;
+  }
 
-    if (class_voxel->current_index < 0) {
-        // This means the voxel is uninitialized.
-        class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
-    }
+  if (class_voxel->current_index < 0) {
+    // This means the voxel is uninitialized.
+    class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+  }
 
-    size_t class_id = interpolator->interpolateID(input.idImage());
+  size_t class_id = interpolator->interpolateID(input.idImage());
 
-    if (class_id >= class_voxel->counts.size()) {
-        LOG_IF(WARNING, config_.verbosity >= 1)
-                        << "Got invalid class ID in tsdf integrator. Skipping class: "
-                        << class_id;
-    } else {
-        classVoxelIncrementClass(class_voxel, class_id);
-    }
-
+  if (class_id >= class_voxel->counts.size()) {
+    LOG_IF(WARNING, config_.verbosity >= 1)
+        << "Got invalid class ID in tsdf integrator. Skipping class: "
+        << class_id;
+  } else {
+    classVoxelIncrementClass(class_voxel, class_id);
+  }
 }
-template<>
-void SingleTsdfIntegrator::updateClassVoxel<panoptic_mapping::ClassUncertaintyVoxel>(InterpolatorBase* interpolator, const InputData& input, panoptic_mapping::ClassUncertaintyVoxel* uncertainty_voxel) const {
-    if (uncertainty_voxel->is_gt) {
-        return; // Do not update voxels that have Groundtruth assigned
-    }
+template <>
+void SingleTsdfIntegrator::updateClassVoxel<
+    panoptic_mapping::ClassUncertaintyVoxel>(
+    InterpolatorBase* interpolator, const InputData& input,
+    panoptic_mapping::ClassUncertaintyVoxel* uncertainty_voxel) const {
+  if (uncertainty_voxel->is_gt) {
+    return;  // Do not update voxels that have Groundtruth assigned
+  }
 
-    // Update Uncertainty Voxel Part
-    float uncertainty_value = interpolator->interpolateUncertainty(input.uncertaintyImage());
+  // Update Uncertainty Voxel Part
+  float uncertainty_value =
+      interpolator->interpolateUncertainty(input.uncertaintyImage());
 
-    // Magic uncertainty value which labels a voxel as groundtruth voxel.
-    // TODO @zrene find better way to implement this.
-    if (uncertainty_value == -1.0) {
-        // Make sure GT voxel have zero uncertainty / entropy
-        uncertainty_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
-        // Update Class Voxel part
-        updateClassVoxel(interpolator, input, static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
-        // Mark as groundtruth
-        uncertainty_voxel->is_gt = true;
-        // Reset Uncertainty
-        uncertainty_voxel->uncertainty_value = 0;
-    } else {
-        updateClassVoxel(interpolator, input, static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
-        classVoxelUpdateUncertainty(uncertainty_voxel, uncertainty_value);
-    }
+  // Magic uncertainty value which labels a voxel as groundtruth voxel.
+  // TODO @zrene find better way to implement this.
+  if (uncertainty_value == -1.0) {
+    // Make sure GT voxel have zero uncertainty / entropy
+    uncertainty_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+    // Update Class Voxel part
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    // Mark as groundtruth
+    uncertainty_voxel->is_gt = true;
+    // Reset Uncertainty
+    uncertainty_voxel->uncertainty_value = 0;
+  } else {
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    classVoxelUpdateUncertainty(uncertainty_voxel, uncertainty_value);
+  }
 }
 
 bool SingleTsdfIntegrator::updateVoxel(
@@ -220,7 +229,7 @@ bool SingleTsdfIntegrator::updateVoxel(
 
     // Update the semantic information if requested.
     if (class_voxel) {
-        updateClassVoxel(interpolator, input, class_voxel);
+      updateClassVoxel(interpolator, input, class_voxel);
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);
@@ -272,4 +281,5 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
   // Update the bounding volume.
   map->updateBoundingVolume();
 }
+
 }  // namespace panoptic_mapping
