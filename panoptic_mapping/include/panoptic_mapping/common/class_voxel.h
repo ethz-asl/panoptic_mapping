@@ -197,7 +197,16 @@ inline void classVoxelUpdateUncertainty(ClassUncertaintyVoxel* voxel,
   }
 }
 
-inline float classVoxelUncertainty(ClassUncertaintyVoxel& voxel) {
+/**
+ * Default function if no uncertainty voxels are used, simply return zero
+ * @param voxel Voxel for which uncertainty should be returned
+ * @return 0.0 Fallback if voxel type does not match
+ */
+inline float classVoxelUncertainty(const ClassVoxel& voxel) {
+  return 0.0;
+}
+
+inline float classVoxelUncertainty(const ClassUncertaintyVoxel& voxel) {
   return static_cast<float>(voxel.uncertainty_value) / UNCERTAINTY_ACCURACY;
 }
 
