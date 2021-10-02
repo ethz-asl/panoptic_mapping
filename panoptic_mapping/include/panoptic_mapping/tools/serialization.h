@@ -70,6 +70,9 @@ const std::string kClass = "class";
 
 template <>
 std::string getVoxelType<panoptic_mapping::ClassVoxel>();
+
+template <>
+std::string getVoxelType<panoptic_mapping::ClassUncertaintyVoxel>();
 }  // namespace voxblox
 
 #endif  // PANOPTIC_MAPPING_SERIALIZATION_H

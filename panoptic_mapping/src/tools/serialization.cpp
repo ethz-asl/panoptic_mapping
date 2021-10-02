@@ -339,8 +339,11 @@ void mergeVoxelAIntoVoxelB<panoptic_mapping::ClassUncertaintyVoxel>(
 }
 
 template <>
-std::string getVoxelType<panoptic_mapping::ClassVoxelType>() {
+std::string getVoxelType<panoptic_mapping::ClassUncertaintyVoxel>() {
   return voxel_types::kClass;
 }
-
+template <>
+std::string getVoxelType<panoptic_mapping::ClassVoxel>() {
+  return voxel_types::kClass;
+}
 }  // namespace voxblox
