@@ -39,6 +39,9 @@ CameraRenderer::CameraRenderer(const CameraRenderer::Config& config,
   // Print config after setting up the modes.
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
+
+  // Setup publishers.
+  nh_ = ros::NodeHandle(config_.ros_namespace);
   render_camera_view_srv_ = nh_.advertiseService(
       "render_camera_view", &CameraRenderer::renderCameraViewCallback, this);
 }
