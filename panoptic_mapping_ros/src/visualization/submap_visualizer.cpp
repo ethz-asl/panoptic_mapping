@@ -666,7 +666,7 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
     case ColorMode::kUncertainty:
       return "uncertainty";
     case ColorMode::kGroundtruth:
-      return "groundtruth"
+      return "groundtruth";
   }
   return "unknown";
 }
