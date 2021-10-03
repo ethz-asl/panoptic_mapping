@@ -143,6 +143,8 @@ class PanopticMapper {
   // Members.
   const Config config_;
 
+  // Vector containing subscriber count for each map
+  std::vector<int> num_subscribers_serialized_map_;
   // Map.
   std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<ThreadSafeSubmapCollection> thread_safe_submaps_;
