@@ -100,6 +100,10 @@ class SubmapCollection {
     return instance_to_submap_ids_;
   }
 
+  void insertSubmap(std::unique_ptr<Submap> submap) {
+    submaps_.emplace_back(std::move(submap));
+  }
+
   // Setters.
   void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
 

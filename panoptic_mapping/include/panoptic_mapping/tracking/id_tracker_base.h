@@ -38,6 +38,19 @@ class IDTrackerBase : public InputDataUser {
    */
   virtual void processInput(SubmapCollection* submaps, InputData* input) = 0;
 
+  /**
+   * Tries to allocate a new submap using the internal submap allocators for the given paramaters
+   * @param submaps SubmapCollection
+   * @param input_data  Input data (can be nullptr)
+   * @param id Id of the submap
+   * @param label Label for the given submap
+   */
+  void setupSubmaps(SubmapCollection* submaps, InputData* input_data, int id, LabelHandler::LabelEntry& label, bool is_freespace) {
+      Submap* new_submap;
+      if (is_freespace) new_submap = freespace_allocator_->allocateSubmap(submaps, input_data);
+      else new_submap = submap_allocator_->allocateSubmap(submaps, nullptr, id, label);
+      submaps->insertSubmap(std::unique_ptr<Submap>(new_submap));
+  }
   // Setters for external setup.
   /**
    * @brief Sets a callback that is called whenever an image needs to be

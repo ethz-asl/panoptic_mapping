@@ -31,6 +31,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
              &use_threadsafe_submap_collection);
   setupParam("ros_spinner_threads", &ros_spinner_threads);
   setupParam("check_input_interval", &check_input_interval);
+  setupParam("map_publishing_interval", &map_publishing_interval);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -287,41 +288,51 @@ void PanopticMapper::serializedMapCallback(
     const panoptic_mapping_msgs::SerializedMap& map_msg) {
   int id = map_msg.submap_id;
   if (!submaps_->submapIdExists(id)) {
-    LOG_IF(WARNING,
-           "Got Submap message with unknown submap id. Going run setup in id "
-           "tracker.");
-    // TODO
-    // id_tracker_->setupSubmaps(submaps_.get());
+    Color label_color(map_msg.label.color_r, map_msg.label.color_g,
+                      map_msg.label.color_b);
+    LabelHandler::LabelEntry label = {
+        map_msg.label.segmentation_id,
+        map_msg.label.class_id,
+        panopticLabelFromString(map_msg.label.label),
+        map_msg.label.name,
+        map_msg.label.supercategory,
+        map_msg.label.size,
+        label_color};
+    id_tracker_->setupSubmaps(submaps_.get(), nullptr, id, label,
+                              map_msg.is_freespace_map);
+    submaps_->updateInstanceToSubmapIDTable();
   }
 
   if (!submaps_->submapIdExists(id)) {
     ROS_ERROR_THROTTLE(
-        10,
-        "Submap ID %d still invalid. Can't rebuild map from serialized message",
+        10, "Submap ID %d invalid. Can't rebuild map from serialized message",
         id);
     return;
   }
 
   if (!voxblox::deserializeMsgToLayer<TsdfVoxel>(
-      map_msg.tsdf_layer, submaps_->getSubmapPtr(id)->getTsdfLayerPtr().get())) {
-      ROS_ERROR_THROTTLE(10, "Got an invalid TSDF map message!");
+          map_msg.tsdf_layer,
+          submaps_->getSubmapPtr(id)->getTsdfLayerPtr().get())) {
+    ROS_ERROR_THROTTLE(10, "Got an invalid TSDF map message!");
   }
-
   if (submaps_->getSubmap(id).hasClassLayer()) {
-     if (!voxblox::deserializeMsgToLayer<ClassVoxelType>(
-              map_msg.class_layer,
-              submaps_->getSubmapPtr(id)->getClassLayerPtr().get())) {
-         ROS_ERROR_THROTTLE(10, "Got an invalid Class map message!");
-     }
+    if (!voxblox::deserializeMsgToLayer<ClassVoxelType>(
+            map_msg.class_layer,
+            submaps_->getSubmapPtr(id)->getClassLayerPtr().get())) {
+      ROS_ERROR_THROTTLE(10, "Got an invalid Class map message!");
+    }
   }
+  submaps_->getSubmapPtr(id)->updateMesh(
+      false, submaps_->getSubmap(id).hasClassLayer());
+  submap_visualizer_->reset();
 }
 
 void PanopticMapper::publishMap(bool reset_remote_map) {
-  // TODO remove this
-  reset_remote_map = true;
   int subscribers = serialized_map_pub_.getNumSubscribers();
   if (subscribers > 0) {
+    ;
     for (Submap& map : *submaps_) {
+      if (!map.isActive()) continue;
       // Keep track of subscriber count for each submap. This makes sure that if
       // a map is created later, not all maps have to be reset
       while (num_subscribers_serialized_map_.size() <= map.getID()) {
@@ -341,11 +352,19 @@ void PanopticMapper::publishMap(bool reset_remote_map) {
 
       panoptic_mapping_msgs::SerializedMap layer_msg;
       layer_msg.submap_id = map.getID();
+      layer_msg.label.class_id = map.getClassID();
+      layer_msg.label.name = map.getName();
+      layer_msg.label.label = panopticLabelToString(map.getLabel());
+      layer_msg.has_class_layer = map.hasClassLayer();
+      layer_msg.is_freespace_map =
+          submaps_->getActiveFreeSpaceSubmapID() == map.getID();
+
+      // TODO Also encode color, supercategory, segmentation_id and size
       voxblox::serializeLayerAsMsg<TsdfVoxel>(map.getTsdfLayer(), only_updated,
                                               &layer_msg.tsdf_layer);
       if (map.hasClassLayer()) {
-          voxblox::serializeLayerAsMsg<ClassVoxelType>(
-                  map.getClassLayer(), only_updated, &layer_msg.class_layer);
+        voxblox::serializeLayerAsMsg<ClassVoxelType>(
+            map.getClassLayer(), only_updated, &layer_msg.class_layer);
       }
 
       if (reset_remote_map) {

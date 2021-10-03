@@ -1,0 +1,9 @@
+int32 segmentation_id
+int32 class_id
+string label
+string name
+string supercategory
+string size
+int8 color_r
+int8 color_g
+int8 color_b

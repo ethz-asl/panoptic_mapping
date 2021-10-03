@@ -1,3 +1,6 @@
 voxblox_msgs/Layer tsdf_layer
 voxblox_msgs/Layer class_layer
 int32 submap_id
+bool is_freespace_map
+bool has_class_layer
+panoptic_mapping_msgs/LabelEntry label

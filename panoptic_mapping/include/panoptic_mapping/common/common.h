@@ -57,6 +57,12 @@ inline std::string panopticLabelToString(const PanopticLabel& label) {
       return "FreeSpace";
   }
 }
+inline PanopticLabel panopticLabelFromString(const std::string& label) {
+    if (label == "Instance") return PanopticLabel::kFreeSpace;
+    if (label == "Background") return PanopticLabel::kFreeSpace;
+    if (label == "FreeSpace") return PanopticLabel::kFreeSpace;
+    return PanopticLabel::kUnknown;
+}
 
 // Iso-surface-points are used to check alignment and represent the surface
 // of finished submaps.
