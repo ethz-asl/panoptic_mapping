@@ -8,6 +8,8 @@
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
 
+#include "panoptic_mapping/tools/serialization.h"
+#include "panoptic_mapping_msgs/SerializedMap.h"
 #include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
 namespace panoptic_mapping {
@@ -157,6 +159,11 @@ void PanopticMapper::setupRos() {
       "print_timings", &PanopticMapper::printTimingsCallback, this);
   finish_mapping_srv_ = nh_private_.advertiseService(
       "finish_mapping", &PanopticMapper::finishMappingCallback, this);
+  serialized_map_pub_ =
+      nh_private_.advertise<panoptic_mapping_msgs::SerializedMap>(
+          "serialized_map_out", 1, false);
+  serialized_map_sub_ = nh_private_.subscribe(
+      "serialized_map_in", 1, &PanopticMapper::serializedMapCallback, this);
 
   // Timers.
   if (config_.visualization_interval > 0.0) {
@@ -173,6 +180,12 @@ void PanopticMapper::setupRos() {
     print_timing_timer_ =
         nh_private_.createTimer(ros::Duration(config_.print_timing_interval),
                                 &PanopticMapper::dataLoggingCallback, this);
+  }
+  if (config_.map_publishing_interval > 0.0) {
+    std::cout << config_.map_publishing_interval << std::endl;
+    pub_map_timer_ =
+        nh_private_.createTimer(ros::Duration(config_.map_publishing_interval),
+                                &PanopticMapper::mapPublishingCallback, this);
   }
   input_timer_ =
       nh_private_.createTimer(ros::Duration(config_.check_input_interval),
@@ -270,6 +283,89 @@ void PanopticMapper::publishVisualization() {
   planning_visualizer_->visualizeAll();
 }
 
+void PanopticMapper::serializedMapCallback(
+    const panoptic_mapping_msgs::SerializedMap& map_msg) {
+  int id = map_msg.submap_id;
+  if (!submaps_->submapIdExists(id)) {
+    LOG_IF(WARNING,
+           "Got Submap message with unknown submap id. Going run setup in id "
+           "tracker.");
+    // TODO
+    // id_tracker_->setupSubmaps(submaps_.get());
+  }
+
+  if (!submaps_->submapIdExists(id)) {
+    ROS_ERROR_THROTTLE(
+        10,
+        "Submap ID %d still invalid. Can't rebuild map from serialized message",
+        id);
+    return;
+  }
+
+  if (!voxblox::deserializeMsgToLayer<TsdfVoxel>(
+      map_msg.tsdf_layer, submaps_->getSubmapPtr(id)->getTsdfLayerPtr().get())) {
+      ROS_ERROR_THROTTLE(10, "Got an invalid TSDF map message!");
+  }
+
+  if (submaps_->getSubmap(id).hasClassLayer()) {
+     if (!voxblox::deserializeMsgToLayer<ClassVoxelType>(
+              map_msg.class_layer,
+              submaps_->getSubmapPtr(id)->getClassLayerPtr().get())) {
+         ROS_ERROR_THROTTLE(10, "Got an invalid Class map message!");
+     }
+  }
+}
+
+void PanopticMapper::publishMap(bool reset_remote_map) {
+  // TODO remove this
+  reset_remote_map = true;
+  int subscribers = serialized_map_pub_.getNumSubscribers();
+  if (subscribers > 0) {
+    for (Submap& map : *submaps_) {
+      // Keep track of subscriber count for each submap. This makes sure that if
+      // a map is created later, not all maps have to be reset
+      while (num_subscribers_serialized_map_.size() <= map.getID()) {
+        // If ID not stored yet, map was probably newly created. Add zeros as
+        // sub, since these maps need to be fully published
+        num_subscribers_serialized_map_.push_back(0);
+      }
+
+      if (num_subscribers_serialized_map_.at(map.getID()) < subscribers) {
+        // Always reset the remote map and send all when a new subscriber
+        // subscribes. A bit of overhead for other subscribers, but better than
+        // inconsistent map states.
+        reset_remote_map = true;
+      }
+
+      const bool only_updated = !reset_remote_map;
+
+      panoptic_mapping_msgs::SerializedMap layer_msg;
+      layer_msg.submap_id = map.getID();
+      voxblox::serializeLayerAsMsg<TsdfVoxel>(map.getTsdfLayer(), only_updated,
+                                              &layer_msg.tsdf_layer);
+      if (map.hasClassLayer()) {
+          voxblox::serializeLayerAsMsg<ClassVoxelType>(
+                  map.getClassLayer(), only_updated, &layer_msg.class_layer);
+      }
+
+      if (reset_remote_map) {
+        layer_msg.tsdf_layer.action =
+            static_cast<uint8_t>(voxblox::MapDerializationAction::kReset);
+        layer_msg.class_layer.action =
+            static_cast<uint8_t>(voxblox::MapDerializationAction::kReset);
+      }
+
+      serialized_map_pub_.publish(layer_msg);
+      num_subscribers_serialized_map_.at(map.getID()) = subscribers;
+    }
+  } else {
+    // Subscribers dropped to zero. Remove all active subs.
+    for (int& subs : num_subscribers_serialized_map_) {
+      subs = 0;
+    }
+  }
+}
+
 bool PanopticMapper::saveMap(const std::string& file_path) {
   bool success = submaps_->saveToFile(file_path);
   LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
@@ -299,6 +395,9 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   LOG(INFO) << "Successfully loaded " << submaps_->size() << " submaps.";
   return true;
+}
+void PanopticMapper::mapPublishingCallback(const ros::TimerEvent&) {
+  publishMap();
 }
 
 void PanopticMapper::dataLoggingCallback(const ros::TimerEvent&) {

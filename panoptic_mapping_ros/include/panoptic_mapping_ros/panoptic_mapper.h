@@ -20,6 +20,7 @@
 #include <panoptic_mapping/tools/thread_safe_submap_collection.h>
 #include <panoptic_mapping/tracking/id_tracker_base.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
+#include <panoptic_mapping_msgs/SerializedMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
@@ -43,6 +44,7 @@ class PanopticMapper {
     bool use_threadsafe_submap_collection = false;
     int ros_spinner_threads = std::thread::hardware_concurrency();
     float check_input_interval = 0.01f;  // s
+    float map_publishing_interval = 1.0f;
 
     Config() { setConfigName("PanopticMapper"); }
 
@@ -61,6 +63,8 @@ class PanopticMapper {
   void dataLoggingCallback(const ros::TimerEvent&);
   void printTimingsCallback(const ros::TimerEvent&);
   void inputCallback(const ros::TimerEvent&);
+  void mapPublishingCallback(const ros::TimerEvent&);
+  void esdfCallback(const ros::TimerEvent&);
 
   // Services.
   bool saveMapCallback(
@@ -90,6 +94,7 @@ class PanopticMapper {
   /* IO */
   bool saveMap(const std::string& file_path);
   bool loadMap(const std::string& file_path);
+  void publishMap(bool reset_remote_map = false);
 
   /* Utilities */
   // Print all timings (from voxblox::timing) to console.
@@ -97,7 +102,8 @@ class PanopticMapper {
 
   // Update the meshes and publish the all visualizations of the current map.
   void publishVisualization();
-
+  // Callback to synchronize internal map with ros message
+  void serializedMapCallback(const panoptic_mapping_msgs::SerializedMap& map_msg);
   /* Access */
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
   const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
@@ -120,6 +126,8 @@ class PanopticMapper {
   ros::NodeHandle nh_private_;
 
   // Subscribers, Publishers, Services, Timers.
+  ros::Publisher serialized_map_pub_;
+  ros::Subscriber serialized_map_sub_;
   ros::ServiceServer load_map_srv_;
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_visualization_mode_srv_;
@@ -129,6 +137,7 @@ class PanopticMapper {
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
   ros::Timer print_timing_timer_;
+  ros::Timer pub_map_timer_;
   ros::Timer input_timer_;
 
   // Members.

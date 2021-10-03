@@ -1,0 +1,3 @@
+voxblox_msgs/Layer tsdf_layer
+voxblox_msgs/Layer class_layer
+int32 submap_id
