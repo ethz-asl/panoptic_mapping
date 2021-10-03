@@ -18,6 +18,7 @@ void SingleTsdfVisualizer::Config::checkParams() const {
 void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("submap_visualizer_config", &submap_visualizer_config);
+  setupParam("entropy_factor", &entropy_factor);
 }
 
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
@@ -55,7 +56,10 @@ void SingleTsdfVisualizer::clearMesh() {
 std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
-
+  if (!submaps->submapIdExists(submaps->getActiveFreeSpaceSubmapID())) {
+    LOG(WARNING) << "no map to publish in generateMeshMsgs" << std::endl;
+    return result;
+  }
   // Get the single map.
   Submap& submap =
       *submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
@@ -127,6 +131,19 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
   return result;
 }
 
+inline Color getColorForFloat(const float value) {
+  Color color;
+  color.b = 0;
+  if (value > 0.5) {
+    color.r = ((1.f - value) * 2.f * 255.f);
+    color.g = 255;
+  } else {
+    color.r = 255;
+    color.g = (value * 2.f * 255.f);
+  }
+  return color;
+}
+
 void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
                                           voxblox_msgs::MeshBlock* mesh_block) {
   const voxblox::BlockIndex block_index(
@@ -146,29 +163,52 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
   mesh_block->b.resize(num_vertices);
 
   // Coloring schemes.
-  std::function<Color(const ClassVoxel&)> get_color;
+  std::function<Color(const ClassVoxelType&)> get_color;
   if (color_mode_ == ColorMode::kClassification) {
     // Color the voxel by the certainty of classification from green 1.0 highest
     // to red 0.0.
-    get_color = [](const ClassVoxel& voxel) {
+    get_color = [](const ClassVoxelType& voxel) {
       const float probability = static_cast<float>(voxel.belongs_count) /
                                 static_cast<float>(std::accumulate(
                                     voxel.counts.begin(), voxel.counts.end(),
                                     ClassVoxel::Counter(0)));
+      return getColorForFloat(probability);
+    };
+  } else if (color_mode_ == ColorMode::kUncertainty) {
+    get_color = [](const ClassVoxelType& voxel) {
+      float probability = panoptic_mapping::classVoxelUncertainty(voxel);
+      // Well defined uncertanties should never be > 1
+      if (probability > 1) probability = 1;
+      return getColorForFloat(probability);
+    };
+  } else if (color_mode_ == ColorMode::kGroundtruth) {
+    get_color = [this](const ClassVoxelType& voxel) {
+      // Coloring gt voxels green and not groundtruth voxels blue
       Color color;
-      color.b = 0;
-      if (probability > 0.5) {
-        color.r = ((1.f - probability) * 2.f * 255.f);
+      color.r = 0;
+      if (voxel.is_gt) {
+        color.b = 0;
         color.g = 255;
       } else {
-        color.r = 255;
-        color.g = (probability * 2.f * 255.f);
+        color.b = 255;
+        color.g = 0;
       }
       return color;
     };
+  } else if (color_mode_ == ColorMode::kEntropy) {
+    get_color = [this](const ClassVoxelType& voxel) {
+      const float uniform_prob = 1 / static_cast<float>(voxel.counts.size());
+      const float uniform_entropy =
+          -voxel.counts.size() * (uniform_prob * std::log(uniform_prob));
+      float normalized_entropy = panoptic_mapping::classVoxelEntropy(voxel) /
+                                 uniform_entropy * config_.entropy_factor; // Entropies are often very small. Use this to make small values visible
+      if (normalized_entropy > 1) normalized_entropy = 1;  // Cap to one
+
+      return getColorForFloat(normalized_entropy);
+    };
   } else {
     // This implies the visualization mode is instances or classes.
-    get_color = [this](const ClassVoxel& voxel) {
+    get_color = [this](const ClassVoxelType& voxel) {
       return id_color_map_.colorLookup(voxel.current_index);
     };
   }
@@ -187,7 +227,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
         (static_cast<float>(mesh_block->z[i]) * point_conv_factor +
          static_cast<float>(block_index[2])) *
         block_edge_length;
-    const ClassVoxel& voxel =
+    const ClassVoxelType& voxel =
         class_block.getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
     const Color color = get_color(voxel);
     mesh_block->r[i] = color.r;
