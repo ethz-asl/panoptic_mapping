@@ -632,6 +632,12 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kClasses;
   } else if (color_mode == "classification") {
     return ColorMode::kClassification;
+  } else if (color_mode == "uncertainty") {
+    return ColorMode::kUncertainty;
+  } else if (color_mode == "entropy") {
+    return ColorMode::kEntropy;
+  } else if (color_mode == "groundtruth") {
+    return ColorMode::kGroundtruth;
   } else {
     LOG(WARNING) << "Unknown ColorMode '" << color_mode
                  << "', using 'color' instead.";
@@ -655,6 +661,12 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
       return "change";
     case ColorMode::kClassification:
       return "classification";
+    case ColorMode::kEntropy:
+      return "entropy";
+    case ColorMode::kUncertainty:
+      return "uncertainty";
+    case ColorMode::kGroundtruth:
+      return "groundtruth"
   }
   return "unknown";
 }
