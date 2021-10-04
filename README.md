@@ -22,7 +22,6 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 * [Contributing](#Contributing)
 
 
-
 # Paper
 If you find this package useful for your research, please consider citing our paper:
 
@@ -116,7 +115,9 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
     roslaunch panoptic_mapping_ros run.launch
     ```
 4. You should now see the map being incrementally built:
+
     <img src="https://user-images.githubusercontent.com/36043993/135860249-6334cc41-5758-457b-8f65-b017e2905804.png" width="400">
+    
 5. After the map finished building, you can save the map:
     ```
     rosservice call /panoptic_mapper/save_map "file_path: '/path/to/run1.panmap'" 
@@ -126,6 +127,7 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
     roslaunch panoptic_mapping_ros run.launch
     ```
 7. You should now see the map being updated based on the first run:
+
     <img src="https://user-images.githubusercontent.com/36043993/135861611-4d576750-3104-4d73-87dc-60b7a4ad1df6.png" width="400">
 
 ## Monolithic Semantic Mapping
@@ -148,7 +150,7 @@ To add to this repository:
     bash
     roscd panoptic_mapping/..
     init_linter_git_hooks
-    # Your set to go!
+    # You're all set to go!
     ```
 * Please open a [Pull Request](https://github.com/ethz-asl/panoptic_mapping/pulls) for your changes.
 * Thank you for contributing!
