@@ -10,8 +10,8 @@
  * the number of classes, this method uses more memory than simply storing the
  * whole count vector, since the indices are also saved.
  */
-#ifndef PANOPTIC_MAPPING_SERIALIZATION_H
-#define PANOPTIC_MAPPING_SERIALIZATION_H
+#ifndef PANOPTIC_MAPPING_TOOLS_SERIALIZATION_H
+#define PANOPTIC_MAPPING_TOOLS_SERIALIZATION_H
 #include "panoptic_mapping/common/common.h"
 
 // Store only top 3 counts per voxel to save memory
@@ -75,4 +75,4 @@ template <>
 std::string getVoxelType<panoptic_mapping::ClassUncertaintyVoxel>();
 }  // namespace voxblox
 
-#endif  // PANOPTIC_MAPPING_SERIALIZATION_H
+#endif  // PANOPTIC_MAPPING_TOOLS_SERIALIZATION_H
