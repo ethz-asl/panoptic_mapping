@@ -25,6 +25,8 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
     // Standard integrator params.
     ProjectiveIntegrator::Config projective_integrator_config;
 
+    bool use_uncertainty = false;
+
     Config() { setConfigName("SingleTsdfIntegrator"); }
 
    protected:
@@ -60,9 +62,10 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
 
   int num_classes_;
 
-  template <typename VoxelType>
   void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
-                        VoxelType* class_voxel) const;
+                          ClassVoxel* class_voxel) const;
+  void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
+                        ClassUncertaintyVoxel* class_voxel) const;
 };
 
 }  // namespace panoptic_mapping

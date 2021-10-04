@@ -25,6 +25,7 @@ void SingleTsdfIntegrator::Config::checkParams() const {
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("projective_integrator_config", &projective_integrator_config);
+  setupParam("use_uncertainty", &use_uncertainty);
   projective_integrator_config.foreign_rays_clear = false;
 }
 
@@ -34,9 +35,11 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
       ProjectiveIntegrator(config.projective_integrator_config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-#ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-  addRequiredInputs({InputData::InputType::kUncertaintyImage});
-#endif
+
+  if (config_.use_uncertainty) {
+    addRequiredInputs({InputData::InputType::kUncertaintyImage});
+  }
+
   // Request all inputs.
   // Cache num classes info.
   num_classes_ = globals_->labelHandler()->numberOfClasses();
@@ -144,8 +147,8 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     block.setUpdatedAll();
   }
 }
-template <>
-void SingleTsdfIntegrator::updateClassVoxel<panoptic_mapping::ClassVoxel>(
+
+void SingleTsdfIntegrator::updateClassVoxel(
     InterpolatorBase* interpolator, const InputData& input,
     panoptic_mapping::ClassVoxel* class_voxel) const {
   // Do not update voxels which are assigned as groundtruth
@@ -168,11 +171,17 @@ void SingleTsdfIntegrator::updateClassVoxel<panoptic_mapping::ClassVoxel>(
     classVoxelIncrementClass(class_voxel, class_id);
   }
 }
-template <>
-void SingleTsdfIntegrator::updateClassVoxel<
-    panoptic_mapping::ClassUncertaintyVoxel>(
+void SingleTsdfIntegrator::updateClassVoxel(
     InterpolatorBase* interpolator, const InputData& input,
     panoptic_mapping::ClassUncertaintyVoxel* uncertainty_voxel) const {
+  if (!config_.use_uncertainty) {
+    // Do not use uncertainty
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    return;
+  }
+
   if (uncertainty_voxel->is_gt) {
     return;  // Do not update voxels that have Groundtruth assigned
   }
