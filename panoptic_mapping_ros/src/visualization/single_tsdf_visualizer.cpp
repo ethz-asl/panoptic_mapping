@@ -57,7 +57,7 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
   if (!submaps->submapIdExists(submaps->getActiveFreeSpaceSubmapID())) {
-    LOG(WARNING) << "no map to publish in generateMeshMsgs" << std::endl;
+    LOG(WARNING) << "No map which can be used to extract a mesh from.";
     return result;
   }
   // Get the single map.
