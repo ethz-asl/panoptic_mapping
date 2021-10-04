@@ -1,8 +1,7 @@
 #ifndef PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_H_
 #define PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_H_
 
-#include <limits.h>
-
+#include <climits>
 #include <vector>
 
 namespace panoptic_mapping {
@@ -18,7 +17,7 @@ namespace panoptic_mapping {
 // Thus if uncertainty_value * accuracy > max_size(<int32|short>) an overflow
 // occurs.
 // Using short as datatype to save memory and having uncertainty values <= 1
-// limits accuracy to: 10^-4 sing short   and   10^-8 Using int
+// limits accuracy to: 10^-4 using short   and   10^-8 Using int
 #define UNCERTAINTY_ACCURACY int(1000)
 // Uncertainty is updated as UNCERTAINTY_DECAY_RATE * old_value +
 // (1-UNCERTAINTY_DECAY_RATE) * new_value Setting this to 0 will always fully
@@ -27,10 +26,8 @@ namespace panoptic_mapping {
 
 #ifdef PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
 using UncertaintyType = short;
-#define MAX_UNCERTAINTY_VALUE SHRT_MAX;  // NOLINT
 #else
 using UncertaintyType = int32_t;
-#define MAX_UNCERTAINTY_VALUE INT32_MAX;  // NOLINT
 #endif  // PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
 
 /**
@@ -178,9 +175,10 @@ inline void classVoxelUpdateUncertainty(ClassUncertaintyVoxel* voxel,
   float uncertainty_shifted = uncertainty_value * UNCERTAINTY_ACCURACY;
 
   // Overflow Check
-  const float max_uncertainty_value = MAX_UNCERTAINTY_VALUE;
+  const float max_uncertainty_value =
+      std::numeric_limits<UncertaintyType>::max();
   if (uncertainty_shifted > max_uncertainty_value) {
-    LOG(WARNING) << "[panoptic::class_voxel.h] Uncertainty value is too big. "
+    LOG(WARNING) << "Uncertainty value is too big. "
                     "Change uncertainty accuracy or use bigger uncertainty "
                     "type to prevent this.";
     uncertainty_shifted = max_uncertainty_value;
