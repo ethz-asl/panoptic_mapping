@@ -3,7 +3,7 @@ This package contains **panoptic_mapping**, a submap-based approach that leverag
 
 ![combined](https://user-images.githubusercontent.com/36043993/135645102-e5798e36-e2b0-4611-9260-ec9d54d38e47.png)
 
-3D Reconstruction, active and inactive panoptic submaps, change detection, and more.
+Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for temporal consistency, online change detection, and more.
 
 # Table of Contents
 **Credits**
@@ -17,6 +17,9 @@ This package contains **panoptic_mapping**, a submap-based approach that leverag
 **Examples**
 * [Running the Panoptic Mapper](#Running-the-Panoptic-Mapper)
 * [Monolithic Semantic Mapping](#Monolithic-Semantic-Mapping)
+
+**Other**
+* [Contributing](#Contributing)
 
 
 
@@ -127,3 +130,25 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
 
 ## Monolithic Semantic Mapping
 This example will follow shortly.
+
+# Contributing
+**panoptic_mapping** is an open-source project, any contributions are welcome! 
+
+For issues, bugs, or suggestions, please open a [GitHub Issue](https://github.com/ethz-asl/panoptic_mapping/issues).
+
+To add to this repository:
+* Please employ the [feature-branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow).
+* Setup our auto-formatter for coherent style (we follow the [google style guide](https://google.github.io/styleguide/cppguide.html)):
+    ```
+    # Download the linter
+    cd <linter_dest>
+    git clone git@github.com:ethz-asl/linter.git
+    cd linter
+    echo ". $(realpath setup_linter.sh)" >> ~/.bashrc
+    bash
+    roscd panoptic_mapping/..
+    init_linter_git_hooks
+    # Your set to go!
+    ```
+* Please open a [Pull Request](https://github.com/ethz-asl/panoptic_mapping/pulls) for your changes.
+* Thank you for contributing!
