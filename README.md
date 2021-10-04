@@ -24,7 +24,7 @@ This package contains **panoptic_mapping**, a submap-based approach that leverag
 If you find this package useful for your research, please consider citing our paper:
 
 * Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" arXiv preprint arXiv:2109.10165 (2021).
-\[[ArXiv](https://arxiv.org/abs/2010.09859)\]
+\[[ArXiv](https://arxiv.org/abs/2109.10165)\]
   ```bibtex
   @ARTICLE{schmid2021panoptic,
     title={Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency},
