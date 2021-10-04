@@ -19,8 +19,8 @@ inline void initialize_voxel(panoptic_mapping::ClassVoxel* voxel,
   }
 }
 
-inline void check_voxel_equal(const panoptic_mapping::ClassVoxel v1,
-                              const panoptic_mapping::ClassVoxel v2) {
+inline void check_voxel_equal(const panoptic_mapping::ClassVoxel& v1,
+                              const panoptic_mapping::ClassVoxel& v2) {
   EXPECT_EQ(v1.is_gt, v2.is_gt);
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
@@ -49,8 +49,8 @@ inline void check_voxel_equal(const panoptic_mapping::ClassVoxel v1,
 }
 
 inline void check_voxel_equal(
-    const panoptic_mapping::ClassUncertaintyVoxel v1,
-    const panoptic_mapping::ClassUncertaintyVoxel v2) {
+    const panoptic_mapping::ClassUncertaintyVoxel& v1,
+    const panoptic_mapping::ClassUncertaintyVoxel& v2) {
   check_voxel_equal(static_cast<panoptic_mapping::ClassVoxel>(v1),
                     static_cast<panoptic_mapping::ClassVoxel>(v2));
   EXPECT_EQ(v1.uncertainty_value, v2.uncertainty_value);
