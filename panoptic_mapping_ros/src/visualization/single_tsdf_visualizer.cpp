@@ -131,15 +131,15 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
   return result;
 }
 
-inline Color getColorForFloat(const float value) {
+inline Color mapProbabilityToGreenRedGradient(const float probability) {
   Color color;
   color.b = 0;
-  if (value > 0.5) {
-    color.r = ((1.f - value) * 2.f * 255.f);
+  if (probability > 0.5) {
+    color.r = ((1.f - probability) * 2.f * 255.f);
     color.g = 255;
   } else {
     color.r = 255;
-    color.g = (value * 2.f * 255.f);
+    color.g = (probability * 2.f * 255.f);
   }
   return color;
 }
@@ -172,16 +172,16 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
                                 static_cast<float>(std::accumulate(
                                     voxel.counts.begin(), voxel.counts.end(),
                                     ClassVoxel::Counter(0)));
-      return getColorForFloat(probability);
+      return mapProbabilityToGreenRedGradient(probability);
     };
   } else if (color_mode_ == ColorMode::kUncertainty) {
     get_color = [](const ClassVoxelType& voxel) {
       float probability = panoptic_mapping::classVoxelUncertainty(voxel);
       // Well defined uncertanties should never be > 1
       if (probability > 1) probability = 1;
-      return getColorForFloat(probability);
+      return mapProbabilityToGreenRedGradient(probability);
     };
-  } else if (color_mode_ == ColorMode::kGroundtruth) {
+  } else if (color_mode_ == ColorMode::kIsGroundtruth) {
     get_color = [this](const ClassVoxelType& voxel) {
       // Coloring gt voxels green and not groundtruth voxels blue
       Color color;
@@ -204,7 +204,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
                                  uniform_entropy * config_.entropy_factor; // Entropies are often very small. Use this to make small values visible
       if (normalized_entropy > 1) normalized_entropy = 1;  // Cap to one
 
-      return getColorForFloat(normalized_entropy);
+      return mapProbabilityToGreenRedGradient(normalized_entropy);
     };
   } else {
     // This implies the visualization mode is instances or classes.
