@@ -102,13 +102,13 @@ inline float classVoxelBelongingProbability(const ClassVoxel& voxel) {
 }
 
 /**
- *
+ * @brief Calculates x * log(x) of the given number. If x is <= returns 0
  * @param x float to calculate entropy for
  * @return  x * log(x) if x > 0 , 0 else
  */
 inline float xlogx(float x) {
   if (x <= 0) {
-    return x;
+    return 0;
   }
   return x * std::log(x);
 }
