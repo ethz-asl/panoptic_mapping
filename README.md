@@ -24,7 +24,7 @@ This package contains **panoptic_mapping**, a submap-based approach that leverag
 If you find this package useful for your research, please consider citing our paper:
 
 * Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" arXiv preprint arXiv:2109.10165 (2021).
-\[[ArXiv](https://arxiv.org/abs/2109.10165)\]
+  \[[ArXiv](https://arxiv.org/abs/2109.10165)\]
   ```bibtex
   @ARTICLE{schmid2021panoptic,
     title={Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency},
@@ -101,10 +101,29 @@ Additional data to run the mapper on the 3RScan dataset will follow.
 ## Running the Panoptic Mapper
 This example explains how to run the Panoptic Multi-TSDF mapper on the flat dataset. 
 
-1. First download the flat dataset:
-   ```
-   export FLAT_DATA_DIR="~/Documents/flat_dataset"  # Or whichever path you prefer.
-   ```
+1. First, download the flat dataset:
+    ```
+    export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
+    chmod +x download_flat_dataset.sh
+    ./download_flat_dataset.sh
+    ```
+2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/flat_groundtruth.yaml (L15)` to the downloaded path.
+3. Run the mapper:
+    ```
+    roslaunch panoptic_mapping_ros run.launch
+    ```
+4. You should now see the map being incrementally built:
+    <img src="https://user-images.githubusercontent.com/36043993/135860249-6334cc41-5758-457b-8f65-b017e2905804.png" width="400">
+5. After the map finished building, you can save the map:
+    ```
+    rosservice call /panoptic_mapper/save_map "file_path: '/path/to/run1.panmap'" 
+    ```
+6. Terminate the mapper pressing Ctrl+C. You can continue the experiment on `run2` of the flat dataset by changing the `base_path`-ending in `launch/run.launch (L10)` to `run2`, and `load_map` and `load_path` in `launch/run.launch (L26-27)` to `true` and `/path/to/run1.panmap`, respectively. Optionally, you can also change the `color_mode` in `config/mapper/flat_groundtruth.yaml (L118)` to `change` to better highlight the change detection at work.
+     ```
+    roslaunch panoptic_mapping_ros run.launch
+    ```
+7. You should now see the map being updated based on the first run:
+    <img src="https://user-images.githubusercontent.com/36043993/135861611-4d576750-3104-4d73-87dc-60b7a4ad1df6.png" width="400">
 
 ## Monolithic Semantic Mapping
 This example will follow shortly.
