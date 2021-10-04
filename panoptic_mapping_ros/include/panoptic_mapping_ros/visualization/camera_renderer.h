@@ -31,7 +31,7 @@ class CameraRenderer {
     void checkParams() const override;
   };
   // Uncertainty methods
-  enum UNCERTAINTY_METHOD { UNCERTAINTY, VOXEL_ENTROPY, PROBABILITY };
+  enum UNCERTAINTY_METHOD { kUNCERTAINTY, kVOXEL_ENTROPY, kPROBABILITY };
 
   // Constructors.
   explicit CameraRenderer(const Config& config,

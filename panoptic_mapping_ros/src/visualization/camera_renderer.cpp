@@ -53,18 +53,16 @@ bool CameraRenderer::renderCameraViewCallback(
 
   if (!request.use_provided_tf) {
     // TF not provided. Look it up.
-    // TODO @zrene. This is hardcoded. Can i use global_frame_name_?
-    auto base_frame = "world";
     auto child_frame = request.sensor_frame;
     // Try to lookup the transform for the maximum wait time.
     try {
-      tf_listener_.waitForTransform(base_frame, child_frame, request.lookup_ts,
+      tf_listener_.waitForTransform(global_frame_name_, child_frame, request.lookup_ts,
                                     ros::Duration(0.5));
-      tf_listener_.lookupTransform(base_frame, child_frame, request.lookup_ts,
+      tf_listener_.lookupTransform(global_frame_name_, child_frame, request.lookup_ts,
                                    transform);
     } catch (tf::TransformException& ex) {
       LOG_IF(WARNING, config_.verbosity >= 0)
-          << "Unable to lookup transform between '" << base_frame << "' and '"
+          << "Unable to lookup transform between '" << global_frame_name_ << "' and '"
           << child_frame << "' at time '" << request.lookup_ts << "' over '"
           << 0.5 << "s', skipping inputs. Exception: '" << ex.what() << "'.";
       return false;
@@ -79,18 +77,18 @@ bool CameraRenderer::renderCameraViewCallback(
   // Parse uncertainty method that should be used
   UNCERTAINTY_METHOD method;
   if (request.uncertainty_method == "uncertainty") {
-    method = UNCERTAINTY_METHOD::UNCERTAINTY;
+    method = UNCERTAINTY_METHOD::kUNCERTAINTY;
   } else if (request.uncertainty_method == "voxel_entropy") {
-    method = UNCERTAINTY_METHOD::VOXEL_ENTROPY;
+    method = UNCERTAINTY_METHOD::kVOXEL_ENTROPY;
   } else if (request.uncertainty_method == "voxel_probability") {
-    method = UNCERTAINTY_METHOD::PROBABILITY;
+    method = UNCERTAINTY_METHOD::kPROBABILITY;
   } else {
     LOG(WARNING) << "unknown uncertainty method " << request.uncertainty_method
                  << std::endl
                  << "Available: <uncertainty,voxel_entropy,voxel_probability>"
                  << std::endl
-                 << " defaulting to uncertainty" << std::endl;
-    method = UNCERTAINTY_METHOD::UNCERTAINTY;
+                 << " defaulting to uncertainty";
+    method = UNCERTAINTY_METHOD::kUNCERTAINTY;
   }
   cv::Mat depth_image;
   // Initialize images width default valuse
@@ -138,11 +136,11 @@ inline float get_voxel_uncertainty_value(
     const ClassVoxelType& voxel,
     const CameraRenderer::UNCERTAINTY_METHOD method) {
   switch (method) {
-    case CameraRenderer::UNCERTAINTY_METHOD::UNCERTAINTY:
+    case CameraRenderer::UNCERTAINTY_METHOD::kUNCERTAINTY:
       return panoptic_mapping::classVoxelUncertainty(voxel);
-    case CameraRenderer::UNCERTAINTY_METHOD::PROBABILITY:
+    case CameraRenderer::UNCERTAINTY_METHOD::kPROBABILITY:
       return panoptic_mapping::classVoxelEntropy(voxel);
-    case CameraRenderer::UNCERTAINTY_METHOD::VOXEL_ENTROPY:
+    case CameraRenderer::UNCERTAINTY_METHOD::kVOXEL_ENTROPY:
       return panoptic_mapping::classVoxelBelongingProbability(voxel);
   }
   return -1;
