@@ -24,6 +24,8 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
   // Config.
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
+    // Factor which multiplies the entropy value in order to bring it into [0,1] range for visualization.
+    float entropy_factor = 1.0f;
     SubmapVisualizer::Config submap_visualizer_config;
 
     Config() { setConfigName("SingleTsdfVisualizer"); }

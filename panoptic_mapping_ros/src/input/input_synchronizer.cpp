@@ -20,7 +20,8 @@ const std::unordered_map<InputData::InputType, std::string>
         {InputData::InputType::kDepthImage, "depth_image_in"},
         {InputData::InputType::kColorImage, "color_image_in"},
         {InputData::InputType::kSegmentationImage, "segmentation_image_in"},
-        {InputData::InputType::kDetectronLabels, "labels_in"}};
+        {InputData::InputType::kDetectronLabels, "labels_in"},
+        {InputData::InputType::kUncertaintyImage, "uncertainty_image_in"}};
 
 void InputSynchronizer::Config::checkParams() const {
   checkParamGT(max_input_queue_length, 0, "max_input_queue_length");
@@ -121,6 +122,20 @@ void InputSynchronizer::advertiseInputTopics() {
         subscribed_inputs_.insert(InputData::InputType::kDetectronLabels);
         break;
       }
+      case InputData::InputType::kUncertaintyImage: {
+            using MsgT = sensor_msgs::ImageConstPtr;
+            addQueue<MsgT>(
+                    type, [this](const MsgT& msg, InputSynchronizerData* data) {
+                        const cv_bridge::CvImageConstPtr uncertainty =
+                                cv_bridge::toCvCopy(msg, "32FC1");
+                        data->data->uncertainty_image_ = uncertainty->image;
+                        const std::lock_guard<std::mutex> lock(data->write_mutex_);
+                        data->data->contained_inputs_.insert(
+                                InputData::InputType::kUncertaintyImage);
+                    });
+            subscribed_inputs_.insert(InputData::InputType::kUncertaintyImage);
+            break;
+        }
     }
   }
 }
