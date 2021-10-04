@@ -166,7 +166,7 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
   // Recompute data that is not stored with the submap.
   if (recompute_data) {
     for (Submap& submap : *this) {
-      submap.updateEverything();
+      submap.updateEverything(false);
     }
   }
   return true;
