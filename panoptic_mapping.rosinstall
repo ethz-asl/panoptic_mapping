@@ -27,10 +27,11 @@
     local-name: opencv3_catkin
     uri: git@github.com:ethz-asl/opencv3_catkin.git
 
-# Package Dependencies
+# Package Dependencies. Notice that voxblox requires a special branch.
 - git:
     local-name: voxblox
     uri: git@github.com:ethz-asl/voxblox.git
+    version: 'devel/panoptic_mapping'
 - git:
     local-name: cblox
     uri: git@github.com:ethz-asl/cblox.git
