@@ -99,6 +99,12 @@ Additional data to run the mapper on the 3RScan dataset will follow.
 
 # Examples
 ## Running the Panoptic Mapper
+This example explains how to run the Panoptic Multi-TSDF mapper on the flat dataset. 
+
+1. First download the flat dataset:
+   ```
+   export FLAT_DATA_DIR="~/Documents/flat_dataset"  # Or whichever path you prefer.
+   ```
 
 ## Monolithic Semantic Mapping
 This example will follow shortly.
