@@ -104,7 +104,7 @@ inline void convert_vector_to_uint32(std::vector<T> data,
  * [Int32] Structure:
  * [ '#ClassesForThisVoxel',
  *   'foreignCount | belongsCount',
- *   'is_gt   |  current_index',
+ *   'is_groundtruth   |  current_index',
  *   'MostCountIndex1 | MostCountIndex2 | | MostCountIndex3 | ...',
  *   'MostCountValue1 | MostCountValue2 | | MostCountValue3| ...' ]
  *
@@ -126,7 +126,7 @@ bool convertVoxelToInt32(const panoptic_mapping::ClassVoxel& voxel,
   data->push_back(static_cast<uint32_t>(voxel.belongs_count) |
                   static_cast<uint32_t>(voxel.foreign_count) << 16);
 
-  data->push_back(static_cast<uint32_t>(voxel.is_gt) |
+  data->push_back(static_cast<uint32_t>(voxel.is_groundtruth) |
                   static_cast<uint32_t>(voxel.current_index) << 16);
 
   if (class_count == 0) {
@@ -169,7 +169,7 @@ bool readVoxelFromInt32(const std::vector<uint32_t>* data, size_t& data_idx,
   voxel.belongs_count = static_cast<uint8_t>(bytes_1 & 0x0000FFFF);
 
   voxel.current_index = static_cast<uint8_t>((bytes_2 & 0xFFFF0000) >> 16);
-  voxel.is_gt = static_cast<bool>(bytes_2 & 0x0000FFFF);
+  voxel.is_groundtruth = static_cast<bool>(bytes_2 & 0x0000FFFF);
 
   if (num_classes == 0) {
     // This voxel has no information stored

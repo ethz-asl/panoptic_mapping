@@ -56,7 +56,7 @@ struct ClassVoxel {
 
   // Flag to set if this voxel was labeled manually and contains a groundtruth
   // class
-  bool is_gt = false;
+  bool is_groundtruth = false;
 };
 
 /**

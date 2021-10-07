@@ -56,7 +56,10 @@ void SingleTsdfVisualizer::clearMesh() {
 std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
-
+  if (submaps->size() == 0) {
+    LOG(WARNING) << "No Map to visualize.";
+    return result;
+  }
   // If the freespace map ID is not yet setup (loaded map) assume it's the first
   // submap in the collection.
   if (submaps->getActiveFreeSpaceSubmapID() < 0) {
@@ -189,7 +192,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
       // Coloring gt voxels green and not groundtruth voxels blue
       Color color;
       color.r = 0;
-      if (voxel.is_gt) {
+      if (voxel.is_groundtruth) {
         color.b = 0;
         color.g = 255;
       } else {
@@ -203,8 +206,10 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
       const float uniform_prob = 1 / static_cast<float>(voxel.counts.size());
       const float uniform_entropy =
           -voxel.counts.size() * (uniform_prob * std::log(uniform_prob));
-      float normalized_entropy = panoptic_mapping::classVoxelEntropy(voxel) /
-                                 uniform_entropy * config_.entropy_factor; // Entropies are often very small. Use this to make small values visible
+      float normalized_entropy =
+          panoptic_mapping::classVoxelEntropy(voxel) / uniform_entropy *
+          config_.entropy_factor;  // Entropies are often very small. Use this
+                                   // to make small values visible
       if (normalized_entropy > 1) normalized_entropy = 1;  // Cap to one
 
       return mapProbabilityToGreenRedGradient(normalized_entropy);

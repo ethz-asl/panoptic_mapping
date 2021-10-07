@@ -152,7 +152,7 @@ void SingleTsdfIntegrator::updateClassVoxel(
     InterpolatorBase* interpolator, const InputData& input,
     panoptic_mapping::ClassVoxel* class_voxel) const {
   // Do not update voxels which are assigned as groundtruth
-  if (class_voxel->is_gt) {
+  if (class_voxel->is_groundtruth) {
     return;
   }
 
@@ -182,7 +182,7 @@ void SingleTsdfIntegrator::updateClassVoxel(
     return;
   }
 
-  if (uncertainty_voxel->is_gt) {
+  if (uncertainty_voxel->is_groundtruth) {
     return;  // Do not update voxels that have Groundtruth assigned
   }
 
@@ -200,7 +200,7 @@ void SingleTsdfIntegrator::updateClassVoxel(
         interpolator, input,
         static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
     // Mark as groundtruth
-    uncertainty_voxel->is_gt = true;
+    uncertainty_voxel->is_groundtruth = true;
     // Reset Uncertainty
     uncertainty_voxel->uncertainty_value = 0;
   } else {

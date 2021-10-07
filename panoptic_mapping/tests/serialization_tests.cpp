@@ -22,7 +22,7 @@ inline void initialize_voxel(panoptic_mapping::ClassVoxel* voxel,
 
 inline void check_voxel_equal(const panoptic_mapping::ClassVoxel& v1,
                               const panoptic_mapping::ClassVoxel& v2) {
-  EXPECT_EQ(v1.is_gt, v2.is_gt);
+  EXPECT_EQ(v1.is_groundtruth, v2.is_groundtruth);
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
   EXPECT_EQ(v1.foreign_count, v2.foreign_count);
@@ -121,7 +121,7 @@ TEST(ClassVoxel, serializeGtVoxels) {
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
       initialize_voxel(voxel, num_classes);
-      voxel->is_gt = true;
+      voxel->is_groundtruth = true;
       // Set class
       panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
     }
@@ -284,7 +284,7 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
           }
         }
         // Randomly assign GT
-        voxel->is_gt = dis(gen) > 0.9;
+        voxel->is_groundtruth = dis(gen) > 0.9;
         // Randomly assign uncertainty
         panoptic_mapping::classVoxelUpdateUncertainty(voxel, dis(gen));
       }
@@ -346,7 +346,7 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
           }
         }
         // Randomly assign GT
-        voxel->is_gt = dis(gen) > 0.9;
+        voxel->is_groundtruth = dis(gen) > 0.9;
         // Randomly assign uncertainty
         panoptic_mapping::classVoxelUpdateUncertainty(voxel, dis(gen));
       }

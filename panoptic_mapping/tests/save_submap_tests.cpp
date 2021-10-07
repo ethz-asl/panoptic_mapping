@@ -16,7 +16,7 @@ const int k_num_classes = 40;
 const int k_num_counts = 5;
 
 inline void check_voxel_equal(const ClassVoxel v1, const ClassVoxel v2) {
-  EXPECT_EQ(v1.is_gt, v2.is_gt);
+  EXPECT_EQ(v1.is_groundtruth, v2.is_groundtruth);
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
   EXPECT_EQ(v1.foreign_count, v2.foreign_count);
@@ -119,7 +119,7 @@ void load_random_voxels(TsdfVoxel* tsdf_voxel, ClassVoxelType* class_voxel) {
     }
   }
   // Randomly assign GT
-  class_voxel->is_gt = dis(gen) > 0.9;
+  class_voxel->is_groundtruth = dis(gen) > 0.9;
   // Randomly assign uncertainty
   classVoxelUpdateUncertainty(class_voxel, dis(gen));
 }
