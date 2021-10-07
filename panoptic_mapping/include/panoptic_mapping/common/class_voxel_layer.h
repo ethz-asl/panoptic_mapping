@@ -2,13 +2,12 @@
 #define PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
 
 #include <voxblox/core/layer.h>
-#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 template <typename VoxelType>
 class ClassVoxelLayer : public voxblox::Layer<VoxelType> {
   // How many class assignements should be serialized.
-  int serialize_top_n_classes_ = PANOPTIC_MAPPING_DEFAULT_SERIALIZATION_COUNT;
+  int serialize_top_n_classes_ = 4;
 
  public:
   explicit ClassVoxelLayer<VoxelType>(voxblox::FloatingPoint voxel_size,
