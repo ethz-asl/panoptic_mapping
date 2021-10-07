@@ -33,8 +33,6 @@ namespace panoptic_mapping {
         class_idx_to_count_2.push(std::pair<int, int>(v2.counts.at(i), i));
       }
       for (int i = 0; i < k_num_counts; ++i) {
-//        std::cout << "checking for equality  " <<i << std::endl;
-//        std::cout << "checking for equality  " <<class_idx_to_count_1.top().first <<  " == " << class_idx_to_count_2.top().first << std::endl;
         EXPECT_EQ(class_idx_to_count_1.top().first,
                   class_idx_to_count_2.top().first);
         EXPECT_EQ(class_idx_to_count_1.top().second,
