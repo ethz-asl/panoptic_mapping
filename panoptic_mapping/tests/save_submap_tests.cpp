@@ -7,12 +7,12 @@
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap.h"
-#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
     const int k_num_blocks = 10;
     const int k_num_classes = 40;
+    const int k_num_counts = 5;
 
     inline void check_voxel_equal(const ClassVoxel v1, const ClassVoxel v2) {
       EXPECT_EQ(v1.is_gt, v2.is_gt);
@@ -29,10 +29,12 @@ namespace panoptic_mapping {
         class_idx_to_count_1.push(std::pair<int, int>(v1.counts.at(i), i));
       }
       std::priority_queue<std::pair<int, int>> class_idx_to_count_2;
-      for (int i = 0; i < v1.counts.size(); ++i) {
-        class_idx_to_count_2.push(std::pair<int, int>(v1.counts.at(i), i));
+      for (int i = 0; i < v2.counts.size(); ++i) {
+        class_idx_to_count_2.push(std::pair<int, int>(v2.counts.at(i), i));
       }
-      for (int i = 0; i < PANOPTIC_MAPPING_SERIALIZE_TOP_N_COUNTS; ++i) {
+      for (int i = 0; i < k_num_counts; ++i) {
+//        std::cout << "checking for equality  " <<i << std::endl;
+//        std::cout << "checking for equality  " <<class_idx_to_count_1.top().first <<  " == " << class_idx_to_count_2.top().first << std::endl;
         EXPECT_EQ(class_idx_to_count_1.top().first,
                   class_idx_to_count_2.top().first);
         EXPECT_EQ(class_idx_to_count_1.top().second,
@@ -143,7 +145,10 @@ namespace panoptic_mapping {
       if (fill) {
         auto tsdf_layer = submap->getTsdfLayerPtr();
         std::shared_ptr<ClassLayer> class_layer = nullptr;
-        if (with_class_layer) class_layer = submap->getClassLayerPtr();
+        if (with_class_layer) {
+          class_layer = submap->getClassLayerPtr();
+          class_layer->set_num_classes_to_serialize(k_num_counts);
+        }
 
         for (int block_idx = 0; block_idx < k_num_blocks; block_idx++) {
           std::shared_ptr<voxblox::Block<voxblox::TsdfVoxel>> tsdf_block =

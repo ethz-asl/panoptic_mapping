@@ -14,6 +14,7 @@
 #include <voxblox/utils/timing.h>
 
 #include "panoptic_mapping/common/class_voxel.h"
+#include "class_voxel_layer.h"
 
 #define PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
 
@@ -39,7 +40,7 @@ using ClassVoxelType = ClassVoxel;
 #endif
 
 using ClassBlock = voxblox::Block<ClassVoxelType>;
-using ClassLayer = voxblox::Layer<ClassVoxelType>;
+using ClassLayer = panoptic_mapping::ClassVoxelLayer<ClassVoxelType>;
 
 using Color = voxblox::Color;
 
