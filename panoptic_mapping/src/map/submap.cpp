@@ -9,6 +9,7 @@
 #include <voxblox/io/layer_io.h>
 
 #include "panoptic_mapping/map_management/layer_manipulator.h"
+#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -99,6 +100,9 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_voxels_per_side(config_.voxels_per_side);
   proto->set_truncation_distance(config_.truncation_distance);
 
+  // Class layer
+  proto->set_has_class_layer(has_class_layer_);
+
   // Store transformation data.
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
   cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
@@ -118,13 +122,25 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   }
 
   // Saving the blocks.
+
+  // TSDF Layer
   constexpr bool kIncludeAllBlocks = true;
   const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
                                      voxblox::BlockIndexList(), outfile_ptr)) {
-    LOG(ERROR) << "Could not write submap blocks to stream.";
+    LOG(ERROR) << "Could not write submap tsdf blocks to stream.";
     outfile_ptr->close();
     return false;
+  }
+
+  if (has_class_layer_) {
+    const ClassLayer& class_layer = *class_layer_;
+    if (!class_layer.saveBlocksToStream(
+            kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
+      LOG(ERROR) << "Could not write submap class blocks to stream.";
+      outfile_ptr->close();
+      return false;
+    }
   }
   return true;
 }
@@ -147,6 +163,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
+  cfg.use_class_layer = submap_proto.has_class_layer();
   auto submap = std::make_unique<Submap>(cfg);
 
   // Load the submap data.
@@ -161,6 +178,17 @@ std::unique_ptr<Submap> Submap::loadFromStream(std::istream* proto_file_ptr,
           proto_file_ptr, submap->tsdf_layer_.get(), tmp_byte_offset_ptr)) {
     LOG(ERROR) << "Could not load the tsdf blocks from stream.";
     return nullptr;
+  }
+
+  // Load class layer
+  if (submap_proto.has_class_layer()) {
+    if (!voxblox::io::LoadBlocksFromStream<ClassVoxelType>(
+            submap_proto.num_blocks(),
+            ClassLayer::BlockMergingStrategy::kReplace, proto_file_ptr,
+            submap->class_layer_.get(), tmp_byte_offset_ptr)) {
+      LOG(ERROR) << "Could not load the class blocks from stream.";
+      return nullptr;
+    }
   }
 
   // Load the transformation.

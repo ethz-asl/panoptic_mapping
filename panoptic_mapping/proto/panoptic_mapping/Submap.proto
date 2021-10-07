@@ -17,6 +17,9 @@ message SubmapProto {
   optional uint32 voxels_per_side = 4;
   optional float truncation_distance = 8;
 
+  // Class layer
+  optional bool has_class_layer = 11;
+
   // Submap Transformation.
   optional cblox.QuatTransformationProto transform = 5;
   optional string frame_name = 10;
