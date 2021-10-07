@@ -18,6 +18,7 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, ProjectiveIDTracker,
 void ProjectiveIDTracker::Config::checkParams() const {
   checkParamGT(rendering_threads, 0, "rendering_threads");
   checkParamNE(depth_tolerance, 0.f, "depth_tolerance");
+  checkParamGT(rendering_subsampling, 0, "rendering_subsampling");
   checkParamConfig(renderer);
 }
 
@@ -27,6 +28,8 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
   setupParam("tracking_metric", &tracking_metric);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
   setupParam("use_class_data_for_matching", &use_class_data_for_matching);
+  setupParam("use_approximate_rendering", &use_approximate_rendering);
+  setupParam("rendering_subsampling", &rendering_subsampling);
   setupParam("min_allocation_size", &min_allocation_size);
   setupParam("rendering_threads", &rendering_threads);
   setupParam("renderer", &renderer);
@@ -199,13 +202,15 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
   if (visualizationIsOn()) {
     vis_timer->Unpause();
     Timer timer("visualization/tracking/rendered");
-    cv::Mat rendered_vis = renderer_.colorIdImage(
-        renderer_.renderActiveSubmapIDs(*submaps, input->T_M_C()));
+    if (config_.use_approximate_rendering) {
+      rendered_vis_ = renderer_.colorIdImage(
+          renderer_.renderActiveSubmapIDs(*submaps, input->T_M_C()));
+    }
     timer = Timer("visualization/tracking/tracked");
     cv::Mat tracked_vis = renderer_.colorIdImage(input->idImage());
     timer.Stop();
     visualize(input_vis, "input");
-    visualize(rendered_vis, "rendered");
+    visualize(rendered_vis_, "rendered");
     visualize(input->colorImage(), "color");
     visualize(tracked_vis, "tracked");
     vis_timer->Stop();
@@ -215,7 +220,7 @@ void ProjectiveIDTracker::processInput(SubmapCollection* submaps,
 Submap* ProjectiveIDTracker::allocateSubmap(int input_id,
                                             SubmapCollection* submaps,
                                             InputData* input) {
-  LabelHandler::LabelEntry label;
+  LabelEntry label;
   if (globals_->labelHandler()->segmentationIdExists(input_id)) {
     label = globals_->labelHandler()->getLabelEntry(input_id);
   }
@@ -244,51 +249,79 @@ TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
          input]() -> std::vector<TrackingInfo> {
           // Also process the input image.
           if (i == 0) {
-            tracking_data.insertInputImage(input->idImage(),
-                                           input->depthImage(),
-                                           globals_->camera()->getConfig());
+            tracking_data.insertInputImage(
+                input->idImage(), input->depthImage(),
+                globals_->camera()->getConfig(), config_.rendering_subsampling);
           }
           std::vector<TrackingInfo> result;
           int index;
           while (index_getter.getNextIndex(&index)) {
-            result.emplace_back(this->renderTrackingInfo(
-                submaps->getSubmap(index), input->T_M_C(), input->depthImage(),
-                input->idImage()));
+            if (config_.use_approximate_rendering) {
+              result.emplace_back(this->renderTrackingInfoApproximate(
+                  submaps->getSubmap(index), *input));
+            } else {
+              result.emplace_back(this->renderTrackingInfoVertices(
+                  submaps->getSubmap(index), *input));
+            }
           }
           return result;
         }));
   }
 
   // Join all threads.
+  std::vector<TrackingInfo> infos;
   for (auto& thread : threads) {
-    tracking_data.insertTrackingInfos(thread.get());
+    for (const TrackingInfo& info : thread.get()) {
+      infos.emplace_back(std::move(info));
+    }
+  }
+  tracking_data.insertTrackingInfos(infos);
+
+  // Render the data if required.
+  if (visualizationIsOn() && !config_.use_approximate_rendering) {
+    Timer timer("visualization/tracking/rendered");
+    cv::Mat vis =
+        cv::Mat::ones(globals_->camera()->getConfig().height,
+                      globals_->camera()->getConfig().width, CV_32SC1) *
+        -1;
+    for (const TrackingInfo& info : infos) {
+      for (const Eigen::Vector2i& point : info.getPoints()) {
+        vis.at<int>(point.y(), point.x()) = info.getSubmapID();
+      }
+    }
+    rendered_vis_ = renderer_.colorIdImage(vis);
   }
   return tracking_data;
 }
 
-TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
-    const Submap& submap, const Transformation& T_M_C,
-    const cv::Mat& depth_image, const cv::Mat& input_ids) const {
+TrackingInfo ProjectiveIDTracker::renderTrackingInfoApproximate(
+    const Submap& submap, const InputData& input) const {
+  // Approximate rendering by projecting the surface points of the submap into
+  // the camera and fill in a patch of the size a voxel has (since there is 1
+  // vertex per voxel).
+
   // Setup.
-  TrackingInfo result(submap.getID(), globals_->camera()->getConfig());
-  const Transformation T_C_S = T_M_C.inverse() * submap.getT_M_S();
-  const float size_factor_x = globals_->camera()->getConfig().fx *
-                              submap.getTsdfLayer().voxel_size() / 2.f;
-  const float size_factor_y = globals_->camera()->getConfig().fy *
-                              submap.getTsdfLayer().voxel_size() / 2.f;
+  const Camera& camera = *globals_->camera();
+  TrackingInfo result(submap.getID(), camera.getConfig());
+  const Transformation T_C_S = input.T_M_C().inverse() * submap.getT_M_S();
+  const float size_factor_x =
+      camera.getConfig().fx * submap.getTsdfLayer().voxel_size() / 2.f;
+  const float size_factor_y =
+      camera.getConfig().fy * submap.getTsdfLayer().voxel_size() / 2.f;
   const float block_size = submap.getTsdfLayer().block_size();
   const FloatingPoint block_diag_half = std::sqrt(3.0f) * block_size / 2.0f;
   const float depth_tolerance =
       config_.depth_tolerance > 0
           ? config_.depth_tolerance
           : -config_.depth_tolerance * submap.getTsdfLayer().voxel_size();
+  const cv::Mat& depth_image = input.depthImage();
 
   // Parse all blocks.
   voxblox::BlockIndexList index_list;
   submap.getMeshLayer().getAllAllocatedMeshes(&index_list);
   for (const voxblox::BlockIndex& index : index_list) {
-    if (!globals_->camera()->blockIsInViewFrustum(
-            submap, index, T_C_S, block_size, block_diag_half)) {
+    if (!camera.blockIsInViewFrustum(submap, index, T_C_S, block_size,
+                                     block_diag_half)) {
       continue;
     }
     for (const Point& vertex :
@@ -296,7 +329,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
       // Project vertex and check depth value.
       const Point p_C = T_C_S * vertex;
       int u, v;
-      if (!globals_->camera()->projectPointToImagePlane(p_C, &u, &v)) {
+      if (!camera.projectPointToImagePlane(p_C, &u, &v)) {
         continue;
       }
       if (std::abs(depth_image.at<float>(v, u) - p_C.z()) >= depth_tolerance) {
@@ -309,7 +342,65 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfo(
       result.insertRenderedPoint(u, v, size_x, size_y);
     }
   }
-  result.evaluate(input_ids, depth_image);
+  result.evaluate(input.idImage(), depth_image);
+  return result;
+}
+
+TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
+    const Submap& submap, const InputData& input) const {
+  TrackingInfo result(submap.getID());
+
+  // Compute the maximum extent to lookup vertices.
+  const Transformation T_C_S = input.T_M_C().inverse() * submap.getT_M_S();
+  const Point origin_C = T_C_S * submap.getBoundingVolume().getCenter();
+  std::vector<size_t> limits(4);  // x_min, x_max, y_min, y_max
+  const Camera::Config& cam_config = globals_->camera()->getConfig();
+
+  // NOTE(schmluk): Currently just iterate over the whole frame since the sphere
+  // tangent computation was not robustly implemented.
+  size_t subsampling_factor = 1;
+  limits = {0u, static_cast<size_t>(cam_config.width), 0u,
+            static_cast<size_t>(cam_config.height)};
+  const Transformation T_S_C = T_C_S.inverse();
+  const TsdfLayer& tsdf_layer = submap.getTsdfLayer();
+  const float depth_tolerance =
+      config_.depth_tolerance > 0
+          ? config_.depth_tolerance
+          : -config_.depth_tolerance * submap.getTsdfLayer().voxel_size();
+  for (size_t u = limits[0]; u < limits[1];
+       u += config_.rendering_subsampling) {
+    for (size_t v = limits[2]; v < limits[3];
+         v += config_.rendering_subsampling) {
+      const float depth = input.depthImage().at<float>(v, u);
+      if (depth < cam_config.min_range || depth > cam_config.max_range) {
+        continue;
+      }
+      const cv::Vec3f& vertex = input.vertexMap().at<cv::Vec3f>(v, u);
+      const Point P_S = T_S_C * Point(vertex[0], vertex[1], vertex[2]);
+      const voxblox::BlockIndex block_index =
+          tsdf_layer.computeBlockIndexFromCoordinates(P_S);
+      const auto block = tsdf_layer.getBlockPtrByIndex(block_index);
+      if (block) {
+        const size_t voxel_index =
+            block->computeLinearIndexFromCoordinates(P_S);
+        const TsdfVoxel& voxel = block->getVoxelByLinearIndex(voxel_index);
+        bool classes_match = true;
+        if (submap.hasClassLayer()) {
+          const ClassVoxel& class_voxel =
+              submap.getClassLayer()
+                  .getBlockByIndex(block_index)
+                  .getVoxelByLinearIndex(voxel_index);
+          classes_match = classVoxelBelongsToSubmap(class_voxel);
+        }
+        if (voxel.weight > 1e-6 && std::abs(voxel.distance) < depth_tolerance) {
+          result.insertVertexPoint(input.idImage().at<int>(v, u));
+          if (visualizationIsOn()) {
+            result.insertVertexVisualizationPoint(u, v);
+          }
+        }
+      }
+    }
+  }
   return result;
 }
 

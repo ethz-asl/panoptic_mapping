@@ -42,7 +42,7 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
 
   // Request all inputs.
   // Cache num classes info.
-  num_classes_ = globals_->labelHandler()->numberOfClasses();
+  num_classes_ = globals_->labelHandler()->numberOfLabels();
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
@@ -238,6 +238,10 @@ bool SingleTsdfIntegrator::updateVoxel(
 
     // Update the semantic information if requested.
     if (class_voxel) {
+      if (class_voxel->current_index < 0) {
+        // This means the voxel is uninitialized.
+        class_voxel->counts.resize(num_classes_);
+      }
       updateClassVoxel(interpolator, input, class_voxel);
     }
   } else {

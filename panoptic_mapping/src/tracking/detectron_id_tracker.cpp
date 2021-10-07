@@ -45,6 +45,11 @@ void DetectronIDTracker::processInput(SubmapCollection* submaps,
 Submap* DetectronIDTracker::allocateSubmap(int input_id,
                                            SubmapCollection* submaps,
                                            InputData* input) {
+  if (input_id == 0) {
+    // The id 0 is used for no-predictions in detectron.
+    return nullptr;
+  }
+
   // Check whether the instance code is known.
   auto it = labels_->find(input_id);
   if (it == labels_->end()) {
@@ -52,7 +57,7 @@ Submap* DetectronIDTracker::allocateSubmap(int input_id,
   }
 
   // Parse detectron label.
-  LabelHandler::LabelEntry label;
+  LabelEntry label;
   const int class_id = it->second.category_id;
   if (globals_->labelHandler()->segmentationIdExists(class_id)) {
     label = globals_->labelHandler()->getLabelEntry(input_id);
@@ -74,6 +79,10 @@ Submap* DetectronIDTracker::allocateSubmap(int input_id,
 }
 
 bool DetectronIDTracker::classesMatch(int input_id, int submap_class_id) {
+  if (input_id == 0) {
+    // The id 0 is used to denote no-predictions by detectron.
+    return false;
+  }
   auto it = labels_->find(input_id);
   if (it == labels_->end()) {
     // No known input label.

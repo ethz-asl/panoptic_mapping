@@ -34,7 +34,7 @@ cmake-build-debug/
 .idea/
 
 # VS Code stuff
-.vscode*
+.vscode/
 
 # qcreator stuff
 CMakeLists.txt.user

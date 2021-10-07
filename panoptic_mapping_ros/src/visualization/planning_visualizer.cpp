@@ -1,6 +1,7 @@
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -51,27 +52,7 @@ void PlanningVisualizer::visualizePlanningSlice() {
 }
 
 visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
-  // Compute extent of the current map.
-  const Submap& submap_0 =
-      *(planning_interface_->getSubmapCollection().begin());
-  Point center_M =
-      submap_0.getT_M_S() * submap_0.getBoundingVolume().getCenter();
-  float x_min = center_M.x();
-  float x_max = center_M.x();
-  float y_min = center_M.y();
-  float y_max = center_M.y();
-  for (const auto& submap : planning_interface_->getSubmapCollection()) {
-    center_M = submap.getT_M_S() * submap.getBoundingVolume().getCenter();
-    const float radius = submap.getBoundingVolume().getRadius();
-    x_min = std::min(x_min, center_M.x() - radius);
-    x_max = std::max(x_max, center_M.x() + radius);
-    y_min = std::min(y_min, center_M.y() - radius);
-    y_max = std::max(y_max, center_M.y() + radius);
-  }
-  size_t x_steps = (x_max - x_min) / config_.slice_resolution;
-  size_t y_steps = (y_max - y_min) / config_.slice_resolution;
-
-  // Setup message.
+  // Setup the message.
   visualization_msgs::Marker marker;
   marker.header.frame_id = global_frame_name_;
   marker.header.stamp = ros::Time::now();
@@ -85,6 +66,38 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
   marker.pose.orientation.w = 1.0;
+
+  // Compute extent of the current map.
+  float x_min = std::numeric_limits<float>::max();
+  float x_max = std::numeric_limits<float>::lowest();
+  float y_min = std::numeric_limits<float>::max();
+  float y_max = std::numeric_limits<float>::lowest();
+  bool extent_set = false;
+  for (const auto& submap : planning_interface_->getSubmapCollection()) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
+      continue;
+    }
+    const Point center_M =
+        submap.getT_M_S() * submap.getBoundingVolume().getCenter();
+    const float radius = submap.getBoundingVolume().getRadius();
+    x_min = std::min(x_min, center_M.x() - radius);
+    x_max = std::max(x_max, center_M.x() + radius);
+    y_min = std::min(y_min, center_M.y() - radius);
+    y_max = std::max(y_max, center_M.y() + radius);
+    extent_set = true;
+  }
+  if (!extent_set) {
+    return marker;
+  }
+
+  // Compute the resolution.
+  size_t x_steps = (x_max - x_min) / config_.slice_resolution;
+  size_t y_steps = (y_max - y_min) / config_.slice_resolution;
+  if (x_steps <= 0u || y_steps <= 0u) {
+    return marker;
+  }
+
+  // General properties.
   marker.points.reserve(x_steps * y_steps);
   marker.colors.reserve(x_steps * y_steps);
 
@@ -106,7 +119,7 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
       point.z = position.z();
       marker.points.emplace_back(point);
       std_msgs::ColorRGBA color;
-      color.a = 0.7;
+      color.a = 0.6;
       PlanningInterface::VoxelState state;
       if (config_.verbosity >= 3) {
         auto t_start = std::chrono::high_resolution_clock::now();
@@ -123,9 +136,9 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
       }
       switch (state) {
         case PlanningInterface::VoxelState::kUnknown: {
-          color.r = 0.5;
-          color.g = 0.5;
-          color.b = 0.5;
+          color.r = 0.7;
+          color.g = 0.7;
+          color.b = 0.7;
           break;
         }
         case PlanningInterface::VoxelState::kKnownFree: {
@@ -143,6 +156,12 @@ visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {
         case PlanningInterface::VoxelState::kKnownOccupied: {
           color.r = 1.0;
           color.g = 0.3;
+          color.b = 0.3;
+          break;
+        }
+        case PlanningInterface::VoxelState::kPersistentOccupied: {
+          color.r = 1.0;
+          color.g = 0.7;
           color.b = 0.3;
           break;
         }

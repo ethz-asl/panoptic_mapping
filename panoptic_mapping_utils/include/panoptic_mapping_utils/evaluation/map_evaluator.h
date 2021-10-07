@@ -10,6 +10,7 @@
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
+#include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_ros/visualization/submap_visualizer.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -18,8 +19,10 @@
 
 namespace panoptic_mapping {
 
-// Evaluation tools in a ROS node for visualization. Largely based on the
-// voxblox_ros/voxblox_eval.cc code.
+/**
+ * @brief Evaluation tools in a ROS node. Initially based on the
+ * voxblox_ros/voxblox_eval.cc code.
+ */
 class MapEvaluator {
  public:
   struct EvaluationRequest
@@ -29,14 +32,19 @@ class MapEvaluator {
     // Data handling.
     std::string map_file;
     std::string ground_truth_pointcloud_file;
+    std::string output_suffix = "evaluation_data";
 
     // Evaluation
     float maximum_distance = 0.2;  // m
+    float inlier_distance = 0.1;   // m
     bool visualize = true;
     bool evaluate = true;
     bool compute_coloring = false;  // Use map_file to load and display.
     bool ignore_truncated_points = false;
     bool color_by_max_error = false;  // false: color by average error
+    bool color_by_mesh_distance =
+        true;  // true: iterate through mesh, false: iterate over gt points.
+    bool is_single_tsdf = false;
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 
@@ -76,12 +84,18 @@ class MapEvaluator {
   // Access.
   bool evaluate(const EvaluationRequest& request);
   void publishVisualization();
+  bool setupMultiMapEvaluation();
+
+  // Services.
+  bool evaluateMapCallback(
+      panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
+      panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
 
  private:
-  void computeReconstructionError(const EvaluationRequest& request);
+  std::string computeReconstructionError(const EvaluationRequest& request);
+  std::string computeMeshError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
-  void computeErrorHistogram(
-      const EvaluationRequest& request);  // Placeholder atm
+  void buildKdTree();
 
  private:
   // ROS.
@@ -100,6 +114,12 @@ class MapEvaluator {
   std::string target_map_name_;
   std::unique_ptr<PlanningInterface> planning_;
   std::unique_ptr<SubmapVisualizer> visualizer_;
+  TreeData kdtree_data_;
+  std::unique_ptr<KDTree> kdtree_;
+
+  // Multi Map Evaluations.
+  ros::ServiceServer process_map_srv_;
+  EvaluationRequest request_;
 };
 
 }  // namespace panoptic_mapping

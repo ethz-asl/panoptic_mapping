@@ -26,6 +26,7 @@ void MeshIntegrator::Config::setupParamsAndPrinting() {
   setupParam("use_color", &use_color);
   setupParam("min_weight", &min_weight);
   setupParam("required_belonging_corners", &required_belonging_corners);
+  setupParam("clear_foreign_voxels", &clear_foreign_voxels);
   setupParam("integrator_threads", &integrator_threads);
 }
 
@@ -115,27 +116,29 @@ void MeshIntegrator::generateMeshBlocksFunction(
   size_t list_idx;
   while (index_getter->getNextIndex(&list_idx)) {
     const voxblox::BlockIndex& block_idx = tsdf_blocks[list_idx];
-    updateMeshForBlock(block_idx);
-    if (clear_updated_flag) {
+    const bool success = updateMeshForBlock(block_idx);
+    if (clear_updated_flag && success) {
       tsdf_layer_->getBlockPtrByIndex(block_idx)->setUpdated(
           voxblox::Update::Status::kMesh, false);
     }
   }
 }
 
-void MeshIntegrator::updateMeshForBlock(
+bool MeshIntegrator::updateMeshForBlock(
     const voxblox::BlockIndex& block_index) {
   voxblox::Mesh::Ptr mesh = mesh_layer_->getMeshPtrByIndex(block_index);
   mesh->clear();
   // This block should already exist, otherwise it makes no sense to update
   // the mesh for it. ;)
   if (!tsdf_layer_->hasBlock(block_index)) {
-    LOG(ERROR) << "Trying to mesh a non-existent TSDF block at index: "
-               << block_index.transpose();
+    LOG(WARNING) << "Trying to mesh a non-existent TSDF block at index: "
+                 << block_index.transpose() << ", skipping block.";
+    return false;
   }
   if (use_class_layer_ && !class_layer_->hasBlock(block_index)) {
-    LOG(ERROR) << "Trying to mesh a non-existent class block at index: "
-               << block_index.transpose();
+    LOG(WARNING) << "Trying to mesh a non-existent class block at index: "
+                 << block_index.transpose() << ", skipping block.";
+    return false;
   }
   const TsdfBlock& tsdf_block = tsdf_layer_->getBlockByIndex(block_index);
   // The class is accessed by pointer since it's just a nullptr if the class
@@ -153,6 +156,7 @@ void MeshIntegrator::updateMeshForBlock(
   }
 
   mesh->updated = true;
+  return true;
 }
 
 void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
@@ -245,6 +249,10 @@ void MeshIntegrator::extractMeshInsideBlock(
   if (all_neighbors_observed) {
     if (use_class_layer_ &&
         belonging_corners <= config_.required_belonging_corners) {
+      return;
+    }
+
+    if (use_class_layer_ && config_.clear_foreign_voxels) {
       // Foreign voxels are set to truncation distance to close the mesh.
       for (unsigned int i = 0; i < 8; ++i) {
         if (!corner_belongs(i)) {
@@ -345,6 +353,10 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
   if (all_neighbors_observed) {
     if (use_class_layer_ &&
         belonging_corners <= config_.required_belonging_corners) {
+      return;
+    }
+
+    if (use_class_layer_ && config_.clear_foreign_voxels) {
       // Foreign voxels are set to truncation distance to close the mesh.
       for (unsigned int i = 0; i < 8; ++i) {
         if (!corner_belongs(i)) {

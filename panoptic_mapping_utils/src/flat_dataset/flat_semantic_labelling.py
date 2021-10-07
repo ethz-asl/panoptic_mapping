@@ -42,7 +42,7 @@ def create_label_ids_flat(ir_correction_file):
         "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
     ]
 
-    def set_label(name, size="M", increment_class=True, count=1):
+    def set_label(name, size="M", increment_class=True, count=1, new_id=True):
         for i in range(count):
             if i >= len(letters):
                 print("Warning: can only write %i (request is %i) suffixes "
@@ -52,7 +52,8 @@ def create_label_ids_flat(ir_correction_file):
 
             # Instance ID
             label_id = id_counter[0]
-            id_counter[0] = id_counter[0] + 1
+            if new_id:
+                id_counter[0] = id_counter[0] + 1
             label["InstanceID"] = label_id
             label["Name"] = full_name
             label["Size"] = size
@@ -75,7 +76,6 @@ def create_label_ids_flat(ir_correction_file):
     # Background classes
     panotpic_id = 0
     set_label("SM_Ceiling")
-    set_label("SM_Curtains")
     set_label("SM_Floor")
     set_label("SM_Walls")
     set_label("SM_Windows_glass")
@@ -84,13 +84,13 @@ def create_label_ids_flat(ir_correction_file):
 
     # Instances
     panotpic_id = 1
-    set_label("SM_Bed", "L")
+    set_label("SM_Bed", "L", count=2)
     set_label("SM_Bed_lamp", count=2)
     set_label("SM_Bed_table", count=2)
-    set_label("SM_Bottle", "S")
     set_label("SM_Ceiling_lamp", count=12)
     set_label("SM_Chair", count=2)
-    set_label("SM_Kitchen_Chair", increment_class=False)
+    set_label("SM_Office_Chair_base", increment_class=False, new_id=False)
+    set_label("SM_Office_Chair_seat", increment_class=False)
     set_label("SM_Coffee_table")
     set_label("SM_Cup", "S", count=3)
     set_label("SM_Decor", "S", count=2)
@@ -106,13 +106,18 @@ def create_label_ids_flat(ir_correction_file):
     set_label("SM_Remote", "S")
     set_label("SM_Sofa", "L")
     set_label("SM_Stack_of_Books", "S", count=6)
-    set_label("SM_Table")
+    set_label("SM_Table", count=2)
     set_label("SM_Table_Decor", "S")
     set_label("SM_Tumblr", "S", count=2)
     set_label("SM_TV")
     set_label("SM_Wall_Clock")
     set_label("SM_Coffee_Machine", "S")
-    set_label("SM_Nightstand")
+    id_counter[0] = id_counter[0] + 1
+    set_label("SM_Laptop",
+              size="S",
+              count=2,
+              increment_class=False,
+              new_id=False)
 
     print("Created a labeling with %i instances and %i classes." %
           (id_counter[0], class_counter[0]))
@@ -464,8 +469,8 @@ def get_available_meshes(comparison_labels=None):
         # TODO(schmluk): These last parts are not cleaned up, change these if
         #                the function is needed.
         print("Comparison Label names found in the scene: ", counts)
-        print("Unique labels matched: %.1f percent" \
-              % (np.mean(np.array(counts) == 1) * 100))
+        print("Unique labels matched: %.1f percent" %
+              (np.mean(np.array(counts) == 1) * 100))
 
 
 def get_infrared_correction(target_file):
@@ -503,8 +508,8 @@ def export_labels(labels, out_file_name):
     Save label data to file.
     """
     color_palette = imageio.imread(
-        "/home/lukas/programs/AirSim/Unreal/Plugins/AirSim/Content/"
-        "HUDAssets/seg_color_palette.png")
+        "/home/lukas/programs/AirSim/Unreal/Plugins/AirSim"
+        "/Content/HUDAssets/seg_color_pallet.png")
     with open(out_file_name, 'w') as csvfile:
         writer = csv.writer(csvfile,
                             delimiter=',',
@@ -514,15 +519,18 @@ def export_labels(labels, out_file_name):
             "InstanceID", "ClassID", "PanopticID", "MeshID", "InfraredID", "R",
             "G", "B", "Name", "Size"
         ])
+        previous_id = None
         for label in labels:
-            writer.writerow([
-                label["InstanceID"], label["ClassID"], label["PanopticID"],
-                label["MeshID"], label["InfraredID"],
-                color_palette[0, label["MeshID"] * 4,
-                              0], color_palette[0, label["MeshID"] * 4, 1],
-                color_palette[0, label["MeshID"] * 4,
-                              2], label["Name"], label["Size"]
-            ])
+            if label["InstanceID"] != previous_id:
+                previous_id = label["InstanceID"]
+                writer.writerow([
+                    label["InstanceID"], label["ClassID"], label["PanopticID"],
+                    label["MeshID"], label["InfraredID"],
+                    color_palette[0, label["MeshID"] * 4,
+                                  0], color_palette[0, label["MeshID"] * 4, 1],
+                    color_palette[0, label["MeshID"] * 4,
+                                  2], label["Name"], label["Size"]
+                ])
     print("Saved %i labels in '%s'." % (len(labels), out_file_name))
 
 

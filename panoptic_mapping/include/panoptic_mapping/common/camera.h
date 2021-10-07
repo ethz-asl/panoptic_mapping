@@ -22,7 +22,7 @@ class Camera {
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 0;
 
-    // Camera Intrinsics. [px]
+    // Camera Intrinsics in pixels.
     int width = 640;
     int height = 480;
     float vx = 320.f;  // Center point.
@@ -30,8 +30,11 @@ class Camera {
     float fx = 320.f;  // Focal lengths.
     float fy = 320.f;
 
-    float max_range = 5.f;   // m
-    float min_range = 0.1f;  // m
+    // Maximum range (ray-length) in meters.
+    float max_range = 5.f;
+
+    // Minimum range (ray-length) in meters.
+    float min_range = 0.1f;
 
     Config() { setConfigName("Camera"); }
 

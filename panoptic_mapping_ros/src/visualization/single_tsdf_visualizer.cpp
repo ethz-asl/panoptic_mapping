@@ -56,10 +56,13 @@ void SingleTsdfVisualizer::clearMesh() {
 std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
-  if (!submaps->submapIdExists(submaps->getActiveFreeSpaceSubmapID())) {
-    LOG(WARNING) << "No map which can be used to extract a mesh from.";
-    return result;
+
+  // If the freespace map ID is not yet setup (loaded map) assume it's the first
+  // submap in the collection.
+  if (submaps->getActiveFreeSpaceSubmapID() < 0) {
+    submaps->setActiveFreeSpaceSubmapID(submaps->begin()->getID());
   }
+
   // Get the single map.
   Submap& submap =
       *submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());

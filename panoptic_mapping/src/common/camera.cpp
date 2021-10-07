@@ -21,14 +21,14 @@ void Camera::Config::checkParams() const {
 
 void Camera::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("width", &width);
-  setupParam("height", &height);
-  setupParam("vx", &vx);
-  setupParam("vy", &vy);
-  setupParam("fx", &fx);
-  setupParam("fy", &fy);
-  setupParam("max_range", &max_range);
-  setupParam("min_range", &min_range);
+  setupParam("width", &width, "px");
+  setupParam("height", &height, "px");
+  setupParam("vx", &vx, "px");
+  setupParam("vy", &vy, "px");
+  setupParam("fx", &fx, "px");
+  setupParam("fy", &fy, "px");
+  setupParam("max_range", &max_range, "m");
+  setupParam("min_range", &min_range, "m");
 }
 
 Camera::Camera(const Config& config) : config_(config.checkValid()) {

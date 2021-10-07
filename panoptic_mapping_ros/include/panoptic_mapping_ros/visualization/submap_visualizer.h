@@ -60,8 +60,16 @@ class SubmapVisualizer {
     kUncertainty,
     kEntropy,
     kIsGroundtruth
+    kClassification,
+    kPersistent
   };
-  enum class VisualizationMode { kAll = 0, kActive, kActiveOnly, kInactive };
+  enum class VisualizationMode {
+    kAll = 0,
+    kActive,
+    kActiveOnly,
+    kInactive,
+    kPersistent
+  };
 
   // Visualization mode conversion.
   static ColorMode colorModeFromString(const std::string& color_mode);
