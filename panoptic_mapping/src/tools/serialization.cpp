@@ -68,7 +68,7 @@ void Block<panoptic_mapping::ClassUncertaintyVoxel>::deserializeFromIntegers(
  * 16 bit)
  */
 template <typename T>
-inline void convert_vector_to_uint32(std::vector<T> data,
+inline void convertVectorToUint32(std::vector<T> data,
                                      std::vector<uint32_t>* serialized_data,
                                      uint8_t bits_per_entry) {
   // Store how many packages have been saved to the serialized vector
@@ -143,8 +143,8 @@ bool convertVoxelToInt32(const panoptic_mapping::ClassVoxel& voxel,
   getTopNElems(voxel.counts, indices_list, score_counts,
                   serialize_top_n_counts);
   // Convert them to int32
-  convert_vector_to_uint32<uint8_t>(indices_list, data, 8);
-  convert_vector_to_uint32<Counter>(score_counts, data, COUNTER_SIZE_BITS);
+  convertVectorToUint32<uint8_t>(indices_list, data, 8);
+  convertVectorToUint32<Counter>(score_counts, data, COUNTER_SIZE_BITS);
   return true;
 }
 

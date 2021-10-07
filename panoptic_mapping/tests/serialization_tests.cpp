@@ -13,14 +13,14 @@ const voxblox::Point origin(0, 0, 0);
 int top_n_to_serialize = 12;
 
 /** HELPER FUNCTIONS **/
-inline void initialize_voxel(panoptic_mapping::ClassVoxel* voxel,
+inline void initializeVoxel(panoptic_mapping::ClassVoxel* voxel,
                              int num_classes) {
   for (int i = 0; i < num_classes; i++) {
     voxel->counts.push_back(0);
   }
 }
 
-inline void check_voxel_equal(const panoptic_mapping::ClassVoxel& v1,
+inline void checkVoxelEqual(const panoptic_mapping::ClassVoxel& v1,
                               const panoptic_mapping::ClassVoxel& v2) {
   EXPECT_EQ(v1.is_groundtruth, v2.is_groundtruth);
   EXPECT_EQ(v1.current_index, v2.current_index);
@@ -49,19 +49,19 @@ inline void check_voxel_equal(const panoptic_mapping::ClassVoxel& v1,
   }
 }
 
-inline void check_voxel_equal(
+inline void checkVoxelEqual(
     const panoptic_mapping::ClassUncertaintyVoxel& v1,
     const panoptic_mapping::ClassUncertaintyVoxel& v2) {
-  check_voxel_equal(static_cast<panoptic_mapping::ClassVoxel>(v1),
+  checkVoxelEqual(static_cast<panoptic_mapping::ClassVoxel>(v1),
                     static_cast<panoptic_mapping::ClassVoxel>(v2));
   EXPECT_EQ(v1.uncertainty_value, v2.uncertainty_value);
 }
 
 template <typename T>
-inline void check_block_equal(const voxblox::Block<T>* blk1,
+inline void checkBlockEqual(const voxblox::Block<T>* blk1,
                               const voxblox::Block<T>* blk2) {
   for (int i = 0; i < blk1->num_voxels(); i++) {
-    check_voxel_equal(blk1->getVoxelByLinearIndex(i),
+    checkVoxelEqual(blk1->getVoxelByLinearIndex(i),
                       blk2->getVoxelByLinearIndex(i));
   }
 }
@@ -78,7 +78,7 @@ TEST(ClassVoxel, serializeEmptyBlock) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -94,7 +94,7 @@ TEST(ClassVoxel, serializeNonGtVoxels) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initialize_voxel(voxel, num_classes);
+      initializeVoxel(voxel, num_classes);
       // Set class
       panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
     }
@@ -104,7 +104,7 @@ TEST(ClassVoxel, serializeNonGtVoxels) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -120,7 +120,7 @@ TEST(ClassVoxel, serializeGtVoxels) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initialize_voxel(voxel, num_classes);
+      initializeVoxel(voxel, num_classes);
       voxel->is_groundtruth = true;
       // Set class
       panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
@@ -131,7 +131,7 @@ TEST(ClassVoxel, serializeGtVoxels) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -147,7 +147,7 @@ TEST(ClassVoxel, serializeMultipleCounts) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initialize_voxel(voxel, num_classes);
+      initializeVoxel(voxel, num_classes);
       // Set class
       panoptic_mapping::classVoxelIncrementClass(voxel, 0);
       panoptic_mapping::classVoxelIncrementClass(voxel, 1);
@@ -163,7 +163,7 @@ TEST(ClassVoxel, serializeMultipleCounts) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -185,7 +185,7 @@ TEST(ClassVoxel, moreThanTopNCounts) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initialize_voxel(voxel, num_classes);
+      initializeVoxel(voxel, num_classes);
 
       EXPECT_LT(top_n_to_serialize, num_classes);
       for (int j = 0; j < top_n_to_serialize + 2; j++) {
@@ -200,7 +200,7 @@ TEST(ClassVoxel, moreThanTopNCounts) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -215,7 +215,7 @@ TEST(ClassUncertaintyVoxel, withUncertainty) {
     if (i % 100 != 99) {
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initialize_voxel(voxel, num_classes);
+      initializeVoxel(voxel, num_classes);
 
       EXPECT_LT(top_n_to_serialize, num_classes);
       for (int j = 0; j < top_n_to_serialize + 2; j++) {
@@ -231,7 +231,7 @@ TEST(ClassUncertaintyVoxel, withUncertainty) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<
       panoptic_mapping::ClassUncertaintyVoxel>(&block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
                                                              &block_to_load);
 }
 
@@ -264,7 +264,7 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
             panoptic_mapping::classVoxelIncrementBinary(voxel, dis(gen) > 0.5);
           }
         } else {
-          initialize_voxel(voxel, num_classes);
+          initializeVoxel(voxel, num_classes);
           panoptic_mapping::classVoxelIncrementClass(voxel, 0);
 
           // Make sure we have unique top 3 counts
@@ -294,7 +294,7 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
         &block_to_save, &data, top_n_to_serialize);
     voxblox::deserializeBlockFromIntegers<
         panoptic_mapping::ClassUncertaintyVoxel>(&block_to_load, data);
-    check_block_equal<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
+    checkBlockEqual<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
                                                                &block_to_load);
   }
 }
@@ -326,7 +326,7 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
             panoptic_mapping::classVoxelIncrementBinary(voxel, dis(gen) > 0.5);
           }
         } else {
-          initialize_voxel(voxel, num_classes);
+          initializeVoxel(voxel, num_classes);
           panoptic_mapping::classVoxelIncrementClass(voxel, 0);
 
           // Make sure we have unique top 3 counts
@@ -358,7 +358,7 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
             &block_to_save, &data, top_n_to_serialize);
     voxblox::deserializeBlockFromIntegers<
             panoptic_mapping::ClassUncertaintyVoxel>(&block_to_load, data);
-    check_block_equal<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
+    checkBlockEqual<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
                                                                &block_to_load);
     top_n_to_serialize = old_top_n;
   }
@@ -387,7 +387,7 @@ TEST(BinaryClassVoxel, binaryClassification) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassVoxel>(&block_to_save,
                                                   &block_to_load);
 }
 
@@ -411,7 +411,7 @@ TEST(BinaryClassUncertaintyVoxel, binaryClassification) {
       &block_to_save, &data, top_n_to_serialize);
   voxblox::deserializeBlockFromIntegers<
       panoptic_mapping::ClassUncertaintyVoxel>(&block_to_load, data);
-  check_block_equal<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
+  checkBlockEqual<panoptic_mapping::ClassUncertaintyVoxel>(&block_to_save,
                                                              &block_to_load);
 }
 

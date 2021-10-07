@@ -24,7 +24,7 @@ class ClassVoxelLayer : public voxblox::Layer<VoxelType> {
                           voxblox::BlockIndexList blocks_to_include,
                           std::fstream* outfile_ptr) const;
 
-  void set_num_classes_to_serialize(int serialize_top_n_classes) {
+  void setNumClassesToSerialize(int serialize_top_n_classes) {
     serialize_top_n_classes_ = serialize_top_n_classes;
   }
 };

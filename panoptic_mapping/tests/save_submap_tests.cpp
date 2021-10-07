@@ -15,7 +15,7 @@ const int k_num_blocks = 10;
 const int k_num_classes = 40;
 const int k_num_counts = 5;
 
-inline void check_voxel_equal(const ClassVoxel v1, const ClassVoxel v2) {
+inline void checkVoxelEqual(const ClassVoxel v1, const ClassVoxel v2) {
   EXPECT_EQ(v1.is_groundtruth, v2.is_groundtruth);
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
@@ -43,13 +43,13 @@ inline void check_voxel_equal(const ClassVoxel v1, const ClassVoxel v2) {
   }
 }
 
-inline void check_voxel_equal(const ClassUncertaintyVoxel v1,
+inline void checkVoxelEqual(const ClassUncertaintyVoxel v1,
                               const ClassUncertaintyVoxel v2) {
-  check_voxel_equal(static_cast<ClassVoxel>(v1), static_cast<ClassVoxel>(v2));
+  checkVoxelEqual(static_cast<ClassVoxel>(v1), static_cast<ClassVoxel>(v2));
   EXPECT_EQ(v1.uncertainty_value, v2.uncertainty_value);
 }
 
-inline void check_voxel_equal(const TsdfVoxel v1, const TsdfVoxel v2) {
+inline void checkVoxelEqual(const TsdfVoxel v1, const TsdfVoxel v2) {
   EXPECT_EQ(v1.color.r, v2.color.r);
   EXPECT_EQ(v1.color.g, v2.color.g);
   EXPECT_EQ(v1.color.b, v2.color.b);
@@ -58,10 +58,10 @@ inline void check_voxel_equal(const TsdfVoxel v1, const TsdfVoxel v2) {
 }
 
 template <typename T>
-inline void check_block_equal(const voxblox::Block<T>* blk1,
+inline void checkBlockEqual(const voxblox::Block<T>* blk1,
                               const voxblox::Block<T>* blk2) {
   for (int i = 0; i < blk1->num_voxels(); i++) {
-    check_voxel_equal(blk1->getVoxelByLinearIndex(i),
+    checkVoxelEqual(blk1->getVoxelByLinearIndex(i),
                       blk2->getVoxelByLinearIndex(i));
   }
 }
@@ -69,7 +69,7 @@ inline void check_block_equal(const voxblox::Block<T>* blk1,
 /**
  * Randomly assigns values to the voxels.
  */
-void load_random_voxels(TsdfVoxel* tsdf_voxel, ClassVoxelType* class_voxel) {
+void loadRandomVoxels(TsdfVoxel* tsdf_voxel, ClassVoxelType* class_voxel) {
   std::random_device
       rd;  // Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd());  // Standard mersenne_twister_engine seeded with rd()
@@ -143,7 +143,7 @@ std::unique_ptr<SubmapCollection> getSubmapCollection(bool fill,
     std::shared_ptr<ClassLayer> class_layer = nullptr;
     if (with_class_layer) {
       class_layer = submap->getClassLayerPtr();
-      class_layer->set_num_classes_to_serialize(k_num_counts);
+      class_layer->setNumClassesToSerialize(k_num_counts);
     }
 
     for (int block_idx = 0; block_idx < k_num_blocks; block_idx++) {
@@ -163,7 +163,7 @@ std::unique_ptr<SubmapCollection> getSubmapCollection(bool fill,
           class_voxel = class_block->getVoxelPtrByCoordinates(
               class_block->computeCoordinatesFromLinearIndex(i));
 
-        load_random_voxels(tsdf_voxel, class_voxel);
+        loadRandomVoxels(tsdf_voxel, class_voxel);
       }
     }
   }
@@ -171,7 +171,7 @@ std::unique_ptr<SubmapCollection> getSubmapCollection(bool fill,
 }
 }  // namespace panoptic_mapping
 
-void check_save_and_load_collection(
+void checkSaveAndLoadCollection(
     std::unique_ptr<panoptic_mapping::SubmapCollection> to_save_collection,
     std::unique_ptr<panoptic_mapping::SubmapCollection> to_load_collection) {
   char* tmpname = strdup("/tmp/tmpfileXXXXXX");
@@ -198,24 +198,24 @@ void check_save_and_load_collection(
 
   for (auto index : indexList) {
     // Check TSDF Layer
-    panoptic_mapping::check_block_equal(
+    panoptic_mapping::checkBlockEqual(
         saved_layers.first.getBlockPtrByIndex(index).get(),
         loaded_layers.first.getBlockPtrByIndex(index).get());
 
     // Check class layer
-    panoptic_mapping::check_block_equal(
+    panoptic_mapping::checkBlockEqual(
         saved_layers.second.getBlockPtrByIndex(index).get(),
         loaded_layers.second.getBlockPtrByIndex(index).get());
   }
 }
 
 TEST(SubmapSave, serializeSubmapWithClassLayer) {
-  check_save_and_load_collection(
+  checkSaveAndLoadCollection(
       panoptic_mapping::getSubmapCollection(true, true),
       panoptic_mapping::getSubmapCollection(false, true));
 }
 TEST(SubmapSave, serializeSubmapWithoutClassLayer) {
-  check_save_and_load_collection(
+  checkSaveAndLoadCollection(
           panoptic_mapping::getSubmapCollection(true, false),
           panoptic_mapping::getSubmapCollection(false, false));
 }
