@@ -59,8 +59,7 @@ class SubmapVisualizer {
     kClassification,
     kUncertainty,
     kEntropy,
-    kIsGroundtruth
-    kClassification,
+    kIsGroundtruth,
     kPersistent
   };
   enum class VisualizationMode {
