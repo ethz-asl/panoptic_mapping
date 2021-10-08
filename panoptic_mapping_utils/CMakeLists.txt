@@ -12,6 +12,7 @@ catkin_package()
 
 cs_add_library(${PROJECT_NAME}
         src/evaluation/map_evaluator.cpp
+        src/voxel_clustering/voxel_clustering.cpp
         )
 
 ###############
@@ -22,11 +23,6 @@ cs_add_executable(single_map_evaluation
         app/single_map_evaluation.cpp
         )
 target_link_libraries(single_map_evaluation ${PROJECT_NAME})
-
-cs_add_executable(multi_map_evaluation
-        app/multi_map_evaluation.cpp
-        )
-target_link_libraries(multi_map_evaluation ${PROJECT_NAME})
 
 ##########
 # Export #
