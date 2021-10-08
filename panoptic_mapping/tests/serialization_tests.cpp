@@ -5,74 +5,13 @@
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/tools/serialization.h"
-
-const int voxels_per_side = 16;
-const int num_classes = 40;
-const float voxel_size = 0.1;
-const voxblox::Point origin(0, 0, 0);
-int top_n_to_serialize = 12;
-
-/** HELPER FUNCTIONS **/
-inline void initializeVoxel(panoptic_mapping::ClassVoxel* voxel,
-                             int num_classes) {
-  for (int i = 0; i < num_classes; i++) {
-    voxel->counts.push_back(0);
-  }
-}
-
-inline void checkVoxelEqual(const panoptic_mapping::ClassVoxel& v1,
-                              const panoptic_mapping::ClassVoxel& v2) {
-  EXPECT_EQ(v1.is_groundtruth, v2.is_groundtruth);
-  EXPECT_EQ(v1.current_index, v2.current_index);
-  EXPECT_EQ(v1.belongs_count, v2.belongs_count);
-  EXPECT_EQ(v1.foreign_count, v2.foreign_count);
-  EXPECT_EQ(v1.counts.size(), v2.counts.size());
-  if (v1.counts.empty()) {
-    return;
-  }
-  // Only check if top_n counts match:
-  std::priority_queue<std::pair<int, int>> class_idx_to_count_1;
-  for (int i = 0; i < v1.counts.size(); ++i) {
-    class_idx_to_count_1.push(std::pair<int, int>(v1.counts.at(i), i));
-  }
-  std::priority_queue<std::pair<int, int>> class_idx_to_count_2;
-  for (int i = 0; i < v2.counts.size(); ++i) {
-    class_idx_to_count_2.push(std::pair<int, int>(v2.counts.at(i), i));
-  }
-  for (int i = 0; i < top_n_to_serialize; ++i) {
-    EXPECT_EQ(class_idx_to_count_1.top().first,
-              class_idx_to_count_2.top().first);
-    EXPECT_EQ(class_idx_to_count_1.top().second,
-              class_idx_to_count_2.top().second);
-    class_idx_to_count_1.pop();
-    class_idx_to_count_2.pop();
-  }
-}
-
-inline void checkVoxelEqual(
-    const panoptic_mapping::ClassUncertaintyVoxel& v1,
-    const panoptic_mapping::ClassUncertaintyVoxel& v2) {
-  checkVoxelEqual(static_cast<panoptic_mapping::ClassVoxel>(v1),
-                    static_cast<panoptic_mapping::ClassVoxel>(v2));
-  EXPECT_EQ(v1.uncertainty_value, v2.uncertainty_value);
-}
-
-template <typename T>
-inline void checkBlockEqual(const voxblox::Block<T>* blk1,
-                              const voxblox::Block<T>* blk2) {
-  for (int i = 0; i < blk1->num_voxels(); i++) {
-    checkVoxelEqual(blk1->getVoxelByLinearIndex(i),
-                      blk2->getVoxelByLinearIndex(i));
-  }
-}
-
-/** START TESTS **/
+#include "test_utils.h"
 
 TEST(ClassVoxel, serializeEmptyBlock) {
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   std::vector<uint32_t> data;
   voxblox::serializeBlockToIntegers<panoptic_mapping::ClassVoxel>(
       &block_to_save, &data, top_n_to_serialize);
@@ -84,9 +23,9 @@ TEST(ClassVoxel, serializeEmptyBlock) {
 
 TEST(ClassVoxel, serializeNonGtVoxels) {
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   // Populate block
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
@@ -94,9 +33,9 @@ TEST(ClassVoxel, serializeNonGtVoxels) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initializeVoxel(voxel, num_classes);
+      initializeVoxel(voxel, kNumClasses);
       // Set class
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
     }
   }
   std::vector<uint32_t> data;
@@ -110,9 +49,9 @@ TEST(ClassVoxel, serializeNonGtVoxels) {
 
 TEST(ClassVoxel, serializeGtVoxels) {
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   // Populate block
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
@@ -120,10 +59,10 @@ TEST(ClassVoxel, serializeGtVoxels) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initializeVoxel(voxel, num_classes);
+      initializeVoxel(voxel, kNumClasses);
       voxel->is_groundtruth = true;
       // Set class
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
     }
   }
   std::vector<uint32_t> data;
@@ -137,9 +76,9 @@ TEST(ClassVoxel, serializeGtVoxels) {
 
 TEST(ClassVoxel, serializeMultipleCounts) {
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   // Populate block
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
@@ -147,15 +86,15 @@ TEST(ClassVoxel, serializeMultipleCounts) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initializeVoxel(voxel, num_classes);
+      initializeVoxel(voxel, kNumClasses);
       // Set class
       panoptic_mapping::classVoxelIncrementClass(voxel, 0);
       panoptic_mapping::classVoxelIncrementClass(voxel, 1);
       panoptic_mapping::classVoxelIncrementClass(voxel, 1);
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
-      panoptic_mapping::classVoxelIncrementClass(voxel, i % num_classes);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
+      panoptic_mapping::classVoxelIncrementClass(voxel, i % kNumClasses);
     }
   }
   std::vector<uint32_t> data;
@@ -175,9 +114,9 @@ TEST(ClassVoxel, moreThanTopNCounts) {
    * serialized (to save memory)
    */
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   // Populate block
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
@@ -185,9 +124,9 @@ TEST(ClassVoxel, moreThanTopNCounts) {
       // Leave some voxels uninitialized
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initializeVoxel(voxel, num_classes);
+      initializeVoxel(voxel, kNumClasses);
 
-      EXPECT_LT(top_n_to_serialize, num_classes);
+      EXPECT_LT(top_n_to_serialize, kNumClasses);
       for (int j = 0; j < top_n_to_serialize + 2; j++) {
         for (int k = 0; k <= j + 1; k++) {
           panoptic_mapping::classVoxelIncrementClass(voxel, j);
@@ -206,18 +145,18 @@ TEST(ClassVoxel, moreThanTopNCounts) {
 
 TEST(ClassUncertaintyVoxel, withUncertainty) {
   voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   // Populate block
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
     if (i % 100 != 99) {
       auto* voxel = block_to_save.getVoxelPtrByCoordinates(
           block_to_save.computeCoordinatesFromLinearIndex(i));
-      initializeVoxel(voxel, num_classes);
+      initializeVoxel(voxel, kNumClasses);
 
-      EXPECT_LT(top_n_to_serialize, num_classes);
+      EXPECT_LT(top_n_to_serialize, kNumClasses);
       for (int j = 0; j < top_n_to_serialize + 2; j++) {
         for (int k = 0; k <= j + 1; k++) {
           panoptic_mapping::classVoxelIncrementClass(voxel, j);
@@ -246,9 +185,9 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
 
   for (int runs = 0; runs < 10; runs++) {
     voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_save(
-        voxels_per_side, voxel_size, origin);
+            kVoxelsPerSide, kVoxelSize, origin);
     voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_load(
-        voxels_per_side, voxel_size, origin);
+            kVoxelsPerSide, kVoxelSize, origin);
 
     for (int i = 0; i < block_to_save.num_voxels(); i++) {
       bool skip_voxel = dis(gen) > 0.8;  // Leave 20% uninitialized
@@ -264,12 +203,12 @@ TEST(ClassUncertaintyVoxel, randomTesting) {
             panoptic_mapping::classVoxelIncrementBinary(voxel, dis(gen) > 0.5);
           }
         } else {
-          initializeVoxel(voxel, num_classes);
+          initializeVoxel(voxel, kNumClasses);
           panoptic_mapping::classVoxelIncrementClass(voxel, 0);
 
           // Make sure we have unique top 3 counts
           std::vector<int> votes;
-          for (int i = 1; i <= num_classes; i++) {
+          for (int i = 1; i <= kNumClasses; i++) {
             votes.push_back(i);
           }
           std::shuffle(votes.begin(), votes.end(), gen);
@@ -308,9 +247,9 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
 
   for (int runs = 0; runs < 10; runs++) {
     voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_save(
-            voxels_per_side, voxel_size, origin);
+            kVoxelsPerSide, kVoxelSize, origin);
     voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_load(
-            voxels_per_side, voxel_size, origin);
+            kVoxelsPerSide, kVoxelSize, origin);
 
     for (int i = 0; i < block_to_save.num_voxels(); i++) {
       bool skip_voxel = dis(gen) > 0.8;  // Leave 20% uninitialized
@@ -326,12 +265,12 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
             panoptic_mapping::classVoxelIncrementBinary(voxel, dis(gen) > 0.5);
           }
         } else {
-          initializeVoxel(voxel, num_classes);
+          initializeVoxel(voxel, kNumClasses);
           panoptic_mapping::classVoxelIncrementClass(voxel, 0);
 
           // Make sure we have unique top 3 counts
           std::vector<int> votes;
-          for (int i = 1; i <= num_classes; i++) {
+          for (int i = 1; i <= kNumClasses; i++) {
             votes.push_back(i);
           }
           std::shuffle(votes.begin(), votes.end(), gen);
@@ -370,9 +309,9 @@ TEST(ClassUncertaintyVoxel, randomTestingDifferentCount) {
 
 TEST(BinaryClassVoxel, binaryClassification) {
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
     // Leave some voxels uninitialized
@@ -393,9 +332,9 @@ TEST(BinaryClassVoxel, binaryClassification) {
 
 TEST(BinaryClassUncertaintyVoxel, binaryClassification) {
   voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_save(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
   voxblox::Block<panoptic_mapping::ClassUncertaintyVoxel> block_to_load(
-      voxels_per_side, voxel_size, origin);
+          kVoxelsPerSide, kVoxelSize, origin);
 
   for (int i = 0; i < block_to_save.num_voxels(); i++) {
     // Leave some voxels uninitialized
