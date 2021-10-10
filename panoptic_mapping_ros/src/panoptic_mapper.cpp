@@ -202,7 +202,7 @@ void PanopticMapper::setupRos() {
       "print_timings", &PanopticMapper::printTimingsCallback, this);
   finish_mapping_srv_ = nh_private_.advertiseService(
       "finish_mapping", &PanopticMapper::finishMappingCallback, this);
-
+    save_pc_srv_ = nh_private_.advertiseService("save_pointcloud", &PanopticMapper::saveVoxelAsPcCallback, this);
   // Timers.
   if (config_.visualization_interval > 0.0) {
     visualization_timer_ = nh_private_.createTimer(
@@ -222,6 +222,29 @@ void PanopticMapper::setupRos() {
   input_timer_ =
       nh_private_.createTimer(ros::Duration(config_.check_input_interval),
                               &PanopticMapper::inputCallback, this);
+  esdf_timer_ =
+          nh_private_.createTimer(ros::Duration(config_.esdf_calculation_interval),
+                                  &PanopticMapper::esdfTimerCallback, this);
+}
+
+bool PanopticMapper::labelClassVoxel(const voxblox::GlobalIndex index,
+                                     int submap_id, int grountdtruth_class) {
+  if (!submaps_->submapIdExists(submap_id)) return false;
+  Submap* map = submaps_->getSubmapPtr(submap_id);
+  if (!map->hasClassLayer()) return false;
+  auto voxel_ptr = map->getClassLayerPtr()->getVoxelPtrByGlobalIndex(index);
+  if (!voxel_ptr) return false;
+
+  voxel_ptr->belongs_count = 0;
+  voxel_ptr->foreign_count = 0;
+  if (voxel_ptr->current_index == -1 && voxel_ptr->counts.empty()) {
+    classVoxelIncrementBinary(voxel_ptr, grountdtruth_class > 0);
+  } else {
+    for (ClassVoxel::Counter& count : voxel_ptr->counts) count = 0;
+    classVoxelIncrementClass(voxel_ptr, grountdtruth_class);
+  }
+  voxel_ptr->is_groundtruth = true;
+  return true;
 }
 
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
@@ -343,6 +366,44 @@ bool PanopticMapper::saveMap(const std::string& file_path) {
   return success;
 }
 
+bool PanopticMapper::saveVoxelAsPcCallback(
+        panoptic_mapping_msgs::SaveLoadMap::Request& request,
+        panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+    pcl::PointCloud<pcl::PointXYZRGB> pointCloud;
+    pointCloud.clear();
+
+    Submap* map = submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID());
+    float voxel_size_ = map->getConfig().voxel_size;
+    voxblox::BlockIndexList block_lists;
+    map->getTsdfLayerPtr()->getAllAllocatedBlocks(&block_lists);
+
+    for (auto block_idx : block_lists) {
+        TsdfBlock& block = map->getTsdfLayerPtr()->getBlockByIndex(block_idx);
+        auto c_block = &map->getClassLayerPtr()->getBlockByIndex(block_idx);
+        for (size_t i = 0; i < block.num_voxels(); ++i) {
+            TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
+            if (abs(voxel.distance) < voxel_size_) {
+                // Found surface voxel,
+                auto c_voxel = c_block->getVoxelByLinearIndex(i);
+                if (c_voxel.current_index >= 0) {
+                    // Found semantic information
+                    pcl::PointXYZRGB point;
+                    auto coord = block.computeCoordinatesFromLinearIndex(i);
+                    point.x = coord.x();
+                    point.y = coord.y();
+                    point.z = coord.z();
+                    point.r = static_cast<uint8_t>(c_voxel.current_index);
+                    point.g = static_cast<uint8_t>(c_voxel.current_index);
+                    point.b = static_cast<uint8_t>(c_voxel.current_index);
+                    pointCloud.push_back(point);
+                }
+            }
+        }
+    }
+    pcl::io::savePCDFile(request.file_path, pointCloud);
+    return true;
+}
+
 bool PanopticMapper::loadMap(const std::string& file_path) {
   auto loaded_map = std::make_shared<SubmapCollection>();
 
@@ -440,6 +501,35 @@ bool PanopticMapper::loadMapCallback(
     panoptic_mapping_msgs::SaveLoadMap::Response& response) {
   response.success = loadMap(request.file_path);
   return response.success;
+}
+
+void PanopticMapper::esdfTimerCallback(const ros::TimerEvent&) {
+  if (!esdf_map_) {
+    if (!submaps_->submapIdExists(submaps_->getActiveFreeSpaceSubmapID()))
+      return;
+    if (!esdf_integrator_) {
+      // Setup integrator
+      voxblox::EsdfIntegrator::Config esdf_integrator_config;
+      esdf_integrator_.reset(new voxblox::EsdfIntegrator(
+          esdf_integrator_config,
+          submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
+              ->getTsdfLayerPtr()
+              .get(),
+          esdf_map_->getEsdfLayerPtr()));
+    }
+    // TODO load from config
+    voxblox::EsdfMap::Config esdf_config;
+    esdf_config.esdf_voxel_size =
+        submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
+            ->getTsdfLayerPtr()
+            ->voxel_size();
+    esdf_map_.reset(new voxblox::EsdfMap(esdf_config));
+  }
+  const Submap* single_tsdf_submap =
+      submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID());
+  if (single_tsdf_submap->getTsdfLayer().getNumberOfAllocatedBlocks() > 0) {
+    esdf_integrator_->updateFromTsdfLayer(true);
+  }
 }
 
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,

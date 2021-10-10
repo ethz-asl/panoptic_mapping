@@ -23,6 +23,7 @@
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
+#include <voxblox/core/esdf_map.h>
 
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 #include "panoptic_mapping_ros/visualization/camera_renderer.h"
@@ -46,6 +47,9 @@ class PanopticMapper {
     float visualization_interval = -1.f;
     float data_logging_interval = 0.f;
     float print_timing_interval = 0.f;
+
+    // How often esdf map should be recalculated.
+    float esdf_calculation_interval = 0.5;
 
     // If true maintain and update the threadsafe submap collection for access.
     bool use_threadsafe_submap_collection = false;
@@ -91,6 +95,7 @@ class PanopticMapper {
   void dataLoggingCallback(const ros::TimerEvent&);
   void printTimingsCallback(const ros::TimerEvent&);
   void inputCallback(const ros::TimerEvent&);
+  void esdfTimerCallback(const ros::TimerEvent&);
 
   // Services.
   bool saveMapCallback(
@@ -107,8 +112,11 @@ class PanopticMapper {
                             std_srvs::Empty::Response& response);   // NOLINT
   bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
                              std_srvs::Empty::Response& response);  // NOLINT
+  bool saveVoxelAsPcCallback(
+        panoptic_mapping_msgs::SaveLoadMap::Request& request,     // NOLINT
+        panoptic_mapping_msgs::SaveLoadMap::Response& response);  // NOLINT
 
-  // Processing.
+    // Processing.
   // Integrate a set of input images. The input is usually gathered from ROS
   // topics and provided by the InputSynchronizer.
   void processInput(InputData* input);
@@ -128,6 +136,9 @@ class PanopticMapper {
   // Update the meshes and publish the all visualizations of the current map.
   void publishVisualization();
 
+  // Label Voxel
+  bool labelClassVoxel(const voxblox::GlobalIndex index, int submap_id,
+                       int grountdtruth_class);
   // Access.
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
   const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
@@ -138,6 +149,9 @@ class PanopticMapper {
   }
   MapManagerBase* getMapManagerPtr() { return map_manager_.get(); }
   const Config& getConfig() const { return config_; }
+
+  // Esdf map access
+  const voxblox::EsdfMap* getEsdfMapPtr() { return esdf_map_.get(); };
 
  private:
   // Setup.
@@ -157,10 +171,12 @@ class PanopticMapper {
   ros::ServiceServer set_color_mode_srv_;
   ros::ServiceServer print_timings_srv_;
   ros::ServiceServer finish_mapping_srv_;
+  ros::ServiceServer save_pc_srv_;
   ros::Timer visualization_timer_;
   ros::Timer data_logging_timer_;
   ros::Timer print_timing_timer_;
   ros::Timer input_timer_;
+  ros::Timer esdf_timer_;
 
   // Members.
   const Config config_;
@@ -169,10 +185,15 @@ class PanopticMapper {
   std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<ThreadSafeSubmapCollection> thread_safe_submaps_;
 
+  // Esdf Map
+  std::shared_ptr<voxblox::EsdfMap> esdf_map_;
+
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;
   std::unique_ptr<TsdfIntegratorBase> tsdf_integrator_;
   std::unique_ptr<MapManagerBase> map_manager_;
+
+  std::unique_ptr<voxblox::EsdfIntegrator> esdf_integrator_;
 
   // Tools.
   std::shared_ptr<Globals> globals_;
