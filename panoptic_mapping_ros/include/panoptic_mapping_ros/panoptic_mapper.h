@@ -25,6 +25,7 @@
 #include <std_srvs/Empty.h>
 
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
+#include "panoptic_mapping_ros/visualization/camera_renderer.h"
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
 #include "panoptic_mapping_ros/visualization/tracking_visualizer.h"
@@ -183,6 +184,7 @@ class PanopticMapper {
   std::unique_ptr<SubmapVisualizer> submap_visualizer_;
   std::unique_ptr<PlanningVisualizer> planning_visualizer_;
   std::unique_ptr<TrackingVisualizer> tracking_visualizer_;
+  std::unique_ptr<CameraRenderer> camera_renderer_;
 
   // Which processing to perform.
   bool compute_vertex_map_ = false;

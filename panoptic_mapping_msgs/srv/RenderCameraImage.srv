@@ -1,0 +1,23 @@
+# This Service can be used to request labels for a given camera pose in the semantic map
+# The pose can either be infered from the given sensor frame and timestamp OR can be provided in the T_C_M transform.
+# If available, a depth image can be provided which improves accuracy and calculation speed
+
+# Flag if depth image is provided that can be used for the lookup
+bool use_depth
+# Flag if custom tf is provided for the map lookup.
+# If false, transform will be calculated using tf lookups from the sensor frame
+bool use_provided_tf
+# Depth image <Optional>
+sensor_msgs/Image depth
+# Transform <Optional>
+geometry_msgs/Transform T_C_M
+# Name of the sensor frame
+string sensor_frame
+# Uncertainty Method that should be used. Choose from: <'uncertainty', 'voxel_entropy', 'voxel_probability'>
+string uncertainty_method
+# Timestamp for when the tf should be looked up <optional>
+time lookup_ts
+---
+sensor_msgs/Image class_image
+sensor_msgs/Image uncertainty_image
+sensor_msgs/Image depth_image

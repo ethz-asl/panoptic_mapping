@@ -17,6 +17,7 @@ cs_add_library(${PROJECT_NAME}
         src/visualization/single_tsdf_visualizer.cpp
         src/visualization/planning_visualizer.cpp
         src/visualization/tracking_visualizer.cpp
+        src/visualization/camera_renderer.cpp
         src/conversions/conversions.cpp
         )
 
