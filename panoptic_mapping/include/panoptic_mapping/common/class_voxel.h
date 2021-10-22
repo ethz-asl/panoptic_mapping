@@ -1,12 +1,34 @@
 #ifndef PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_H_
 #define PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_H_
 
+#include <climits>
 #include <vector>
 
 namespace panoptic_mapping {
 
 // Compiler Flag whether to use 16bit or 8bit + averaging strategy.
 #define PANOPTIC_MAPPING_USE_CLASS_VOXELS_AVERAGING
+
+// Compiler flag whether to use 32 bits or 16 bits (reduced)
+#define PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
+
+// How many decimal points of the uncertainty value should be used.
+// note value is converted to <int|short> using uncertainty_value * accuracy.
+// Thus if uncertainty_value * accuracy > max_size(<int32|short>) an overflow
+// occurs.
+// Using short as datatype to save memory and having uncertainty values <= 1
+// limits accuracy to: 10^-4 using short   and   10^-8 Using int
+#define UNCERTAINTY_ACCURACY int(1000)
+// Uncertainty is updated as UNCERTAINTY_DECAY_RATE * old_value +
+// (1-UNCERTAINTY_DECAY_RATE) * new_value Setting this to 0 will always fully
+// update the newest value
+#define UNCERTAINTY_DECAY_RATE float(0.5)
+
+#ifdef PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
+using UncertaintyType = short;
+#else
+using UncertaintyType = int32_t;
+#endif  // PANOPTIC_MAPPING_USE_REDUCED_UNCERTAINTY_ACCURACY
 
 /**
  * @brief Voxel-type used map classification data.
@@ -31,6 +53,18 @@ struct ClassVoxel {
   // belongs to.
   std::vector<Counter> counts;
   int current_index = -1;
+
+  // Flag to set if this voxel was labeled manually and contains a groundtruth
+  // class
+  bool is_groundtruth = false;
+};
+
+/**
+ * @brief Voxel-type used map classification data.
+ */
+struct ClassUncertaintyVoxel : ClassVoxel {
+  // Uncertainty
+  UncertaintyType uncertainty_value = -1;
 };
 
 // Common class voxel functions.
@@ -68,6 +102,41 @@ inline float classVoxelBelongingProbability(const ClassVoxel& voxel) {
 }
 
 /**
+ * @brief Calculates x * log(x) of the given number. If x is <= returns 0
+ * @param x float to calculate entropy for
+ * @return  x * log(x) if x > 0 , 0 else
+ */
+inline float xlogx(float x) {
+  if (x <= 0) {
+    return 0;
+  }
+  return x * std::log(x);
+}
+
+/**
+ * @brief Compute the entropy of the class voting distribution.
+ *
+ * @param voxel Voxel to lookup.
+ * @return Entropy of the distribution
+ */
+inline float classVoxelEntropy(const ClassVoxel& voxel) {
+  float sum = voxel.belongs_count + voxel.foreign_count;
+
+  if (voxel.current_index < 0) {
+    return -(xlogx(static_cast<float>(voxel.belongs_count) / sum) +
+             xlogx(static_cast<float>(voxel.foreign_count) / sum));
+  } else {
+    return -std::accumulate(
+               voxel.counts.begin(), voxel.counts.end(), 0.0f,
+               [sum](float accumulated, ClassVoxel::Counter new_value) {
+                 return accumulated +
+                        xlogx(static_cast<float>(new_value) / sum);
+               }) /
+           std::log(voxel.counts.size());
+  }
+}
+
+/**
  * @brief Increment the binary classification count of a voxel. Existence of the
  * input voxel is not checked.
  *
@@ -92,6 +161,51 @@ inline void classVoxelIncrementBinary(ClassVoxel* voxel, bool belongs) {
     }
 #endif  // PANOPTIC_MAPPING_USE_CLASS_VOXELS_AVERAGING
   }
+}
+
+/**
+ * @brief Updates the uncertainty value of a voxel. Uses UNCERTAINTY_DECAY_RATE
+ * * old_value + (1-UNCERTAINTY_DECAY_RATE) * new_value
+ *
+ * @param voxel Voxel to update.
+ * @param uncertainty_value Uncertainty value assigned to this voxel.
+ */
+inline void classVoxelUpdateUncertainty(ClassUncertaintyVoxel* voxel,
+                                        float uncertainty_value) {
+  float uncertainty_shifted = uncertainty_value * UNCERTAINTY_ACCURACY;
+
+  // Overflow Check
+  const float max_uncertainty_value =
+      std::numeric_limits<UncertaintyType>::max();
+  if (uncertainty_shifted > max_uncertainty_value) {
+    LOG(WARNING) << "Uncertainty value is too big. "
+                    "Change uncertainty accuracy or use bigger uncertainty "
+                    "type to prevent this.";
+    uncertainty_shifted = max_uncertainty_value;
+  }
+  // Assign values
+  if (voxel->uncertainty_value == -1) {
+    // Voxel was not yet initialized
+    voxel->uncertainty_value = static_cast<UncertaintyType>(
+        UNCERTAINTY_DECAY_RATE * uncertainty_shifted);
+  } else {
+    voxel->uncertainty_value = static_cast<UncertaintyType>(
+        UNCERTAINTY_DECAY_RATE * uncertainty_shifted +
+        (1 - UNCERTAINTY_DECAY_RATE) * voxel->uncertainty_value);
+  }
+}
+
+/**
+ * Default function if no uncertainty voxels are used, simply return zero
+ * @param voxel Voxel for which uncertainty should be returned
+ * @return 0.0 Fallback if voxel type does not match
+ */
+inline float classVoxelUncertainty(const ClassVoxel& voxel) {
+  return 0.0;
+}
+
+inline float classVoxelUncertainty(const ClassUncertaintyVoxel& voxel) {
+  return static_cast<float>(voxel.uncertainty_value) / UNCERTAINTY_ACCURACY;
 }
 
 /**

@@ -9,6 +9,7 @@
 #include <voxblox/io/layer_io.h>
 
 #include "panoptic_mapping/map_management/layer_manipulator.h"
+#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -120,46 +121,22 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   }
 
   // Saving the blocks.
+
+  // TSDF Layer
   constexpr bool kIncludeAllBlocks = true;
   const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
                                      voxblox::BlockIndexList(), outfile_ptr)) {
-    LOG(ERROR) << "Could not write submap blocks to stream.";
+    LOG(ERROR) << "Could not write submap tsdf blocks to stream.";
     outfile_ptr->close();
     return false;
   }
 
-  // Save class data.
-  // NOTE(schmluk): Currently only supports binary classification. Hacked as
-  // storing them in a tsdf layer.
   if (has_class_layer_) {
-    TsdfLayer tmp(tsdf_layer);
-    voxblox::BlockIndexList blocks;
-    tmp.getAllAllocatedBlocks(&blocks);
-    for (const auto& index : blocks) {
-      ClassBlock* class_block = nullptr;
-      TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
-      if (hasClassLayer()) {
-        if (class_layer_->hasBlock(index)) {
-          class_block = &class_layer_->getBlockByIndex(index);
-        }
-      }
-      for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
-        TsdfVoxel& voxel = tsdf_block.getVoxelByLinearIndex(i);
-        if (class_block) {
-          voxel.distance = static_cast<float>(
-              class_block->getVoxelByLinearIndex(i).belongs_count);
-          voxel.weight = static_cast<float>(
-              class_block->getVoxelByLinearIndex(i).foreign_count);
-        } else {
-          voxel.distance = 0.f;
-          voxel.weight = 0.f;
-        }
-      }
-    }
-    if (!tmp.saveBlocksToStream(kIncludeAllBlocks, voxblox::BlockIndexList(),
-                                outfile_ptr)) {
-      LOG(ERROR) << "Could not write submap blocks to stream.";
+    const ClassLayer& class_layer = *class_layer_;
+    if (!class_layer.saveBlocksToStream(
+            kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
+      LOG(ERROR) << "Could not write submap class blocks to stream.";
       outfile_ptr->close();
       return false;
     }
@@ -204,30 +181,14 @@ std::unique_ptr<Submap> Submap::loadFromStream(
     return nullptr;
   }
 
-  // Load classification data. See note when saving.
-  if (cfg.use_class_layer) {
-    TsdfLayer tmp(cfg.voxel_size, cfg.voxels_per_side);
-    if (!voxblox::io::LoadBlocksFromStream(
+  // Load class layer
+  if (submap_proto.has_class_layer()) {
+    if (!voxblox::io::LoadBlocksFromStream<ClassVoxelType>(
             submap_proto.num_blocks(),
-            TsdfLayer::BlockMergingStrategy::kReplace, proto_file_ptr, &tmp,
-            tmp_byte_offset_ptr)) {
+            ClassLayer::BlockMergingStrategy::kReplace, proto_file_ptr,
+            submap->class_layer_.get(), tmp_byte_offset_ptr)) {
       LOG(ERROR) << "Could not load the class blocks from stream.";
       return nullptr;
-    }
-    voxblox::BlockIndexList blocks;
-    tmp.getAllAllocatedBlocks(&blocks);
-    for (const auto& index : blocks) {
-      TsdfBlock& tsdf_block = tmp.getBlockByIndex(index);
-      ClassBlock* class_block =
-          submap->getClassLayerPtr()->allocateBlockPtrByIndex(index).get();
-      for (size_t i = 0; i < tsdf_block.num_voxels(); ++i) {
-        ClassVoxel& class_voxel = class_block->getVoxelByLinearIndex(i);
-        TsdfVoxel& tsdf_voxel = tsdf_block.getVoxelByLinearIndex(i);
-        class_voxel.belongs_count =
-            static_cast<ClassVoxel::Counter>(tsdf_voxel.distance);
-        class_voxel.foreign_count =
-            static_cast<ClassVoxel::Counter>(tsdf_voxel.weight);
-      }
     }
   }
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8.3)
 project(panoptic_mapping)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -27,6 +27,7 @@ target_link_libraries(${PROJECT_NAME}_proto ${PROTOBUF_LIBRARIES})
 cs_add_library(${PROJECT_NAME}
         src/common/camera.cpp
         src/common/input_data_user.cpp
+        src/common/class_voxel_layer.cpp
         src/map/submap.cpp
         src/map/submap_collection.cpp
         src/map/submap_id.cpp
@@ -58,8 +59,20 @@ cs_add_library(${PROJECT_NAME}
         src/tools/null_data_writer.cpp
         src/tools/log_data_writer.cpp
         src/tools/evaluation_data_writer.cpp
+        src/tools/serialization.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
+
+##########
+# Tests #
+##########
+
+if (CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(serialization_tests tests/serialization_tests.cpp)
+    target_link_libraries(serialization_tests ${catkin_LIBRARIES} ${PROJECT_NAME})
+    catkin_add_gtest(save_submap_tests tests/save_submap_tests.cpp)
+    target_link_libraries(save_submap_tests ${catkin_LIBRARIES} ${PROJECT_NAME})
+endif()
 
 ##########
 # Export #

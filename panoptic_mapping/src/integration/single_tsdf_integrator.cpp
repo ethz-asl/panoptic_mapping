@@ -25,6 +25,7 @@ void SingleTsdfIntegrator::Config::checkParams() const {
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("projective_integrator_config", &projective_integrator_config);
+  setupParam("use_uncertainty", &use_uncertainty);
   projective_integrator_config.foreign_rays_clear = false;
 }
 
@@ -34,6 +35,12 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
       ProjectiveIntegrator(config.projective_integrator_config,
                            std::move(globals), false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+
+  if (config_.use_uncertainty) {
+    addRequiredInputs({InputData::InputType::kUncertaintyImage});
+  }
+
+  // Request all inputs.
   // Cache num classes info.
   num_classes_ = globals_->labelHandler()->numberOfLabels();
 }
@@ -124,7 +131,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
-    ClassVoxel* class_voxel = nullptr;
+    ClassVoxelType* class_voxel = nullptr;
     if (use_class_layer) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
@@ -141,11 +148,74 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   }
 }
 
+void SingleTsdfIntegrator::updateClassVoxel(
+    InterpolatorBase* interpolator, const InputData& input,
+    panoptic_mapping::ClassVoxel* class_voxel) const {
+  // Do not update voxels which are assigned as groundtruth
+  if (class_voxel->is_groundtruth) {
+    return;
+  }
+
+  if (class_voxel->current_index < 0) {
+    // This means the voxel is uninitialized.
+    class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+  }
+
+  size_t class_id = interpolator->interpolateID(input.idImage());
+
+  if (class_id >= class_voxel->counts.size()) {
+    LOG_IF(WARNING, config_.verbosity >= 1)
+        << "Got invalid class ID in tsdf integrator. Skipping class: "
+        << class_id;
+  } else {
+    classVoxelIncrementClass(class_voxel, class_id);
+  }
+}
+void SingleTsdfIntegrator::updateClassVoxel(
+    InterpolatorBase* interpolator, const InputData& input,
+    panoptic_mapping::ClassUncertaintyVoxel* uncertainty_voxel) const {
+  if (!config_.use_uncertainty) {
+    // Do not use uncertainty
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    return;
+  }
+
+  if (uncertainty_voxel->is_groundtruth) {
+    return;  // Do not update voxels that have Groundtruth assigned
+  }
+
+  // Update Uncertainty Voxel Part
+  float uncertainty_value =
+      interpolator->interpolateUncertainty(input.uncertaintyImage());
+
+  // Magic uncertainty value which labels a voxel as groundtruth voxel.
+  // TODO @zrene find better way to implement this.
+  if (uncertainty_value == -1.0) {
+    // Make sure GT voxel have zero uncertainty / entropy
+    uncertainty_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+    // Update Class Voxel part
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    // Mark as groundtruth
+    uncertainty_voxel->is_groundtruth = true;
+    // Reset Uncertainty
+    uncertainty_voxel->uncertainty_value = 0;
+  } else {
+    updateClassVoxel(
+        interpolator, input,
+        static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
+    classVoxelUpdateUncertainty(uncertainty_voxel, uncertainty_value);
+  }
+}
+
 bool SingleTsdfIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel) const {
+    const float voxel_size, ClassVoxelType* class_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -172,8 +242,7 @@ bool SingleTsdfIntegrator::updateVoxel(
         // This means the voxel is uninitialized.
         class_voxel->counts.resize(num_classes_);
       }
-      classVoxelIncrementClass(class_voxel,
-                               interpolator->interpolateID(input.idImage()));
+      updateClassVoxel(interpolator, input, class_voxel);
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);

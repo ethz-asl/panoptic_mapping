@@ -14,6 +14,9 @@
 #include <voxblox/utils/timing.h>
 
 #include "panoptic_mapping/common/class_voxel.h"
+#include "class_voxel_layer.h"
+
+#define PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
 
 namespace panoptic_mapping {
 // Type definitions to work with a voxblox map.
@@ -29,8 +32,15 @@ using TsdfVoxel = voxblox::TsdfVoxel;
 using TsdfBlock = voxblox::Block<TsdfVoxel>;
 using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
-using ClassBlock = voxblox::Block<ClassVoxel>;
-using ClassLayer = voxblox::Layer<ClassVoxel>;
+
+#ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
+using ClassVoxelType = ClassUncertaintyVoxel;
+#else
+using ClassVoxelType = ClassVoxel;
+#endif
+
+using ClassBlock = voxblox::Block<ClassVoxelType>;
+using ClassLayer = panoptic_mapping::ClassVoxelLayer<ClassVoxelType>;
 
 using Color = voxblox::Color;
 

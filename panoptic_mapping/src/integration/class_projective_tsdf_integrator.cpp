@@ -97,7 +97,7 @@ void ClassProjectiveIntegrator::updateBlock(
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
-    ClassVoxel* class_voxel = nullptr;
+    ClassVoxelType* class_voxel = nullptr;
     if (class_block) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
@@ -117,7 +117,7 @@ bool ClassProjectiveIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel) const {
+    const float voxel_size, ClassVoxelType* class_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {

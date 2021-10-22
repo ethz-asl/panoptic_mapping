@@ -53,6 +53,14 @@ class InterpolatorBase {
    * @return int The interpolated ID value.
    */
   virtual int interpolateID(const cv::Mat& id_image) = 0;
+
+    /**
+   * @brief Compute the uncertainty based on the internally cached weights.
+   *
+   * @param uncertainty_image Uncertainty Image image to interpolate in.
+   * @return Color The interpolated uncertainty value.
+   */
+  virtual float interpolateUncertainty(const cv::Mat& uncertainty_image) = 0;
 };
 
 /**
@@ -66,6 +74,7 @@ class InterpolatorNearest : public InterpolatorBase {
                       const Eigen::MatrixXf& range_image) override;
   float interpolateRange(const Eigen::MatrixXf& range_image) override;
   Color interpolateColor(const cv::Mat& color_image) override;
+  float interpolateUncertainty(const cv::Mat& uncertainty_image)  override;
   int interpolateID(const cv::Mat& id_image) override;
 
  protected:
@@ -88,6 +97,7 @@ class InterpolatorBilinear : public InterpolatorBase {
   void computeWeights(float u, float v,
                       const Eigen::MatrixXf& range_image) override;
   float interpolateRange(const Eigen::MatrixXf& range_image) override;
+  float interpolateUncertainty(const cv::Mat& uncertainty_image)  override;
   Color interpolateColor(const cv::Mat& color_image) override;
   int interpolateID(const cv::Mat& id_image) override;
 
@@ -116,6 +126,7 @@ class InterpolatorAdaptive : public InterpolatorBilinear {
   float interpolateRange(const Eigen::MatrixXf& range_image) override;
   Color interpolateColor(const cv::Mat& color_image) override;
   int interpolateID(const cv::Mat& id_image) override;
+  float interpolateUncertainty(const cv::Mat& uncertainty_image)  override;
 
  protected:
   int u_;
