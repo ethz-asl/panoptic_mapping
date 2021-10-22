@@ -17,6 +17,7 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 **Examples**
 * [Running the Panoptic Mapper](#Running-the-Panoptic-Mapper)
 * [Monolithic Semantic Mapping](#Monolithic-Semantic-Mapping)
+* [Running the RIO Dataset](#Running-the-RIO-Dataset)
 
 **Other**
 * [Contributing](#Contributing)
@@ -131,6 +132,9 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
     <img src="https://user-images.githubusercontent.com/36043993/135861611-4d576750-3104-4d73-87dc-60b7a4ad1df6.png" width="400">
 
 ## Monolithic Semantic Mapping
+This example will follow shortly.
+
+## Running the RIO Dataset
 This example will follow shortly.
 
 # Contributing
