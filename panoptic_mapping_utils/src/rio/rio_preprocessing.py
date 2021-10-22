@@ -67,7 +67,7 @@ def produce_instance_images(scan_names, create_images):
                     object_index = index['objects']
                     break
         if object_index is None:
-            print("Warning: Could not find scan '%s' i object list." % scan)
+            print("Warning: Could not find scan '%s' in object list." % scan)
             continue
 
         # Write objects to label list
