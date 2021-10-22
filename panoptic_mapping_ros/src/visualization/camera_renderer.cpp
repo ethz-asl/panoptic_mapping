@@ -30,20 +30,23 @@ CameraRenderer::CameraRenderer(const CameraRenderer::Config& config,
                                std::shared_ptr<Globals> globals,
                                std::shared_ptr<Camera> camera,
                                std::shared_ptr<SubmapCollection> submaps,
-                               bool print_config)
+                               bool print_config,
+                               ros::NodeHandle nh)
     : config_(config.checkValid()),
       global_frame_name_("mission"),
       globals_(globals),
       camera_(camera),
-      submaps_(submaps) {
+      submaps_(submaps), nh_(nh) {
   // Print config after setting up the modes.
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
 
   // Setup publishers.
-  nh_ = ros::NodeHandle(config_.ros_namespace);
+//  nh_ = ros::NodeHandle(config_.ros_namespace);
+std::cout << "CAMERA SERVICE ADVERTIESED PLEASE "<< std::endl;
   render_camera_view_srv_ = nh_.advertiseService(
       "render_camera_view", &CameraRenderer::renderCameraViewCallback, this);
+  std::cout << render_camera_view_srv_.getService() << std::endl;
 }
 
 bool CameraRenderer::renderCameraViewCallback(

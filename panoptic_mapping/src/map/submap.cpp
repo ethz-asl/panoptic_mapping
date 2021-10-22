@@ -72,6 +72,7 @@ void Submap::initialize() {
   if (config_.use_class_layer) {
     class_layer_ = std::make_shared<ClassLayer>(config_.voxel_size,
                                                 config_.voxels_per_side);
+
     has_class_layer_ = true;
   }
 
@@ -164,6 +165,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
   cfg.use_class_layer = submap_proto.has_class_layer();
+//  cfg.mesh_config.
   auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
@@ -190,6 +192,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
       LOG(ERROR) << "Could not load the class blocks from stream.";
       return nullptr;
     }
+    submap->has_class_layer_ = true;
   }
 
   // Load the transformation.

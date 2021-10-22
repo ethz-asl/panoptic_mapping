@@ -18,6 +18,7 @@ namespace panoptic_mapping {
 
 class CameraRenderer {
  public:
+    std::shared_ptr<SubmapCollection> submaps_;
   // config
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
@@ -38,7 +39,7 @@ class CameraRenderer {
                           std::shared_ptr<Globals> globals,
                           std::shared_ptr<Camera> camera,
                           std::shared_ptr<SubmapCollection> submaps,
-                          bool print_config = true);
+                          bool print_config, ros::NodeHandle nh);
   virtual ~CameraRenderer() = default;
 
   // Interaction.
@@ -51,7 +52,6 @@ class CameraRenderer {
 
   // Members.
   std::shared_ptr<Globals> globals_;
-  std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<Camera> camera_;
 
   // Data.

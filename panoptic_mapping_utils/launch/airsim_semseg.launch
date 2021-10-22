@@ -1,0 +1,77 @@
+<launch>
+  <param name="/use_sim_time" value="true"/>
+
+  <group ns="airsim">
+    <!-- Airsim Node that Publishes Odometry and Images -->
+    <arg name="output" default="screen"/>
+    <arg name="publish_clock" default="true"/>
+    <arg name="is_vulkan" default="true"/>
+    <arg name="host" default="localhost"/>
+
+    <node name="airsim_node" pkg="airsim_ros_pkgs" type="airsim_node" output="$(arg output)" respawn="true">
+      <param name="is_vulkan" type="bool" value="false"/>
+      <!-- ROS timer rates. Note that timer callback will be processed at maximum possible rate, upperbounded by the following ROS params -->
+      <param name="update_airsim_img_response_every_n_sec" type="double" value="0.2"/>
+      <param name="update_airsim_control_every_n_sec" type="double" value="0.05"/>
+      <param name="update_lidar_every_n_sec" type="double" value="10"/>
+      <param name="publish_clock" type="bool" value="$(arg publish_clock)"/>
+      <param name="host_ip" type="string" value="$(arg host)"/>
+      <remap from="drone_1/points" to="airsim_node/drone_1/front/DepthPlanner/registered/points"/>
+    </node>
+
+    <!-- Static transforms -->
+    <include file="$(find airsim_ros_pkgs)/launch/static_transforms.launch"/>
+
+<!--    &lt;!&ndash; Airsim position controller &ndash;&gt;-->
+<!--    <node name="pid_position_node" pkg="airsim_ros_pkgs" type="pd_position_controller_simple_node" output="log">-->
+<!--      <remap from="/airsim_node/odom_local_ned" to="airsim_node/drone_1/odom_local_ned"/>-->
+<!--      <remap from="/airsim_node/home_geo_point" to="airsim_node/origin_geo_point"/>-->
+<!--      <remap from="/vel_cmd_world_frame" to="airsim_node/drone_1/vel_cmd_world_frame"/>-->
+<!--      <remap from="/airsim_node/gps_goal" to="airsim_node/gps_goal"/>-->
+<!--      <remap from="/airsim_node/local_position_goal/override" to="airsim_node/local_position_goal/override"/>-->
+<!--      <param name="update_control_every_n_sec" type="double"-->
+<!--             value="0.01"/>-->
+<!--      &lt;!&ndash; this needs to be in sync with airsim_ros_wrapper? &ndash;&gt;-->
+<!--      <param name="kp_x" type="double" value="0.50"/>-->
+<!--      <param name="kp_y" type="double" value="0.50"/>-->
+<!--      <param name="kp_z" type="double" value="0.20"/>-->
+<!--      <param name="kp_yaw" type="double" value="0.3"/>-->
+<!--      <param name="kd_x" type="double" value="0.3"/>-->
+<!--      <param name="kd_y" type="double" value="0.3"/>-->
+<!--      <param name="kd_z" type="double" value="0.2"/>-->
+<!--      <param name="kd_yaw" type="double" value="0.1"/>-->
+<!--      <param name="reached_thresh_xyz" type="double" value="0.02"/>-->
+<!--      <param name="reached_yaw_degrees" type="double" value="0.1"/>-->
+<!--    </node>-->
+
+
+    <node name="airsim_semantics_converter" pkg="panoptic_mapping_utils" type="airsim_semantics_converter.py" output="screen">
+      <remap from="input_image" to="/airsim/airsim_node/drone_1/front/Infrared"/>
+      <remap from="depth_image" to="/airsim/airsim_node/drone_1/front/DepthPlanner" />
+      <remap from="output_image" to="/semseg_gt"/>
+      <remap from="uncertainy_image" to="/dummy_uncertainty"/>
+    </node>
+  </group>
+
+<!--  <node name="pid_position_node" pkg="airsim_ros_pkgs" type="pd_position_controller_simple_node" output="log">-->
+<!--    <remap from="/airsim_node/odom_local_ned" to="airsim_node/drone_1/odom_local_ned"/>-->
+<!--    <remap from="/airsim_node/home_geo_point" to="airsim_node/origin_geo_point"/>-->
+<!--    <remap from="/vel_cmd_world_frame" to="airsim_node/drone_1/vel_cmd_world_frame"/>-->
+<!--    <remap from="/airsim_node/gps_goal" to="airsim_node/gps_goal"/>-->
+<!--    <remap from="/airsim_node/local_position_goal/override" to="airsim_node/local_position_goal/override"/>-->
+<!--    <param name="update_control_every_n_sec" type="double"-->
+<!--           value="0.01"/>-->
+<!--    &lt;!&ndash; this needs to be in sync with airsim_ros_wrapper? &ndash;&gt;-->
+<!--    <param name="kp_x" type="double" value="0.50"/>-->
+<!--    <param name="kp_y" type="double" value="0.50"/>-->
+<!--    <param name="kp_z" type="double" value="0.20"/>-->
+<!--    <param name="kp_yaw" type="double" value="0.3"/>-->
+<!--    <param name="kd_x" type="double" value="0.3"/>-->
+<!--    <param name="kd_y" type="double" value="0.3"/>-->
+<!--    <param name="kd_z" type="double" value="0.2"/>-->
+<!--    <param name="kd_yaw" type="double" value="0.1"/>-->
+<!--    <param name="reached_thresh_xyz" type="double" value="0.02"/>-->
+<!--    <param name="reached_yaw_degrees" type="double" value="0.1"/>-->
+<!--  </node>-->
+
+</launch>

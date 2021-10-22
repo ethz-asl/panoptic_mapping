@@ -177,7 +177,7 @@ class PanopticMapper {
   ros::Timer print_timing_timer_;
   ros::Timer input_timer_;
   ros::Timer esdf_timer_;
-
+  ros::Publisher changed_esdf_voxel_pub_;
   // Members.
   const Config config_;
 

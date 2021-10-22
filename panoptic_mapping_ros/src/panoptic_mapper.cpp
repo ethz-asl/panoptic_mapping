@@ -11,6 +11,7 @@
 #include <panoptic_mapping/labels/label_handler_base.h>
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
+#include <voxblox_ros/ptcloud_vis.h>
 
 namespace panoptic_mapping {
 
@@ -52,6 +53,9 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("save_map_path_when_finished", &save_map_path_when_finished);
   setupParam("display_config_units", &display_config_units);
   setupParam("indicate_default_values", &indicate_default_values);
+  setupParam("esdf_calculation_interval", &esdf_calculation_interval);
+
+
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -76,23 +80,29 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 }
 
 void PanopticMapper::setupMembers() {
+  
   // Map.
   submaps_ = std::make_shared<SubmapCollection>();
+  
 
   // Threadsafe wrapper for the map.
   thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
+  
 
   // Camera.
   auto camera = std::make_shared<Camera>(
       config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
+  
 
   // Label Handler.
   std::shared_ptr<LabelHandlerBase> label_handler =
       config_utilities::FactoryRos::create<LabelHandlerBase>(
           defaultNh("label_handler"));
+  
 
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);
+  
 
   // Submap Allocation.
   std::shared_ptr<SubmapAllocatorBase> submap_allocator =
@@ -101,6 +111,7 @@ void PanopticMapper::setupMembers() {
   std::shared_ptr<FreespaceAllocatorBase> freespace_allocator =
       config_utilities::FactoryRos::create<FreespaceAllocatorBase>(
           defaultNh("freespace_allocator"));
+  
 
   // ID Tracking.
   id_tracker_ = config_utilities::FactoryRos::create<IDTrackerBase>(
@@ -116,6 +127,7 @@ void PanopticMapper::setupMembers() {
   map_manager_ = config_utilities::FactoryRos::create<MapManagerBase>(
       defaultNh("map_management"));
 
+  
   // Visualization.
   ros::NodeHandle visualization_nh(nh_private_, "visualization");
 
@@ -129,13 +141,17 @@ void PanopticMapper::setupMembers() {
 //      config_utilities::getConfigFromRos<PlanningVisualizer::Config>(
 //          ros::NodeHandle(visualization_nh, "planning")),
 //      planning_interface_);
-  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+//  
+//
+//  planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+//  
 
   // Camera Visualizer
   camera_renderer_ = std::make_unique<CameraRenderer>(
           config_utilities::getConfigFromRos<CameraRenderer::Config>(
                   ros::NodeHandle(visualization_nh, "camera_renderer")),
-          globals_, camera, submaps_);
+          globals_, camera, submaps_, true, nh_private_);
+  
 
   // Tracking.
   tracking_visualizer_ = std::make_unique<TrackingVisualizer>(
@@ -190,6 +206,7 @@ void PanopticMapper::setupRos() {
   // Setup all input topics.
   input_synchronizer_->advertiseInputTopics();
 
+  changed_esdf_voxel_pub_ = nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI> >("changed_esdf", 1, true);
   // Services.
   save_map_srv_ = nh_private_.advertiseService(
       "save_map", &PanopticMapper::saveMapCallback, this);
@@ -435,6 +452,9 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
 
   LOG_IF(INFO, config_.verbosity >= 1)
       << "Successfully loaded " << submaps_->size() << " submaps.";
+
+  camera_renderer_->submaps_ = submaps_;
+
   return true;
 }
 
@@ -499,37 +519,56 @@ bool PanopticMapper::saveMapCallback(
 bool PanopticMapper::loadMapCallback(
     panoptic_mapping_msgs::SaveLoadMap::Request& request,
     panoptic_mapping_msgs::SaveLoadMap::Response& response) {
+
   response.success = loadMap(request.file_path);
   return response.success;
 }
 
 void PanopticMapper::esdfTimerCallback(const ros::TimerEvent&) {
+
+  if (!submaps_->submapIdExists(submaps_->getActiveFreeSpaceSubmapID()))
+    return;
+
   if (!esdf_map_) {
-    if (!submaps_->submapIdExists(submaps_->getActiveFreeSpaceSubmapID()))
-      return;
-    if (!esdf_integrator_) {
-      // Setup integrator
-      voxblox::EsdfIntegrator::Config esdf_integrator_config;
-      esdf_integrator_.reset(new voxblox::EsdfIntegrator(
-          esdf_integrator_config,
-          submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
-              ->getTsdfLayerPtr()
-              .get(),
-          esdf_map_->getEsdfLayerPtr()));
-    }
-    // TODO load from config
     voxblox::EsdfMap::Config esdf_config;
     esdf_config.esdf_voxel_size =
-        submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
-            ->getTsdfLayerPtr()
-            ->voxel_size();
+            submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
+                    ->getTsdfLayerPtr()
+                    ->voxel_size();
+    esdf_config.esdf_voxels_per_side =    submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
+            ->getTsdfLayerPtr()->voxels_per_side();
+
     esdf_map_.reset(new voxblox::EsdfMap(esdf_config));
+
+
+    // Setup integrator
+    voxblox::EsdfIntegrator::Config esdf_integrator_config;
+
+    esdf_integrator_config.max_distance_m = 1;
+    esdf_integrator_config.min_distance_m = 0.1;
+//    esdf_integrator_config.
+    esdf_integrator_ = std::make_unique<voxblox::EsdfIntegrator>(
+            esdf_integrator_config,
+            submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID())
+                    ->getTsdfLayerPtr()
+                    .get(),
+            esdf_map_->getEsdfLayerPtr());
   }
-  const Submap* single_tsdf_submap =
-      submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID());
+
+  const Submap *single_tsdf_submap =
+          submaps_->getSubmapPtr(submaps_->getActiveFreeSpaceSubmapID());
+
+//  std::cout << "upadting tsdf layer " <<  single_tsdf_submap->getTsdfLayer().getNumberOfAllocatedBlocks() << std::endl;
   if (single_tsdf_submap->getTsdfLayer().getNumberOfAllocatedBlocks() > 0) {
     esdf_integrator_->updateFromTsdfLayer(true);
   }
+
+//  pcl::PointCloud<pcl::PointXYZI> pointcloud;
+//  voxblox::createFreePointcloudFromEsdfLayer(esdf_map_->getEsdfLayer(), 0.1, &pointcloud);
+//
+//  pointcloud.header.frame_id = "world";
+//  changed_esdf_voxel_pub_.publish(pointcloud);
+
 }
 
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,

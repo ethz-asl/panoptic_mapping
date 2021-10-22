@@ -79,7 +79,7 @@ inline bool classVoxelBelongsToSubmap(const ClassVoxel& voxel) {
     // This means binary classification is employed.
     return voxel.belongs_count > voxel.foreign_count;
   } else {
-    return voxel.current_index == 0;
+    return voxel.current_index != -1;
   }
 }
 

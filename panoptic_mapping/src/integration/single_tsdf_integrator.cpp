@@ -152,6 +152,10 @@ void SingleTsdfIntegrator::updateClassVoxel(
     InterpolatorBase* interpolator, const InputData& input,
     panoptic_mapping::ClassVoxel* class_voxel) const {
   // Do not update voxels which are assigned as groundtruth
+  if (class_voxel->counts.empty()) {
+      class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
+  }
+
   if (class_voxel->is_groundtruth) {
     return;
   }
