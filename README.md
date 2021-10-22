@@ -15,17 +15,9 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 * [Datasets](#Datasets)
 
 **Examples**
-- [Panoptic Mapping](#panoptic-mapping)
-- [Table of Contents](#table-of-contents)
-- [Paper](#paper)
-- [Video](#video)
-- [Installation](#installation)
-- [Datasets](#datasets)
-- [Examples](#examples)
-  - [Running the Panoptic Mapper](#running-the-panoptic-mapper)
-  - [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
-  - [Running the RIO Dataset](#running-the-rio-dataset)
-- [Contributing](#contributing)
+* [Running the Panoptic Mapper](#running-the-panoptic-mapper)
+* [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
+* [Running the RIO Dataset](#running-the-rio-dataset)
 
 **Other**
 * [Contributing](#Contributing)
@@ -49,7 +41,7 @@ If you find this package useful for your research, please consider citing our pa
 A short video overview explaining the approach will be released upon publication.
 
 # Installation
-Installation instructions for Linux.
+Installation instructions for Linux. The repository was developed on Ubuntu 18.04 with ROS melodic and also tested on Ubuntu 20.04 with ROS noetic.
 
 **Prerequisites**
 
