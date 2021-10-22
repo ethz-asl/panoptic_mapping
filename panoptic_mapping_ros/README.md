@@ -1,2 +1,2 @@
-# Panoptic Mapping
-Prototyping an underlying metric map towards spatio-temporally consistent mapping for robot interaction.
+# Panoptic Mapping ROS
+ROS dependent code and executables of **panoptic_mapping**.

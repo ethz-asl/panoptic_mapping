@@ -1,2 +1,2 @@
-# Panoptic Mapping
-Prototyping an underlying metric map towards spatio-temporally consistent mapping for robot interaction.
+# Panoptic Mapping Utils
+Utility tools and scripts around **panoptic_mapping**. Playing and creating datasets and similar.

@@ -15,9 +15,17 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 * [Datasets](#Datasets)
 
 **Examples**
-* [Running the Panoptic Mapper](#Running-the-Panoptic-Mapper)
-* [Monolithic Semantic Mapping](#Monolithic-Semantic-Mapping)
-* [Running the RIO Dataset](#Running-the-RIO-Dataset)
+- [Panoptic Mapping](#panoptic-mapping)
+- [Table of Contents](#table-of-contents)
+- [Paper](#paper)
+- [Video](#video)
+- [Installation](#installation)
+- [Datasets](#datasets)
+- [Examples](#examples)
+  - [Running the Panoptic Mapper](#running-the-panoptic-mapper)
+  - [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
+  - [Running the RIO Dataset](#running-the-rio-dataset)
+- [Contributing](#contributing)
 
 **Other**
 * [Contributing](#Contributing)
@@ -97,8 +105,14 @@ Installation instructions for Linux.
 # Datasets
 The datasets described in the paper and used for the demo can be downloaded from the [ASL Datasets](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
 
+To a utility script is provided to directly download the data:
+```
+roscd panoptic_mapping_utils
+export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
+chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
+./panoptic_mapping_utils/scripts/download_flat_dataset.sh
+```
 Additional data to run the mapper on the 3RScan dataset will follow.
-
 
 # Examples
 ## Running the Panoptic Mapper
@@ -107,8 +121,8 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
 1. First, download the flat dataset:
     ```
     export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
-    chmod +x download_flat_dataset.sh
-    ./download_flat_dataset.sh
+    chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
+    ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
     ```
 2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/flat_groundtruth.yaml (L15)` to the downloaded path.
 3. Run the mapper:
