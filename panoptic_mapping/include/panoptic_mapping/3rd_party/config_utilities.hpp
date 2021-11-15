@@ -2,7 +2,7 @@
 AUTHOR:       Lukas Schmid <schmluk@mavt.ethz.ch>
 AFFILIATION:  Autonomous Systems Lab (ASL), ETH Zürich
 SOURCE:       https://github.com/ethz-asl/config_utilities
-VERSION:      1.1.7
+VERSION:      1.2.0
 LICENSE:      BSD-3-Clause
 
 Copyright 2020 Autonomous Systems Lab (ASL), ETH Zürich.
@@ -34,7 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 // Raises a redefined warning if different versions are used. v=MMmmPP.
-#define CONFIG_UTILITIES_VERSION 010107
+#define CONFIG_UTILITIES_VERSION 010200
 
 /**
  * Depending on which headers are available, ROS dependencies are included in
@@ -178,7 +178,7 @@ class RequiredArguments {
  * ==================== Internal Utilities ====================
  */
 namespace internal {
-// Printing utility
+// Printing utilities.
 inline std::string printCenter(const std::string& text, int width,
                                char symbol) {
   int first = std::max((width - static_cast<int>(text.length()) - 2) / 2, 0);
@@ -187,14 +187,53 @@ inline std::string printCenter(const std::string& text, int width,
                         symbol);
   return result;
 }
+/**
+ * @brief Resolve namespaces to ROS standards.
+ *
+ * @param param_namespace The current param namespace of the config.
+ * @param sub_namespace Sub-name space to read parameters from.
+ * @param private_namespace Private namespace of the ROS node.
+ * @return std::string Resolved global ROS namespace.
+ */
+inline std::string resolveNameSpaceROS(const std::string& param_namespace,
+                                       const std::string& sub_namespace,
+                                       const std::string& private_namespace) {
+  // Update the sub-namespace. Default to same ns. Leading "/" for global ns.
+  // Leading "~" for private ns.
+  if (sub_namespace.empty()) {
+    return param_namespace;
+  } else if (sub_namespace.front() == '/') {
+    return sub_namespace;
+  } else if (sub_namespace.front() == '~') {
+    return private_namespace + sub_namespace.substr(1);
+  } else {
+    return param_namespace + "/" + sub_namespace;
+  }
+}
 
-// Type verification
+// Type verification.
+// NOTE(schmluk): This is not particularly pretty but works well for varying
+// template types.
 struct ConfigInternalVerificator {};
+
 template <typename T>
 inline bool isConfig(const T* candidate) {
   try {
     throw candidate;
   } catch (const ConfigInternalVerificator*) {
+    return true;
+  } catch (...) {
+  }
+  return false;
+}
+
+struct VariableConfigVerificator {};
+
+template <typename T>
+inline bool isVariableConfig(const T* candidate) {
+  try {
+    throw candidate;
+  } catch (const VariableConfigVerificator*) {
     return true;
   } catch (...) {
   }
@@ -346,7 +385,53 @@ inline bool xmlCast(XmlRpc::XmlRpcValue xml, std::vector<T>* param = nullptr) {
   return true;
 }
 
+// Forward declarations.
 struct ConfigInternal;
+inline std::unique_ptr<ConfigInternal> copyConfig(const ConfigInternal* config);
+
+// Defines virtual interfaces implemented in the corresponding VariableConfig
+// part.
+struct VariableConfigInternal : public VariableConfigVerificator {
+ public:
+  // Constructors.
+  VariableConfigInternal() = default;
+  VariableConfigInternal(const VariableConfigInternal& other) {
+    config_ = copyConfig(other.config_.get());
+    type_ = other.type_;
+  }
+  VariableConfigInternal& operator=(const VariableConfigInternal& other) {
+    config_ = copyConfig(other.config_.get());
+    type_ = other.type_;
+    return *this;
+  }
+  VariableConfigInternal(VariableConfigInternal&& other) {
+    config_ = copyConfig(other.config_.get());
+    type_ = other.type_;
+  }
+  VariableConfigInternal& operator=(VariableConfigInternal&& other) {
+    if (&other != this) {
+      config_ = copyConfig(other.config_.get());
+      type_ = other.type_;
+    }
+    return *this;
+  }
+
+  // Access. These methods wrap the inspection tools for the contained config.
+  virtual bool isValid() const { return false; }
+
+  virtual std::string toString() const { return "Variable config not setup."; }
+
+  const std::string& type() const { return type_; }
+
+  bool isSetup() const { return config_ != nullptr; }
+
+ protected:
+  friend ConfigInternal;
+  std::string type_ = "Not Setup";
+  std::unique_ptr<ConfigInternal> config_ = nullptr;
+
+  virtual void createConfig(const ParamMap& params){};
+};
 }  // namespace internal
 
 /**
@@ -547,6 +632,7 @@ namespace internal {
 // Base class for internal use.
 struct ConfigInternal : public ConfigInternalVerificator {
  public:
+  // Constructors.
   explicit ConfigInternal(std::string name)
       : name_(std::move(name)), meta_data_(new MetaData()) {}
 
@@ -556,6 +642,17 @@ struct ConfigInternal : public ConfigInternalVerificator {
   ConfigInternal& operator=(const ConfigInternal& other) {
     name_ = other.name_;
     meta_data_.reset(new MetaData(*(other.meta_data_)));
+    return *this;
+  }
+
+  ConfigInternal(ConfigInternal&& other)
+      : name_(other.name_), meta_data_(std::move(other.meta_data_)) {}
+
+  ConfigInternal& operator=(ConfigInternal&& other) {
+    if (&other != this) {
+      name_ = other.name_;
+      meta_data_ = std::move(other.meta_data_);
+    }
     return *this;
   }
 
@@ -612,10 +709,11 @@ struct ConfigInternal : public ConfigInternalVerificator {
    * Implement this function by adding all printField functions.
    */
   virtual void printFields() const {
-    if (!meta_data_->merged_setup_already_used) {
+    if (!meta_data_->merged_setup_already_used &&
+        !meta_data_->use_printing_to_get_values) {
       meta_data_->messages->emplace_back(
           std::string(meta_data_->indent, ' ')
-              .append("The 'printFields()' method is not implemented for " +
+              .append("The 'printFields()' method is not implemented for '" +
                       name_ + "'."));
     }
   }
@@ -636,8 +734,8 @@ struct ConfigInternal : public ConfigInternalVerificator {
    * duplication. Implement this function by ading all setupParam functions.
    */
   virtual void setupParamsAndPrinting() {
-    // If this is overwritten this won't be set and will precede fromRosParam
-    // and printField.
+    // If this is overridden this won't be set and will precede fromRosParam
+    // and printFields.
     meta_data_->merged_setup_already_used = false;
   }
 
@@ -795,6 +893,30 @@ struct ConfigInternal : public ConfigInternalVerificator {
     }
   }
 
+  /**
+   * @brief Execute a config check, i.e. whether config is valid.
+   *
+   * @param config Config to be validated.
+   */
+  void checkParamConfig(const internal::VariableConfigInternal& config) const {
+    if (!meta_data_->checker) {
+      LOG(WARNING) << "'checkParamConfig()' calls are only allowed within the "
+                      "'checkParams()' method, no checks will be performed.";
+      return;
+    }
+    if (!config.isSetup()) {
+      meta_data_->checker->checkCond(false,
+                                     "Variable member config is not setup.");
+    } else {
+      if (!config.config_->isValid(meta_data_->print_warnings)) {
+        meta_data_->checker->checkCond(
+            false, "Variable member config '" + config.config_->name_ +
+                       "' (Variable Config: " + config.type() +
+                       ") is not valid.");
+      }
+    }
+  }
+
   // Printing Tools.
   /**
    * @brief Print this parameter in the config toString summary. The parameter
@@ -813,6 +935,19 @@ struct ConfigInternal : public ConfigInternalVerificator {
         // The default values only apply for non-config fields, as these will be
         // managed internally when printing the sub-config.
         printConfigInternal(name, (const internal::ConfigInternal*)&field);
+      }
+    } else if (isVariableConfig(&field)) {
+      if (!meta_data_->use_printing_to_get_values) {
+        // The default values only apply for non-config fields, as these will be
+        // managed internally when printing the sub-config.
+        auto var = (const internal::VariableConfigInternal*)&field;
+        if (var->config_ != nullptr) {
+          printConfigInternal(name + " (Variable Config: " + var->type_ + ")",
+                              var->config_.get());
+
+        } else {
+          printFieldInternal(name, "Uninitialized Variable Config.");
+        }
       }
     } else {
       std::stringstream ss;
@@ -895,10 +1030,12 @@ struct ConfigInternal : public ConfigInternalVerificator {
     // printing mode.
     ((ConfigInternal*)this)->setupParamsAndPrinting();
     printFields();
+
     std::unordered_map<std::string, std::string> result =
         *(meta_data_->default_values);
     meta_data_->default_values.reset(nullptr);
     meta_data_->use_printing_to_get_values = false;
+    meta_data_->merged_setup_currently_active = false;
     return result;
   }
 
@@ -978,6 +1115,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
                            const internal::ConfigInternal* field) const {
     meta_data_->messages->emplace_back(std::string(meta_data_->indent, ' ') +
                                        name + ":");
+    CHECK_NOTNULL(field);
     meta_data_->messages->emplace_back(field->toStringInternal(
         meta_data_->indent + GlobalSettings::instance().subconfig_indent));
   }
@@ -987,8 +1125,8 @@ struct ConfigInternal : public ConfigInternalVerificator {
     meta_data_->indent = indent;
 
     meta_data_->messages = std::make_unique<std::vector<std::string>>();
-    meta_data_->merged_setup_already_used = true;
     meta_data_->merged_setup_set_params = false;
+    meta_data_->merged_setup_currently_active = true;
 
     // Create the default values if required.
     if (GlobalSettings::instance().indicate_default_values) {
@@ -998,12 +1136,15 @@ struct ConfigInternal : public ConfigInternalVerificator {
           std::make_unique<std::unordered_map<std::string, std::string>>(
               defaults->getValues());
       meta_data_->use_printing_to_get_values = true;
+      meta_data_->merged_setup_already_used = true;
+
       // NOTE: setupParamsAndPrinting() does not modify 'this' in printing mode.
       ((ConfigInternal*)this)->setupParamsAndPrinting();
       printFields();
-      meta_data_->merged_setup_already_used = true;
-      meta_data_->use_printing_to_get_values = false;
     }
+
+    meta_data_->use_printing_to_get_values = false;
+    meta_data_->merged_setup_already_used = true;
 
     // NOTE: setupParamsAndPrinting() does not modify 'this' in printing mode.
     ((ConfigInternal*)this)->setupParamsAndPrinting();
@@ -1018,6 +1159,8 @@ struct ConfigInternal : public ConfigInternalVerificator {
     meta_data_->messages.reset(nullptr);
     meta_data_->default_values.reset(nullptr);
     meta_data_->indent = indent_prev;
+    meta_data_->merged_setup_currently_active = false;
+
     return result;
   };
 
@@ -1207,18 +1350,23 @@ struct ConfigInternal : public ConfigInternalVerificator {
     // Update the sub-namespace. Default to same ns. Leading "/" for global ns.
     // Leading "~" for private ns.
     internal::ParamMap params = *(meta_data_->params);
-    if (sub_namespace.empty()) {
-      params["_name_space"] = param_namespace_;
-    } else if (sub_namespace.front() == '/') {
-      params["_name_space"] = sub_namespace;
-    } else if (sub_namespace.front() == '~') {
-      params["_name_space"] =
-          static_cast<std::string>(params["_name_space_private"]) +
-          sub_namespace.substr(1);
-    } else {
-      params["_name_space"] = param_namespace_ + "/" + sub_namespace;
-    }
+    params["_name_space"] = resolveNameSpaceROS(
+        param_namespace_, sub_namespace,
+        static_cast<std::string>(params["_name_space_private"]));
     setupConfigFromParamMap(params, config);
+  }
+
+  void rosParam(VariableConfigInternal* config,
+                const std::string& sub_namespace = "") {
+    CHECK_NOTNULL(config);
+    // Resolve the param namespace and get param map.
+    internal::ParamMap params = *(meta_data_->params);
+    params["_name_space"] = resolveNameSpaceROS(
+        param_namespace_, sub_namespace,
+        static_cast<std::string>(params["_name_space_private"]));
+
+    // Create the desired config.
+    config->createConfig(params);
   }
 
   /**
@@ -1322,17 +1470,37 @@ struct ConfigInternal : public ConfigInternalVerificator {
                   const std::string& unit = "") {
     this->setupParamInternal(name, param, unit);
   }
+
   /**
    * @brief Set the name and storage variable for a parameter that is itself a
    * config_utilities config. These will be used for both the fromRosParam
    * parameter retrieval and printField parameter printing.
    *
    * @param name Name of the parameter to be retrieved and displayed.
-   * @param param Value to be stored and read.
+   * @param config Value to be stored and read.
    * @param sub_namespace If set, all values for the child config will be
    * retrieved from the given sub-namespace.
    */
   void setupParam(const std::string& name, ConfigInternal* config,
+                  const std::string& sub_namespace = "") {
+    if (meta_data_->merged_setup_set_params) {
+      rosParam(config, sub_namespace);
+    } else {
+      printField(name, *config);
+    }
+  }
+
+  /**
+   * @brief Set the name and storage variable for a parameter that is a
+   * config_utilities VariableConfig. These will be used for both the
+   * fromRosParam parameter retrieval and printField parameter printing.
+   *
+   * @param name Name of the parameter to be retrieved and displayed.
+   * @param config Value to be stored and read.
+   * @param sub_namespace If set, all values for the variable config will be
+   * retrieved from the given sub-namespace.
+   */
+  void setupParam(const std::string& name, VariableConfigInternal* config,
                   const std::string& sub_namespace = "") {
     if (meta_data_->merged_setup_set_params) {
       rosParam(config, sub_namespace);
@@ -1424,9 +1592,12 @@ struct ConfigInternal : public ConfigInternalVerificator {
  private:
   friend void setupConfigFromParamMap(const internal::ParamMap& params,
                                       ConfigInternal* config);
+  friend std::unique_ptr<ConfigInternal> copyConfig(
+      const ConfigInternal* config);
 
   virtual std::unique_ptr<internal::ConfigInternal> getDefaultConfig()
       const = 0;
+  virtual std::unique_ptr<internal::ConfigInternal> copy() const = 0;
 
   struct MetaData {
     // temporary tools
@@ -1458,6 +1629,11 @@ inline std::ostream& operator<<(std::ostream& os, const ConfigInternal&) {
   return os;
 }
 
+inline std::ostream& operator<<(std::ostream& os,
+                                const VariableConfigVerificator&) {
+  return os;
+}
+
 /**
  * ==================== Exposure Utilities ===================
  */
@@ -1466,6 +1642,15 @@ inline void setupConfigFromParamMap(const ParamMap& params,
                                     ConfigInternal* config) {
   CHECK_NOTNULL(config);
   config->setupFromParamMap(params);
+}
+
+inline std::unique_ptr<ConfigInternal> copyConfig(
+    const ConfigInternal* config) {
+  if (config == nullptr) {
+    return nullptr;
+  } else {
+    return config->copy();
+  }
 }
 }  // namespace internal
 
@@ -1513,6 +1698,10 @@ struct Config : public internal::ConfigInternal {
  private:
   std::unique_ptr<internal::ConfigInternal> getDefaultConfig() const override {
     return std::make_unique<ConfigT>();
+  }
+
+  std::unique_ptr<internal::ConfigInternal> copy() const override {
+    return std::make_unique<ConfigT>(*static_cast<const ConfigT*>(this));
   }
 };
 
@@ -1606,14 +1795,155 @@ class Factory {
     return std::unique_ptr<BaseT>(it->second(args...));
   }
 
+  /**
+   * @brief Query the factory to create a dervied type from a param map.
+   *
+   * @tparam BaseT Type of the base class to query for.
+   * @tparam Args Other constructor arguments. Notice that each unique set of
+   * constructor arguments will result in a different base-entry in the factory.
+   * @param params Param map to create the derived type from. Needs to contain a
+   * param named 'type' in the active namespace.
+   * @param args Other constructor arguments.
+   * @return std::unique_ptr<BaseT> Unique pointer of type base that contains
+   * the derived object.
+   */
+  template <class BaseT, typename... Args>
+  static std::unique_ptr<BaseT> create(const internal::ParamMap& params,
+                                       Args... args) {
+    ModuleMap<BaseT, Args...>& module = ModuleMap<BaseT, Args...>::instance();
+    std::stringstream ss;
+    ((ss << typeid(args).name() << ", "), ...);
+    std::string type_info = ss.str();
+    if (!type_info.empty()) {
+      type_info = " and constructor arguments '" +
+                  type_info.substr(0, type_info.size() - 2) + "'";
+    } else {
+      type_info = "";
+    }
+
+    // Check the namespace.
+    auto it = params.find("_name_space");
+    if (it == params.end()) {
+      LOG(ERROR)
+          << "ROS factory creation requires the ParamMap to have a namespace.";
+      return nullptr;
+    }
+    const std::string ns = it->second;
+
+    // Get the type from param.
+    it = params.find(ns + "/type");
+    if (it == params.end()) {
+      LOG(ERROR) << "ROS factory creation requires the param 'type' to be set "
+                    "in namespace '"
+                 << ns << "'.";
+      return nullptr;
+    }
+    const std::string type = it->second;
+
+    // Check the source module exists.
+    if (module.map_ros.empty()) {
+      LOG(ERROR) << "Cannot create a module of type '" << type
+                 << "': No modules registered to the factory for base '"
+                 << typeid(BaseT).name() << "'" << type_info
+                 << ". Register modules using a static Registration struct.";
+      return nullptr;
+    }
+    auto it2 = module.map_ros.find(type);
+    if (it2 == module.map_ros.end()) {
+      std::string module_list;
+      for (const auto& entry : module.map_ros) {
+        module_list.append(entry.first + ", ");
+      }
+      module_list = module_list.substr(0, module_list.size() - 2);
+      LOG(ERROR) << "No module of type '" << type
+                 << "' registered to the factory for base '"
+                 << typeid(BaseT).name() << "'" << type_info
+                 << ". Registered are: " << module_list << ".";
+      return nullptr;
+    }
+
+    // Get the config and create the target.
+    return std::unique_ptr<BaseT>(it2->second(params, args...));
+  }
+
+  template <class BaseT>
+  static std::unique_ptr<internal::ConfigInternal> createConfig(
+      const internal::ParamMap& params) {
+    auto module = Factory::ModuleMapConfig<BaseT>::instance();
+
+    // Check the namespace.
+    auto it = params.find("_name_space");
+    if (it == params.end()) {
+      LOG(ERROR)
+          << "ROS factory creation requires the ParamMap to have a namespace.";
+      return nullptr;
+    }
+    const std::string ns = it->second;
+
+    // Get the type from param.
+    it = params.find(ns + "/type");
+    if (it == params.end()) {
+      LOG(ERROR) << "ROS factory creation requires the param 'type' to be set "
+                    "in namespace '"
+                 << ns << "'.";
+      return nullptr;
+    }
+    const std::string type = it->second;
+
+    // Check the source module exists.
+    if (module.map_config.empty()) {
+      LOG(ERROR) << "Cannot create a module of type '" << type
+                 << "': No modules registered to the factory for base '"
+                 << typeid(BaseT).name()
+                 << "'. Register modules using a static Registration struct.";
+      return nullptr;
+    }
+    auto it2 = module.map_config.find(type);
+    if (it2 == module.map_config.end()) {
+      std::string module_list;
+      for (const auto& entry : module.map_config) {
+        module_list.append(entry.first + ", ");
+      }
+      module_list = module_list.substr(0, module_list.size() - 2);
+      LOG(ERROR) << "No module of type '" << type
+                 << "' registered to the factory for base '"
+                 << typeid(BaseT).name() << "'. Registered are: " << module_list
+                 << ".";
+      return nullptr;
+    }
+
+    // Get the config.
+    return it2->second(params);
+  }
+
  protected:
+  // Separate module map that does only needs the base type.
+  template <class BaseT>
+  struct ModuleMapConfig {
+   public:
+    using FactoryMethod =
+        std::function<std::unique_ptr<internal::ConfigInternal>(
+            const internal::ParamMap& params)>;
+    // Singleton access.
+    static ModuleMapConfig& instance() {
+      static ModuleMapConfig instance_;
+      return instance_;
+    }
+
+    // The map.
+    std::unordered_map<std::string, FactoryMethod> map_config;
+
+   private:
+    ModuleMapConfig() = default;
+  };
+
+  // Module map for factory creation.
   template <class BaseT, typename... Args>
   struct ModuleMap {
    public:
     using FactoryMethod = std::function<BaseT*(Args... args)>;
     using FactoryMethodRos =
         std::function<BaseT*(const internal::ParamMap& params, Args... args)>;
-
     // Singleton access.
     static ModuleMap& instance() {
       static ModuleMap instance_;
@@ -1647,18 +1977,39 @@ class Factory {
               auto config_ptr =
                   dynamic_cast<Config<typename DerivedT::Config>*>(&config);
               if (!config_ptr) {
-                LOG(ERROR) << "Cannot create '" << type << "' with <DerivedT>='"
-                           << typeid(DerivedT).name()
-                           << "': 'DerivedT::Config' needs to inherit from "
-                              "'config_utilities::Config<DerivedT::Config>'.";
+                LOG(ERROR)
+                    << "Cannot create '" << type << "' with <DerivedT>='"
+                    << typeid(DerivedT).name()
+                    << "': 'DerivedT::Config' needs to exist and inherit from "
+                       "'config_utilities::Config<DerivedT::Config>'.";
                 return nullptr;
               }
               internal::setupConfigFromParamMap(params, config_ptr);
               return new DerivedT(config, args...);
             }));
+        Factory::ModuleMapConfig<BaseT>& modules_config =
+            Factory::ModuleMapConfig<BaseT>::instance();
+        modules_config.map_config.insert(std::make_pair(
+            type,
+            [type](const internal::ParamMap& params)
+                -> std::unique_ptr<internal::ConfigInternal> {
+              auto config = std::make_unique<typename DerivedT::Config>();
+              auto config_ptr =
+                  dynamic_cast<Config<typename DerivedT::Config>*>(
+                      config.get());
+              if (!config_ptr) {
+                LOG(ERROR)
+                    << "Cannot create config for '" << type
+                    << "' with <DerivedT>='" << typeid(DerivedT).name()
+                    << "': 'DerivedT::Config' needs to exist and inherit from "
+                       "'config_utilities::Config<DerivedT::Config>'.";
+                return nullptr;
+              }
+              internal::setupConfigFromParamMap(params, config_ptr);
+              return config;
+            }));
       }
     }
-
     // The maps.
     std::unordered_map<std::string, FactoryMethod> map;
     std::unordered_map<std::string, FactoryMethodRos> map_ros;
@@ -1666,6 +2017,61 @@ class Factory {
    private:
     ModuleMap() = default;
   };
+};
+
+/**
+ * ==================== Variable Config ====================
+ */
+
+/**
+ * @brief Wrapper that can contain a variable config to create a BaseT module
+ * further downstream. The contained config needs to be of type
+ * config_utilities::Config<DerivedT::Config>.
+ *
+ * @tparam BaseT Base class of the derived object for which a config is
+ * contained.
+ */
+template <typename BaseT>
+class VariableConfig : public internal::VariableConfigInternal {
+ public:
+  bool isValid() const override {
+    if (config_ != nullptr) {
+      return config_->isValid();
+    }
+    return false;
+  }
+
+  std::string toString() const override {
+    if (config_ != nullptr) {
+      return config_->toString();
+    } else {
+      return "Variable config not setup.";
+    }
+  }
+  /**
+   * @brief Creation tool that acts like the RosFactory to create a DerivedT
+   * based on the stored config.
+   *
+   * @tparam Args Additional contructor arguments required for the BaseT.
+   */
+  template <typename... Args>
+  std::unique_ptr<BaseT> create(Args... args) const {
+    return Factory::create<BaseT>(params_, args...);
+  }
+
+ private:
+  void createConfig(const internal::ParamMap& params) override {
+    config_ = Factory::createConfig<BaseT>(params);
+    if (config_) {
+      type_ = static_cast<std::string>(params.at(
+          static_cast<std::string>(params.at("_name_space")) + "/type"));
+      params_ = params;
+    }
+  };
+
+  // TODO(schmluk): This is an ugly hack but needs more refactoring of the
+  // factory system and naming to make this more clean and gerenal.
+  internal::ParamMap params_;
 };
 
 }  // namespace config_utilities
@@ -1735,14 +2141,15 @@ ConfigT getConfigFromRos(const ros::NodeHandle& nh) {
 class FactoryRos : protected Factory {
  public:
   /**
-   * @brief Query the ROS-factory to create a dervied type with its config from
-   * a ROS nodehandle.
+   * @brief Query the ROS-factory to create a dervied type with its config
+   * from a ROS nodehandle.
    *
    * @tparam BaseT Type of the base class to query for.
    * @tparam Args Other constructor arguments. The first constructor argument
-   * for all derived classes is required to be a <typename DerivedT::Config> and
-   * not listed in the arguments. Notice that each unique set of
-   * constructor arguments will result in a different base-entry in the factory.
+   * for all derived classes is required to be a <typename DerivedT::Config>
+   * and not listed in the arguments. Notice that each unique set of
+   * constructor arguments will result in a different base-entry in the
+   * factory.
    * @param nh Nodehandle to create the config from. The string identifier of
    * the derived class to create is taken from ROS-parameter named 'type'.
    * @param args Other constructor arguments.
@@ -1752,51 +2159,9 @@ class FactoryRos : protected Factory {
   template <class BaseT, typename... Args>
   static std::unique_ptr<BaseT> create(const ros::NodeHandle& nh,
                                        Args... args) {
-    ModuleMap<BaseT, Args...>& module = ModuleMap<BaseT, Args...>::instance();
-    std::stringstream ss;
-    ((ss << typeid(args).name() << ", "), ...);
-    std::string type_info = ss.str();
-    if (!type_info.empty()) {
-      type_info = " and constructor arguments '" +
-                  type_info.substr(0, type_info.size() - 2) + "'";
-    } else {
-      type_info = "";
-    }
-
-    // Get the type from param.
-    std::string type;
-    if (!nh.hasParam("type")) {
-      LOG(ERROR) << "ROS factory creation requires the param 'type' to be set "
-                    "in namespace '"
-                 << nh.getNamespace() << "'.";
-      return nullptr;
-    }
-    nh.getParam("type", type);
-
-    if (module.map_ros.empty()) {
-      LOG(ERROR) << "Cannot create a module of type '" << type
-                 << "': No modules registered to the factory for base '"
-                 << typeid(BaseT).name() << "'" << type_info
-                 << ". Register modules using a static Registration struct.";
-      return nullptr;
-    }
-    auto it = module.map_ros.find(type);
-    if (it == module.map_ros.end()) {
-      std::string module_list;
-      for (const auto& entry : module.map_ros) {
-        module_list.append(entry.first + ", ");
-      }
-      module_list = module_list.substr(0, module_list.size() - 2);
-      LOG(ERROR) << "No module of type '" << type
-                 << "' registered to the factory for base '"
-                 << typeid(BaseT).name() << "'" << type_info
-                 << ". Registered are: " << module_list << ".";
-      return nullptr;
-    }
-
     // Get the config and create the target.
     internal::ParamMap params = internal::getParamMapFromRos(nh);
-    return std::unique_ptr<BaseT>(it->second(params, args...));
+    return Factory::create<BaseT>(params, args...);
   }
 };
 
