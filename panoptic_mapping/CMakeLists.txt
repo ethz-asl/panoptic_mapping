@@ -33,6 +33,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/submap_id.cpp
         src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
+        src/map/classification/class_layer.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp

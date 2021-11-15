@@ -1,7 +1,5 @@
-#ifndef PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
-#define PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
 
-#include <voxblox/core/layer.h>
+#include "panoptic_mapping/map/classification/class_layer.h"
 
 namespace panoptic_mapping {
 template <typename VoxelType>
@@ -30,5 +28,3 @@ class ClassVoxelLayer : public voxblox::Layer<VoxelType> {
 };
 
 }  // namespace panoptic_mapping
-
-#endif  // PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_

@@ -29,6 +29,11 @@ cs_add_executable(panoptic_mapper_node
         )
 target_link_libraries(panoptic_mapper_node ${PROJECT_NAME})
 
+cs_add_executable(test
+        app/test.cpp
+        )
+target_link_libraries(test ${PROJECT_NAME})
+
 ###########
 # Export #
 ###########
