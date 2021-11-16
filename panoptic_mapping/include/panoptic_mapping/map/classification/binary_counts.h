@@ -1,39 +1,54 @@
-#ifndef PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
-#define PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
+#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_
+#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_
 
-#include <voxblox/core/layer.h>
+#include <memory>
+#include <vector>
+
+#include "panoptic_mapping/3rd_party/config_utilities.hpp"
+#include "panoptic_mapping/map/classification/class_layer.h"
+#include "panoptic_mapping/map/classification/class_voxel.h"
 
 namespace panoptic_mapping {
 
-class ClassLayer {
+/**
+ * @brief Binary classification by simple counting, where ID 0 indicates the
+ * voxel belongs.
+ */
+struct BinaryCountVoxel : public ClassVoxel {
  public:
+  // Implement interfaces.
+  bool isObserverd() const override;
+  bool belongsToSubmap() const override;
+  float getBelongingProbability(const int id) const override;
+  void incrementCount(const int id, const float weight = 1.f) override;
+  void serializeVoxelToInt(std::vector<uint32_t>* data) const override;
+  void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
+                               size_t& data_index) override;
+  // Data. uint16_t can store up to ~65k observations, so that should always be
+  // sufficient.
+  uint16_t belongs_count = 0;
+  uint16_t foreign_count = 0;
 };
 
-template <typename VoxelType>
-class ClassVoxelLayer : public voxblox::Layer<VoxelType> {
-  // How many class assignements should be serialized.
-  int serialize_top_n_classes_ = 4;
-
+class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
  public:
-  explicit ClassVoxelLayer<VoxelType>(voxblox::FloatingPoint voxel_size,
-                                      size_t voxels_per_side)
-      : voxblox::Layer<VoxelType>(voxel_size, voxels_per_side) {}
+  struct Config : public config_utilities::Config<Config> {
+    Config() { setConfigName("BinaryCountLayer"); }
+  };
 
-  explicit ClassVoxelLayer<VoxelType>(voxblox::FloatingPoint voxel_size,
-                                      size_t voxels_per_side,
-                                      int serialize_top_n_classes)
-      : voxblox::Layer<VoxelType>(voxel_size, voxels_per_side),
-        serialize_top_n_classes_(serialize_top_n_classes) {}
+  BinaryCountLayer(const Config& config, const float voxel_size,
+                   const size_t voxels_per_side);
 
-  bool saveBlocksToStream(bool include_all_blocks,
-                          voxblox::BlockIndexList blocks_to_include,
-                          std::fstream* outfile_ptr) const;
+  ClassVoxelType getVoxelType() const override;
+  std::unique_ptr<ClassLayer> clone() const;
 
-  void setNumClassesToSerialize(int serialize_top_n_classes) {
-    serialize_top_n_classes_ = serialize_top_n_classes;
-  }
+ protected:
+  const Config config_;
+  static config_utilities::Factory::RegistrationRos<
+      ClassLayer, BinaryCountLayer, float, size_t>
+      registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_COMMON_CLASS_VOXEL_LAYER_H_
+#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_

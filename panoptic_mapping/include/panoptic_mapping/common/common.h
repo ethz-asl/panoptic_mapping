@@ -13,16 +13,12 @@
 #include <voxblox/mesh/mesh_layer.h>
 #include <voxblox/utils/timing.h>
 
-#include "panoptic_mapping/map/classification/class_layer.h"
-#include "panoptic_mapping/map/classification/class_voxel.h"
-
-// #include "panoptic_mapping/common/class_voxel.h"
-// #include "class_voxel_layer.h"
-
-#define PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-
 namespace panoptic_mapping {
-// Type definitions to work with a voxblox map.
+/**
+ * @brief Common Type definitions.
+ */
+
+// Wroking with voxblox maps.
 using FloatingPoint = voxblox::FloatingPoint;
 using VoxelIndex = voxblox::VoxelIndex;
 using BlockIndex = voxblox::BlockIndex;
@@ -32,20 +28,20 @@ using Point = voxblox::Point;
 using Transformation = voxblox::Transformation;
 using Pointcloud = voxblox::Pointcloud;
 
-// Tsdf and class Maps.
+// Tsdf and mesh Maps. Classification maps are defined in class_layer.h
 using TsdfVoxel = voxblox::TsdfVoxel;
 using TsdfBlock = voxblox::Block<TsdfVoxel>;
 using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
 
 // #ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-// using ClassVoxelType = ClassUncertaintyVoxel;
+// using ClassVoxel = ClassUncertaintyVoxel;
 // #else
-// using ClassVoxelType = ClassVoxel;
+// using ClassVoxel = ClassVoxel;
 // #endif
 
-// using ClassBlock = voxblox::Block<ClassVoxelType>;
-// using ClassLayer = panoptic_mapping::ClassVoxelLayer<ClassVoxelType>;
+// using ClassBlock = voxblox::Block<ClassVoxel>;
+// using ClassLayer = panoptic_mapping::ClassVoxelLayer<ClassVoxel>;
 
 using Color = voxblox::Color;
 

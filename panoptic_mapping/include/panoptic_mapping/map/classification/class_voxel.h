@@ -3,8 +3,6 @@
 
 #include <vector>
 
-#include "voxblox/core/block.h"
-
 namespace panoptic_mapping {
 
 /**
@@ -12,8 +10,7 @@ namespace panoptic_mapping {
  * are stored in classification layers and need to implement at least these
  * interfaces.
  */
-class ClassVoxel {
- public:
+struct ClassVoxel {
   virtual ~ClassVoxel() = default;
 
   /**
@@ -22,14 +19,9 @@ class ClassVoxel {
   virtual bool isObserverd() const = 0;
 
   /**
-   * @brief Check if this voxel counts as belonging to the entity specified with
-   * the ID (submap, class, instance, ..., depending on the employed
-   * classification scheme).
-   *
-   * @param id Entity ID to lookup.
-   * @return True If this voxel belongs to the entity.
+   * @brief Check if this voxel counts as belonging to the containing submap.
    */
-  virtual bool belongsTo(const int id) const = 0;
+  virtual bool belongsToSubmap() const = 0;
 
   /**
    * @brief Computes the probability or confidence that this voxel belongs to

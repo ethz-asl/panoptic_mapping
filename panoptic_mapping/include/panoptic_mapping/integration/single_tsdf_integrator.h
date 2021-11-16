@@ -52,7 +52,7 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
                    const Point& p_C, const InputData& input,
                    const int submap_id, const bool is_free_space_submap,
                    const float truncation_distance, const float voxel_size,
-                   ClassVoxelType* class_voxel = nullptr) const override;
+                   ClassVoxel* class_voxel = nullptr) const override;
 
  private:
   const Config config_;
@@ -63,9 +63,11 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
   int num_classes_;
 
   void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
-                          ClassVoxel* class_voxel) const;
-  void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
-                        ClassUncertaintyVoxel* class_voxel) const;
+                        ClassVoxel* class_voxel) const;
+  // TODO
+  // void updateClassVoxel(InterpolatorBase* interpolator, const InputData&
+  // input,
+  //                       ClassUncertaintyVoxel* class_voxel) const;
 };
 
 }  // namespace panoptic_mapping

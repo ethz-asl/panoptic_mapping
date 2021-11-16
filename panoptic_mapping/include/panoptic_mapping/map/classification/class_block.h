@@ -36,11 +36,19 @@ class ClassBlock {
   virtual ClassVoxel& getVoxelByVoxelIndex(const VoxelIndex& index) = 0;
 };
 
+/**
+ * @brief Implements all the interface fucntions to wrap a block of VoxelT
+ * voxels.
+ *
+ * @tparam VoxelT Voxel type contained in the wrapped block. Needs to inherit
+ * from ClassVoxel.
+ */
 template <typename VoxelT>
 class ClassBlockImpl : public ClassBlock {
  public:
   explicit ClassBlockImpl(std::shared_ptr<voxblox::Block<VoxelT>> block)
       : block_(std::move(block)) {}
+
   const ClassVoxel& getVoxelByLinearIndex(size_t index) const override {
     return block_->getVoxelByLinearIndex(index);
   }
@@ -62,10 +70,10 @@ class ClassBlockImpl : public ClassBlock {
     return block_->getVoxelPtrByCoordinates(coords);
   }
   ClassVoxel& getVoxelByLinearIndex(size_t index) override {
-    return block_->getVoxelByLinearIndex(coords);
+    return block_->getVoxelByLinearIndex(index);
   }
   ClassVoxel& getVoxelByVoxelIndex(const VoxelIndex& index) override {
-    return block_->getVoxelByVoxelIndex(coords);
+    return block_->getVoxelByVoxelIndex(index);
   }
 
   voxblox::Block<VoxelT>& getBlock() { return *block_; }

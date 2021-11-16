@@ -40,6 +40,7 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/map/classification/class_layer.h"
 
 namespace panoptic_mapping {
 
@@ -82,7 +83,7 @@ class MeshIntegrator {
   MeshIntegrator(const MeshIntegrator::Config& config,
                  std::shared_ptr<TsdfLayer> tsdf_layer,
                  std::shared_ptr<MeshLayer> mesh_layer,
-                 std::shared_ptr<ClassLayer> class_layer = nullptr,
+                 std::shared_ptr<ClassLayer> class_layer,
                  float truncation_distance = 0.f);
 
   // Generates the mesh from the tsdf layer.

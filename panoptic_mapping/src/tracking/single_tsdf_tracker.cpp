@@ -28,7 +28,7 @@ SingleTSDFTracker::SingleTSDFTracker(const Config& config,
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   addRequiredInput(InputData::InputType::kColorImage);
   addRequiredInput(InputData::InputType::kDepthImage);
-  if (config_.submap_config.use_class_layer) {
+  if (config_.submap_config.useClassLayer()) {
     addRequiredInput(InputData::InputType::kSegmentationImage);
   }
   if (config_.use_detectron) {
@@ -81,8 +81,8 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
             config_.submap_config.voxels_per_side ||
         map.getConfig().truncation_distance !=
             config_.submap_config.truncation_distance ||
-        map.getConfig().use_class_layer !=
-            config_.submap_config.use_class_layer) {
+        map.getConfig().useClassLayer() !=
+            config_.submap_config.useClassLayer()) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }

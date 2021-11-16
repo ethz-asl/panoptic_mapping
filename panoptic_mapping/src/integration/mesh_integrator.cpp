@@ -236,8 +236,8 @@ void MeshIntegrator::extractMeshInsideBlock(
       break;
     }
     if (use_class_layer_) {
-      corner_belongs(i) = classVoxelBelongsToSubmap(
-          class_block->getVoxelByVoxelIndex(corner_index));
+      corner_belongs(i) =
+          class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
       if (corner_belongs(i)) {
         belonging_corners++;
       }
@@ -293,8 +293,8 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
         break;
       }
       if (use_class_layer_) {
-        corner_belongs(i) = classVoxelBelongsToSubmap(
-            class_block->getVoxelByVoxelIndex(corner_index));
+        corner_belongs(i) =
+            class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
         if (corner_belongs(i)) {
           belonging_corners++;
         }
@@ -335,9 +335,9 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
         if (use_class_layer_) {
           // We assume that the class blocks are always updated simultaneously
           // so existence of the class block is not checked here.
-          corner_belongs(i) = classVoxelBelongsToSubmap(
-              class_layer_->getBlockByIndex(neighbor_index)
-                  .getVoxelByVoxelIndex(corner_index));
+          corner_belongs(i) = class_layer_->getBlockPtrByIndex(neighbor_index)
+                                  ->getVoxelByVoxelIndex(corner_index)
+                                  .belongsToSubmap();
           if (corner_belongs(i)) {
             belonging_corners++;
           }

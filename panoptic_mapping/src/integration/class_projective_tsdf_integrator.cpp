@@ -97,7 +97,7 @@ void ClassProjectiveIntegrator::updateBlock(
     TsdfVoxel& voxel = block.getVoxelByLinearIndex(i);
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
-    ClassVoxelType* class_voxel = nullptr;
+    ClassVoxel* class_voxel = nullptr;
     if (class_block) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
@@ -117,7 +117,7 @@ bool ClassProjectiveIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxelType* class_voxel) const {
+    const float voxel_size, ClassVoxel* class_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -153,43 +153,31 @@ void ClassProjectiveIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
                                                  const InputData& input,
                                                  const int submap_id) const {
   if (config_.use_binary_classification) {
+    // Use ID 0 for belongs, 1 for does not belong.
     if (config_.use_instance_classification) {
       // Just count how often the assignments were right.
-      classVoxelIncrementBinary(
-          voxel, interpolator->interpolateID(input.idImage()) == submap_id);
+      voxel->incrementCount(
+          1 - static_cast<int>(interpolator->interpolateID(input.idImage()) ==
+                               submap_id));
     } else {
       // Only the class needs to match.
       auto it = id_to_class_.find(submap_id);
       auto it2 =
           id_to_class_.find(interpolator->interpolateID(input.idImage()));
       if (it != id_to_class_.end() && it2 != id_to_class_.end()) {
-        classVoxelIncrementBinary(voxel, it->second == it2->second);
+        voxel->incrementCount(1 - static_cast<int>(it->second == it2->second));
       } else {
-        classVoxelIncrementBinary(voxel, false);
+        voxel->incrementCount(1);
       }
     }
   } else {
     if (config_.use_instance_classification) {
-      if (voxel->counts.size() < num_classes_) {
-        voxel->counts.resize(num_classes_);
-      }
-      int id = interpolator->interpolateID(input.idImage());
-      if (id == submap_id) {
-        id = 0;
-      }
-      classVoxelIncrementClass(voxel, id);
+      voxel->incrementCount(interpolator->interpolateID(input.idImage()));
     } else {
-      if (voxel->current_index < 0) {
-        // This means the voxel is uninitialized.
-        voxel->counts.resize(num_classes_);
-      }
-      // TODO(schmluk): This might out_of_range for unknown classes or similar,
-      // how to handle these cases?
-      int id = id_to_class_.at(interpolator->interpolateID(input.idImage()));
-      if (id == id_to_class_.at(submap_id)) {
-        id = 0;
-      }
-      classVoxelIncrementClass(voxel, id);
+      // NOTE(schmluk): id_to_class should always exist since it's created based
+      // on the input.
+      voxel->incrementCount(
+          id_to_class_.at(interpolator->interpolateID(input.idImage())));
     }
   }
 }

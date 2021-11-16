@@ -56,7 +56,7 @@ class ClassProjectiveIntegrator : public ProjectiveIntegrator {
                    const Point& p_C, const InputData& input,
                    const int submap_id, const bool is_free_space_submap,
                    const float truncation_distance, const float voxel_size,
-                   ClassVoxelType* class_voxel = nullptr) const override;
+                   ClassVoxel* class_voxel = nullptr) const override;
 
   void updateClassVoxel(InterpolatorBase* interpolator, ClassVoxel* voxel,
                         const InputData& input, const int submap_id) const;

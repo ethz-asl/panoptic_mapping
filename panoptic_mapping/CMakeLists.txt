@@ -27,13 +27,12 @@ target_link_libraries(${PROJECT_NAME}_proto ${PROTOBUF_LIBRARIES})
 cs_add_library(${PROJECT_NAME}
         src/common/camera.cpp
         src/common/input_data_user.cpp
-        src/common/class_voxel_layer.cpp
         src/map/submap.cpp
         src/map/submap_collection.cpp
         src/map/submap_id.cpp
         src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
-        src/map/classification/class_layer.cpp
+        src/map/classification/binary_counts.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp
@@ -60,7 +59,7 @@ cs_add_library(${PROJECT_NAME}
         src/tools/null_data_writer.cpp
         src/tools/log_data_writer.cpp
         src/tools/evaluation_data_writer.cpp
-        src/tools/serialization.cpp
+        #src/tools/serialization.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
 

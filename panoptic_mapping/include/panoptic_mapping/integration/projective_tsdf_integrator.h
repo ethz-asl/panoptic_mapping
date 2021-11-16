@@ -113,7 +113,7 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
                            const int submap_id, const bool is_free_space_submap,
                            const float truncation_distance,
                            const float voxel_size,
-                           ClassVoxelType* class_voxel = nullptr) const;
+                           ClassVoxel* class_voxel = nullptr) const;
 
   /**
    * @brief Sets up the interpolator and computes the signed distance.

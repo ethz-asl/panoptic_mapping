@@ -9,7 +9,8 @@
 #include <voxblox/io/layer_io.h>
 
 #include "panoptic_mapping/map_management/layer_manipulator.h"
-#include "panoptic_mapping/tools/serialization.h"
+// TODO
+// #include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -19,7 +20,10 @@ void Submap::Config::checkParams() const {
   checkParamCond(voxels_per_side % 2 == 0,
                  "voxels_per_side is required to be a multiple of 2.");
   checkParamGT(voxels_per_side, 0, "voxels_per_side");
-  checkParamConfig(mesh_config);
+  checkParamConfig(mesh);
+  if (classification.isSetup()) {
+    checkParamConfig(classification);
+  }
 }
 
 void Submap::Config::initializeDependentVariableDefaults() {
@@ -32,8 +36,12 @@ void Submap::Config::setupParamsAndPrinting() {
   setupParam("voxel_size", &voxel_size);
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
-  setupParam("use_class_layer", &use_class_layer);
-  setupParam("mesh_config", &mesh_config);
+  setupParam("classification", &classification, "classification");
+  setupParam("mesh", &mesh, "mesh");
+}
+
+bool Submap::Config::useClassLayer() const {
+  return classification.isSetup() && classification.type() != "null";
 }
 
 Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
@@ -69,15 +77,15 @@ void Submap::initialize() {
       std::make_shared<TsdfLayer>(config_.voxel_size, config_.voxels_per_side);
   mesh_layer_ =
       std::make_shared<MeshLayer>(config_.voxel_size * config_.voxels_per_side);
-  if (config_.use_class_layer) {
-    class_layer_ = std::make_shared<ClassLayer>(config_.voxel_size,
-                                                config_.voxels_per_side);
+  if (config_.useClassLayer()) {
+    class_layer_ = config_.classification.create(config_.voxel_size,
+                                                 config_.voxels_per_side);
     has_class_layer_ = true;
   }
 
   // Setup tools.
   mesh_integrator_ = std::make_unique<MeshIntegrator>(
-      config_.mesh_config, tsdf_layer_, mesh_layer_, class_layer_,
+      config_.mesh, tsdf_layer_, mesh_layer_, class_layer_,
       config_.truncation_distance);
 }
 
@@ -163,7 +171,8 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
-  cfg.use_class_layer = submap_proto.has_class_layer();
+  // TODO
+  // cfg.use_class_layer = submap_proto.has_class_layer();
   auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
@@ -183,13 +192,14 @@ std::unique_ptr<Submap> Submap::loadFromStream(
 
   // Load class layer
   if (submap_proto.has_class_layer()) {
-    if (!voxblox::io::LoadBlocksFromStream<ClassVoxelType>(
-            submap_proto.num_blocks(),
-            ClassLayer::BlockMergingStrategy::kReplace, proto_file_ptr,
-            submap->class_layer_.get(), tmp_byte_offset_ptr)) {
-      LOG(ERROR) << "Could not load the class blocks from stream.";
-      return nullptr;
-    }
+    // TODO
+    // if (!voxblox::io::LoadBlocksFromStream<ClassVoxel>(
+    //         submap_proto.num_blocks(),
+    //         ClassLayer::BlockMergingStrategy::kReplace, proto_file_ptr,
+    //         submap->class_layer_.get(), tmp_byte_offset_ptr)) {
+    //   LOG(ERROR) << "Could not load the class blocks from stream.";
+    //   return nullptr;
+    // }
   }
 
   // Load the transformation.
@@ -299,10 +309,10 @@ std::unique_ptr<Submap> Submap::clone(
   result->tsdf_layer_ = std::make_shared<TsdfLayer>(*tsdf_layer_);
   result->mesh_layer_ = std::make_shared<MeshLayer>(*mesh_layer_);
   if (class_layer_) {
-    result->class_layer_ = std::make_shared<ClassLayer>(*class_layer_);
+    result->class_layer_ = class_layer_->clone();
   }
   result->mesh_integrator_ = std::make_unique<MeshIntegrator>(
-      result->config_.mesh_config, result->tsdf_layer_, result->mesh_layer_,
+      result->config_.mesh, result->tsdf_layer_, result->mesh_layer_,
       result->class_layer_, result->config_.truncation_distance);
 
   // The bounding volume can not completely be copied so it's just updated,

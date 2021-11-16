@@ -1,13 +1,14 @@
-#include <queue>
 #include <cstdlib>
+#include <memory>
+#include <queue>
+#include <utility>
 
 #include <gtest/gtest.h>
-#include <panoptic_mapping/map/submap_collection.h>
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap.h"
-#include "test_utils.h"
-
+#include "panoptic_mapping/map/submap_collection.h"
+#include "panoptic_mapping/tests/test_utils.h"
 
 const int kNumBlocks = 10;
 
@@ -17,12 +18,15 @@ const int kNumBlocks = 10;
  * try to visualize this map or extract meshes
  * @return submap ptr
  */
-std::unique_ptr<panoptic_mapping::SubmapCollection> getSubmapCollection(bool fill,
-                                                      bool with_class_layer) {
+
+// TODO
+std::unique_ptr<panoptic_mapping::SubmapCollection> getSubmapCollection(
+    bool fill, bool with_class_layer) {
   panoptic_mapping::Submap::Config cfg;
   cfg.use_class_layer = with_class_layer;
 
-  auto submap_collection = std::make_unique<panoptic_mapping::SubmapCollection>();
+  auto submap_collection =
+      std::make_unique<panoptic_mapping::SubmapCollection>();
   auto submap = submap_collection->createSubmap(cfg);
 
   if (fill) {
@@ -37,15 +41,17 @@ std::unique_ptr<panoptic_mapping::SubmapCollection> getSubmapCollection(bool fil
       std::shared_ptr<voxblox::Block<voxblox::TsdfVoxel>> tsdf_block =
           tsdf_layer->allocateBlockPtrByIndex(
               voxblox::BlockIndex(block_idx, 0, 0));
-      std::shared_ptr<voxblox::Block<panoptic_mapping::ClassVoxelType>> class_block = nullptr;
+      std::shared_ptr<voxblox::Block<panoptic_mapping::ClassVoxel>>
+          class_block = nullptr;
       if (with_class_layer)
         class_block = class_layer->allocateBlockPtrByIndex(
             voxblox::BlockIndex(block_idx, 0, 0));
 
       for (int i = 0; i < tsdf_block->num_voxels(); i++) {
-        panoptic_mapping::TsdfVoxel* tsdf_voxel = tsdf_block->getVoxelPtrByCoordinates(
-            tsdf_block->computeCoordinatesFromLinearIndex(i));
-        panoptic_mapping::ClassVoxelType* class_voxel = nullptr;
+        panoptic_mapping::TsdfVoxel* tsdf_voxel =
+            tsdf_block->getVoxelPtrByCoordinates(
+                tsdf_block->computeCoordinatesFromLinearIndex(i));
+        panoptic_mapping::ClassVoxel* class_voxel = nullptr;
         if (with_class_layer)
           class_voxel = class_block->getVoxelPtrByCoordinates(
               class_block->computeCoordinatesFromLinearIndex(i));
@@ -84,26 +90,22 @@ void checkSaveAndLoadCollection(
 
   for (auto index : indexList) {
     // Check TSDF Layer
-    checkBlockEqual(
-        saved_layers.first.getBlockPtrByIndex(index).get(),
-        loaded_layers.first.getBlockPtrByIndex(index).get());
+    checkBlockEqual(saved_layers.first.getBlockPtrByIndex(index).get(),
+                    loaded_layers.first.getBlockPtrByIndex(index).get());
 
     // Check class layer
-    checkBlockEqual(
-        saved_layers.second.getBlockPtrByIndex(index).get(),
-        loaded_layers.second.getBlockPtrByIndex(index).get());
+    checkBlockEqual(saved_layers.second.getBlockPtrByIndex(index).get(),
+                    loaded_layers.second.getBlockPtrByIndex(index).get());
   }
 }
 
 TEST(SubmapSave, serializeSubmapWithClassLayer) {
-  checkSaveAndLoadCollection(
-      getSubmapCollection(true, true),
-      getSubmapCollection(false, true));
+  checkSaveAndLoadCollection(getSubmapCollection(true, true),
+                             getSubmapCollection(false, true));
 }
 TEST(SubmapSave, serializeSubmapWithoutClassLayer) {
-  checkSaveAndLoadCollection(
-          getSubmapCollection(true, false),
-          getSubmapCollection(false, false));
+  checkSaveAndLoadCollection(getSubmapCollection(true, false),
+                             getSubmapCollection(false, false));
 }
 
 int main(int argc, char** argv) {
