@@ -5,6 +5,15 @@
 
 namespace panoptic_mapping {
 
+// Enumerate all implemented classification voxel types for objects that need to
+// operate on specific voxel types.
+enum class ClassVoxelType {
+  kBinaryCounts,
+  kFixedCounts,
+  kVariableCounts,
+  kUncertainty
+};
+
 /**
  * @brief General interface for classification voxels. The classification voxels
  * are stored in classification layers and need to implement at least these
@@ -12,6 +21,12 @@ namespace panoptic_mapping {
  */
 struct ClassVoxel {
   virtual ~ClassVoxel() = default;
+
+  /**
+   * @brief Expose the contained type of the voxel for objects that need to
+   * operate on specific voxel types.
+   */
+  virtual ClassVoxelType getVoxelType() const = 0;
 
   /**
    * @brief Return true if the voxel has received any measurements yet.
@@ -24,6 +39,19 @@ struct ClassVoxel {
   virtual bool belongsToSubmap() const = 0;
 
   /**
+   * @brief Compute the probability in [0, 1] of this voxel belonging to the
+   * containing submap.
+   */
+  virtual float getBelongingProbability() const = 0;
+
+  /**
+   * @brief Get the ID of entity (submap, class, instance, ..., depending
+   * on the employed classification scheme) that this voxel is most likely to
+   * belong to.
+   */
+  virtual int getBelongingID() const = 0;
+
+  /**
    * @brief Computes the probability or confidence that this voxel belongs to
    * the entity specified with the ID (submap, class, instance, ..., depending
    * on the employed classification scheme).
@@ -31,7 +59,7 @@ struct ClassVoxel {
    * @param id Entity ID to lookup.
    * @return float Probability in [0, 1] that this voxel belongs to the entity.
    */
-  virtual float getBelongingProbability(const int id) const = 0;
+  virtual float getProbability(const int id) const = 0;
 
   /**
    * @brief Increment the belief of this classification of belonging to the

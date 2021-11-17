@@ -6,6 +6,10 @@
 
 namespace panoptic_mapping {
 
+ClassVoxelType BinaryCountVoxel::getVoxelType() const {
+  return ClassVoxelType::kBinaryCounts;
+}
+
 bool BinaryCountVoxel::isObserverd() const {
   return belongs_count > 0 || foreign_count > 0;
 }
@@ -16,8 +20,18 @@ bool BinaryCountVoxel::belongsToSubmap() const {
   return belongs_count >= foreign_count;
 }
 
-float BinaryCountVoxel::getBelongingProbability(const int id) const {
+float BinaryCountVoxel::getBelongingProbability() const {
   return static_cast<float>(belongs_count) /
+         static_cast<float>(belongs_count + foreign_count);
+}
+
+int BinaryCountVoxel::getBelongingID() const {
+  // 0 - belongin submap, 1 - else
+  return foreign_count < belongs_count;
+}
+
+float BinaryCountVoxel::getProbability(const int id) const {
+  return static_cast<float>(id == 0 ? belongs_count : foreign_count) /
          static_cast<float>(belongs_count + foreign_count);
 }
 

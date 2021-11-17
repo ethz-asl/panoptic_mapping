@@ -17,9 +17,12 @@ namespace panoptic_mapping {
 struct BinaryCountVoxel : public ClassVoxel {
  public:
   // Implement interfaces.
+  ClassVoxelType getVoxelType() const override;
   bool isObserverd() const override;
   bool belongsToSubmap() const override;
-  float getBelongingProbability(const int id) const override;
+  float getBelongingProbability() const override;
+  int getBelongingID() const override;
+  float getProbability(const int id) const override;
   void incrementCount(const int id, const float weight = 1.f) override;
   void serializeVoxelToInt(std::vector<uint32_t>* data) const override;
   void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
@@ -40,7 +43,7 @@ class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
                    const size_t voxels_per_side);
 
   ClassVoxelType getVoxelType() const override;
-  std::unique_ptr<ClassLayer> clone() const;
+  std::unique_ptr<ClassLayer> clone() const override;
 
  protected:
   const Config config_;

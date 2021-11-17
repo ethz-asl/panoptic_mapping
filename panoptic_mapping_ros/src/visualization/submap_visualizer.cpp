@@ -261,7 +261,7 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
 
 void SubmapVisualizer::generateClassificationMesh(Submap* submap,
                                                   voxblox_msgs::Mesh* mesh) {
-  if (!submap->getConfig().use_class_layer) {
+  if (!submap->hasClassLayer()) {
     return;
   }
 
@@ -288,16 +288,16 @@ void SubmapVisualizer::generateClassificationMesh(Submap* submap,
   // Do the coloring.
   for (const auto& block_index : updated_blocks) {
     TsdfBlock& tsdf_block = tsdf_layer.getBlockByIndex(block_index);
-    const ClassBlock& class_block =
-        submap->getClassLayer().getBlockByIndex(block_index);
+    const ClassBlock::ConstPtr class_block =
+        submap->getClassLayer().getBlockPtrByIndex(block_index);
     for (size_t linear_index = 0; linear_index < voxels_per_block;
          ++linear_index) {
       TsdfVoxel& tsdf_voxel = tsdf_block.getVoxelByLinearIndex(linear_index);
       const ClassVoxel& class_voxel =
-          class_block.getVoxelByLinearIndex(linear_index);
+          class_block->getVoxelByLinearIndex(linear_index);
 
       // Coloring.
-      float probability = classVoxelBelongingProbability(class_voxel);
+      const float probability = class_voxel.getBelongingProbability();
       tsdf_voxel.color.b = 0;
       if (probability > 0.5) {
         tsdf_voxel.color.r = ((1.f - probability) * 2.f * 255.f);

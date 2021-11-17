@@ -34,6 +34,7 @@ class ClassBlock {
       const Point& coords) const = 0;
   virtual ClassVoxel& getVoxelByLinearIndex(size_t index) = 0;
   virtual ClassVoxel& getVoxelByVoxelIndex(const VoxelIndex& index) = 0;
+  virtual ClassVoxelType getVoxelType() const = 0;
 };
 
 /**
@@ -75,9 +76,15 @@ class ClassBlockImpl : public ClassBlock {
   ClassVoxel& getVoxelByVoxelIndex(const VoxelIndex& index) override {
     return block_->getVoxelByVoxelIndex(index);
   }
+  ClassVoxelType getVoxelType() const override {
+    return reinterpret_cast<const ClassVoxel&>(block_->getVoxelByLinearIndex(0)).getVoxelType();
+  }
 
+// Exposes the actual block if the type is known.
   voxblox::Block<VoxelT>& getBlock() { return *block_; }
   const voxblox::Block<VoxelT>& getBlock() const { return *block_; }
+
+
 
  private:
   const std::shared_ptr<voxblox::Block<VoxelT>> block_;

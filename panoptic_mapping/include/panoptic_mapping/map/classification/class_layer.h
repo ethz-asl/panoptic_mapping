@@ -12,15 +12,6 @@
 
 namespace panoptic_mapping {
 
-// Enumerate all implemented classification voxel types for objects that need to
-// operate on specific voxel types.
-enum class ClassVoxelType {
-  kBinaryCounts,
-  kFixedCounts,
-  kVariableCounts,
-  kUncertainty
-};
-
 /**
  * @brief General interface to classification voxel layers. Wraps the voxblox
  * layer to allow substituting different classification layer types.
@@ -64,6 +55,7 @@ class ClassLayer {
   virtual size_t getMemorySize() const = 0;
   virtual size_t voxels_per_side() const = 0;
   virtual FloatingPoint voxel_size() const = 0;
+  virtual FloatingPoint block_size() const = 0;
   virtual std::unique_ptr<ClassLayer> clone() const = 0;
 
   /**
@@ -174,16 +166,17 @@ class ClassLayerImpl : public ClassLayer {
   bool saveBlocksToStream(bool include_all_blocks,
                           voxblox::BlockIndexList blocks_to_include,
                           std::fstream* outfile_ptr) const override {
-    return layer_.saveBlocksToStream(include_all_blocks, blocks_to_include,
-                                     outfile_ptr);
+    // return layer_.saveBlocksToStream(include_all_blocks, blocks_to_include,
+    //                                  outfile_ptr);
   }
   bool addBlockFromProto(const voxblox::BlockProto& block_proto) override {
-    return layer_.addBlockFromProto(
-        block_proto, voxblox::Layer<VoxelT>::BlockMergingStrategy::kReplace);
+    // return layer_.addBlockFromProto(
+    //     block_proto, voxblox::Layer<VoxelT>::BlockMergingStrategy::kReplace);
   }
   size_t getMemorySize() const override { return layer_.getMemorySize(); }
   size_t voxels_per_side() const override { return layer_.voxels_per_side(); }
   FloatingPoint voxel_size() const override { return layer_.voxel_size(); }
+  FloatingPoint block_size() const override { return layer_.block_size(); }
 
   ClassVoxel* getVoxelPtrByCoordinates(const Point& coords) override {
     return layer_.getVoxelPtrByCoordinates(coords);

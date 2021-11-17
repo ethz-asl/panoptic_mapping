@@ -1,7 +1,7 @@
 // #include "panoptic_mapping/common/class_voxel_layer.h"
 
 #include "panoptic_mapping/common/common.h"
-#include "panoptic_mapping/tools/serialization.h"
+// #include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
