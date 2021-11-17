@@ -77,14 +77,13 @@ class ClassBlockImpl : public ClassBlock {
     return block_->getVoxelByVoxelIndex(index);
   }
   ClassVoxelType getVoxelType() const override {
-    return reinterpret_cast<const ClassVoxel&>(block_->getVoxelByLinearIndex(0)).getVoxelType();
+    return reinterpret_cast<const ClassVoxel&>(block_->getVoxelByLinearIndex(0))
+        .getVoxelType();
   }
 
-// Exposes the actual block if the type is known.
+  // Exposes the actual block if the type is known.
   voxblox::Block<VoxelT>& getBlock() { return *block_; }
   const voxblox::Block<VoxelT>& getBlock() const { return *block_; }
-
-
 
  private:
   const std::shared_ptr<voxblox::Block<VoxelT>> block_;

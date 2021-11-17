@@ -11,13 +11,16 @@ message SubmapProto {
   optional int32 panoptic_label = 7;
   optional string name = 9;
   optional int32 change_state = 11;
-  optional bool has_class_layer = 12;
 
   // Tsdf Layer.
   optional uint32 num_blocks = 2;
   optional float voxel_size = 3;
   optional uint32 voxels_per_side = 4;
   optional float truncation_distance = 8;
+
+  // Classification Layer.
+  optional uint32 num_class_blocks = 12;
+  optional int32 class_voxel_type = 13;
 
   // Submap Transformation.
   optional cblox.QuatTransformationProto transform = 5;

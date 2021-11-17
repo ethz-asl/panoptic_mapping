@@ -77,7 +77,7 @@ struct ClassVoxel {
    *
    * @param data The current binary data to append the voxel to.
    */
-  virtual void serializeVoxelToInt(std::vector<uint32_t>* data) const = 0;
+  virtual std::vector<uint32_t> serializeVoxelToInt() const = 0;
 
   /**
    * @brief De-serialize the voxel from integer data.
@@ -88,7 +88,7 @@ struct ClassVoxel {
    * can be read from there.
    */
   virtual void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
-                                       size_t& data_index) = 0;
+                                       size_t* data_index) = 0;
 };
 
 }  // namespace panoptic_mapping

@@ -59,7 +59,7 @@ cs_add_library(${PROJECT_NAME}
         src/tools/null_data_writer.cpp
         src/tools/log_data_writer.cpp
         src/tools/evaluation_data_writer.cpp
-        #src/tools/serialization.cpp
+        src/tools/serialization.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
 

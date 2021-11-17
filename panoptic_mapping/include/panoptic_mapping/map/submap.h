@@ -39,8 +39,8 @@ class Submap {
     // Numbers of voxels per side of a voxel block. Needs to be a power of 2.
     int voxels_per_side = 16;
 
-    // Config of the classification voxels to be used. Type 'null' can be used
-    // to not use any classification.
+    // Config of the classification voxels to be used. Type 'null' or leaving
+    // the config uninitialized can be used to not use any classification.
     config_utilities::VariableConfig<ClassLayer> classification;
 
     // Config of the mesh integrator.

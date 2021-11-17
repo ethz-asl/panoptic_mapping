@@ -9,8 +9,7 @@
 #include <voxblox/io/layer_io.h>
 
 #include "panoptic_mapping/map_management/layer_manipulator.h"
-// TODO
-// #include "panoptic_mapping/tools/serialization.h"
+#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -108,7 +107,14 @@ void Submap::getProto(SubmapProto* proto) const {
   proto->set_voxel_size(config_.voxel_size);
   proto->set_voxels_per_side(config_.voxels_per_side);
   proto->set_truncation_distance(config_.truncation_distance);
-  proto->set_has_class_layer(has_class_layer_);
+
+  // Store classification data.
+  if (has_class_layer_) {
+    proto->set_class_voxel_type(static_cast<int>(class_layer_->getVoxelType()));
+    proto->set_num_class_blocks(class_layer_->getNumberOfAllocatedBlocks());
+  } else {
+    proto->set_num_class_blocks(0);
+  }
 
   // Store transformation data.
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
@@ -119,7 +125,7 @@ void Submap::getProto(SubmapProto* proto) const {
 
 bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   CHECK_NOTNULL(outfile_ptr);
-  // Saving the TSDF submap header.
+  // Saving the submap header.
   SubmapProto submap_proto;
   getProto(&submap_proto);
   if (!voxblox::utils::writeProtoMsgToStream(submap_proto, outfile_ptr)) {
@@ -127,8 +133,6 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     outfile_ptr->close();
     return false;
   }
-
-  // Saving the blocks.
 
   // TSDF Layer
   constexpr bool kIncludeAllBlocks = true;
@@ -141,10 +145,9 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
   }
 
   if (has_class_layer_) {
-    const ClassLayer& class_layer = *class_layer_;
-    if (!class_layer.saveBlocksToStream(
+    if (!class_layer_->saveBlocksToStream(
             kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
-      LOG(ERROR) << "Could not write submap class blocks to stream.";
+      LOG(ERROR) << "Could not write submap classification blocks to stream.";
       outfile_ptr->close();
       return false;
     }
@@ -171,11 +174,10 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
-  // TODO
-  // cfg.use_class_layer = submap_proto.has_class_layer();
   auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
+  submap->has_class_layer_ = submap_proto.num_class_blocks() > 0;
   submap->setInstanceID(submap_proto.instance_id());
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
@@ -190,16 +192,14 @@ std::unique_ptr<Submap> Submap::loadFromStream(
     return nullptr;
   }
 
-  // Load class layer
-  if (submap_proto.has_class_layer()) {
-    // TODO
-    // if (!voxblox::io::LoadBlocksFromStream<ClassVoxel>(
-    //         submap_proto.num_blocks(),
-    //         ClassLayer::BlockMergingStrategy::kReplace, proto_file_ptr,
-    //         submap->class_layer_.get(), tmp_byte_offset_ptr)) {
-    //   LOG(ERROR) << "Could not load the class blocks from stream.";
-    //   return nullptr;
-    // }
+  // Load the classification layer.
+  if (submap_proto.num_class_blocks() > 0) {
+    submap->class_layer_ = loadClassLayerFromStream(
+        submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
+    if (!submap->class_layer_) {
+      LOG(ERROR) << "Could not load the classification layer from stream.";
+      return nullptr;
+    }
   }
 
   // Load the transformation.

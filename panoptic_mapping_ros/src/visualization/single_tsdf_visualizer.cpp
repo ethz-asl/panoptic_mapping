@@ -177,12 +177,12 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
       return mapProbabilityToGreenRedGradient(voxel.getBelongingProbability());
     };
   } else if (color_mode_ == ColorMode::kUncertainty) {
-          // TODO
+    // TODO
     // get_color = [](const ClassVoxel& voxel) {
-      // float probability = panoptic_mapping::classVoxelUncertainty(voxel);
-      // Well defined uncertanties should never be > 1
-      // if (probability > 1) probability = 1;
-      // return mapProbabilityToGreenRedGradient(probability);
+    // float probability = panoptic_mapping::classVoxelUncertainty(voxel);
+    // Well defined uncertanties should never be > 1
+    // if (probability > 1) probability = 1;
+    // return mapProbabilityToGreenRedGradient(probability);
     // };
   } else if (color_mode_ == ColorMode::kIsGroundtruth) {
     // get_color = [this](const ClassVoxel& voxel) {
@@ -205,7 +205,8 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
     //       -voxel.counts.size() * (uniform_prob * std::log(uniform_prob));
     //   float normalized_entropy =
     //       panoptic_mapping::classVoxelEntropy(voxel) / uniform_entropy *
-    //       config_.entropy_factor;  // Entropies are often very small. Use this
+    //       config_.entropy_factor;  // Entropies are often very small. Use
+    //       this
     //                                // to make small values visible
     //   if (normalized_entropy > 1) normalized_entropy = 1;  // Cap to one
 

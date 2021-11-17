@@ -44,10 +44,10 @@ void BinaryCountVoxel::incrementCount(const int id, const float weight) {
   }
 }
 
-void BinaryCountVoxel::serializeVoxelToInt(std::vector<uint32_t>* data) const {}
+std::vector<uint32_t> BinaryCountVoxel::serializeVoxelToInt() const {}
 
 void BinaryCountVoxel::deseriliazeVoxelFromInt(
-    const std::vector<uint32_t>& data, size_t& data_index) {}
+    const std::vector<uint32_t>& data, size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, BinaryCountLayer, float,
                                            size_t>
@@ -64,6 +64,15 @@ ClassVoxelType BinaryCountLayer::getVoxelType() const {
 
 std::unique_ptr<ClassLayer> BinaryCountLayer::clone() const {
   return std::make_unique<BinaryCountLayer>(*this);
+}
+
+std::unique_ptr<ClassLayer> BinaryCountLayer::loadFromStream(
+    const SubmapProto& submap_proto, std::istream* /* proto_file_ptr */,
+    uint64_t* /* tmp_byte_offset_ptr */) {
+  // Nothing special needed to configure for binary counts.
+  return std::make_unique<BinaryCountLayer>(BinaryCountLayer::Config(),
+                                            submap_proto.voxel_size(),
+                                            submap_proto.voxels_per_side());
 }
 
 }  // namespace panoptic_mapping

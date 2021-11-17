@@ -5,7 +5,8 @@
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
-#include "panoptic_mapping/map/classification/class_layer.h"
+#include "panoptic_mapping/Submap.pb.h"
+#include "panoptic_mapping/map/classification/class_layer_impl.h"
 #include "panoptic_mapping/map/classification/class_voxel.h"
 
 namespace panoptic_mapping {
@@ -24,9 +25,9 @@ struct BinaryCountVoxel : public ClassVoxel {
   int getBelongingID() const override;
   float getProbability(const int id) const override;
   void incrementCount(const int id, const float weight = 1.f) override;
-  void serializeVoxelToInt(std::vector<uint32_t>* data) const override;
+  std::vector<uint32_t> serializeVoxelToInt() const override;
   void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
-                               size_t& data_index) override;
+                               size_t* data_index) override;
   // Data. uint16_t can store up to ~65k observations, so that should always be
   // sufficient.
   uint16_t belongs_count = 0;
@@ -44,6 +45,9 @@ class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
+  static std::unique_ptr<ClassLayer> loadFromStream(
+      const SubmapProto& submap_proto, std::istream* /* proto_file_ptr */,
+      uint64_t* /* tmp_byte_offset_ptr */);
 
  protected:
   const Config config_;
