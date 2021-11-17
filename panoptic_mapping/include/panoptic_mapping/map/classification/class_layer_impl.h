@@ -182,6 +182,10 @@ class ClassLayerImpl : public ClassLayer {
     return layer_.getVoxelPtrByCoordinates(coords);
   }
 
+  // Exposes the layer block if the type is known.
+  voxblox::Layer<VoxelT>& getLayer() { return layer_; }
+  const voxblox::Layer<VoxelT>& getLayer() const { return layer_; }
+
  protected:
   voxblox::Layer<VoxelT> layer_;
 };
