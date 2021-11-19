@@ -160,7 +160,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
 
   // Setup.
   const ClassBlock::ConstPtr class_block =
-      submap.getClassLayer().getBlockPtrByIndex(block_index);
+      submap.getClassLayer().getBlockConstPtrByIndex(block_index);
   const float point_conv_factor = 2.0f / std::numeric_limits<uint16_t>::max();
   const float block_edge_length = submap.getClassLayer().block_size();
   const size_t num_vertices = mesh_block->x.size();

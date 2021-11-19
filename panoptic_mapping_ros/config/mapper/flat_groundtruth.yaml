@@ -35,7 +35,6 @@ submap_allocator:
   mesh:
     clear_foreign_voxels: false
     required_belonging_corners: 1
-    integrator_threads: 1 #test
   classification:
     type: binary_counts
     test: 1

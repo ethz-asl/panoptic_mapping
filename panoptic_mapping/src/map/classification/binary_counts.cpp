@@ -1,6 +1,5 @@
 #include "panoptic_mapping/map/classification/binary_counts.h"
 
-#include <climits>
 #include <memory>
 #include <vector>
 
@@ -11,7 +10,7 @@ ClassVoxelType BinaryCountVoxel::getVoxelType() const {
 }
 
 bool BinaryCountVoxel::isObserverd() const {
-  return belongs_count > 0 || foreign_count > 0;
+  return belongs_count > 0u || foreign_count > 0u;
 }
 
 bool BinaryCountVoxel::belongsToSubmap() const {
@@ -31,13 +30,13 @@ int BinaryCountVoxel::getBelongingID() const {
 }
 
 float BinaryCountVoxel::getProbability(const int id) const {
-  return static_cast<float>(id == 0 ? belongs_count : foreign_count) /
+  return static_cast<float>(id == 0u ? belongs_count : foreign_count) /
          static_cast<float>(belongs_count + foreign_count);
 }
 
 void BinaryCountVoxel::incrementCount(const int id, const float weight) {
   // ID 0 is used for belonging voxels.
-  if (id == 0) {
+  if (id == 0u) {
     belongs_count++;
   } else {
     foreign_count++;

@@ -15,13 +15,19 @@
 
 namespace panoptic_mapping {
 /**
- * @brief Common Type definitions.
+ * @brief Common Type definitions for the full framework.
  */
+
+// Types.
+// Type used for counting voxels. This stores up to ~65k measurements so should
+// never run out.
+using ClassificationCount = uint16_t;
 
 // Wroking with voxblox maps.
 using FloatingPoint = voxblox::FloatingPoint;
 using VoxelIndex = voxblox::VoxelIndex;
 using BlockIndex = voxblox::BlockIndex;
+using Color = voxblox::Color;
 
 // Geometry.
 using Point = voxblox::Point;
@@ -33,14 +39,6 @@ using TsdfVoxel = voxblox::TsdfVoxel;
 using TsdfBlock = voxblox::Block<TsdfVoxel>;
 using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
-
-// #ifdef PANOPTIC_MAPPING_USE_UNCERTAINTY_VOXELS
-// using ClassVoxel = ClassUncertaintyVoxel;
-// #else
-// using ClassVoxel = ClassVoxel;
-// #endif
-
-using Color = voxblox::Color;
 
 // Panoptic type labels.
 enum class PanopticLabel { kUnknown = 0, kInstance, kBackground, kFreeSpace };

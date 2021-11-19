@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_
-#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_
+#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_FIXED_COUNTS_H_
+#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_FIXED_COUNTS_H_
 
 #include <memory>
 #include <vector>
@@ -12,10 +12,12 @@
 namespace panoptic_mapping {
 
 /**
- * @brief Binary classification by simple counting, where ID 0 indicates the
- * voxel belongs.
+ * @brief Classification by counting the occurences of each label. The index 0
+ * is generally reserved for the belonging submap by shifting all IDs by 1. The
+ * memory for counting is lazily allocated since often only surface voxels are
+ * relevant.
  */
-struct BinaryCountVoxel : public ClassVoxel {
+struct FixedCountVoxel : public ClassVoxel {
  public:
   // Implement interfaces.
   ClassVoxelType getVoxelType() const override;
@@ -29,22 +31,28 @@ struct BinaryCountVoxel : public ClassVoxel {
   void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
   // Data.
-  ClassificationCount belongs_count = 0u;
-  ClassificationCount foreign_count = 0u;
+  std::vector<ClassificationCount> counts;
+  int current_index = 0;
+  ClassificationCount current_count = 0;
+  ClassificationCount total_count = 0;
+
+  // Fixed count voxels store a fixed number of labels, which is currently set
+  // via this global setting.
+  static size_t kNumCounts;
 };
 
-class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
+class FixedCountLayer : public ClassLayerImpl<FixedCountVoxel> {
  public:
   struct Config : public config_utilities::Config<Config> {
-    Config() { setConfigName("BinaryCountLayer"); }
+    Config() { setConfigName("FixedCountLayer"); }
 
    protected:
     void fromRosParam() override {}
     void printFields() const override {}
   };
 
-  BinaryCountLayer(const Config& config, const float voxel_size,
-                   const int voxels_per_side);
+  FixedCountLayer(const Config& config, const float voxel_size,
+                  const int voxels_per_side);
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
@@ -54,11 +62,11 @@ class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
 
  protected:
   const Config config_;
-  static config_utilities::Factory::RegistrationRos<
-      ClassLayer, BinaryCountLayer, float, int>
+  static config_utilities::Factory::RegistrationRos<ClassLayer, FixedCountLayer,
+                                                    float, int>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_BINARY_COUNTS_H_
+#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_FIXED_COUNTS_H_
