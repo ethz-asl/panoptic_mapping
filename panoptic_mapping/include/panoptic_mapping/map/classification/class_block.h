@@ -17,8 +17,29 @@ namespace panoptic_mapping {
  */
 class ClassBlock {
  public:
-  typedef std::shared_ptr<ClassBlock> Ptr;
-  typedef std::shared_ptr<const ClassBlock> ConstPtr;
+  // Wrap the shared pointer operator bool to account for the wrapped blocks.
+  class Ptr : public std::shared_ptr<ClassBlock> {
+   public:
+    explicit Ptr(ClassBlock* ptr = nullptr)
+        : std::shared_ptr<ClassBlock>(ptr) {}
+    operator bool() const {
+      if (!std::shared_ptr<ClassBlock>::operator bool()) {
+        return false;
+      }
+      return this->operator->()->isValid();
+    }
+  };
+  class ConstPtr : public std::shared_ptr<const ClassBlock> {
+   public:
+    explicit ConstPtr(const ClassBlock* ptr = nullptr)
+        : std::shared_ptr<const ClassBlock>(ptr) {}
+    operator bool() const {
+      if (!std::shared_ptr<const ClassBlock>::operator bool()) {
+        return false;
+      }
+      return this->operator->()->isValid();
+    }
+  };
 
   virtual ~ClassBlock() = default;
 
@@ -35,6 +56,12 @@ class ClassBlock {
   virtual ClassVoxel& getVoxelByLinearIndex(size_t index) = 0;
   virtual ClassVoxel& getVoxelByVoxelIndex(const VoxelIndex& index) = 0;
   virtual ClassVoxelType getVoxelType() const = 0;
+
+  // Additional checks for validity.
+  operator bool() const { return isValid(); }
+
+ protected:
+  virtual bool isValid() const = 0;
 };
 
 /**
@@ -47,7 +74,8 @@ class ClassBlock {
 template <typename VoxelT>
 class ClassBlockImpl : public ClassBlock {
  public:
-  explicit ClassBlockImpl(std::shared_ptr<voxblox::Block<VoxelT>> block)
+  explicit ClassBlockImpl(
+      std::shared_ptr<voxblox::Block<VoxelT>> block = nullptr)
       : block_(std::move(block)) {}
 
   const ClassVoxel& getVoxelByLinearIndex(size_t index) const override {
@@ -85,8 +113,9 @@ class ClassBlockImpl : public ClassBlock {
   voxblox::Block<VoxelT>& getBlock() { return *block_; }
   const voxblox::Block<VoxelT>& getBlock() const { return *block_; }
 
- private:
+ protected:
   const std::shared_ptr<voxblox::Block<VoxelT>> block_;
+  bool isValid() const override { return block_.operator bool(); }
 };
 
 }  // namespace panoptic_mapping

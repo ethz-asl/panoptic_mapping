@@ -27,57 +27,35 @@ class ClassLayerImpl : public ClassLayer {
                                   size_t voxels_per_side)
       : layer_(voxel_size, voxels_per_side) {}
 
-  // NOTE(schmluk): Since const pointers are returned the const-ness is cast
-  // away to create the ClassBlock Wrapper. The block itself should thus still
-  // be protected.
-  ClassBlock::ConstPtr getBlockPtrByIndex(
+  // Block access interfaces.
+  ClassBlock::ConstPtr getBlockConstPtrByIndex(
       const BlockIndex& index) const override {
-    auto block = layer_.getBlockPtrByIndex(index);
-    if (block) {
-      return std::make_shared<const ClassBlockImpl<VoxelT>>(
-          std::const_pointer_cast<voxblox::Block<VoxelT>>(block));
-    }
-    return nullptr;
+    return getClassBlockConstPtr(layer_.getBlockPtrByIndex(index));
   }
   ClassBlock::Ptr getBlockPtrByIndex(const BlockIndex& index) override {
-    auto block = layer_.getBlockPtrByIndex(index);
-    if (block) {
-      return std::make_shared<ClassBlockImpl<VoxelT>>(block);
-    }
-    return nullptr;
+    return getClassBlockPtr(layer_.getBlockPtrByIndex(index));
   }
   ClassBlock::Ptr allocateBlockPtrByIndex(const BlockIndex& index) override {
-    auto block = layer_.allocateBlockPtrByIndex(index);
-    return std::make_shared<ClassBlockImpl<VoxelT>>(block);
+    return getClassBlockPtr(layer_.allocateBlockPtrByIndex(index));
   }
   ClassBlock::ConstPtr getBlockPtrByCoordinates(
       const Point& coords) const override {
-    auto block = layer_.getBlockPtrByCoordinates(coords);
-    if (block) {
-      return std::make_shared<const ClassBlockImpl<VoxelT>>(
-          std::const_pointer_cast<voxblox::Block<VoxelT>>(block));
-    }
-    return nullptr;
+    return getClassBlockConstPtr(layer_.getBlockPtrByCoordinates(coords));
   }
   ClassBlock::Ptr getBlockPtrByCoordinates(const Point& coords) override {
-    auto block = layer_.getBlockPtrByCoordinates(coords);
-    if (block) {
-      return std::make_shared<ClassBlockImpl<VoxelT>>(block);
-    }
-    return nullptr;
+    return getClassBlockPtr(layer_.getBlockPtrByCoordinates(coords));
   }
   ClassBlock::Ptr allocateBlockPtrByCoordinates(const Point& coords) override {
-    auto block = layer_.allocateBlockPtrByCoordinates(coords);
-    return std::make_shared<ClassBlockImpl<VoxelT>>(block);
+    return getClassBlockPtr(layer_.allocateBlockPtrByCoordinates(coords));
   }
   ClassBlock::Ptr allocateNewBlock(const BlockIndex& index) override {
-    auto block = layer_.allocateNewBlock(index);
-    return std::make_shared<ClassBlockImpl<VoxelT>>(block);
+    return getClassBlockPtr(layer_.allocateNewBlock(index));
   }
   ClassBlock::Ptr allocateNewBlockByCoordinates(const Point& coords) override {
-    auto block = layer_.allocateNewBlockByCoordinates(coords);
-    return std::make_shared<ClassBlockImpl<VoxelT>>(block);
+    return getClassBlockPtr(layer_.allocateNewBlockByCoordinates(coords));
   }
+
+  // General functions.
   void removeBlock(const BlockIndex& index) override {
     layer_.removeBlock(index);
   }
@@ -188,6 +166,26 @@ class ClassLayerImpl : public ClassLayer {
 
  protected:
   voxblox::Layer<VoxelT> layer_;
+
+  // Common conversion functions for the class block wrapper.
+  ClassBlock::Ptr getClassBlockPtr(
+      const typename voxblox::Block<VoxelT>::Ptr& block_ptr) {
+    if (block_ptr) {
+      return ClassBlock::Ptr(new ClassBlockImpl<VoxelT>(block_ptr));
+    }
+    return ClassBlock::Ptr();
+  }
+  ClassBlock::ConstPtr getClassBlockConstPtr(
+      const typename voxblox::Block<VoxelT>::ConstPtr& block_ptr) const {
+    // NOTE(schmluk): Since const pointers are returned the const-ness is cast
+    // away to create the ClassBlock Wrapper. The block itself should thus still
+    // be protected.
+    if (block_ptr) {
+      return ClassBlock::ConstPtr(new ClassBlockImpl<VoxelT>(
+          std::const_pointer_cast<voxblox::Block<VoxelT>>(block_ptr)));
+    }
+    return ClassBlock::ConstPtr();
+  }
 };
 
 }  // namespace panoptic_mapping

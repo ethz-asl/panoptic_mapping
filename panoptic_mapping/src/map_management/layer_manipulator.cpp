@@ -39,7 +39,7 @@ void LayerManipulator::applyClassificationLayer(
   for (auto& block_index : block_indices) {
     TsdfBlock& tsdf_block = tsdf_layer->getBlockByIndex(block_index);
     const ClassBlock::ConstPtr class_block =
-        class_layer.getBlockPtrByIndex(block_index);
+        class_layer.getBlockConstPtrByIndex(block_index);
     if (!class_block) {
       continue;
     }
@@ -89,7 +89,7 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
     const TsdfBlock::ConstPtr block_A =
         A.getTsdfLayer().getBlockPtrByIndex(block_index);
     ClassBlock::ConstPtr class_A =
-        A.getClassLayer().getBlockPtrByIndex(block_index);
+        A.getClassLayer().getBlockConstPtrByIndex(block_index);
     ClassBlock::Ptr class_B =
         B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
 

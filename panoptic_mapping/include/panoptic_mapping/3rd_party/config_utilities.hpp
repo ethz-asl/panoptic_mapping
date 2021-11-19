@@ -2,7 +2,7 @@
 AUTHOR:       Lukas Schmid <schmluk@mavt.ethz.ch>
 AFFILIATION:  Autonomous Systems Lab (ASL), ETH Zürich
 SOURCE:       https://github.com/ethz-asl/config_utilities
-VERSION:      1.2.0
+VERSION:      1.2.1
 LICENSE:      BSD-3-Clause
 
 Copyright 2020 Autonomous Systems Lab (ASL), ETH Zürich.
@@ -34,7 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 // Raises a redefined warning if different versions are used. v=MMmmPP.
-#define CONFIG_UTILITIES_VERSION 010200
+#define CONFIG_UTILITIES_VERSION 010201
 
 /**
  * Depending on which headers are available, ROS dependencies are included in
@@ -430,7 +430,7 @@ struct VariableConfigInternal : public VariableConfigVerificator {
   std::string type_ = "Not Setup";
   std::unique_ptr<ConfigInternal> config_ = nullptr;
 
-  virtual void createConfig(const ParamMap& params){};
+  virtual void createConfig(const ParamMap& params, bool optional){};
 };
 }  // namespace internal
 
@@ -1357,7 +1357,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
   }
 
   void rosParam(VariableConfigInternal* config,
-                const std::string& sub_namespace = "") {
+                const std::string& sub_namespace = "", bool optional = true) {
     CHECK_NOTNULL(config);
     // Resolve the param namespace and get param map.
     internal::ParamMap params = *(meta_data_->params);
@@ -1366,7 +1366,7 @@ struct ConfigInternal : public ConfigInternalVerificator {
         static_cast<std::string>(params["_name_space_private"]));
 
     // Create the desired config.
-    config->createConfig(params);
+    config->createConfig(params, optional);
   }
 
   /**
@@ -1501,9 +1501,9 @@ struct ConfigInternal : public ConfigInternalVerificator {
    * retrieved from the given sub-namespace.
    */
   void setupParam(const std::string& name, VariableConfigInternal* config,
-                  const std::string& sub_namespace = "") {
+                  const std::string& sub_namespace = "", bool optional = true) {
     if (meta_data_->merged_setup_set_params) {
-      rosParam(config, sub_namespace);
+      rosParam(config, sub_namespace, optional);
     } else {
       printField(name, *config);
     }
@@ -1868,7 +1868,7 @@ class Factory {
 
   template <class BaseT>
   static std::unique_ptr<internal::ConfigInternal> createConfig(
-      const internal::ParamMap& params) {
+      const internal::ParamMap& params, bool optional) {
     auto module = Factory::ModuleMapConfig<BaseT>::instance();
 
     // Check the namespace.
@@ -1883,9 +1883,12 @@ class Factory {
     // Get the type from param.
     it = params.find(ns + "/type");
     if (it == params.end()) {
-      LOG(ERROR) << "ROS factory creation requires the param 'type' to be set "
-                    "in namespace '"
-                 << ns << "'.";
+      if (!optional) {
+        LOG(ERROR)
+            << "ROS factory creation requires the param 'type' to be set "
+               "in namespace '"
+            << ns << "'.";
+      }
       return nullptr;
     }
     const std::string type = it->second;
@@ -2060,8 +2063,8 @@ class VariableConfig : public internal::VariableConfigInternal {
   }
 
  private:
-  void createConfig(const internal::ParamMap& params) override {
-    config_ = Factory::createConfig<BaseT>(params);
+  void createConfig(const internal::ParamMap& params, bool optional) override {
+    config_ = Factory::createConfig<BaseT>(params, optional);
     if (config_) {
       type_ = static_cast<std::string>(params.at(
           static_cast<std::string>(params.at("_name_space")) + "/type"));

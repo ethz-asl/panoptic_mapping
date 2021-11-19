@@ -25,7 +25,7 @@ class ClassLayer {
   virtual ClassVoxelType getVoxelType() const = 0;
 
   // Voxblox interfaces.
-  virtual ClassBlock::ConstPtr getBlockPtrByIndex(
+  virtual ClassBlock::ConstPtr getBlockConstPtrByIndex(
       const BlockIndex& index) const = 0;
   virtual ClassBlock::Ptr getBlockPtrByIndex(const BlockIndex& index) = 0;
   virtual ClassBlock::Ptr allocateBlockPtrByIndex(const BlockIndex& index) = 0;

@@ -276,7 +276,7 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
   voxblox::BlockIndexList block_indices;
   tsdf_layer->getAllAllocatedBlocks(&block_indices);
   for (const auto& block_index : block_indices) {
-    ClassBlock::ConstPtr class_block = nullptr;
+    ClassBlock::Ptr class_block;
     if (class_layer) {
       if (class_layer->hasBlock(block_index)) {
         class_block = class_layer->getBlockPtrByIndex(block_index);

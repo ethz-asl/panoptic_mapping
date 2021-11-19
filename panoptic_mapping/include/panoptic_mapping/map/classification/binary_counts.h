@@ -38,10 +38,14 @@ class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
  public:
   struct Config : public config_utilities::Config<Config> {
     Config() { setConfigName("BinaryCountLayer"); }
+
+   protected:
+    void fromRosParam() override {}
+    void printFields() const override {}
   };
 
   BinaryCountLayer(const Config& config, const float voxel_size,
-                   const size_t voxels_per_side);
+                   const int voxels_per_side);
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
@@ -52,7 +56,7 @@ class BinaryCountLayer : public ClassLayerImpl<BinaryCountVoxel> {
  protected:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      ClassLayer, BinaryCountLayer, float, size_t>
+      ClassLayer, BinaryCountLayer, float, int>
       registration_;
 };
 

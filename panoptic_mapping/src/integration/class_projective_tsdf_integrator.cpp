@@ -85,7 +85,7 @@ void ClassProjectiveIntegrator::updateBlock(
   bool was_updated = false;
 
   // Allocate the class block if not yet existent and get it.
-  ClassBlock::Ptr class_block = nullptr;
+  ClassBlock::Ptr class_block;
   if (submap->hasClassLayer() &&
       (!config_.update_only_tracked_submaps || submap->wasTracked())) {
     class_block =
@@ -98,6 +98,7 @@ void ClassProjectiveIntegrator::updateBlock(
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
     ClassVoxel* class_voxel = nullptr;
+
     if (class_block) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }

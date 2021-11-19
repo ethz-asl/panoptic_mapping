@@ -387,7 +387,7 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
         bool classes_match = true;
         if (submap.hasClassLayer()) {
           classes_match = submap.getClassLayer()
-                              .getBlockPtrByIndex(block_index)
+                              .getBlockConstPtrByIndex(block_index)
                               ->getVoxelByLinearIndex(voxel_index)
                               .belongsToSubmap();
         }

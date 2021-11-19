@@ -32,11 +32,13 @@ submap_allocator:
   # submaps
   voxels_per_side: &voxels_per_side 16
   truncation_distance: -2 # negative = #vs
-  use_class_layer: true
-  
-  # Meshing
-  clear_foreign_voxels: false
-  required_belonging_corners: 1
+  mesh:
+    clear_foreign_voxels: false
+    required_belonging_corners: 1
+    integrator_threads: 1 #test
+  classification:
+    type: binary_counts
+    test: 1
   
   # Semantic
   small_instance_voxel_size: 0.02
@@ -86,8 +88,8 @@ map_management:
   
   # Frequencies
   prune_active_blocks_frequency: 0 
-  activity_management_frequency: 1
-  change_detection_frequency: 5
+  activity_management_frequency: 0 # 1
+  change_detection_frequency: 0 # 5
   
   # Behavior
   merge_deactivated_submaps_if_possible: true

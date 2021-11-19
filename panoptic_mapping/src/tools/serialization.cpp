@@ -37,7 +37,7 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
   }
 
   // Load the blocks.
-  if (!LoadClassBlocksFromStream(submap_proto, proto_file_ptr,
+  if (!loadClassBlocksFromStream(submap_proto, proto_file_ptr,
                                  tmp_byte_offset_ptr, result.get())) {
     LOG(ERROR) << "Could not read class blocks from stream.";
     return nullptr;
@@ -46,7 +46,7 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
   return result;
 }
 
-bool LoadClassBlocksFromStream(const SubmapProto& submap_proto,
+bool loadClassBlocksFromStream(const SubmapProto& submap_proto,
                                std::istream* proto_file_ptr,
                                uint64_t* tmp_byte_offset_ptr,
                                ClassLayer* layer) {

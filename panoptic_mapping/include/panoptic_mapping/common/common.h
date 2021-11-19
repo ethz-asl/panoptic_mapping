@@ -40,9 +40,6 @@ using MeshLayer = voxblox::MeshLayer;
 // using ClassVoxel = ClassVoxel;
 // #endif
 
-// using ClassBlock = voxblox::Block<ClassVoxel>;
-// using ClassLayer = panoptic_mapping::ClassVoxelLayer<ClassVoxel>;
-
 using Color = voxblox::Color;
 
 // Panoptic type labels.

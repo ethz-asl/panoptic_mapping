@@ -50,11 +50,11 @@ void BinaryCountVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, BinaryCountLayer, float,
-                                           size_t>
+                                           int>
     BinaryCountLayer::registration_("binary_counts");
 
 BinaryCountLayer::BinaryCountLayer(const Config& config, const float voxel_size,
-                                   const size_t voxels_per_side)
+                                   const int voxels_per_side)
     : config_(config.checkValid()),
       ClassLayerImpl(voxel_size, voxels_per_side) {}
 
