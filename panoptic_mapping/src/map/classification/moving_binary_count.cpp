@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/classification/moving_binary_counts.h"
+#include "panoptic_mapping/map/classification/moving_binary_count.h"
 
 #include <limits>
 #include <memory>

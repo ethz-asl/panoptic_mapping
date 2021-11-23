@@ -32,10 +32,10 @@ cs_add_library(${PROJECT_NAME}
         src/map/submap_id.cpp
         src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
-        src/map/classification/binary_counts.cpp
-        src/map/classification/moving_binary_counts.cpp
-        src/map/classification/fixed_counts.cpp
-        src/map/classification/variable_counts.cpp
+        src/map/classification/binary_count.cpp
+        src/map/classification/moving_binary_count.cpp
+        src/map/classification/fixed_count.cpp
+        src/map/classification/variable_count.cpp
         src/map/classification/uncertainty.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp

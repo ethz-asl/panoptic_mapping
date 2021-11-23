@@ -3,7 +3,7 @@
   <!-- General -->
   <arg name="namespace" default="data"/> 
   <arg name="use_rio" default="false"/>
-  <arg name="use_detectron" default="false"/>
+  <arg name="use_detectron" default="true"/>
   <arg name="visualize" default="true"/> 
   
   <!-- Flat Dataset args -->
@@ -19,7 +19,7 @@
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="flat_groundtruth"/> <!-- flat_groundtruth, flat_detectron, rio_groundtruth, rio_detectron, single_tsdf -->
+  <arg name="config" default="single_tsdf"/> <!-- <flat,rio>_<groundtruth,detectron>, single_tsdf -->
   <arg name="shutdown_when_finished" default="false"/> 
   
   <!-- Save/Load maps -->

@@ -36,7 +36,7 @@ submap_allocator:
     clear_foreign_voxels: false
     required_belonging_corners: 1
   classification:
-    type: binary_counts
+    type: moving_binary_count
   
   # Semantic
   small_instance_voxel_size: 0.02

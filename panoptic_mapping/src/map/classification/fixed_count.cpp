@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/classification/fixed_counts.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
 
 #include <algorithm>
 #include <memory>

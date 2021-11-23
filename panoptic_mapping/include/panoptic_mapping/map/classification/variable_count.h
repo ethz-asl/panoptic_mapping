@@ -1,7 +1,8 @@
-#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_MOVING_BINARY_COUNTS_H_
-#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_MOVING_BINARY_COUNTS_H_
+#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_H_
+#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_H_
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
@@ -12,11 +13,10 @@
 namespace panoptic_mapping {
 
 /**
- * @brief Binary classification by simple counting, where ID 0 indicates the
- * voxel belongs. Uses a reduced datatype to save memory, where older counts are
- * de-weighted to prevent overflow.
+ * @brief Keep track of arbitrary number of IDs in an unordered map. ID 0 is
+ * generally used to store the belonging submap and shifting other IDs by 1.
  */
-struct MovingBinaryCountVoxel : public ClassVoxel {
+struct VariableCountVoxel : public ClassVoxel {
  public:
   // Implement interfaces.
   ClassVoxelType getVoxelType() const override;
@@ -30,22 +30,24 @@ struct MovingBinaryCountVoxel : public ClassVoxel {
   void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
   // Data.
-  uint8_t belongs_count = 0u;
-  uint8_t foreign_count = 0u;
+  std::unordered_map<int, ClassificationCount> counts;
+  int current_index = 0;
+  ClassificationCount current_count = 0;
+  ClassificationCount total_count = 0;
 };
 
-class MovingBinaryCountLayer : public ClassLayerImpl<MovingBinaryCountVoxel> {
+class VariableCountLayer : public ClassLayerImpl<VariableCountVoxel> {
  public:
   struct Config : public config_utilities::Config<Config> {
-    Config() { setConfigName("MovingBinaryCountLayer"); }
+    Config() { setConfigName("VariableCountLayer"); }
 
    protected:
     void fromRosParam() override {}
     void printFields() const override {}
   };
 
-  MovingBinaryCountLayer(const Config& config, const float voxel_size,
-                         const int voxels_per_side);
+  VariableCountLayer(const Config& config, const float voxel_size,
+                     const int voxels_per_side);
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
@@ -56,10 +58,10 @@ class MovingBinaryCountLayer : public ClassLayerImpl<MovingBinaryCountVoxel> {
  protected:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      ClassLayer, MovingBinaryCountLayer, float, int>
+      ClassLayer, VariableCountLayer, float, int>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_MOVING_BINARY_COUNTS_H_
+#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_H_

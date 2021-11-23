@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "panoptic_mapping/map/classification/fixed_counts.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/tools/coloring.h"
 
@@ -189,7 +189,9 @@ std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
   switch (color_mode_) {
     case ColorMode::kClassification:
       return [](const ClassVoxel& voxel) {
-        return redToGreenGradient(voxel.getBelongingProbability());
+        // Look up the probability of the voxel belonging to its highest rating
+        // entity.
+        return redToGreenGradient(voxel.getProbability(voxel.getBelongingID()));
       };
 
     case ColorMode::kUncertainty:

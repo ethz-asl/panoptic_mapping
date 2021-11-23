@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/classification/variable_counts.h"
+#include "panoptic_mapping/map/classification/variable_count.h"
 
 #include <memory>
 #include <vector>

@@ -9,6 +9,7 @@
 
 #include <panoptic_mapping/common/camera.h>
 #include <panoptic_mapping/labels/label_handler_base.h>
+#include <panoptic_mapping/map/classification/fixed_count.h>
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
 
@@ -90,6 +91,10 @@ void PanopticMapper::setupMembers() {
   std::shared_ptr<LabelHandlerBase> label_handler =
       config_utilities::FactoryRos::create<LabelHandlerBase>(
           defaultNh("label_handler"));
+
+  // Setup the number of labels. TODO(schmluk): there should be a more generic
+  // way to set the number of tracked labels based on the configuration.
+  FixedCountVoxel::setNumCounts(label_handler->numberOfLabels());
 
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);

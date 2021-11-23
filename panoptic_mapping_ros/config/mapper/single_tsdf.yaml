@@ -12,7 +12,7 @@ ros_spinning_threads: 8
 
 labels:
   type: csv
-  file_name: /home/lukas/Documents/Datasets/flat_dataset/groundtruth_labels.csv
+  file_name: /home/lukas/Documents/Datasets/flat_dataset/detectron_labels.csv
 
 camera:
   verbosity: 1
@@ -34,8 +34,10 @@ id_tracker:
   truncation_distance: -2
   voxels_per_side: 16
   use_class_layer: false
-  use_detectron: false
+  use_detectron: true
   use_instance_classification: false
+  classification:
+    type: fixed_count
 
 tsdf_integrator:  
   type: single_tsdf
@@ -51,7 +53,7 @@ visualization:
   submaps:
     type: single_tsdf  
     verbosity: 1
-    color_mode: color # color, normals, classes, instances, classification
+    color_mode: classes # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
     visualize_mesh: true

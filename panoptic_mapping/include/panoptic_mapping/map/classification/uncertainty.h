@@ -8,7 +8,7 @@
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/map/classification/class_layer_impl.h"
 #include "panoptic_mapping/map/classification/class_voxel.h"
-#include "panoptic_mapping/map/classification/fixed_counts.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
 
 namespace panoptic_mapping {
 

@@ -19,7 +19,7 @@ class SemanticSubmapAllocator : public SubmapAllocatorBase {
 
     // All values for the submap config except the voxel sizes and truncation
     // distance, these are individually set below.
-    Submap::Config submap_config;
+    Submap::Config submap;
 
     // Voxel size for each label in meters.
     float small_instance_voxel_size = 0.03;
@@ -29,7 +29,7 @@ class SemanticSubmapAllocator : public SubmapAllocatorBase {
     float unknown_voxel_size = 0.1;
 
     // Truncation distance for all labels in meters. This overwrites the
-    // submap_config. Negative values are multiples of the voxel size.
+    // submap. Negative values are multiples of the voxel size.
     float truncation_distance = -2.f;
 
     Config() { setConfigName("SemanticSubmapAllocator"); }

@@ -9,7 +9,11 @@
 #include <voxblox/Block.pb.h>
 #include <voxblox/io/layer_io.h>
 
-#include "panoptic_mapping/map/classification/binary_counts.h"
+#include "panoptic_mapping/map/classification/binary_count.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
+#include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/uncertainty.h"
+#include "panoptic_mapping/map/classification/variable_count.h"
 
 namespace panoptic_mapping {
 
@@ -27,6 +31,26 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
   switch (voxel_type) {
     case ClassVoxelType::kBinaryCount: {
       result = BinaryCountLayer::loadFromStream(submap_proto, proto_file_ptr,
+                                                tmp_byte_offset_ptr);
+      break;
+    }
+    case ClassVoxelType::kMovingBinaryCount: {
+      result = MovingBinaryCountLayer::loadFromStream(
+          submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
+      break;
+    }
+    case ClassVoxelType::kFixedCount: {
+      result = FixedCountLayer::loadFromStream(submap_proto, proto_file_ptr,
+                                               tmp_byte_offset_ptr);
+      break;
+    }
+    case ClassVoxelType::kVariableCount: {
+      result = VariableCountLayer::loadFromStream(submap_proto, proto_file_ptr,
+                                                  tmp_byte_offset_ptr);
+      break;
+    }
+    case ClassVoxelType::kUncertainty: {
+      result = UncertaintyLayer::loadFromStream(submap_proto, proto_file_ptr,
                                                 tmp_byte_offset_ptr);
       break;
     }
@@ -95,6 +119,7 @@ bool isCompatible(const voxblox::BlockProto& block_proto,
 
 }  // namespace panoptic_mapping
 
+// TODO
 // namespace voxblox {
 // /**
 //  * Stores the top 3 numbers and their indices in the indices and counts

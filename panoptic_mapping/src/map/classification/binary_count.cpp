@@ -1,4 +1,4 @@
-#include "panoptic_mapping/map/classification/binary_counts.h"
+#include "panoptic_mapping/map/classification/binary_count.h"
 
 #include <memory>
 #include <vector>
