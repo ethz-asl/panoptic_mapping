@@ -36,6 +36,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/classification/moving_binary_counts.cpp
         src/map/classification/fixed_counts.cpp
         src/map/classification/variable_counts.cpp
+        src/map/classification/uncertainty.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp

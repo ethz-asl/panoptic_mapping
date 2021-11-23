@@ -36,6 +36,10 @@ struct FixedCountVoxel : public ClassVoxel {
   ClassificationCount current_count = 0;
   ClassificationCount total_count = 0;
 
+  static size_t numCounts();
+  static void setNumCounts(size_t num_counts);
+
+ private:
   // Fixed count voxels store a fixed number of labels, which is currently set
   // via this global setting.
   static size_t kNumCounts;

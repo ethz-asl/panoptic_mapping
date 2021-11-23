@@ -12,6 +12,22 @@ ClassVoxelType FixedCountVoxel::getVoxelType() const {
 
 size_t FixedCountVoxel::kNumCounts = 0u;
 
+size_t FixedCountVoxel::numCounts() { return kNumCounts; }
+void FixedCountVoxel::setNumCounts(size_t num_counts) {
+  if (num_counts == kNumCounts) {
+    return;
+  }
+  if (kNumCounts != 0u) {
+    // This means the number of classes has already been initialized and since
+    // this is currently a global property raise a warning at least.
+    LOG(WARNING) << "The number of classes to be stored in FixedCountVoxels "
+                    "was already initialized to "
+                 << kNumCounts << ", now set to " << num_counts
+                 << ". This can cause undefined behavior.";
+  }
+  kNumCounts = num_counts;
+}
+
 bool FixedCountVoxel::isObserverd() const { return !counts.empty(); }
 
 bool FixedCountVoxel::belongsToSubmap() const {

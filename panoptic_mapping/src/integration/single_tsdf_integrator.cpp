@@ -19,30 +19,32 @@ config_utilities::Factory::RegistrationRos<
     SingleTsdfIntegrator::registration_("single_tsdf");
 
 void SingleTsdfIntegrator::Config::checkParams() const {
-  checkParamConfig(projective_integrator_config);
+  checkParamConfig(projective_integrator);
+  if (use_uncertainty) {
+    checkParamGE(uncertainty_decay_rate, 0.f, "uncertainty_decay_rate");
+    checkParamLE(uncertainty_decay_rate, 1.f, "uncertainty_decay_rate");
+  }
 }
 
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("projective_integrator_config", &projective_integrator_config);
+  setupParam("projective_integrator", &projective_integrator);
   setupParam("use_uncertainty", &use_uncertainty);
-  projective_integrator_config.foreign_rays_clear = false;
+  setupParam("uncertainty_decay_rate", &uncertainty_decay_rate);
+  // Set this param to false since there is only one layer.
+  projective_integrator.foreign_rays_clear = false;
 }
 
 SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.projective_integrator_config,
-                           std::move(globals), false) {
+      ProjectiveIntegrator(config.projective_integrator, std::move(globals),
+                           false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-
+  // Request uncertainty input if required.
   if (config_.use_uncertainty) {
     addRequiredInputs({InputData::InputType::kUncertaintyImage});
   }
-
-  // Request all inputs.
-  // Cache num classes info.
-  num_classes_ = globals_->labelHandler()->numberOfLabels();
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
@@ -72,8 +74,7 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
 
   // Integrate in parallel.
   std::vector<std::future<void>> threads;
-  for (int i = 0; i < config_.projective_integrator_config.integration_threads;
-       ++i) {
+  for (int i = 0; i < config_.projective_integrator.integration_threads; ++i) {
     threads.emplace_back(std::async(
         std::launch::async, [this, &index_getter, map, input, i, T_C_S]() {
           voxblox::BlockIndex index;
@@ -148,71 +149,6 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   }
 }
 
-void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
-                                            const InputData& input,
-                                            ClassVoxel* class_voxel) const {
-  // Do not update voxels which are assigned as groundtruth
-  // TODO
-  //   if (class_voxel->is_groundtruth) {
-  //     return;
-  //   }
-
-  //   if (class_voxel->current_index < 0) {
-  //     // This means the voxel is uninitialized.
-  //     class_voxel->counts = std::vector<ClassVoxel::Counter>(num_classes_);
-  //   }
-
-  //   size_t class_id = interpolator->interpolateID(input.idImage());
-
-  //   if (class_id >= class_voxel->counts.size()) {
-  //     LOG_IF(WARNING, config_.verbosity >= 1)
-  //         << "Got invalid class ID in tsdf integrator. Skipping class: "
-  //         << class_id;
-  //   } else {
-  //     classVoxelIncrementClass(class_voxel, class_id);
-  //   }
-  // }
-  // void SingleTsdfIntegrator::updateClassVoxel(
-  //     InterpolatorBase* interpolator, const InputData& input,
-  //     panoptic_mapping::ClassUncertaintyVoxel* uncertainty_voxel) const {
-  //   if (!config_.use_uncertainty) {
-  //     // Do not use uncertainty
-  //     updateClassVoxel(
-  //         interpolator, input,
-  //         static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
-  //     return;
-  //   }
-
-  //   if (uncertainty_voxel->is_groundtruth) {
-  //     return;  // Do not update voxels that have Groundtruth assigned
-  //   }
-
-  //   // Update Uncertainty Voxel Part
-  //   float uncertainty_value =
-  //       interpolator->interpolateUncertainty(input.uncertaintyImage());
-
-  //   // Magic uncertainty value which labels a voxel as groundtruth voxel.
-  //   // TODO @zrene find better way to implement this.
-  //   if (uncertainty_value == -1.0) {
-  //     // Make sure GT voxel have zero uncertainty / entropy
-  //     uncertainty_voxel->counts =
-  //     std::vector<ClassVoxel::Counter>(num_classes_);
-  //     // Update Class Voxel part
-  //     updateClassVoxel(
-  //         interpolator, input,
-  //         static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
-  //     // Mark as groundtruth
-  //     uncertainty_voxel->is_groundtruth = true;
-  //     // Reset Uncertainty
-  //     uncertainty_voxel->uncertainty_value = 0;
-  //   } else {
-  //     updateClassVoxel(
-  //         interpolator, input,
-  //         static_cast<panoptic_mapping::ClassVoxel*>(uncertainty_voxel));
-  //     classVoxelUpdateUncertainty(uncertainty_voxel, uncertainty_value);
-  //   }
-}
-
 bool SingleTsdfIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
@@ -240,12 +176,59 @@ bool SingleTsdfIntegrator::updateVoxel(
 
     // Update the semantic information if requested.
     if (class_voxel) {
-      updateClassVoxel(interpolator, input, class_voxel);
+      // Uncertainty voxels are handled differently.
+      if (config_.use_uncertainty &&
+          class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
+        updateUncertaintyVoxel(interpolator, input,
+                               static_cast<UncertaintyVoxel*>(class_voxel));
+      } else {
+        updateClassVoxel(interpolator, input, class_voxel);
+      }
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);
   }
   return true;
+}
+
+void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
+                                            const InputData& input,
+                                            ClassVoxel* class_voxel) const {
+  // For the single TSDF case there is no belonging submap, just use the ID
+  // directly.
+  const int id = interpolator->interpolateID(input.idImage());
+  class_voxel->incrementCount(id);
+}
+
+void SingleTsdfIntegrator::updateUncertaintyVoxel(
+    InterpolatorBase* interpolator, const InputData& input,
+    UncertaintyVoxel* class_voxel) const {
+  // Do not update voxels which are assigned as groundtruth
+  if (class_voxel->is_ground_truth) {
+    return;
+  }
+  // Update Uncertainty Voxel Part
+  const float uncertainty =
+      interpolator->interpolateUncertainty(input.uncertaintyImage());
+
+  // Magic uncertainty value which labels a voxel as groundtruth in the
+  // uncertainty input..
+  // TODO(zrene) find a better way to implement this.
+  if (uncertainty == -1.0) {
+    // Make sure GT voxels have zero uncertainty and entropy.
+    class_voxel->counts =
+        std::vector<ClassificationCount>(FixedCountVoxel::numCounts());
+    // Update classification part.
+    class_voxel->is_ground_truth = true;
+    class_voxel->uncertainty = 0.f;
+  } else {
+    // Update uncertainty.
+    class_voxel->uncertainty =
+        config_.uncertainty_decay_rate * uncertainty +
+        (1.f - config_.uncertainty_decay_rate) * class_voxel->uncertainty;
+  }
+
+  updateClassVoxel(interpolator, input, class_voxel);
 }
 
 void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {

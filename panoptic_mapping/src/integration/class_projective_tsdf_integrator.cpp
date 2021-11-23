@@ -26,7 +26,7 @@ void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
   setupParam("use_binary_classification", &use_binary_classification);
   setupParam("use_instance_classification", &use_instance_classification);
   setupParam("update_only_tracked_submaps", &update_only_tracked_submaps);
-  setupParam("projective_integrator_config", &pi_config);
+  setupParam("projective_integrator", &pi_config);
 }
 
 ClassProjectiveIntegrator::ClassProjectiveIntegrator(

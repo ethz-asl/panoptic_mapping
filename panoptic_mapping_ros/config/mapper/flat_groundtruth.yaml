@@ -37,7 +37,6 @@ submap_allocator:
     required_belonging_corners: 1
   classification:
     type: binary_counts
-    test: 1
   
   # Semantic
   small_instance_voxel_size: 0.02

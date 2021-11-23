@@ -12,6 +12,7 @@ enum class ClassVoxelType {
   kMovingBinaryCounts,
   kFixedCounts,
   kVariableCounts,
+  kUncertainty
 };
 
 /**
