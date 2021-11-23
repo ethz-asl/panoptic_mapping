@@ -66,8 +66,6 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
       TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
       registration_;
 
-  int num_classes_;
-
   void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
                         ClassVoxel* class_voxel) const;
 

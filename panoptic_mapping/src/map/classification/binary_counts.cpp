@@ -6,7 +6,7 @@
 namespace panoptic_mapping {
 
 ClassVoxelType BinaryCountVoxel::getVoxelType() const {
-  return ClassVoxelType::kBinaryCounts;
+  return ClassVoxelType::kBinaryCount;
 }
 
 bool BinaryCountVoxel::isObserverd() const {
@@ -50,7 +50,7 @@ void BinaryCountVoxel::deseriliazeVoxelFromInt(
 
 config_utilities::Factory::RegistrationRos<ClassLayer, BinaryCountLayer, float,
                                            int>
-    BinaryCountLayer::registration_("binary_counts");
+    BinaryCountLayer::registration_("binary_count");
 
 BinaryCountLayer::BinaryCountLayer(const Config& config, const float voxel_size,
                                    const int voxels_per_side)
@@ -58,7 +58,7 @@ BinaryCountLayer::BinaryCountLayer(const Config& config, const float voxel_size,
       ClassLayerImpl(voxel_size, voxels_per_side) {}
 
 ClassVoxelType BinaryCountLayer::getVoxelType() const {
-  return ClassVoxelType::kBinaryCounts;
+  return ClassVoxelType::kBinaryCount;
 }
 
 std::unique_ptr<ClassLayer> BinaryCountLayer::clone() const {

@@ -7,7 +7,7 @@
 namespace panoptic_mapping {
 
 ClassVoxelType MovingBinaryCountVoxel::getVoxelType() const {
-  return ClassVoxelType::kMovingBinaryCounts;
+  return ClassVoxelType::kMovingBinaryCount;
 }
 
 bool MovingBinaryCountVoxel::isObserverd() const {
@@ -61,7 +61,7 @@ void MovingBinaryCountVoxel::deseriliazeVoxelFromInt(
 
 config_utilities::Factory::RegistrationRos<ClassLayer, MovingBinaryCountLayer,
                                            float, int>
-    MovingBinaryCountLayer::registration_("moving_binary_counts");
+    MovingBinaryCountLayer::registration_("moving_binary_count");
 
 MovingBinaryCountLayer::MovingBinaryCountLayer(const Config& config,
                                                const float voxel_size,
@@ -70,7 +70,7 @@ MovingBinaryCountLayer::MovingBinaryCountLayer(const Config& config,
       ClassLayerImpl(voxel_size, voxels_per_side) {}
 
 ClassVoxelType MovingBinaryCountLayer::getVoxelType() const {
-  return ClassVoxelType::kMovingBinaryCounts;
+  return ClassVoxelType::kMovingBinaryCount;
 }
 
 std::unique_ptr<ClassLayer> MovingBinaryCountLayer::clone() const {

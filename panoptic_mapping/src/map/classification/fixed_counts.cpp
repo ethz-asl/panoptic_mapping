@@ -7,7 +7,7 @@
 namespace panoptic_mapping {
 
 ClassVoxelType FixedCountVoxel::getVoxelType() const {
-  return ClassVoxelType::kFixedCounts;
+  return ClassVoxelType::kFixedCount;
 }
 
 size_t FixedCountVoxel::kNumCounts = 0u;
@@ -76,7 +76,7 @@ void FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
 
 config_utilities::Factory::RegistrationRos<ClassLayer, FixedCountLayer, float,
                                            int>
-    FixedCountLayer::registration_("fixed_counts");
+    FixedCountLayer::registration_("fixed_count");
 
 FixedCountLayer::FixedCountLayer(const Config& config, const float voxel_size,
                                  const int voxels_per_side)
@@ -84,7 +84,7 @@ FixedCountLayer::FixedCountLayer(const Config& config, const float voxel_size,
       ClassLayerImpl(voxel_size, voxels_per_side) {}
 
 ClassVoxelType FixedCountLayer::getVoxelType() const {
-  return ClassVoxelType::kFixedCounts;
+  return ClassVoxelType::kFixedCount;
 }
 
 std::unique_ptr<ClassLayer> FixedCountLayer::clone() const {

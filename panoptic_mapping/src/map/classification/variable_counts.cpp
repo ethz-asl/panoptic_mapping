@@ -6,7 +6,7 @@
 namespace panoptic_mapping {
 
 ClassVoxelType VariableCountVoxel::getVoxelType() const {
-  return ClassVoxelType::kVariableCounts;
+  return ClassVoxelType::kVariableCount;
 }
 
 bool VariableCountVoxel::isObserverd() const { return !counts.empty(); }
@@ -49,7 +49,7 @@ void VariableCountVoxel::deseriliazeVoxelFromInt(
 
 config_utilities::Factory::RegistrationRos<ClassLayer, VariableCountLayer,
                                            float, int>
-    VariableCountLayer::registration_("variable_counts");
+    VariableCountLayer::registration_("variable_count");
 
 VariableCountLayer::VariableCountLayer(const Config& config,
                                        const float voxel_size,
@@ -58,7 +58,7 @@ VariableCountLayer::VariableCountLayer(const Config& config,
       ClassLayerImpl(voxel_size, voxels_per_side) {}
 
 ClassVoxelType VariableCountLayer::getVoxelType() const {
-  return ClassVoxelType::kVariableCounts;
+  return ClassVoxelType::kVariableCount;
 }
 
 std::unique_ptr<ClassLayer> VariableCountLayer::clone() const {

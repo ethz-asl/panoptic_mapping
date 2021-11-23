@@ -54,9 +54,23 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(globals_->camera().get());
   CHECK(inputIsValid(*input));
 
-  // Allocate all blocks in the map.
   cam_config_ = &(globals_->camera()->getConfig());
   Submap* map = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+  // Check classification layer matches the task.
+  if (config_.use_uncertainty) {
+    if (!map->hasClassLayer()) {
+      LOG(WARNING)
+          << "Can not 'use_uncertainty' without a class layer, skipping frame.";
+      return;
+    }
+    if (map->getClassLayer().getVoxelType() != ClassVoxelType::kUncertainty) {
+      LOG(WARNING) << "Can not 'use_uncertainty' with a class layer that is "
+                      "not of type 'uncertainty', skipping frame.";
+      return;
+    }
+  }
+
+  // Allocate all blocks in the map.
   auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(map, input);
   auto t2 = std::chrono::high_resolution_clock::now();

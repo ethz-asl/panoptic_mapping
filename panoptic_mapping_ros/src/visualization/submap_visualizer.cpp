@@ -666,8 +666,6 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kUncertainty;
   } else if (color_mode == "entropy") {
     return ColorMode::kEntropy;
-  } else if (color_mode == "is_groundtruth") {
-    return ColorMode::kIsGroundtruth;
   } else {
     LOG(WARNING) << "Unknown ColorMode '" << color_mode
                  << "', using 'color' instead.";
@@ -697,8 +695,6 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
       return "entropy";
     case ColorMode::kUncertainty:
       return "uncertainty";
-    case ColorMode::kIsGroundtruth:
-      return "is_groundtruth";
     default:
       return "unknown";
   }

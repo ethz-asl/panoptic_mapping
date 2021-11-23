@@ -25,7 +25,7 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
   const ClassVoxelType voxel_type =
       static_cast<ClassVoxelType>(submap_proto.class_voxel_type());
   switch (voxel_type) {
-    case ClassVoxelType::kBinaryCounts: {
+    case ClassVoxelType::kBinaryCount: {
       result = BinaryCountLayer::loadFromStream(submap_proto, proto_file_ptr,
                                                 tmp_byte_offset_ptr);
       break;

@@ -8,10 +8,10 @@ namespace panoptic_mapping {
 // Enumerate all implemented classification voxel types for objects that need to
 // operate on specific voxel types.
 enum class ClassVoxelType {
-  kBinaryCounts,
-  kMovingBinaryCounts,
-  kFixedCounts,
-  kVariableCounts,
+  kBinaryCount,
+  kMovingBinaryCount,
+  kFixedCount,
+  kVariableCount,
   kUncertainty
 };
 
