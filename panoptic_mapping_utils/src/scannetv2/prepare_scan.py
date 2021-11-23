@@ -1,5 +1,7 @@
 import argparse
+import csv
 import json
+import time
 from pathlib import Path
 from typing import List
 from zipfile import ZipFile
@@ -14,6 +16,8 @@ _INSTANCE_DIR = "instance-filt"
 _DETECTRON_LABEL_DIR = "label-detectron"
 _NYU40_STUFF_CLASSES = [1, 2, 22]
 _DEFAULT_THING_SCORE = 0.9
+_TIMESTAMPS_FILE = "timestamps.csv"
+_FRAME_PERIOD_NS = 33333333
 
 
 def make_predicted_map_and_segment_labels(
@@ -112,7 +116,7 @@ def create_detectron_labels_from_groundtruth(
 
     label_detectron_dir_path = scan_dir_path / _DETECTRON_LABEL_DIR
     label_detectron_dir_path.mkdir(exist_ok=True)
-
+    num_frames = 0
     for labels_file_path in label_dir_path.glob("*.png"):
         instance_file_path = instance_dir_path / labels_file_path.name
 
@@ -137,6 +141,22 @@ def create_detectron_labels_from_groundtruth(
         )
         with segment_labels_file_path.open("w") as f:
             json.dump(segment_labels, f)
+
+        num_frames += 1
+
+    # Generate timestamps file
+    next_frame_time = time.time_ns()
+    timestamps_file_path = scan_dir_path / _TIMESTAMPS_FILE
+    with open(timestamps_file_path, "w") as f:
+        writer = csv.DictWriter(f, fieldnames=["FrameID", "TimeStamp"])
+        for i in range(num_frames):
+            writer.writer(
+                {
+                    "FrameID": i,
+                    "TimeStamp": next_frame_time,
+                }
+            )
+            next_frame_time += _FRAME_PERIOD_NS
 
 
 def _parse_args():
