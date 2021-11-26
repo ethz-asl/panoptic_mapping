@@ -1,7 +1,9 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/>
-  <arg name="detectron_data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>  
+  <!-- <arg name="bag_name" default="/home/lukas/Documents/Datasets/flat_dataset/run1.bag"/>
+  <arg name="detectron_data_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/>   -->
+  <arg name="bag_name" default="/home/junting/Downloads/dataset/large_flat/run1.bag"/>
+  <arg name="detectron_data_path" default="/home/junting/Downloads/dataset/large_flat/run1"/>  
   <arg name="bag_play_rate" default="1"/>
   <arg name="use_sim_time" default="false"/>
   <arg name="start_at" default="1"/>

@@ -1,6 +1,7 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/>
+  <!-- <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> -->
+  <arg name="data_path" default="/media/junting/SSD_data/RIO_data"/>
   <arg name="scan_id" default="0"/>
   <arg name="rio_play_rate" default="5"/>
   <arg name="namespace" default=""/>
@@ -16,6 +17,8 @@
     <remap from="~color_image" to="$(arg namespace)/color_image" />
     <remap from="~depth_image" to="$(arg namespace)/depth_image" />
     <remap from="~segmentation_image" to="$(arg namespace)/segmentation_image" />
+    <!-- <remap from="~pose" to="$(arg namespace)/pose"/> -->
+    
   </node>
   
 

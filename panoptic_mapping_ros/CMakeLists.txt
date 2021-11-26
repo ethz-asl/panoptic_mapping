@@ -33,6 +33,11 @@ cs_add_executable(getting_data_demo_node
         )
 target_link_libraries(getting_data_demo_node ${PROJECT_NAME})
 
+cs_add_executable(panoptic_mapper_pclpub_node
+        app/panoptic_mapper_pclpub_node.cpp
+        )
+target_link_libraries(panoptic_mapper_pclpub_node ${PROJECT_NAME})
+
 ###########
 # Export #
 ###########

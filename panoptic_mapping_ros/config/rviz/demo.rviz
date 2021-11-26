@@ -1,12 +1,14 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 78
+    Help Height: 85
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Drone_flat1
         - /Mesh1
+        - /FreeSpaceTsdf1
       Splitter Ratio: 0.8294117450714111
-    Tree Height: 726
+    Tree Height: 691
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -66,9 +68,7 @@ Visualization Manager:
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
       Min Color: 0; 0; 0
-      Min Intensity: 0
       Name: ColorPcl
       Position Transformer: XYZ
       Queue Size: 10
@@ -111,21 +111,24 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Class: rviz/Axes
+    - Alpha: 1
+      Class: rviz/Axes
       Enabled: true
       Length: 0.5
       Name: Drone_flat
       Radius: 0.15000000596046448
       Reference Frame: airsim_drone
       Value: true
-    - Class: rviz/Axes
+    - Alpha: 1
+      Class: rviz/Axes
       Enabled: false
       Length: 0.5
       Name: Drone_rio
       Radius: 0.15000000596046448
       Reference Frame: rio
       Value: false
-    - Class: rviz/Axes
+    - Alpha: 1
+      Class: rviz/Axes
       Enabled: false
       Length: 1
       Name: Origin
@@ -143,6 +146,7 @@ Visualization Manager:
     - Class: voxblox_rviz_plugin/VoxbloxMultiMesh
       Enabled: true
       Name: Mesh
+      Queue Size: 10
       Toggle Visibility All: true
       Topic: /panoptic_mapper/visualization/submaps/mesh
       Unreliable: false
@@ -157,10 +161,33 @@ Visualization Manager:
         15_SM_Cup_c: true
         16_SM_Picture_d: true
         17_SM_Chair_b: true
+        18_SM_Sofa_a: true
+        19_SM_Picture_b: true
         1_SM_Door_a: true
+        22_SM_Bed_a: true
+        23_SM_Picture_e: true
+        24_SM_TV_Wall_a: true
+        28_SM_Bed_lamp_a: true
+        29_SM_Stack_of_Books_f: true
         2_SM_Tumblr_a: true
+        30_SM_Bed_table_a: true
+        31_SM_Ceiling_lamp_j: true
+        32_SM_Ceiling_lamp_i: true
+        34_SM_Ceiling_lamp_e: true
+        35_SM_TV_a: true
+        36_SM_Coffee_table_a: true
+        37_SM_Journal_b: true
+        38_SM_Journal_c: true
         3_SM_Dimmer_a: true
+        41_SM_Ceiling_lamp_c: true
+        42_SM_Picture_a: true
+        43_SM_Cup_a: true
+        44_SM_Picture_c: true
+        45_SM_Remote_a: true
+        46_SM_Plate_b: true
+        49_SM_Ceiling_lamp_f: true
         4_SM_Floor_a: true
+        50_SM_Ceiling_lamp_d: true
         5_SM_Walls_a: true
         7_SM_Ceiling_a: true
         8_SM_Chair_a: true
@@ -181,9 +208,7 @@ Visualization Manager:
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 0.6000001430511475
       Min Color: 0; 0; 0
-      Min Intensity: -0.5982100963592529
       Name: FreeSpaceTsdf
       Position Transformer: XYZ
       Queue Size: 10
@@ -191,7 +216,7 @@ Visualization Manager:
       Size (Pixels): 5
       Size (m): 0.009999999776482582
       Style: Points
-      Topic: /panoptic_mapper/visualization/free_space_tsdf
+      Topic: /panoptic_mapper/visualization/submaps/free_space_tsdf
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -232,12 +257,10 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 4096
       Min Color: 0; 0; 0
-      Min Intensity: 0
       Name: PointCloud2
       Position Transformer: XYZ
       Queue Size: 10
@@ -249,7 +272,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Class: rviz/Group
       Displays:
         - Class: rviz/Image
@@ -326,14 +349,52 @@ Visualization Manager:
           Value: true
       Enabled: false
       Name: Tracking
-    - Class: rviz/Marker
-      Enabled: false
+    - Class: rviz/MarkerArray
+      Enabled: true
       Marker Topic: /submap_points
-      Name: Mesh Vertices
+      Name: submap_points
       Namespaces:
-        {}
+        FreeSpace: true
+        SM_Bed_a: true
+        SM_Bed_lamp_a: true
+        SM_Bed_table_a: true
+        SM_Ceiling_a: true
+        SM_Ceiling_lamp_c: true
+        SM_Ceiling_lamp_d: true
+        SM_Ceiling_lamp_e: true
+        SM_Ceiling_lamp_f: true
+        SM_Ceiling_lamp_j: true
+        SM_Chair_a: true
+        SM_Chair_b: true
+        SM_Coffee_table_a: true
+        SM_Cup_a: true
+        SM_Cup_b: true
+        SM_Cup_c: true
+        SM_Dimmer_a: true
+        SM_Door_a: true
+        SM_Floor_a: true
+        SM_Journal_b: true
+        SM_Journal_c: true
+        SM_Kitchen_a: true
+        SM_Picture_a: true
+        SM_Picture_b: true
+        SM_Picture_c: true
+        SM_Picture_d: true
+        SM_Picture_e: true
+        SM_Plate_a: true
+        SM_Plate_c: true
+        SM_Remote_a: true
+        SM_Sofa_a: true
+        SM_Stack_of_Books_f: true
+        SM_TV_Wall_a: true
+        SM_TV_a: true
+        SM_Table_Decor_a: true
+        SM_Table_a: true
+        SM_Tumblr_a: true
+        SM_Wall_Clock_a: true
+        SM_Walls_a: true
       Queue Size: 100
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -362,25 +423,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 14.05415153503418
+      Distance: 9.691155433654785
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
       Focal Point:
-        X: -1.6165517568588257
-        Y: -1.4565917253494263
-        Z: -0.5762447714805603
+        X: -1.1789263486862183
+        Y: 0.8810168504714966
+        Z: 0.2651253342628479
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1897966861724854
+      Pitch: 0.1947976052761078
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 4.0391435623168945
+      Yaw: 3.2841391563415527
     Saved: ~
 Window Geometry:
   Color:
@@ -394,7 +455,7 @@ Window Geometry:
     collapsed: false
   Normals:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000015600000361fc020000000ffb0000001200530065006c0065006300740069006f006e000000003d0000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afc0000003d00000361000000c900fffffffa000000010100000002fb0000000e004e006f0072006d0061006c007302000001c8000002830000018800000138fb000000100044006900730070006c0061007900730100000000000001560000015600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0043006f006c006f0072020000003b0000001d00000280000001e0fb0000000a0049006e007000750074020000003b000001500000018b00000133fb0000001000520065006e0064006500720065006402000001c80000001d0000018b00000131fb0000000e0054007200610063006b0065006402000001c7000001500000018c00000134fb0000001e0055006e0072006500660069006e0064006500200049006e007000750074020000003b0000025800000280000001e0000000010000010f00000361fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000361000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004f30000003efc0100000002fb0000000800540069006d00650100000000000004f3000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000003970000036100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001610000034ffc020000000ffb0000001200530065006c0065006300740069006f006e000000003d0000009b0000006e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afc000000470000034f000000f100fffffffa000000010100000002fb0000000e004e006f0072006d0061006c007302000001c80000028300000280000001e0fb000000100044006900730070006c0061007900730100000000000001560000016100fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0049006d00610067006501000002d6000000c80000000000000000fb0000000a0043006f006c006f0072020000003b0000001d00000280000001e0fb0000000a0049006e007000750074020000003b0000015000000280000001e0fb0000001000520065006e0064006500720065006402000001c80000001d00000280000001e0fb0000000e0054007200610063006b0065006402000001c7000001500000018c00000134fb0000001e0055006e0072006500660069006e0064006500200049006e007000750074020000003b0000025800000280000001e0000000010000010f00000361fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000361000000c200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005bd00000041fc0100000002fb0000000800540069006d00650100000000000005bd0000037100fffffffb0000000800540069006d00650100000000000004500000000000000000000004550000034f00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Rendered:
     collapsed: false
   Selection:
@@ -409,6 +470,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1267
+  Width: 1469
   X: 652
-  Y: 27
+  Y: 34

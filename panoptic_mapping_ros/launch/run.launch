@@ -1,0 +1,68 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <!-- General -->
+  <arg name="use_rio" value="false"/>
+  <arg name="use_flat" value="true"/>
+  <arg name="namespace" default="data"/> 
+  
+  <!-- Flat Dataset args -->
+  <!-- <arg name="bag_name" default="/home/junting/Downloads/dataset/flat/run1.bag"/>  -->
+  <arg name="bag_name" default="/home/junting/Downloads/dataset/large_flat/run1.bag"/> 
+  <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
+  <arg name="use_sim_time" default="false"/>
+  <arg name="use_detectron" default="false"/>
+  
+  <!-- Rio Dataset args -->
+  <arg name="scan_id" default="0"/>
+  <arg name="rio_play_rate" default="1"/>  <!-- Hz -->
+    
+  <!-- Mapper -->
+  <arg name="config" default="large_flat"/> <!-- demo, rio, large_flat, airsim -->
+
+  <!-- Load maps -->
+  <arg name="load_map" default = "false"/>
+  <arg name="load_file" default = "/home/junting/Downloads/dataset/flat/saved_map/run1.panmap"/>
+
+
+
+
+
+<!-- ============ Run ============ -->
+  <param name="/use_sim_time" value="$(arg use_sim_time)" />
+  
+  <!-- Play data -->
+  <include file="$(find panoptic_mapping_utils)/launch/play_flat_dataset.launch" pass_all_args="true" if="$(arg use_flat)" />
+  <include file="$(find panoptic_mapping_utils)/launch/play_rio_dataset.launch" pass_all_args="true" if="$(arg use_rio)" />  
+  
+  <!-- Mapper -->
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_pclpub_node" output="screen">
+  <!-- <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="getting_data_demo_node" output="screen"> -->
+    <!-- Config -->
+    <rosparam file="$(find panoptic_mapping_ros)/config/mapper/$(arg config).yaml"/>
+
+    <!-- Input -->
+    <remap from="color_image_in" to="$(arg namespace)/color_image"/>
+    <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
+    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>
+    <remap from="labels_in" to="$(arg namespace)/segmentation_labels"/>
+  </node>  
+  
+  <!-- Map loader -->
+  <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" if="$(arg load_map)">
+     <param name="path" value="$(arg load_file)" /> 
+     <param name="srv_name" value="/panoptic_mapper/load_map" /> 
+     <param name="delay" value="0.25" /> 
+  </node>  
+  
+  <!-- RVIZ Visualization-->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/rviz/my_demo.rviz" output="screen"/>
+
+
+  <!-- Path visualization -->
+  <node name="path_visualizer" pkg="panoptic_mapping_utils" type="path_visualizer.py" output="screen">
+    <remap from="~pose_in" to="$(arg namespace)/pose" />
+    <param name="use_arrow" value="false" /> 
+    <param name="length" value="0.5" />
+  </node>
+
+</launch>
