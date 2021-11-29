@@ -3,8 +3,8 @@
 #include <fstream>
 #include <queue>
 #include <random>
+#include <string>
 #include <vector>
-#include <string> 
 
 #include <experimental/filesystem>
 #include <gtest/gtest.h>
@@ -12,6 +12,10 @@
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/classification/binary_count.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
+#include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/uncertainty.h"
+#include "panoptic_mapping/map/classification/variable_count.h"
 #include "panoptic_mapping/test/comparison_utils.h"
 #include "panoptic_mapping/test/randomization_utils.h"
 
@@ -47,7 +51,9 @@ inline void testVoxelSerialization() {
     const std::vector<uint32_t> data = before.serializeVoxelToInt();
     size_t index = 0;
     after.deseriliazeVoxelFromInt(data, &index);
-    checkVoxelEqual(before, after);
+    if (!checkVoxelEqual(before, after)) {
+      return;
+    }
   }
 }
 
@@ -82,7 +88,9 @@ inline void testBlockSerialization() {
     LayerT after(typename LayerT::Config(), config.voxel_size,
                  config.voxels_per_side);
     after.addBlockFromProto(block_proto);
-    checkLayerEqual(before.getLayer(), after.getLayer());
+    if (!checkLayerEqual(before.getLayer(), after.getLayer())) {
+      return;
+    }
   }
 }
 
@@ -96,7 +104,7 @@ inline void testLayerSerialization() {
     // Create up to N random blocks depending on number of duplicates.
     for (size_t i = 0; i < config.num_blocks_per_layer; ++i) {
       // Get random positions of the blocks.
-      const Point position(#include <string> getRandomReal(-10.f, 10.f),
+      const Point position(getRandomReal(-10.f, 10.f),
                            getRandomReal(-10.f, 10.f),
                            getRandomReal(-10.f, 10.f));
       auto block = before.allocateNewBlockByCoordinates(position);
@@ -142,7 +150,9 @@ inline void testLayerSerialization() {
       FAIL() << "Could not cast loaded layer to LayerT.";
       return;
     }
-    checkLayerEqual(before.getLayer(), after->getLayer());
+    if (!checkLayerEqual(before.getLayer(), after->getLayer())) {
+      return;
+    }
   }
 }
 
@@ -156,6 +166,16 @@ TEST(BinaryCount, SerializeBlock) {
 
 TEST(BinaryCount, SerializeLayer) {
   testLayerSerialization<BinaryCountVoxel, BinaryCountLayer>();
+}
+
+TEST(FixedCount, SerializeVoxel) { testVoxelSerialization<FixedCountVoxel>(); }
+
+TEST(FixedCount, SerializeBlock) {
+  testBlockSerialization<FixedCountVoxel, FixedCountLayer>();
+}
+
+TEST(FixedCount, SerializeLayer) {
+  testLayerSerialization<FixedCountVoxel, FixedCountLayer>();
 }
 
 }  // namespace test

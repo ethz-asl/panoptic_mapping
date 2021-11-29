@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_TOOLS_SERIALIZATION_H_
 
 #include <memory>
+#include <utility>
 
 #include <voxblox/Block.pb.h>
 
@@ -11,6 +12,16 @@
 #include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
+
+// Serialization tools.
+inline uint32_t int32FromTwoInt16(uint16_t first, uint16_t second) {
+  return ((static_cast<uint32_t>(first) << 16) + second);
+}
+
+inline std::pair<uint16_t, uint16_t> twoInt16FromInt32(uint32_t data) {
+  return {static_cast<uint16_t>(data >> 16),
+          static_cast<uint16_t>(data & 0xFFFF)};
+}
 
 std::unique_ptr<ClassLayer> loadClassLayerFromStream(
     const SubmapProto& submap_proto, std::istream* proto_file_ptr,

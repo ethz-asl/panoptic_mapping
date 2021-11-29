@@ -1,7 +1,10 @@
 #include "panoptic_mapping/map/classification/binary_count.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
+
+#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -46,9 +49,7 @@ void BinaryCountVoxel::incrementCount(const int id, const float weight) {
 std::vector<uint32_t> BinaryCountVoxel::serializeVoxelToInt() const {
   // Assumes uint16 for counting data. Simply pack both values into a single
   // uint32 via bitshift.
-  const uint32_t data =
-      (static_cast<uint32_t>(belongs_count) << 16) + foreign_count;
-  return {data};
+  return {int32FromTwoInt16(belongs_count, foreign_count)};
 }
 
 bool BinaryCountVoxel::deseriliazeVoxelFromInt(
@@ -59,9 +60,10 @@ bool BinaryCountVoxel::deseriliazeVoxelFromInt(
         << *data_index << ", data: " << data.size() << ")";
     return false;
   }
-  const uint32_t datum = data[*data_index];
-  belongs_count = (datum >> 16);
-  foreign_count = (datum & 0xFFFF);
+  const std::pair<uint16_t, uint16_t> datum =
+      twoInt16FromInt32(data[*data_index]);
+  belongs_count = datum.first;
+  foreign_count = datum.second;
   (*data_index)++;
   return true;
 }

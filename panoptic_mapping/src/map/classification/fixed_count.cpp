@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
+
+#include "panoptic_mapping/tools/serialization.h"
 
 namespace panoptic_mapping {
 
@@ -69,10 +72,62 @@ void FixedCountVoxel::incrementCount(const int id, const float weight) {
   ++total_count;
 }
 
-std::vector<uint32_t> FixedCountVoxel::serializeVoxelToInt() const {}
+std::vector<uint32_t> FixedCountVoxel::serializeVoxelToInt() const {
+  // Store the number of counts first followed by all the values.
+  const size_t length = (counts.size() + 3u) / 2u;
+  std::vector<uint32_t> result(length);
+  result[0] = counts.size();
+  for (size_t i = 1; i < counts.size(); i += 2u) {
+    result[i / 2 + 1] = int32FromTwoInt16(counts[i - 1], counts[i]);
+  }
+  if (counts.size() % 2 != 0) {
+    result[length - 1] = int32FromTwoInt16(counts.back(), 0u);
+  }
+  return result;
+}
 
 bool FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
-                                              size_t* data_index) {}
+                                              size_t* data_index) {
+  if (*data_index >= data.size()) {
+    LOG(WARNING)
+        << "Can not deserialize voxel from integer data: Out of range (index: "
+        << *data_index << ", data: " << data.size() << ")";
+    return false;
+  }
+
+  // Check number of counts to load.
+  const size_t num_counts = data[*data_index];
+  const size_t length = (num_counts + 3u) / 2u;
+  if (*data_index + length > data.size()) {
+    LOG(WARNING) << "Can not deserialize voxel from integer data: Not enough "
+                    "data (index: "
+                 << (*data_index + length - 1) << ", data: " << data.size()
+                 << ")";
+    return false;
+  }
+
+  // Load data.
+  counts.resize(num_counts);
+  current_count = 0;
+  current_index = -1;
+  std::pair<uint16_t, uint16_t> datum;
+  for (size_t i = 0; i < num_counts; ++i) {
+    if (i % 2 == 0) {
+      datum = twoInt16FromInt32(data[*data_index + 1u + i / 2u]);
+      counts[i] = datum.first;
+    } else {
+      counts[i] = datum.second;
+    }
+
+    // Recompute the current count and index from the data.
+    if (counts[i] > current_count) {
+      current_count = counts[i];
+      current_index = i;
+    }
+  }
+  *data_index += length;
+  return true;
+}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, FixedCountLayer, float,
                                            int>

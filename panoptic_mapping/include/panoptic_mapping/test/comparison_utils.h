@@ -4,17 +4,15 @@
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/classification/binary_count.h"
+#include "panoptic_mapping/map/classification/fixed_count.h"
+#include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/uncertainty.h"
+#include "panoptic_mapping/map/classification/variable_count.h"
 
 namespace panoptic_mapping {
 namespace test {
 
 // Test Configuration.
-const int kVoxelsPerSide = 16;
-const int kNumClasses = 40;
-const float kVoxelSize = 0.1;
-const Point kOrigin(0, 0, 0);
-const int k_num_classes = 40;
-int top_n_to_serialize = 12;
 const float kTol = 0.00001;
 
 // Assertions.
@@ -37,6 +35,18 @@ inline bool checkVoxelEqual(const panoptic_mapping::BinaryCountVoxel& v1,
   EXPECT_EQ(v1.foreign_count, v2.foreign_count);
   return v1.belongs_count == v2.belongs_count &&
          v1.foreign_count == v2.foreign_count;
+}
+
+inline bool checkVoxelEqual(const panoptic_mapping::FixedCountVoxel& v1,
+                            const panoptic_mapping::FixedCountVoxel& v2) {
+  EXPECT_EQ(v1.counts.size(), v2.counts.size());
+  EXPECT_EQ(v1.current_index, v2.current_index);
+  EXPECT_EQ(v1.current_count, v2.current_count);
+  EXPECT_EQ(v1.counts, v2.counts);
+
+  return v1.counts.size() == v2.counts.size() &&
+         v1.current_index == v2.current_index &&
+         v1.current_count == v2.current_count && v1.counts == v2.counts;
 }
 
 template <typename T>
