@@ -12,7 +12,7 @@ ClassVoxelType UncertaintyVoxel::getVoxelType() const {
 
 std::vector<uint32_t> UncertaintyVoxel::serializeVoxelToInt() const {}
 
-void UncertaintyVoxel::deseriliazeVoxelFromInt(
+bool UncertaintyVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, UncertaintyLayer, float,

@@ -20,7 +20,8 @@ namespace panoptic_mapping {
 
 // Types.
 // Type used for counting voxels. This stores up to ~65k measurements so should
-// never run out.
+// never run out. If this parameter is changed double check that all
+// serialization still works.
 using ClassificationCount = uint16_t;
 
 // Wroking with voxblox maps.

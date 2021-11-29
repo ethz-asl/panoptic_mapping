@@ -70,6 +70,10 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
   return result;
 }
 
+bool saveClassLayerToStream(const ClassLayer& layer) {
+  // Currently just a dummy since not needed...
+}
+
 bool loadClassBlocksFromStream(const SubmapProto& submap_proto,
                                std::istream* proto_file_ptr,
                                uint64_t* tmp_byte_offset_ptr,
@@ -78,7 +82,7 @@ bool loadClassBlocksFromStream(const SubmapProto& submap_proto,
   CHECK_NOTNULL(tmp_byte_offset_ptr);
   CHECK_NOTNULL(layer);
   // Read all blocks and add them to the layer.
-  for (uint32_t block_idx = 0u; block_idx < submap_proto.num_blocks();
+  for (uint32_t block_idx = 0u; block_idx < submap_proto.num_class_blocks();
        ++block_idx) {
     voxblox::BlockProto block_proto;
     if (!voxblox::utils::readProtoMsgFromStream(proto_file_ptr, &block_proto,

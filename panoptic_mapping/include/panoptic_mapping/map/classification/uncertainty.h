@@ -21,7 +21,7 @@ struct UncertaintyVoxel : public FixedCountVoxel {
   // Implement interfaces.
   ClassVoxelType getVoxelType() const override;
   std::vector<uint32_t> serializeVoxelToInt() const override;
-  void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
+  bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
   // Data.
   float uncertainty = 0.f;

@@ -43,10 +43,28 @@ void BinaryCountVoxel::incrementCount(const int id, const float weight) {
   }
 }
 
-std::vector<uint32_t> BinaryCountVoxel::serializeVoxelToInt() const {}
+std::vector<uint32_t> BinaryCountVoxel::serializeVoxelToInt() const {
+  // Assumes uint16 for counting data. Simply pack both values into a single
+  // uint32 via bitshift.
+  const uint32_t data =
+      (static_cast<uint32_t>(belongs_count) << 16) + foreign_count;
+  return {data};
+}
 
-void BinaryCountVoxel::deseriliazeVoxelFromInt(
-    const std::vector<uint32_t>& data, size_t* data_index) {}
+bool BinaryCountVoxel::deseriliazeVoxelFromInt(
+    const std::vector<uint32_t>& data, size_t* data_index) {
+  if (*data_index >= data.size()) {
+    LOG(WARNING)
+        << "Can not deserialize voxel from integer data: Out of range (index: "
+        << *data_index << ", data: " << data.size() << ")";
+    return false;
+  }
+  const uint32_t datum = data[*data_index];
+  belongs_count = (datum >> 16);
+  foreign_count = (datum & 0xFFFF);
+  (*data_index)++;
+  return true;
+}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, BinaryCountLayer, float,
                                            int>

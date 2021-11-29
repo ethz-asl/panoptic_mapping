@@ -134,7 +134,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     return false;
   }
 
-  // TSDF Layer
+  // TSDF Layer.
   constexpr bool kIncludeAllBlocks = true;
   const TsdfLayer& tsdf_layer = *tsdf_layer_;
   if (!tsdf_layer.saveBlocksToStream(kIncludeAllBlocks,
@@ -144,6 +144,7 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     return false;
   }
 
+  // Class Layer.
   if (has_class_layer_) {
     if (!class_layer_->saveBlocksToStream(
             kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {

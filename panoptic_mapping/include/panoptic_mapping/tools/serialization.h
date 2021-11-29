@@ -16,6 +16,8 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
     const SubmapProto& submap_proto, std::istream* proto_file_ptr,
     uint64_t* tmp_byte_offset_ptr);
 
+bool saveClassLayerToStream(const ClassLayer& layer);
+
 bool loadClassBlocksFromStream(const SubmapProto& submap_proto,
                                std::istream* proto_file_ptr,
                                uint64_t* tmp_byte_offset_ptr,

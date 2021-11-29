@@ -44,7 +44,7 @@ void VariableCountVoxel::incrementCount(const int id, const float weight) {
 }
 std::vector<uint32_t> VariableCountVoxel::serializeVoxelToInt() const {}
 
-void VariableCountVoxel::deseriliazeVoxelFromInt(
+bool VariableCountVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, VariableCountLayer,

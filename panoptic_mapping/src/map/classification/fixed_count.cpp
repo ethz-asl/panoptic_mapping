@@ -71,7 +71,7 @@ void FixedCountVoxel::incrementCount(const int id, const float weight) {
 
 std::vector<uint32_t> FixedCountVoxel::serializeVoxelToInt() const {}
 
-void FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
+bool FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                               size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, FixedCountLayer, float,

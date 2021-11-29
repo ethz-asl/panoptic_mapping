@@ -56,7 +56,7 @@ void MovingBinaryCountVoxel::incrementCount(const int id, const float weight) {
 
 std::vector<uint32_t> MovingBinaryCountVoxel::serializeVoxelToInt() const {}
 
-void MovingBinaryCountVoxel::deseriliazeVoxelFromInt(
+bool MovingBinaryCountVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, MovingBinaryCountLayer,

@@ -87,8 +87,9 @@ struct ClassVoxel {
    * @param data_index Index from where to read the data. This index should be
    * updated to point to the end of the serialized data such that the next voxel
    * can be read from there.
+   * @return True if the voxel was correctly de-serialized, false otherwise.
    */
-  virtual void deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
+  virtual bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                        size_t* data_index) = 0;
 };
 

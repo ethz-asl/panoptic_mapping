@@ -110,8 +110,9 @@ class ClassLayerImpl : public ClassLayer {
       for (size_t i = 0; i < block->num_voxels(); ++i) {
         for (uint32_t word : reinterpret_cast<const ClassVoxel&>(
                                  block->getVoxelByLinearIndex(i))
-                                 .serializeVoxelToInt())
+                                 .serializeVoxelToInt()) {
           proto.add_voxel_data(word);
+        }
       }
       if (!voxblox::utils::writeProtoMsgToStream(proto, outfile_ptr)) {
         LOG(ERROR) << "Could not write class block proto message to stream.";
@@ -133,22 +134,25 @@ class ClassLayerImpl : public ClassLayer {
     layer_.removeBlockByCoordinates(origin);
     auto block = layer_.allocateNewBlockByCoordinates(origin);
 
-    if (block_proto.has_data()) {
-      // Read the data.
-      std::vector<uint32_t> data;
-      data.resize(block_proto.voxel_data_size());
-      size_t index = 0;
-      for (uint32_t word : block_proto.voxel_data()) {
-        data[index++] = word;
-      }
+    // Read the data.
+    std::vector<uint32_t> data;
+    data.resize(block_proto.voxel_data_size());
+    size_t index = 0;
+    for (uint32_t word : block_proto.voxel_data()) {
+      data[index] = word;
+      index++;
+    }
 
-      // Load the voxels.
-      index = 0;
-      for (size_t i = 0; i < block->num_voxels(); ++i) {
-        reinterpret_cast<ClassVoxel&>(block->getVoxelByLinearIndex(i))
-            .deseriliazeVoxelFromInt(data, &index);
+    // Load the voxels.
+    index = 0;
+    for (size_t i = 0; i < block->num_voxels(); ++i) {
+      if (!reinterpret_cast<ClassVoxel&>(block->getVoxelByLinearIndex(i))
+               .deseriliazeVoxelFromInt(data, &index)) {
+        LOG(WARNING) << "Could not serialize voxel from data.";
+        return false;
       }
     }
+    return true;
   }
 
   // Lookup.
