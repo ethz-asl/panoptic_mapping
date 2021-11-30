@@ -50,7 +50,7 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
     ```shell script    
     # Create a new workspace
-    sudo apt-get install python-catkin-tools
+    sudo apt-get install python-catkin-tools  #python3-catkin-tools for noetic
     mkdir -p ~/catkin_ws/src
     cd ~/catkin_ws
     catkin init
@@ -63,12 +63,13 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 
 1. Install system dependencies:
     
-    * Ubuntu 18.04 + ROS Melodic:
+      Ubuntu 18.04 + ROS Melodic:
     
       ```shell script
       sudo apt-get install python-wstool python-catkin-tools
       ```
-    * Ubuntu 20.04 + ROS Noetic:
+      
+      Ubuntu 20.04 + ROS Noetic:
     
       ```shell script
       sudo apt-get install python3-wstool python3-catkin-tools
