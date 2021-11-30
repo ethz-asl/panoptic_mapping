@@ -26,7 +26,14 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
     // Standard integrator params.
     ProjectiveIntegrator::Config projective_integrator;
 
-    // If true require and update an uncertainty image and voxels.
+    // If true require a color image and update voxel colors.
+    bool use_color = true;
+
+    // If true require a segmentation image and integrate it into a class layer.
+    bool use_segmentation = true;
+
+    // If true require an uncertainty image and integrate it into an class layer
+    // of type 'UncertaintyLayer'.
     bool use_uncertainty = false;
 
     // Decay rate in [0, 1] used to update uncertainty voxels. Only used if

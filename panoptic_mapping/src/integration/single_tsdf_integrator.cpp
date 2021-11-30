@@ -29,6 +29,8 @@ void SingleTsdfIntegrator::Config::checkParams() const {
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("projective_integrator", &projective_integrator);
+  setupParam("use_color", &use_color);
+  setupParam("use_segmentation", &use_segmentation);
   setupParam("use_uncertainty", &use_uncertainty);
   setupParam("uncertainty_decay_rate", &uncertainty_decay_rate);
   // Set this param to false since there is only one layer.
@@ -41,7 +43,16 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
       ProjectiveIntegrator(config.projective_integrator, std::move(globals),
                            false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  // Request uncertainty input if required.
+  // Setup all needed inputs.
+  setRequiredInputs({InputData::InputType::kDepthImage,
+                     InputData::InputType::kVertexMap,
+                     InputData::InputType::kValidityImage});
+  if (config_.use_color) {
+    addRequiredInputs({InputData::InputType::kColorImage});
+  }
+  if (config_.use_segmentation) {
+    addRequiredInputs({InputData::InputType::kSegmentationImage});
+  }
   if (config_.use_uncertainty) {
     addRequiredInputs({InputData::InputType::kUncertaintyImage});
   }
@@ -57,13 +68,14 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   cam_config_ = &(globals_->camera()->getConfig());
   Submap* map = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
   // Check classification layer matches the task.
-  if (config_.use_uncertainty) {
+  if (config_.use_uncertainty || config_.use_segmentation) {
     if (!map->hasClassLayer()) {
-      LOG(WARNING)
-          << "Can not 'use_uncertainty' without a class layer, skipping frame.";
+      LOG(WARNING) << "Can not 'use_uncertainty' or 'use_segmentation' without "
+                      "a class layer, skipping frame.";
       return;
     }
-    if (map->getClassLayer().getVoxelType() != ClassVoxelType::kUncertainty) {
+    if (config_.use_uncertainty &&
+        map->getClassLayer().getVoxelType() != ClassVoxelType::kUncertainty) {
       LOG(WARNING) << "Can not 'use_uncertainty' with a class layer that is "
                       "not of type 'uncertainty', skipping frame.";
       return;
@@ -131,7 +143,8 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
   ClassBlock::Ptr class_block;
-  const bool use_class_layer = submap->hasClassLayer();
+  const bool use_class_layer =
+      submap->hasClassLayer() && config_.use_segmentation;
   if (use_class_layer) {
     if (!submap->getClassLayer().hasBlock(block_index)) {
       LOG_IF(WARNING, config_.verbosity >= 1)

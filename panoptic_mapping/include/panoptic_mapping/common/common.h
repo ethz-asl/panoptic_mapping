@@ -54,6 +54,7 @@ inline std::string panopticLabelToString(const PanopticLabel& label) {
     case PanopticLabel::kFreeSpace:
       return "FreeSpace";
   }
+  return "UnknownPanopticLabel";
 }
 
 // Iso-surface-points are used to check alignment and represent the surface
