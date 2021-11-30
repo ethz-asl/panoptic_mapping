@@ -189,7 +189,7 @@ To add to this repository:
     ```
     # Download the linter
     cd <linter_dest>
-    git clone git@github.com:ethz-asl/linter.git
+    git clone git@github.com:ethz-asl/linter.git -b feature/noetic
     cd linter
     echo ". $(realpath setup_linter.sh)" >> ~/.bashrc
     bash
