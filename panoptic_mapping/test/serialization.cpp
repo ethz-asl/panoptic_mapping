@@ -71,8 +71,8 @@ inline void testBlockSerialization() {
     }
 
     // Save and load via temporary filestream.
-    const std::string file_name = testing::internal::TempDir() +
-                                  "panoptic_mapping_serialization_test.tmp";
+    const std::string file_name =
+        testing::TempDir() + "panoptic_mapping_serialization_test.tmp";
     std::fstream f(file_name, std::fstream::in | std::fstream::out |
                                   std::fstream::trunc | std::fstream::binary);
     EXPECT_TRUE(f.is_open());
@@ -114,8 +114,8 @@ inline void testLayerSerialization() {
     }
 
     // Save and load via temporary filestream.
-    const std::string file_name = testing::internal::TempDir() +
-                                  "panoptic_mapping_serialization_test.tmp";
+    const std::string file_name =
+        testing::TempDir() + "panoptic_mapping_serialization_test.tmp";
     std::fstream f(file_name, std::fstream::in | std::fstream::out |
                                   std::fstream::trunc | std::fstream::binary);
     // TODO(schmluk): it might be neater to move submap serialization also to
