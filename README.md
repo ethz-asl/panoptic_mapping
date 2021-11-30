@@ -62,10 +62,18 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 **Installation**
 
 1. Install system dependencies:
-    ```shell script
-    sudo apt-get install python-wstool python-catkin-tools
-    ```
-
+    
+    * Ubuntu 18.04 + ROS Melodic:
+    
+      ```shell script
+      sudo apt-get install python-wstool python-catkin-tools
+      ```
+    * Ubuntu 20.04 + ROS Noetic:
+    
+      ```shell script
+      sudo apt-get install python3-wstool python3-catkin-tools
+      ```
+    
 2. Move to your catkin workspace:
     ```shell script
     cd ~/catkin_ws/src
