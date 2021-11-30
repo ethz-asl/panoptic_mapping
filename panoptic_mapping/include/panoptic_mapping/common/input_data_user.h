@@ -56,7 +56,7 @@ class InputDataUser {
    *
    * @param types Inputs to add.
    */
-  void InputDataUser::setRequiredInputs(const InputData::InputTypes& types);
+  void setRequiredInputs(const InputData::InputTypes& types);
 
  private:
   InputData::InputTypes required_inputs_;
