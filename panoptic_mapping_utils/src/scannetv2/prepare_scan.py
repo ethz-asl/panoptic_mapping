@@ -87,8 +87,7 @@ def create_detectron_labels_from_groundtruth(
 ):
     assert scan_dir_path.is_dir()
 
-    instance_dir_path = scan_dir_path / label_dir
-    instance_dir_path = scan_dir_path / label_dir
+    instance_dir_path = scan_dir_path / instance_dir
     if not instance_dir_path.exists():
         instance_archive_glob_pattern = f"*{instance_dir}.zip"
         # Try to extract the archive
@@ -102,7 +101,7 @@ def create_detectron_labels_from_groundtruth(
         instance_archive = ZipFile(str(instance_archive_path))
         instance_archive.extractall(path=str(scan_dir_path))
 
-    label_dir_path = scan_dir_path / out_dir
+    label_dir_path = scan_dir_path / label_dir
     if not label_dir_path.exists():
         # Try to extract the archive
         label_archive_glob_pattern = f"*{label_dir}.zip"
@@ -114,7 +113,7 @@ def create_detectron_labels_from_groundtruth(
         label_archive = ZipFile(str(label_archive_path))
         label_archive.extractall(path=str(scan_dir_path))
 
-    label_detectron_dir_path = scan_dir_path / _DETECTRON_LABEL_DIR
+    label_detectron_dir_path = scan_dir_path /out_dir
     label_detectron_dir_path.mkdir(exist_ok=True)
     num_frames = 0
     for labels_file_path in label_dir_path.glob("*.png"):
@@ -149,8 +148,9 @@ def create_detectron_labels_from_groundtruth(
     timestamps_file_path = scan_dir_path / _TIMESTAMPS_FILE
     with open(timestamps_file_path, "w") as f:
         writer = csv.DictWriter(f, fieldnames=["FrameID", "TimeStamp"])
+        writer.writeheader()
         for i in range(num_frames):
-            writer.writer(
+            writer.writerow(
                 {
                     "FrameID": i,
                     "TimeStamp": next_frame_time,
