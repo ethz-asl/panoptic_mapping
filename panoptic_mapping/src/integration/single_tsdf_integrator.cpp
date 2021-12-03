@@ -198,8 +198,12 @@ bool SingleTsdfIntegrator::updateVoxel(
 
   // Only merge color and semantics near the surface.
   if (std::abs(sdf) < truncation_distance) {
-    const Color color = interpolator->interpolateColor(input.colorImage());
-    updateVoxelValues(voxel, sdf, weight, &color);
+    if (config_.use_color) {
+      const Color color = interpolator->interpolateColor(input.colorImage());
+      updateVoxelValues(voxel, sdf, weight, &color);
+    } else {
+      updateVoxelValues(voxel, sdf, weight, nullptr);
+    }
 
     // Update the semantic information if requested.
     if (class_voxel) {

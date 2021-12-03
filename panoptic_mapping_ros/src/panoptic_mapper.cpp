@@ -12,6 +12,7 @@
 #include <panoptic_mapping/map/classification/fixed_count.h>
 #include <panoptic_mapping/submap_allocation/freespace_allocator_base.h>
 #include <panoptic_mapping/submap_allocation/submap_allocator_base.h>
+#include <sensor_msgs/CameraInfo.h>
 
 namespace panoptic_mapping {
 
@@ -53,6 +54,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("save_map_path_when_finished", &save_map_path_when_finished);
   setupParam("display_config_units", &display_config_units);
   setupParam("indicate_default_values", &indicate_default_values);
+  setupParam("get_camera_intrinsics_from_ros_topic",
+             &get_camera_intrinsics_from_ros_topic);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -84,8 +87,23 @@ void PanopticMapper::setupMembers() {
   thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
 
   // Camera.
-  auto camera = std::make_shared<Camera>(
-      config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera")));
+  Camera::Config camera_config =
+      config_utilities::getConfigFromRos<Camera::Config>(defaultNh("camera"));
+  if (!config_.get_camera_intrinsics_from_ros_topic.empty()) {
+    LOG(INFO) << "Waiting for camera info on topic '"
+              << config_.get_camera_intrinsics_from_ros_topic << "' ...";
+    const sensor_msgs::CameraInfoConstPtr info =
+        ros::topic::waitForMessage<sensor_msgs::CameraInfo>(
+            config_.get_camera_intrinsics_from_ros_topic, nh_private_);
+    LOG(INFO) << "... got camera info.";
+    camera_config.height = info->height;
+    camera_config.width = info->width;
+    camera_config.fx = info->K[0];
+    camera_config.fy = info->K[4];
+    camera_config.vx = info->K[2];
+    camera_config.vy = info->K[5];
+  }
+  auto camera = std::make_shared<Camera>(camera_config);
 
   // Label Handler.
   std::shared_ptr<LabelHandlerBase> label_handler =

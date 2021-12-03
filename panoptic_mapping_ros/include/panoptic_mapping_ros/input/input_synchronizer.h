@@ -29,14 +29,26 @@ class InputSynchronizer : public InputSynchronizerBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
-    int max_input_queue_length = 10;  // Number of data points per type stored
-    // before old data starts being discarded.
+    // Number of data points per type stored before old data starts being
+    // discarded.
+    int max_input_queue_length = 10;
+
+    // Name of the global frame w.r.t. which the pose of the sensor is queried.
     std::string global_frame_name = "mission";
-    std::string sensor_frame_name =
-        "";  // Empty (default) take the frame of the depth message header.
-    float transform_lookup_time =
-        0.1f;  // s, Maximum time to wait for transforms.
-    double max_delay = 0.0; // s, Maximum delay between Image messages that should be synced
+
+    // Name of the sensor frame. Leave empty (default) take the frame of the
+    // depth message header.
+    std::string sensor_frame_name = "";
+
+    // Maximum time to wait for transforms in seconds.
+    float transform_lookup_time = 0.1f;
+
+    // Maximum delay between Image messages that count as one measurment for
+    // synchronization in seconds.
+    double max_delay = 0.0;
+
+    // If true print a warning when messages are dropped.
+    bool warn_when_dropping_messages = true;
 
     Config() { setConfigName("InputSynchronizer"); }
 

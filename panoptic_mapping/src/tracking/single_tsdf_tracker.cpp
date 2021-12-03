@@ -26,7 +26,6 @@ SingleTSDFTracker::SingleTSDFTracker(const Config& config,
                                      std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  addRequiredInput(InputData::InputType::kColorImage);
   addRequiredInput(InputData::InputType::kDepthImage);
   if (config_.submap.useClassLayer()) {
     addRequiredInput(InputData::InputType::kSegmentationImage);

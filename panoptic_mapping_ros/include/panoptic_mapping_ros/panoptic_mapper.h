@@ -73,6 +73,10 @@ class PanopticMapper {
     // If true, indicate the default values when printing component configs.
     bool indicate_default_values = true;
 
+    // If set overwrite the camera intrinsics with the ones from this topic.
+    // Leave empty to use the intrinsics given by the configuration.
+    std::string get_camera_intrinsics_from_ros_topic = "";
+
     Config() { setConfigName("PanopticMapper"); }
 
    protected:
