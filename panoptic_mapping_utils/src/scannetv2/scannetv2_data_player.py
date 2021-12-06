@@ -29,18 +29,15 @@ class ScannetV2DataPlayer:
     def __init__(self):
 
         # node params
-        self.data_dir_path = Path(
-            rospy.get_param(
-                "~data_path",
-                "/home/giuliano/mt_ipp_panoptic_mapping/scannetv2/scene0001_00",
-            )
-        )
+        self.data_dir_path = Path(rospy.get_param("~data_path"))
+        if not self.data_dir_path.exists():
+            raise RuntimeError("Invalid data dir path!")
+
         self.global_frame_name = rospy.get_param("~global_frame_name", "world")
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name", "depth_cam")
         self.play_rate = rospy.get_param("~play_rate", 1.0)
         self.use_predicted_labels = rospy.get_param("~use_predicted_labels", False)
         self.wait = rospy.get_param("~wait", False)
-        self.max_frames = rospy.get_param("~max_frames", 1e9)
         self.refresh_rate = 30  # Hz
 
         self.wait = rospy.get_param("~wait")
@@ -206,6 +203,8 @@ class ScannetV2DataPlayer:
         self._load_and_publish_pose(pose_file_path, now)
 
         self.current_index += 1
+        if self.current_index >= len(self.ids):
+            rospy.signal_shutdown("Player reached end of sequence.")
 
 
 if __name__ == "__main__":
