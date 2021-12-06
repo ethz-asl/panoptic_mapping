@@ -2,7 +2,7 @@
 <!-- ============ Arguments ============ -->
   <arg name="base_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0587_02"/>
   <arg name="play_rate" default="1"/>
-  <arg name="wait" default="true"/>
+  <arg name="wait" default="false"/>
   <arg name="namespace" default="data"/>
   <arg name="global_frame_name" default="world"/>
   <arg name="sensor_frame_name" default="depth_camera"/>
