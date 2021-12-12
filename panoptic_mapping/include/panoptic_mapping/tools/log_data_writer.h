@@ -31,7 +31,7 @@ class LogDataWriter : public DataWriterBase {
     // Which fields to evaluate Fields.
     bool evaluate_number_of_submaps = true;
     bool evaluate_number_of_active_submaps = true;
-    bool evaluate_numer_of_objects = true;
+    bool evaluate_number_of_objects = true;
 
     Config() { setConfigName("LogDataWriter"); }
 

@@ -19,7 +19,7 @@ void LogDataWriter::Config::setupParamsAndPrinting() {
   setupParam("output_directory", &output_directory);
   setupParam("file_name", &file_name);
   setupParam("evaluate_number_of_submaps", &evaluate_number_of_submaps);
-  setupParam("evaluate_numer_of_objects", &evaluate_numer_of_objects);
+  setupParam("evaluate_number_of_objects", &evaluate_number_of_objects);
 }
 
 void LogDataWriter::Config::checkParams() const {
@@ -62,6 +62,8 @@ void LogDataWriter::setupLogFile() {
   std::stringstream timestamp;
   timestamp << std::put_time(&tm, "%Y_%m_%d-%H_%M_%S");
 
+  output_path_ = config_.output_directory;
+
   // Setup the logfile with the timestamp.
   outfile_name_ = config_.file_name;
   if (outfile_name_.back() != '_' && !outfile_name_.empty()) {
@@ -93,7 +95,7 @@ void LogDataWriter::setupEvaluations() {
       this->evaluateNumberOfActiveSubmaps(submaps);
     });
   }
-  if (config_.evaluate_numer_of_objects) {
+  if (config_.evaluate_number_of_objects) {
     writeEntry("NoObjects [1]");
     evaluations_.emplace_back([this](const SubmapCollection& submaps) {
       this->evaluateNumberOfObjects(submaps);
