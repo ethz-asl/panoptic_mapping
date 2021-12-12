@@ -16,72 +16,72 @@ labels:
 
 camera:
   verbosity: 1
-  width: 640  # Px
+  width: 640 # Px
   height: 480
   vx: 319.500000
   vy: 239.500000
   fx: 577.870605
   fy: 577.870605
-  max_range: 5  # m
+  max_range: 5 # m
   min_range: 0.1
 
 id_tracker:
   type: single_tsdf # ground_truth, projective, detectron, single_tsdf
   verbosity: 1
-  
+
   # Single TSDF tracker params
   voxel_size: 0.05
   truncation_distance: -2
   voxels_per_side: 16
-  use_class_layer: false
+  use_class_layer: true
   use_detectron: true
   use_instance_classification: false
   classification:
     type: fixed_count
 
-tsdf_integrator:  
+tsdf_integrator:
   type: single_tsdf
-  verbosity: 1     
+  verbosity: 1
 
   # Projective
   use_weight_dropoff: true
   max_weight: 10000
-  interpolation_method: adaptive  # nearest, bilinear, adaptive
+  interpolation_method: adaptive # nearest, bilinear, adaptive
   integration_threads: 8
 
 submap_allocator:
-  type: semantic  # semantic
-  verbosity: 1   
-  
+  type: semantic # semantic
+  verbosity: 1
+
   # submaps
   voxels_per_side: &voxels_per_side 16
   truncation_distance: -2 # negative = #vs
   use_class_layer: true
-  
+
   # Meshing
   clear_foreign_voxels: false
   required_belonging_corners: 1
-  
+
   # Semantic
   small_instance_voxel_size: 0.02
   medium_instance_voxel_size: 0.03
   large_instance_voxel_size: 0.04
   background_voxel_size: 0.05
   unknown_voxel_size: 0.05
-  
+
 freespace_allocator:
-  type: monolithic  # monolithic
-  verbosity: 1  
-  voxels_per_side: *voxels_per_side 
-  truncation_distance: -2   
+  type: monolithic # monolithic
+  verbosity: 1
+  voxels_per_side: *voxels_per_side
+  truncation_distance: -2
   voxel_size: 0.3
 
-visualization:  
+visualization:
   submaps:
-    type: single_tsdf  
+    type: single_tsdf
     verbosity: 1
     color_mode: classes # color, normals, classes, instances, classification
-    visualization_mode: all  # all
+    visualization_mode: all # all
     submap_color_discretization: 20
     visualize_mesh: true
     visualize_tsdf_blocks: true
@@ -89,13 +89,26 @@ visualization:
     visualize_bounding_volumes: true
     include_free_space: true
     mesh_min_weight: 0.000001
-  
+
   planning:
     verbosity: 1
     visualize_slice: true
     slice_resolution: 0.1
     slice_height: -0.5
-  
+
   tracking:
     verbosity: 1
     visualize_tracking: true
+
+data_writer:
+  type: evaluation
+  verbosity: 4
+  store_map_every_n_frames: 4
+
+  log_data_writer_config:
+    output_directory: /home/giuliano/mt_ipp_panoptic_mapping/logs/single_tsdf
+    file_name: logs
+    verbosity: 4
+    evaluate_number_of_submaps: true
+    evaluate_number_of_objects: true
+    
