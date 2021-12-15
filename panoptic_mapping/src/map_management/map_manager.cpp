@@ -276,10 +276,10 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
   voxblox::BlockIndexList block_indices;
   tsdf_layer->getAllAllocatedBlocks(&block_indices);
   for (const auto& block_index : block_indices) {
-    const ClassBlock* class_block = nullptr;
+    ClassBlock::Ptr class_block;
     if (class_layer) {
       if (class_layer->hasBlock(block_index)) {
-        class_block = &class_layer->getBlockByIndex(block_index);
+        class_block = class_layer->getBlockPtrByIndex(block_index);
       }
     }
     const TsdfBlock& tsdf_block = tsdf_layer->getBlockByIndex(block_index);
@@ -289,8 +289,8 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
     for (int voxel_index = 0; voxel_index < voxel_indices; ++voxel_index) {
       if (tsdf_block.getVoxelByLinearIndex(voxel_index).weight >= 1e-6) {
         if (class_block) {
-          if (classVoxelBelongsToSubmap(
-                  class_block->getVoxelByLinearIndex(voxel_index))) {
+          if (class_block->getVoxelByLinearIndex(voxel_index)
+                  .belongsToSubmap()) {
             has_beloning_voxels = true;
             break;
           }

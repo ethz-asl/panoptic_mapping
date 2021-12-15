@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import json
@@ -96,7 +96,7 @@ class FlatDataPlayer(object):
         # Get all data and publish.
         file_id = os.path.join(self.data_path, self.ids[self.current_index])
 
-        # Color
+        # Color.
         color_file = file_id + "_color.png"
         depth_file = file_id + "_depth.tiff"
         pose_file = file_id + "_pose.txt"

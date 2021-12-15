@@ -10,6 +10,7 @@
 #include "panoptic_mapping/common/camera.h"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/integration/projective_tsdf_integrator.h"
+#include "panoptic_mapping/map/classification/uncertainty.h"
 
 namespace panoptic_mapping {
 
@@ -23,7 +24,21 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
     int verbosity = 4;
 
     // Standard integrator params.
-    ProjectiveIntegrator::Config projective_integrator_config;
+    ProjectiveIntegrator::Config projective_integrator;
+
+    // If true require a color image and update voxel colors.
+    bool use_color = true;
+
+    // If true require a segmentation image and integrate it into a class layer.
+    bool use_segmentation = true;
+
+    // If true require an uncertainty image and integrate it into an class layer
+    // of type 'UncertaintyLayer'.
+    bool use_uncertainty = false;
+
+    // Decay rate in [0, 1] used to update uncertainty voxels. Only used if
+    // 'use_uncertainty' is true.
+    float uncertainty_decay_rate = 0.5f;
 
     Config() { setConfigName("SingleTsdfIntegrator"); }
 
@@ -58,7 +73,12 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
       TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
       registration_;
 
-  int num_classes_;
+  void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
+                        ClassVoxel* class_voxel) const;
+
+  void updateUncertaintyVoxel(InterpolatorBase* interpolator,
+                              const InputData& input,
+                              UncertaintyVoxel* class_voxel) const;
 };
 
 }  // namespace panoptic_mapping

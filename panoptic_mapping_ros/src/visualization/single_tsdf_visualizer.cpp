@@ -5,6 +5,10 @@
 #include <utility>
 #include <vector>
 
+#include "panoptic_mapping/map/classification/fixed_count.h"
+#include "panoptic_mapping/map/classification/uncertainty.h"
+#include "panoptic_mapping/tools/coloring.h"
+
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<
@@ -12,19 +16,19 @@ config_utilities::Factory::RegistrationRos<
     SingleTsdfVisualizer::registration_("single_tsdf");
 
 void SingleTsdfVisualizer::Config::checkParams() const {
-  checkParamConfig(submap_visualizer_config);
+  checkParamConfig(submap_visualizer);
 }
 
 void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("submap_visualizer_config", &submap_visualizer_config);
+  setupParam("submap_visualizer", &submap_visualizer);
+  setupParam("entropy_factor", &entropy_factor);
 }
 
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
                                            std::shared_ptr<Globals> globals,
                                            bool print_config)
-    : SubmapVisualizer(config.submap_visualizer_config, std::move(globals),
-                       false),
+    : SubmapVisualizer(config.submap_visualizer, std::move(globals), false),
       config_(config.checkValid()) {
   // Print config after setting up the modes.
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
@@ -43,7 +47,7 @@ void SingleTsdfVisualizer::reset() {
 
 void SingleTsdfVisualizer::clearMesh() {
   // Clear the current mesh from the rviz plugin.
-  if (config_.submap_visualizer_config.visualize_mesh &&
+  if (config_.submap_visualizer.visualize_mesh &&
       mesh_pub_.getNumSubscribers() > 0) {
     voxblox_msgs::MultiMesh msg;
     msg.header.stamp = ros::Time::now();
@@ -55,7 +59,10 @@ void SingleTsdfVisualizer::clearMesh() {
 std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     SubmapCollection* submaps) {
   std::vector<voxblox_msgs::MultiMesh> result;
-
+  if (submaps->size() == 0) {
+    LOG(WARNING) << "No Map to visualize.";
+    return result;
+  }
   // If the freespace map ID is not yet setup (loaded map) assume it's the first
   // submap in the collection.
   if (submaps->getActiveFreeSpaceSubmapID() < 0) {
@@ -142,9 +149,9 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
   }
 
   // Setup.
-  const ClassBlock& class_block =
-      submap.getClassLayer().getBlockByIndex(block_index);
-  const float point_conv_factor = 2.0f / std::numeric_limits<uint16_t>::max();
+  const ClassBlock::ConstPtr class_block =
+      submap.getClassLayer().getBlockConstPtrByIndex(block_index);
+  const float point_conv_factor = 2.f / std::numeric_limits<uint16_t>::max();
   const float block_edge_length = submap.getClassLayer().block_size();
   const size_t num_vertices = mesh_block->x.size();
   mesh_block->r.resize(num_vertices);
@@ -152,32 +159,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
   mesh_block->b.resize(num_vertices);
 
   // Coloring schemes.
-  std::function<Color(const ClassVoxel&)> get_color;
-  if (color_mode_ == ColorMode::kClassification) {
-    // Color the voxel by the certainty of classification from green 1.0 highest
-    // to red 0.0.
-    get_color = [](const ClassVoxel& voxel) {
-      const float probability = static_cast<float>(voxel.belongs_count) /
-                                static_cast<float>(std::accumulate(
-                                    voxel.counts.begin(), voxel.counts.end(),
-                                    ClassVoxel::Counter(0)));
-      Color color;
-      color.b = 0;
-      if (probability > 0.5) {
-        color.r = ((1.f - probability) * 2.f * 255.f);
-        color.g = 255;
-      } else {
-        color.r = 255;
-        color.g = (probability * 2.f * 255.f);
-      }
-      return color;
-    };
-  } else {
-    // This implies the visualization mode is instances or classes.
-    get_color = [this](const ClassVoxel& voxel) {
-      return id_color_map_.colorLookup(voxel.current_index);
-    };
-  }
+  std::function<Color(const ClassVoxel&)> get_color = getColoring();
 
   for (int i = 0; i < num_vertices; ++i) {
     // Get the vertex position in map frame.
@@ -194,7 +176,7 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
          static_cast<float>(block_index[2])) *
         block_edge_length;
     const ClassVoxel& voxel =
-        class_block.getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
+        class_block->getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
     const Color color = get_color(voxel);
     mesh_block->r[i] = color.r;
     mesh_block->g[i] = color.g;
@@ -202,8 +184,85 @@ void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
   }
 }
 
+std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
+    const {
+  switch (color_mode_) {
+    case ColorMode::kClassification:
+      return [](const ClassVoxel& voxel) {
+        // Look up the probability of the voxel belonging to its highest rating
+        // entity.
+        return redToGreenGradient(voxel.getProbability(voxel.getBelongingID()));
+      };
+
+    case ColorMode::kUncertainty:
+      return [this](const ClassVoxel& voxel) {
+        if (voxel.getVoxelType() != ClassVoxelType::kUncertainty) {
+          return kUnknownColor_;
+        }
+        const UncertaintyVoxel& uncertainty_voxel =
+            static_cast<const UncertaintyVoxel&>(voxel);
+        if (uncertainty_voxel.is_ground_truth) {
+          return Color(0, 0, 255);
+        }
+        float probability = uncertainty_voxel.uncertainty;
+        // Well defined uncertanties should never be > 1.
+        if (probability > 1.f) {
+          probability = 1.f;
+        }
+        return redToGreenGradient(probability);
+      };
+
+    case ColorMode::kEntropy:
+      return [this](const ClassVoxel& voxel) {
+        if (voxel.getVoxelType() != ClassVoxelType::kUncertainty &&
+            voxel.getVoxelType() != ClassVoxelType::kFixedCount) {
+          // NOTE(schmluk): This is easy to implement also for other types of
+          // voxels but not yet supported.
+          return kUnknownColor_;
+        }
+        const FixedCountVoxel& count_voxel =
+            static_cast<const FixedCountVoxel&>(voxel);
+        if (count_voxel.counts.empty()) {
+          return Color(255, 0, 0);
+        }
+        const float uniform_prob =
+            1.f / static_cast<float>(count_voxel.counts.size());
+        const float uniform_entropy = -count_voxel.counts.size() *
+                                      (uniform_prob * std::log(uniform_prob));
+        float normalized_entropy =
+            -std::accumulate(
+                count_voxel.counts.begin(), count_voxel.counts.end(), 0.f,
+                [count_voxel](float accumulated,
+                              ClassificationCount new_value) {
+                  const float to_add =
+                      static_cast<float>(new_value) / count_voxel.total_count;
+                  if (to_add <= 0.f) {
+                    return accumulated;
+                  }
+                  return accumulated + to_add * std::log(to_add);
+                }) /
+            std::log(count_voxel.counts.size());
+        normalized_entropy =
+            normalized_entropy / uniform_entropy *
+            config_.entropy_factor;  // Entropies are often very small. Use
+                                     // this to make small values visible
+        if (normalized_entropy > 1.f) {
+          normalized_entropy = 1;
+        }
+
+        return redToGreenGradient(normalized_entropy);
+      };
+    default:
+      return [this](const ClassVoxel& voxel) {
+        // This implies the visualization mode is instances or classes.
+        return id_color_map_.colorLookup(voxel.getBelongingID());
+      };
+  }
+}
+
 void SingleTsdfVisualizer::updateVisInfos(const SubmapCollection& submaps) {
-  // Check whether the same submap collection is being visualized (cached data).
+  // Check whether the same submap collection is being visualized (cached
+  // data).
   if (previous_submaps_ != &submaps) {
     reset();
     previous_submaps_ = &submaps;

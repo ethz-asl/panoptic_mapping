@@ -13,26 +13,33 @@
 #include <voxblox/mesh/mesh_layer.h>
 #include <voxblox/utils/timing.h>
 
-#include "panoptic_mapping/common/class_voxel.h"
-
 namespace panoptic_mapping {
-// Type definitions to work with a voxblox map.
+/**
+ * @brief Common Type definitions for the full framework.
+ */
+
+// Types.
+// Type used for counting voxels. This stores up to ~65k measurements so should
+// never run out. If this parameter is changed double check that all
+// serialization still works!
+using ClassificationCount = uint16_t;
+
+// Wroking with voxblox maps.
 using FloatingPoint = voxblox::FloatingPoint;
+using VoxelIndex = voxblox::VoxelIndex;
+using BlockIndex = voxblox::BlockIndex;
+using Color = voxblox::Color;
 
 // Geometry.
 using Point = voxblox::Point;
 using Transformation = voxblox::Transformation;
 using Pointcloud = voxblox::Pointcloud;
 
-// Tsdf and class Maps.
+// Tsdf and mesh Maps. Classification maps are defined in class_layer.h
 using TsdfVoxel = voxblox::TsdfVoxel;
 using TsdfBlock = voxblox::Block<TsdfVoxel>;
 using TsdfLayer = voxblox::Layer<TsdfVoxel>;
 using MeshLayer = voxblox::MeshLayer;
-using ClassBlock = voxblox::Block<ClassVoxel>;
-using ClassLayer = voxblox::Layer<ClassVoxel>;
-
-using Color = voxblox::Color;
 
 // Panoptic type labels.
 enum class PanopticLabel { kUnknown = 0, kInstance, kBackground, kFreeSpace };
@@ -47,6 +54,7 @@ inline std::string panopticLabelToString(const PanopticLabel& label) {
     case PanopticLabel::kFreeSpace:
       return "FreeSpace";
   }
+  return "UnknownPanopticLabel";
 }
 
 // Iso-surface-points are used to check alignment and represent the surface

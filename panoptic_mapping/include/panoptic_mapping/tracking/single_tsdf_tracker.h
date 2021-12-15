@@ -7,6 +7,7 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/labels/label_handler_base.h"
+#include "panoptic_mapping/map/classification/class_layer.h"
 #include "panoptic_mapping/tracking/id_tracker_base.h"
 
 namespace panoptic_mapping {
@@ -22,7 +23,7 @@ class SingleTSDFTracker : public IDTrackerBase {
 
     // Submap allocation config. Set use class_layer to true to perform label
     // integration.
-    Submap::Config submap_config;
+    Submap::Config submap;
 
     // System params.
     bool use_detectron = false;

@@ -12,12 +12,12 @@ config_utilities::Factory::RegistrationRos<IDTrackerBase, SingleTSDFTracker,
     SingleTSDFTracker::registration_("single_tsdf");
 
 void SingleTSDFTracker::Config::checkParams() const {
-  checkParamConfig(submap_config);
+  checkParamConfig(submap);
 }
 
 void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("submap_config", &submap_config);
+  setupParam("submap", &submap);
   setupParam("use_detectron", &use_detectron);
   setupParam("use_instance_classification", &use_instance_classification);
 }
@@ -28,7 +28,7 @@ SingleTSDFTracker::SingleTSDFTracker(const Config& config,
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   addRequiredInput(InputData::InputType::kColorImage);
   addRequiredInput(InputData::InputType::kDepthImage);
-  if (config_.submap_config.use_class_layer) {
+  if (config_.submap.useClassLayer()) {
     addRequiredInput(InputData::InputType::kSegmentationImage);
   }
   if (config_.use_detectron) {
@@ -76,13 +76,11 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
   if (submaps->size() > 0) {
     Submap& map = *(submaps->begin());
-    if (map.getConfig().voxel_size != config_.submap_config.voxel_size ||
-        map.getConfig().voxels_per_side !=
-            config_.submap_config.voxels_per_side ||
+    if (map.getConfig().voxel_size != config_.submap.voxel_size ||
+        map.getConfig().voxels_per_side != config_.submap.voxels_per_side ||
         map.getConfig().truncation_distance !=
-            config_.submap_config.truncation_distance ||
-        map.getConfig().use_class_layer !=
-            config_.submap_config.use_class_layer) {
+            config_.submap.truncation_distance ||
+        map.getConfig().useClassLayer() != config_.submap.useClassLayer()) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }
@@ -90,7 +88,7 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
     map_id_ = map.getID();
   } else {
     // Allocate the single map.
-    Submap* new_submap = submaps->createSubmap(config_.submap_config);
+    Submap* new_submap = submaps->createSubmap(config_.submap);
     new_submap->setLabel(PanopticLabel::kBackground);
     map_id_ = new_submap->getID();
   }

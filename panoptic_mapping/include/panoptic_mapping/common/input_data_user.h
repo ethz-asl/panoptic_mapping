@@ -51,6 +51,13 @@ class InputDataUser {
    */
   void addRequiredInputs(const InputData::InputTypes& types);
 
+  /**
+   * @brief Sets the required inputs, erasing all previously stored input types.
+   *
+   * @param types Inputs to add.
+   */
+  void setRequiredInputs(const InputData::InputTypes& types);
+
  private:
   InputData::InputTypes required_inputs_;
 };

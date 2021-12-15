@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package panoptic_mapping;
+
+message ClassLayerProto {
+  // Directly store binary data.
+  repeated uint32 voxel_data = 1;
+}

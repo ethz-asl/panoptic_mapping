@@ -19,23 +19,43 @@ config_utilities::Factory::RegistrationRos<
     SingleTsdfIntegrator::registration_("single_tsdf");
 
 void SingleTsdfIntegrator::Config::checkParams() const {
-  checkParamConfig(projective_integrator_config);
+  checkParamConfig(projective_integrator);
+  if (use_uncertainty) {
+    checkParamGE(uncertainty_decay_rate, 0.f, "uncertainty_decay_rate");
+    checkParamLE(uncertainty_decay_rate, 1.f, "uncertainty_decay_rate");
+  }
 }
 
 void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("projective_integrator_config", &projective_integrator_config);
-  projective_integrator_config.foreign_rays_clear = false;
+  setupParam("projective_integrator", &projective_integrator);
+  setupParam("use_color", &use_color);
+  setupParam("use_segmentation", &use_segmentation);
+  setupParam("use_uncertainty", &use_uncertainty);
+  setupParam("uncertainty_decay_rate", &uncertainty_decay_rate);
+  // Set this param to false since there is only one layer.
+  projective_integrator.foreign_rays_clear = false;
 }
 
 SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.projective_integrator_config,
-                           std::move(globals), false) {
+      ProjectiveIntegrator(config.projective_integrator, std::move(globals),
+                           false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  // Cache num classes info.
-  num_classes_ = globals_->labelHandler()->numberOfLabels();
+  // Setup all needed inputs.
+  setRequiredInputs({InputData::InputType::kDepthImage,
+                     InputData::InputType::kVertexMap,
+                     InputData::InputType::kValidityImage});
+  if (config_.use_color) {
+    addRequiredInputs({InputData::InputType::kColorImage});
+  }
+  if (config_.use_segmentation) {
+    addRequiredInputs({InputData::InputType::kSegmentationImage});
+  }
+  if (config_.use_uncertainty) {
+    addRequiredInputs({InputData::InputType::kUncertaintyImage});
+  }
 }
 
 void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
@@ -45,9 +65,24 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(globals_->camera().get());
   CHECK(inputIsValid(*input));
 
-  // Allocate all blocks in the map.
   cam_config_ = &(globals_->camera()->getConfig());
   Submap* map = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+  // Check classification layer matches the task.
+  if (config_.use_uncertainty || config_.use_segmentation) {
+    if (!map->hasClassLayer()) {
+      LOG(WARNING) << "Can not 'use_uncertainty' or 'use_segmentation' without "
+                      "a class layer, skipping frame.";
+      return;
+    }
+    if (config_.use_uncertainty &&
+        map->getClassLayer().getVoxelType() != ClassVoxelType::kUncertainty) {
+      LOG(WARNING) << "Can not 'use_uncertainty' with a class layer that is "
+                      "not of type 'uncertainty', skipping frame.";
+      return;
+    }
+  }
+
+  // Allocate all blocks in the map.
   auto t1 = std::chrono::high_resolution_clock::now();
   allocateNewBlocks(map, input);
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -65,8 +100,7 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
 
   // Integrate in parallel.
   std::vector<std::future<void>> threads;
-  for (int i = 0; i < config_.projective_integrator_config.integration_threads;
-       ++i) {
+  for (int i = 0; i < config_.projective_integrator.integration_threads; ++i) {
     threads.emplace_back(std::async(
         std::launch::async, [this, &index_getter, map, input, i, T_C_S]() {
           voxblox::BlockIndex index;
@@ -108,8 +142,9 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const float voxel_size = block.voxel_size();
   const float truncation_distance = submap->getConfig().truncation_distance;
   const int submap_id = submap->getID();
-  ClassBlock* class_block;
-  const bool use_class_layer = submap->hasClassLayer();
+  ClassBlock::Ptr class_block;
+  const bool use_class_layer =
+      submap->hasClassLayer() && config_.use_segmentation;
   if (use_class_layer) {
     if (!submap->getClassLayer().hasBlock(block_index)) {
       LOG_IF(WARNING, config_.verbosity >= 1)
@@ -118,7 +153,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
           << ".";
       return;
     }
-    class_block = &submap->getClassLayerPtr()->getBlockByIndex(block_index);
+    class_block = submap->getClassLayerPtr()->getBlockPtrByIndex(block_index);
   }
 
   // Update all voxels.
@@ -168,17 +203,59 @@ bool SingleTsdfIntegrator::updateVoxel(
 
     // Update the semantic information if requested.
     if (class_voxel) {
-      if (class_voxel->current_index < 0) {
-        // This means the voxel is uninitialized.
-        class_voxel->counts.resize(num_classes_);
+      // Uncertainty voxels are handled differently.
+      if (config_.use_uncertainty &&
+          class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
+        updateUncertaintyVoxel(interpolator, input,
+                               static_cast<UncertaintyVoxel*>(class_voxel));
+      } else {
+        updateClassVoxel(interpolator, input, class_voxel);
       }
-      classVoxelIncrementClass(class_voxel,
-                               interpolator->interpolateID(input.idImage()));
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);
   }
   return true;
+}
+
+void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
+                                            const InputData& input,
+                                            ClassVoxel* class_voxel) const {
+  // For the single TSDF case there is no belonging submap, just use the ID
+  // directly.
+  const int id = interpolator->interpolateID(input.idImage());
+  class_voxel->incrementCount(id);
+}
+
+void SingleTsdfIntegrator::updateUncertaintyVoxel(
+    InterpolatorBase* interpolator, const InputData& input,
+    UncertaintyVoxel* class_voxel) const {
+  // Do not update voxels which are assigned as groundtruth.
+  if (class_voxel->is_ground_truth) {
+    return;
+  }
+  // Update Uncertainty Voxel Part.
+  const float uncertainty =
+      interpolator->interpolateUncertainty(input.uncertaintyImage());
+
+  // Magic uncertainty value which labels a voxel as groundtruth in the
+  // uncertainty input..
+  // TODO(zrene) find a better way to implement this.
+  if (uncertainty == -1.0) {
+    // Make sure GT voxels have zero uncertainty and entropy.
+    class_voxel->counts =
+        std::vector<ClassificationCount>(FixedCountVoxel::numCounts());
+    // Update classification part.
+    class_voxel->is_ground_truth = true;
+    class_voxel->uncertainty = 0.f;
+  } else {
+    // Update uncertainty.
+    class_voxel->uncertainty =
+        config_.uncertainty_decay_rate * uncertainty +
+        (1.f - config_.uncertainty_decay_rate) * class_voxel->uncertainty;
+  }
+
+  updateClassVoxel(interpolator, input, class_voxel);
 }
 
 void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {

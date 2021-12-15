@@ -135,17 +135,17 @@ bool MeshIntegrator::updateMeshForBlock(
                  << block_index.transpose() << ", skipping block.";
     return false;
   }
-  if (use_class_layer_ && !class_layer_->hasBlock(block_index)) {
-    LOG(WARNING) << "Trying to mesh a non-existent class block at index: "
-                 << block_index.transpose() << ", skipping block.";
-    return false;
-  }
   const TsdfBlock& tsdf_block = tsdf_layer_->getBlockByIndex(block_index);
   // The class is accessed by pointer since it's just a nullptr if the class
   // info is not used.
-  const ClassBlock* class_block = nullptr;
+  ClassBlock::ConstPtr class_block;
   if (use_class_layer_) {
-    class_block = class_layer_->getBlockPtrByIndex(block_index).get();
+    class_block = class_layer_->getBlockConstPtrByIndex(block_index);
+    if (!class_block) {
+      LOG(WARNING) << "Trying to mesh a non-existent class block at index: "
+                   << block_index.transpose() << ", skipping block.";
+      return false;
+    }
   }
 
   extractBlockMesh(tsdf_block, class_block, mesh.get());
@@ -160,7 +160,7 @@ bool MeshIntegrator::updateMeshForBlock(
 }
 
 void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
-                                      const ClassBlock* class_block,
+                                      const ClassBlock::ConstPtr& class_block,
                                       voxblox::Mesh* mesh) {
   DCHECK(mesh != nullptr);
 
@@ -214,7 +214,7 @@ void MeshIntegrator::extractBlockMesh(const TsdfBlock& tsdf_block,
 }
 
 void MeshIntegrator::extractMeshInsideBlock(
-    const TsdfBlock& tsdf_block, const ClassBlock* class_block,
+    const TsdfBlock& tsdf_block, const ClassBlock::ConstPtr& class_block,
     const voxblox::VoxelIndex& index, const Point& coords,
     voxblox::VertexIndex* next_mesh_index, voxblox::Mesh* mesh) {
   Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets =
@@ -224,6 +224,7 @@ void MeshIntegrator::extractMeshInsideBlock(
   Eigen::Matrix<bool, 8, 1> corner_belongs;
   bool all_neighbors_observed = true;
   int belonging_corners = 0;
+  const bool use_class = class_block;
 
   for (unsigned int i = 0; i < 8; ++i) {
     // Get all sdf values.
@@ -235,9 +236,9 @@ void MeshIntegrator::extractMeshInsideBlock(
       all_neighbors_observed = false;
       break;
     }
-    if (use_class_layer_) {
-      corner_belongs(i) = classVoxelBelongsToSubmap(
-          class_block->getVoxelByVoxelIndex(corner_index));
+    if (use_class) {
+      corner_belongs(i) =
+          class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
       if (corner_belongs(i)) {
         belonging_corners++;
       }
@@ -247,12 +248,11 @@ void MeshIntegrator::extractMeshInsideBlock(
   }
 
   if (all_neighbors_observed) {
-    if (use_class_layer_ &&
-        belonging_corners <= config_.required_belonging_corners) {
+    if (use_class && belonging_corners <= config_.required_belonging_corners) {
       return;
     }
 
-    if (use_class_layer_ && config_.clear_foreign_voxels) {
+    if (use_class && config_.clear_foreign_voxels) {
       // Foreign voxels are set to truncation distance to close the mesh.
       for (unsigned int i = 0; i < 8; ++i) {
         if (!corner_belongs(i)) {
@@ -265,12 +265,10 @@ void MeshIntegrator::extractMeshInsideBlock(
   }
 }
 
-void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
-                                         const ClassBlock* class_block,
-                                         const voxblox::VoxelIndex& index,
-                                         const Point& coords,
-                                         voxblox::VertexIndex* next_mesh_index,
-                                         voxblox::Mesh* mesh) {
+void MeshIntegrator::extractMeshOnBorder(
+    const TsdfBlock& tsdf_block, const ClassBlock::ConstPtr& class_block,
+    const voxblox::VoxelIndex& index, const Point& coords,
+    voxblox::VertexIndex* next_mesh_index, voxblox::Mesh* mesh) {
   Eigen::Matrix<FloatingPoint, 3, 8> cube_coord_offsets =
       cube_index_offsets_.cast<FloatingPoint>() * voxel_size_;
   Eigen::Matrix<FloatingPoint, 3, 8> corner_coords;
@@ -280,6 +278,7 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
   int belonging_corners = 0;
   corner_coords.setZero();
   corner_sdf.setZero();
+  const bool use_class = class_block;
 
   for (unsigned int i = 0; i < 8; ++i) {
     voxblox::VoxelIndex corner_index = index + cube_index_offsets_.col(i);
@@ -292,9 +291,9 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
         all_neighbors_observed = false;
         break;
       }
-      if (use_class_layer_) {
-        corner_belongs(i) = classVoxelBelongsToSubmap(
-            class_block->getVoxelByVoxelIndex(corner_index));
+      if (use_class) {
+        corner_belongs(i) =
+            class_block->getVoxelByVoxelIndex(corner_index).belongsToSubmap();
         if (corner_belongs(i)) {
           belonging_corners++;
         }
@@ -333,11 +332,14 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
           break;
         }
         if (use_class_layer_) {
-          // We assume that the class blocks are always updated simultaneously
-          // so existence of the class block is not checked here.
-          corner_belongs(i) = classVoxelBelongsToSubmap(
-              class_layer_->getBlockByIndex(neighbor_index)
-                  .getVoxelByVoxelIndex(corner_index));
+          // The class blocks should always exist but just make sure.
+          const ClassBlock::ConstPtr neighbor_class_block =
+              class_layer_->getBlockConstPtrByIndex(neighbor_index);
+          corner_belongs(i) =
+              neighbor_class_block
+                  ? neighbor_class_block->getVoxelByVoxelIndex(corner_index)
+                        .belongsToSubmap()
+                  : true;
           if (corner_belongs(i)) {
             belonging_corners++;
           }
@@ -370,7 +372,7 @@ void MeshIntegrator::extractMeshOnBorder(const TsdfBlock& tsdf_block,
 }
 
 void MeshIntegrator::updateMeshColor(const TsdfBlock& tsdf_block,
-                                     const ClassBlock* class_block,
+                                     const ClassBlock::ConstPtr& class_block,
                                      voxblox::Mesh* mesh) {
   mesh->colors.clear();
   mesh->colors.resize(mesh->indices.size());

@@ -386,11 +386,10 @@ TrackingInfo ProjectiveIDTracker::renderTrackingInfoVertices(
         const TsdfVoxel& voxel = block->getVoxelByLinearIndex(voxel_index);
         bool classes_match = true;
         if (submap.hasClassLayer()) {
-          const ClassVoxel& class_voxel =
-              submap.getClassLayer()
-                  .getBlockByIndex(block_index)
-                  .getVoxelByLinearIndex(voxel_index);
-          classes_match = classVoxelBelongsToSubmap(class_voxel);
+          classes_match = submap.getClassLayer()
+                              .getBlockConstPtrByIndex(block_index)
+                              ->getVoxelByLinearIndex(voxel_index)
+                              .belongsToSubmap();
         }
         if (voxel.weight > 1e-6 && std::abs(voxel.distance) < depth_tolerance) {
           result.insertVertexPoint(input.idImage().at<int>(v, u));

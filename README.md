@@ -41,7 +41,7 @@ If you find this package useful for your research, please consider citing our pa
 A short video overview explaining the approach will be released upon publication.
 
 # Installation
-Installation instructions for Linux. The repository was developed on Ubuntu 18.04 with ROS melodic and also tested on Ubuntu 20.04 with ROS noetic.
+Installation instructions for Linux. The repository was developed on Ubuntu 18.04 with ROS melodic. The repository was also tested on Ubuntu 20.04 with ROS noetic, replace python with python3 in the installation instructions..
 
 **Prerequisites**
 
@@ -50,7 +50,7 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
     ```shell script    
     # Create a new workspace
-    sudo apt-get install python-catkin-tools
+    sudo apt-get install python-catkin-tools  #python3-catkin-tools for noetic
     mkdir -p ~/catkin_ws/src
     cd ~/catkin_ws
     catkin init
@@ -62,10 +62,19 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 **Installation**
 
 1. Install system dependencies:
-    ```shell script
-    sudo apt-get install python-wstool python-catkin-tools
-    ```
-
+    
+      Ubuntu 18.04 + ROS Melodic:
+    
+      ```shell script
+      sudo apt-get install python-wstool python-catkin-tools
+      ```
+      
+      Ubuntu 20.04 + ROS Noetic:
+    
+      ```shell script
+      sudo apt-get install python3-wstool python3-catkin-tools
+      ```
+    
 2. Move to your catkin workspace:
     ```shell script
     cd ~/catkin_ws/src
@@ -97,7 +106,7 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
 # Datasets
 The datasets described in the paper and used for the demo can be downloaded from the [ASL Datasets](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
 
-To a utility script is provided to directly download the data:
+A utility script is provided to directly download the flat data:
 ```
 roscd panoptic_mapping_utils
 export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
@@ -138,7 +147,33 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
     <img src="https://user-images.githubusercontent.com/36043993/135861611-4d576750-3104-4d73-87dc-60b7a4ad1df6.png" width="400">
 
 ## Monolithic Semantic Mapping
-This example will follow shortly.
+Panoptic Mapping supports also the monolithic use case. This example explains how to run the Panoptic Single-TSDF mapper on the flat dataset. 
+
+1. If not already done so, download the flat dataset:
+
+   ```
+   export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
+   chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
+   ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
+   ```
+
+2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/single_tsdf.yaml (L15)` to the downloaded path. 
+
+3. To use the single-TSDF mapper and real segmentation predictions, set `use_detectron` in `launch/run.launch (L6)` to true and `config` in `launch/run.launch (L22)` to 'single_tsdf'.
+
+4. Run the mapper:
+
+   ```
+   roslaunch panoptic_mapping_ros run.launch
+   ```
+
+5. You should now see the map being incrementally built. 
+
+6. Varying visualization modes are supported, the `classes` (default) will color the mesh according to the predicted semantic class. Other modes, such as `classification` will show the confidence of the aggregated predictions.
+
+![single_combined](https://user-images.githubusercontent.com/36043993/143055994-2703f57c-cf4a-4126-a43c-cb7f47b6da02.png)
+
+Predicted classes (left) and corresponding fusion confidence (right, low to high in red to green).
 
 ## Running the RIO Dataset
 This example will follow shortly.
@@ -154,7 +189,7 @@ To add to this repository:
     ```
     # Download the linter
     cd <linter_dest>
-    git clone git@github.com:ethz-asl/linter.git
+    git clone git@github.com:ethz-asl/linter.git -b feature/noetic
     cd linter
     echo ". $(realpath setup_linter.sh)" >> ~/.bashrc
     bash

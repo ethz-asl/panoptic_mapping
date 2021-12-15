@@ -7,7 +7,7 @@ config_utilities::Factory::RegistrationRos<SubmapAllocatorBase,
     SemanticSubmapAllocator::registration_("semantic");
 
 void SemanticSubmapAllocator::Config::checkParams() const {
-  checkParamConfig(submap_config);
+  checkParamConfig(submap);
   checkParamGT(small_instance_voxel_size, 0.f, "small_instance_voxel_size");
   checkParamGT(medium_instance_voxel_size, 0.f, "medium_instance_voxel_size");
   checkParamGT(large_instance_voxel_size, 0.f, "large_instance_voxel_size");
@@ -18,7 +18,7 @@ void SemanticSubmapAllocator::Config::checkParams() const {
 
 void SemanticSubmapAllocator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
-  setupParam("submap_config", &submap_config);
+  setupParam("submap", &submap);
   setupParam("small_instance_voxel_size", &small_instance_voxel_size);
   setupParam("medium_instance_voxel_size", &medium_instance_voxel_size);
   setupParam("large_instance_voxel_size", &large_instance_voxel_size);
@@ -38,7 +38,7 @@ Submap* SemanticSubmapAllocator::allocateSubmap(SubmapCollection* submaps,
                                                 InputData* /* input */,
                                                 int input_id,
                                                 const LabelEntry& label) {
-  Submap::Config config = config_.submap_config;
+  Submap::Config config = config_.submap;
 
   // Setup the voxel size.
   switch (label.label) {

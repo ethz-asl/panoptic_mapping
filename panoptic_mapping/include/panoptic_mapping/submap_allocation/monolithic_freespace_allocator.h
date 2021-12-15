@@ -19,7 +19,7 @@ class MonolithicFreespaceAllocator : public FreespaceAllocatorBase {
 
     // All values for the submap config except the voxel sizes. Use negative
     // truncation distance to make them multiples of the voxelsizes.
-    Submap::Config submap_config;
+    Submap::Config submap;
 
     Config() { setConfigName("MonolithicFreespaceAllocator"); }
 

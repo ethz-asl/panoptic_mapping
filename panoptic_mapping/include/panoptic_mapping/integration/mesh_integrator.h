@@ -40,6 +40,7 @@
 
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
+#include "panoptic_mapping/map/classification/class_layer.h"
 
 namespace panoptic_mapping {
 
@@ -51,25 +52,22 @@ namespace panoptic_mapping {
 class MeshIntegrator {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
-  /**
-   * @brief Parameters used to mesh submaps.
-   *
-   * @param use_color Whether to use color information from the TSDF.
-   * @param min_weight Minimum TSDF weight required to mesh a voxel.
-   * @param required_belonging_corners If classification is used, how many of
-   * the corners of a mesh cube need to labeled as belonging to the submap to
-   * still be meshed. Values are [0-8].
-   * @param integrator_threads Number of threads used to mesh a layer in
-   * parallel.
-   * @param clear_foreign_voxels If true, voxels not belonging to this submap
-   * will be set to the truncation distance.
-   */
   struct Config : public config_utilities::Config<Config> {
+    // Whether to use color information from the TSDF.
     bool use_color = true;
+
+    // Minimum TSDF weight required to mesh a voxel.
     float min_weight = 1e-6;
+
+    // If classification is used, how many of the corners of a mesh cube need to
+    // labeled as belonging to the submap to still be meshed. Values are [0-8].
     int required_belonging_corners = 4;
+
+    // Number of threads used to mesh a layer in parallel.
     int integrator_threads = std::thread::hardware_concurrency();
+
+    // If true, voxels not belonging to this submap will be set to the
+    // truncation distance.
     bool clear_foreign_voxels = false;
 
     Config() { setConfigName("MeshIntegrator"); }
@@ -82,7 +80,7 @@ class MeshIntegrator {
   MeshIntegrator(const MeshIntegrator::Config& config,
                  std::shared_ptr<TsdfLayer> tsdf_layer,
                  std::shared_ptr<MeshLayer> mesh_layer,
-                 std::shared_ptr<ClassLayer> class_layer = nullptr,
+                 std::shared_ptr<ClassLayer> class_layer,
                  float truncation_distance = 0.f);
 
   // Generates the mesh from the tsdf layer.
@@ -98,24 +96,26 @@ class MeshIntegrator {
   bool updateMeshForBlock(const voxblox::BlockIndex& block_index);
 
   void extractBlockMesh(const TsdfBlock& tsdf_block,
-                        const ClassBlock* class_block, voxblox::Mesh* mesh);
+                        const ClassBlock::ConstPtr& class_block,
+                        voxblox::Mesh* mesh);
 
   void extractMeshInsideBlock(const TsdfBlock& tsdf_block,
-                              const ClassBlock* class_block,
+                              const ClassBlock::ConstPtr& class_block,
                               const voxblox::VoxelIndex& index,
                               const Point& coords,
                               voxblox::VertexIndex* next_mesh_index,
                               voxblox::Mesh* mesh);
 
   void extractMeshOnBorder(const TsdfBlock& tsdf_block,
-                           const ClassBlock* class_block,
+                           const ClassBlock::ConstPtr& class_block,
                            const voxblox::VoxelIndex& index,
                            const Point& coords,
                            voxblox::VertexIndex* next_mesh_index,
                            voxblox::Mesh* mesh);
 
   void updateMeshColor(const TsdfBlock& tsdf_block,
-                       const ClassBlock* class_block, voxblox::Mesh* mesh);
+                       const ClassBlock::ConstPtr& class_block,
+                       voxblox::Mesh* mesh);
 
  protected:
   const MeshIntegrator::Config config_;

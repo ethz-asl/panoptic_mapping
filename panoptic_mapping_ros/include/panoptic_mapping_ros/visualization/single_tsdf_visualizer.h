@@ -24,7 +24,12 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
   // Config.
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
-    SubmapVisualizer::Config submap_visualizer_config;
+    // Factor which multiplies the entropy value in order to bring it into
+    // [0,1] range for visualization.
+    float entropy_factor = 1.0f;
+
+    // Standard visualizer config.
+    SubmapVisualizer::Config submap_visualizer;
 
     Config() { setConfigName("SingleTsdfVisualizer"); }
 
@@ -51,6 +56,7 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
  protected:
   void colorMeshBlock(const Submap& submap,
                       voxblox_msgs::MeshBlock* mesh_block);
+  std::function<Color(const ClassVoxel&)> getColoring() const;
   void updateVisInfos(const SubmapCollection& submaps) override;
 
  private:

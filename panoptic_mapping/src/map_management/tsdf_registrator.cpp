@@ -168,11 +168,14 @@ bool TsdfRegistrator::submapsConflict(const Submap& reference,
         }
       } else {
         // Check for class belonging.
+
         if (other.hasClassLayer()) {
-          if (!classVoxelBelongsToSubmap(
-                  *other.getClassLayer().getVoxelPtrByCoordinates(
-                      point.position))) {
-            distance = other.getConfig().truncation_distance;
+          const ClassVoxel* class_voxel =
+              other.getClassLayer().getVoxelPtrByCoordinates(point.position);
+          if (class_voxel) {
+            if (!class_voxel->belongsToSubmap()) {
+              distance = other.getConfig().truncation_distance;
+            }
           }
         }
         if (distance <= -rejection_distance) {

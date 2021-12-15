@@ -166,11 +166,13 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
     const Point position_S = submap.getT_S_M() * position;
     if (submap.getBoundingVolume().contains_S(position_S)) {
       // Check classification for inactive submaps.
-      if (submap.hasClassLayer()) {
-        if (!submap.isActive() &&
-            !classVoxelBelongsToSubmap(
-                *submap.getClassLayer().getVoxelPtrByCoordinates(position_S))) {
-          continue;
+      if (submap.hasClassLayer() && !submap.isActive()) {
+        const ClassVoxel* class_voxel =
+            submap.getClassLayer().getVoxelPtrByCoordinates(position_S);
+        if (class_voxel) {
+          if (class_voxel->belongsToSubmap()) {
+            continue;
+          }
         }
       }
       float sdf;

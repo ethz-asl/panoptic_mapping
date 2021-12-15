@@ -32,6 +32,11 @@ cs_add_library(${PROJECT_NAME}
         src/map/submap_id.cpp
         src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
+        src/map/classification/binary_count.cpp
+        src/map/classification/moving_binary_count.cpp
+        src/map/classification/fixed_count.cpp
+        src/map/classification/variable_count.cpp
+        src/map/classification/uncertainty.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp
@@ -58,8 +63,18 @@ cs_add_library(${PROJECT_NAME}
         src/tools/null_data_writer.cpp
         src/tools/log_data_writer.cpp
         src/tools/evaluation_data_writer.cpp
+        src/tools/serialization.cpp
         )
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
+
+##########
+# Tests #
+##########
+
+if (CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(serialization-test test/serialization.cpp)
+    target_link_libraries(serialization-test ${catkin_LIBRARIES} ${PROJECT_NAME})
+endif()
 
 ##########
 # Export #

@@ -19,7 +19,7 @@
   <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
     
   <!-- Mapper -->
-  <arg name="config" default="flat_groundtruth"/> <!-- flat_groundtruth, flat_detectron, rio_groundtruth, rio_detectron, single_tsdf -->
+  <arg name="config" default="flat_groundtruth"/> <!-- <flat,rio>_<groundtruth,detectron>, single_tsdf -->
   <arg name="shutdown_when_finished" default="false"/> 
   
   <!-- Save/Load maps -->
@@ -34,7 +34,7 @@
   <include file="$(find panoptic_mapping_utils)/launch/play_rio_dataset.launch" pass_all_args="true" if="$(arg use_rio)" />  
   
   <!-- Mapper -->
-  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" ><!--required="true"-->
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="$(arg shutdown_when_finished)">
     <!-- Config -->
     <rosparam file="$(find panoptic_mapping_ros)/config/mapper/$(arg config).yaml"/>
      
