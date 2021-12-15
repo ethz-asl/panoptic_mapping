@@ -202,6 +202,18 @@ TEST(VariableCount, SerializeLayer) {
   testLayerSerialization<VariableCountVoxel, VariableCountLayer>();
 }
 
+TEST(Uncertainty, SerializeVoxel) {
+  testVoxelSerialization<UncertaintyVoxel>();
+}
+
+TEST(Uncertainty, SerializeBlock) {
+  testBlockSerialization<UncertaintyVoxel, UncertaintyLayer>();
+}
+
+TEST(Uncertainty, SerializeLayer) {
+  testLayerSerialization<UncertaintyVoxel, UncertaintyLayer>();
+}
+
 }  // namespace test
 }  // namespace panoptic_mapping
 

@@ -18,8 +18,7 @@ namespace test {
 const float kTol = 0.00001;
 
 // Assertions.
-inline bool checkVoxelEqual(const panoptic_mapping::TsdfVoxel& v1,
-                            const panoptic_mapping::TsdfVoxel& v2) {
+inline bool checkVoxelEqual(const TsdfVoxel& v1, const TsdfVoxel& v2) {
   EXPECT_NEAR(v1.distance, v2.distance, kTol);
   EXPECT_NEAR(v1.weight, v2.weight, kTol);
   EXPECT_EQ(v1.color.r, v2.color.r);
@@ -31,16 +30,16 @@ inline bool checkVoxelEqual(const panoptic_mapping::TsdfVoxel& v1,
           std::fabs(v1.weight - v2.weight) <= kTol);
 }
 
-inline bool checkVoxelEqual(const panoptic_mapping::BinaryCountVoxel& v1,
-                            const panoptic_mapping::BinaryCountVoxel& v2) {
+inline bool checkVoxelEqual(const BinaryCountVoxel& v1,
+                            const BinaryCountVoxel& v2) {
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
   EXPECT_EQ(v1.foreign_count, v2.foreign_count);
   return v1.belongs_count == v2.belongs_count &&
          v1.foreign_count == v2.foreign_count;
 }
 
-inline bool checkVoxelEqual(const panoptic_mapping::FixedCountVoxel& v1,
-                            const panoptic_mapping::FixedCountVoxel& v2) {
+inline bool checkVoxelEqual(const FixedCountVoxel& v1,
+                            const FixedCountVoxel& v2) {
   EXPECT_EQ(v1.counts.size(), v2.counts.size());
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.current_count, v2.current_count);
@@ -51,17 +50,16 @@ inline bool checkVoxelEqual(const panoptic_mapping::FixedCountVoxel& v1,
          v1.current_count == v2.current_count && v1.counts == v2.counts;
 }
 
-inline bool checkVoxelEqual(
-    const panoptic_mapping::MovingBinaryCountVoxel& v1,
-    const panoptic_mapping::MovingBinaryCountVoxel& v2) {
+inline bool checkVoxelEqual(const MovingBinaryCountVoxel& v1,
+                            const MovingBinaryCountVoxel& v2) {
   EXPECT_EQ(v1.belongs_count, v2.belongs_count);
   EXPECT_EQ(v1.foreign_count, v2.foreign_count);
   return v1.belongs_count == v2.belongs_count &&
          v1.foreign_count == v2.foreign_count;
 }
 
-inline bool checkVoxelEqual(const panoptic_mapping::VariableCountVoxel& v1,
-                            const panoptic_mapping::VariableCountVoxel& v2) {
+inline bool checkVoxelEqual(const VariableCountVoxel& v1,
+                            const VariableCountVoxel& v2) {
   EXPECT_EQ(v1.counts.size(), v2.counts.size());
   for (const auto& id_count_pair : v1.counts) {
     auto it = v2.counts.find(id_count_pair.first);
@@ -80,6 +78,18 @@ inline bool checkVoxelEqual(const panoptic_mapping::VariableCountVoxel& v1,
     }
   }
   return true;
+}
+
+inline bool checkVoxelEqual(const UncertaintyVoxel& v1,
+                            const UncertaintyVoxel& v2) {
+  if (!checkVoxelEqual(static_cast<const FixedCountVoxel&>(v1),
+                       static_cast<const FixedCountVoxel&>(v2))) {
+    return false;
+  }
+  EXPECT_EQ(v1.is_ground_truth, v2.is_ground_truth);
+  EXPECT_EQ(v1.uncertainty, v2.uncertainty);
+  return v1.is_ground_truth == v2.is_ground_truth &&
+         v1.uncertainty == v2.uncertainty;
 }
 
 template <typename T>

@@ -10,10 +10,33 @@ ClassVoxelType UncertaintyVoxel::getVoxelType() const {
   return ClassVoxelType::kUncertainty;
 }
 
-std::vector<uint32_t> UncertaintyVoxel::serializeVoxelToInt() const {}
+std::vector<uint32_t> UncertaintyVoxel::serializeVoxelToInt() const {
+  // Serialize the count data.
+  std::vector<uint32_t> result = FixedCountVoxel::serializeVoxelToInt();
+
+  // Append the added data.
+  result.push_back(static_cast<uint32_t>(is_ground_truth));
+  result.push_back(int32FromX32<float>(uncertainty));
+  return result;
+}
 
 bool UncertaintyVoxel::deseriliazeVoxelFromInt(
-    const std::vector<uint32_t>& data, size_t* data_index) {}
+    const std::vector<uint32_t>& data, size_t* data_index) {
+  // De-serialize count data.
+  FixedCountVoxel::deseriliazeVoxelFromInt(data, data_index);
+  if (*data_index + 1 >= data.size()) {
+    LOG(WARNING)
+        << "Can not deserialize voxel from integer data: Out of range (index: "
+        << *data_index << ", data: " << data.size() << ")";
+    return false;
+  }
+
+  // De-serialize the added data.
+  is_ground_truth = data[*data_index];
+  uncertainty = x32FromInt32<float>(data[*data_index + 1]);
+  *data_index += 2;
+  return true;
+}
 
 config_utilities::Factory::RegistrationRos<ClassLayer, UncertaintyLayer, float,
                                            int>

@@ -75,6 +75,12 @@ void randomizeVoxel(VariableCountVoxel* voxel) {
   }
 }
 
+void randomizeVoxel(UncertaintyVoxel* voxel) {
+  randomizeVoxel(static_cast<FixedCountVoxel*>(voxel));
+  voxel->is_ground_truth = getRandomInt(0, 1);
+  voxel->uncertainty = getRandomReal<float>();
+}
+
 }  // namespace test
 }  // namespace panoptic_mapping
 
