@@ -43,11 +43,13 @@ inline bool checkVoxelEqual(const FixedCountVoxel& v1,
   EXPECT_EQ(v1.counts.size(), v2.counts.size());
   EXPECT_EQ(v1.current_index, v2.current_index);
   EXPECT_EQ(v1.current_count, v2.current_count);
+  EXPECT_EQ(v1.total_count, v2.total_count);
   EXPECT_EQ(v1.counts, v2.counts);
 
   return v1.counts.size() == v2.counts.size() &&
          v1.current_index == v2.current_index &&
-         v1.current_count == v2.current_count && v1.counts == v2.counts;
+         v1.current_count == v2.current_count &&
+         v1.total_count == v2.total_count && v1.counts == v2.counts;
 }
 
 inline bool checkVoxelEqual(const MovingBinaryCountVoxel& v1,
@@ -61,6 +63,10 @@ inline bool checkVoxelEqual(const MovingBinaryCountVoxel& v1,
 inline bool checkVoxelEqual(const VariableCountVoxel& v1,
                             const VariableCountVoxel& v2) {
   EXPECT_EQ(v1.counts.size(), v2.counts.size());
+  // NOTE(schmluk): We don't check the current index since this can be ambiguous
+  // for identical maximum counts.
+  EXPECT_EQ(v1.current_count, v2.current_count);
+  EXPECT_EQ(v1.total_count, v2.total_count);
   for (const auto& id_count_pair : v1.counts) {
     auto it = v2.counts.find(id_count_pair.first);
     if (it == v2.counts.end()) {
@@ -77,7 +83,9 @@ inline bool checkVoxelEqual(const VariableCountVoxel& v1,
       return false;
     }
   }
-  return true;
+  return v1.counts.size() == v2.counts.size() &&
+         v1.current_count == v2.current_count &&
+         v1.total_count == v2.total_count;
 }
 
 inline bool checkVoxelEqual(const UncertaintyVoxel& v1,

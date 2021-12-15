@@ -230,11 +230,11 @@ void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
 void SingleTsdfIntegrator::updateUncertaintyVoxel(
     InterpolatorBase* interpolator, const InputData& input,
     UncertaintyVoxel* class_voxel) const {
-  // Do not update voxels which are assigned as groundtruth
+  // Do not update voxels which are assigned as groundtruth.
   if (class_voxel->is_ground_truth) {
     return;
   }
-  // Update Uncertainty Voxel Part
+  // Update Uncertainty Voxel Part.
   const float uncertainty =
       interpolator->interpolateUncertainty(input.uncertaintyImage());
 

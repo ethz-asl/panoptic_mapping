@@ -42,6 +42,28 @@ void VariableCountVoxel::incrementCount(const int id, const float weight) {
   }
   ++total_count;
 }
+
+bool VariableCountVoxel::mergeVoxel(const ClassVoxel& other) {
+  // Check type compatibility.
+  auto voxel = dynamic_cast<const VariableCountVoxel*>(&other);
+  if (!voxel) {
+    LOG(WARNING) << "Can not merge voxels that are not of same type "
+                    "(VariableCountVoxel).";
+    return false;
+  }
+  // No averaging is performed here. This inflates the number of total counts
+  // but keeps the accuracy higher.
+  for (const auto& id_count_pair : voxel->counts) {
+    total_count += id_count_pair.second;
+    counts[id_count_pair.first] += id_count_pair.second;
+    if (counts[id_count_pair.first] > current_count) {
+      current_count = counts[id_count_pair.first];
+      current_index = id_count_pair.first;
+    }
+  }
+  return true;
+}
+
 std::vector<uint32_t> VariableCountVoxel::serializeVoxelToInt() const {
   // To save memory, here we just assume that the IDs stored in the map are in
   // int_16 range (-32k:32k).
@@ -74,23 +96,31 @@ bool VariableCountVoxel::deseriliazeVoxelFromInt(
   }
 
   // Check number of counts to load.
-  const size_t num_counts = data[*data_index] + 1;
-  if (*data_index + num_counts > data.size()) {
+  const size_t length = data[*data_index] + 1;
+  if (*data_index + length > data.size()) {
     LOG(WARNING) << "Can not deserialize voxel from integer data: Not enough "
                     "data (index: "
-                 << *data_index << "-" << (*data_index + num_counts)
+                 << *data_index << "-" << (*data_index + length)
                  << ", data: " << data.size() << ")";
     return false;
   }
 
   // Get the data.
   counts.clear();
-  for (size_t i = 1; i < num_counts; ++i) {
+  total_count = 0;
+  current_index = -1;
+  current_count = 0;
+  for (size_t i = 1; i < length; ++i) {
     std::pair<uint16_t, uint16_t> datum =
         twoInt16FromInt32(data[*data_index + i]);
     counts[static_cast<int16_t>(datum.first)] = datum.second;
+    total_count += datum.second;
+    if (datum.second > current_count) {
+      current_count = datum.second;
+      current_index = datum.first;
+    }
   }
-  *data_index += num_counts;
+  *data_index += length;
   return true;
 }
 

@@ -26,6 +26,7 @@ struct VariableCountVoxel : public ClassVoxel {
   int getBelongingID() const override;
   float getProbability(const int id) const override;
   void incrementCount(const int id, const float weight = 1.f) override;
+  bool mergeVoxel(const ClassVoxel& other) override;
   std::vector<uint32_t> serializeVoxelToInt() const override;
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;

@@ -10,6 +10,31 @@ ClassVoxelType UncertaintyVoxel::getVoxelType() const {
   return ClassVoxelType::kUncertainty;
 }
 
+bool UncertaintyVoxel::mergeVoxel(const ClassVoxel& other) {
+  // Check type compatibility.
+  auto voxel = dynamic_cast<const UncertaintyVoxel*>(&other);
+  if (!voxel) {
+    LOG(WARNING)
+        << "Can not merge voxels that are not of same type (UncertaintyVoxel).";
+    return false;
+  }
+  if (is_ground_truth) {
+    return true;
+  }
+  if (voxel->is_ground_truth) {
+    counts = voxel->counts;
+    current_index = voxel->current_index;
+    current_count = voxel->current_count;
+    uncertainty = voxel->uncertainty;
+    is_ground_truth = true;
+    return true;
+  }
+  FixedCountVoxel::mergeVoxel(other);
+  // We assume that uncertainties can be averaged here.
+  uncertainty = (uncertainty + voxel->uncertainty) / 2.f;
+  return true;
+}
+
 std::vector<uint32_t> UncertaintyVoxel::serializeVoxelToInt() const {
   // Serialize the count data.
   std::vector<uint32_t> result = FixedCountVoxel::serializeVoxelToInt();

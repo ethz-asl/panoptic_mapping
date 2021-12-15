@@ -54,6 +54,27 @@ void MovingBinaryCountVoxel::incrementCount(const int id, const float weight) {
   }
 }
 
+bool MovingBinaryCountVoxel::mergeVoxel(const ClassVoxel& other) {
+  // Check type compatibility.
+  auto voxel = dynamic_cast<const MovingBinaryCountVoxel*>(&other);
+  if (!voxel) {
+    LOG(WARNING) << "Can not merge voxels that are not of same type "
+                    "(MovingBinaryCountVoxel).";
+    return false;
+  }
+  const int new_belongs_count =
+      static_cast<int>(belongs_count) + static_cast<int>(voxel->belongs_count);
+  const int new_foreign_count =
+      static_cast<int>(foreign_count) + static_cast<int>(voxel->foreign_count);
+  const int normalization =
+      (new_belongs_count > 255 || new_foreign_count > 255) ? 2 : 1;
+  belongs_count =
+      static_cast<ClassificationCount>(new_belongs_count / normalization);
+  foreign_count =
+      static_cast<ClassificationCount>(new_foreign_count / normalization);
+  return true;
+}
+
 std::vector<uint32_t> MovingBinaryCountVoxel::serializeVoxelToInt() const {
   // Pack both values into an uint16 and return as uint32, will be further
   // packed by the layer.

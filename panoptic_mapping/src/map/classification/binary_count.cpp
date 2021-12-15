@@ -46,6 +46,21 @@ void BinaryCountVoxel::incrementCount(const int id, const float weight) {
   }
 }
 
+bool BinaryCountVoxel::mergeVoxel(const ClassVoxel& other) {
+  // Check type compatibility.
+  auto voxel = dynamic_cast<const BinaryCountVoxel*>(&other);
+  if (!voxel) {
+    LOG(WARNING)
+        << "Can not merge voxels that are not of same type (BinaryCountVoxel).";
+    return false;
+  }
+  // No averaging is performed here. This inflates the number of total counts
+  // but keeps the accuracy higher.
+  belongs_count += voxel->belongs_count;
+  foreign_count += voxel->foreign_count;
+  return true;
+}
+
 std::vector<uint32_t> BinaryCountVoxel::serializeVoxelToInt() const {
   // Assumes uint16 for counting data. Simply pack both values into a single
   // uint32 via bitshift.
