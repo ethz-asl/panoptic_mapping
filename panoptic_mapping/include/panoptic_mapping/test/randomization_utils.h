@@ -44,7 +44,7 @@ void randomizeVoxel(TsdfVoxel* voxel) {
 
 void randomizeVoxel(BinaryCountVoxel* voxel) {
   voxel->belongs_count = getRandomInt<ClassificationCount>();
-  voxel->belongs_count = getRandomInt<ClassificationCount>();
+  voxel->foreign_count = getRandomInt<ClassificationCount>();
 }
 
 void randomizeVoxel(FixedCountVoxel* voxel) {
@@ -59,6 +59,19 @@ void randomizeVoxel(FixedCountVoxel* voxel) {
       voxel->current_count = count;
       voxel->current_index = i;
     }
+  }
+}
+
+void randomizeVoxel(MovingBinaryCountVoxel* voxel) {
+  voxel->belongs_count = getRandomInt<uint8_t>();
+  voxel->foreign_count = getRandomInt<uint8_t>();
+}
+
+void randomizeVoxel(VariableCountVoxel* voxel) {
+  voxel->counts.clear();
+  for (size_t i = 0; i < getRandomInt<size_t>(0, kMaxNumClasses); ++i) {
+    voxel->counts[getRandomInt<int16_t>()] =
+        getRandomInt<ClassificationCount>();
   }
 }
 

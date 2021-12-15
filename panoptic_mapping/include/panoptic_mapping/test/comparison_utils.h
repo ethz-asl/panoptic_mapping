@@ -1,6 +1,8 @@
 #ifndef PANOPTIC_MAPPING_TEST_COMPARISON_UTILS_H_
 #define PANOPTIC_MAPPING_TEST_COMPARISON_UTILS_H_
+
 #include <random>
+#include <string>
 
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/classification/binary_count.h"
@@ -47,6 +49,37 @@ inline bool checkVoxelEqual(const panoptic_mapping::FixedCountVoxel& v1,
   return v1.counts.size() == v2.counts.size() &&
          v1.current_index == v2.current_index &&
          v1.current_count == v2.current_count && v1.counts == v2.counts;
+}
+
+inline bool checkVoxelEqual(
+    const panoptic_mapping::MovingBinaryCountVoxel& v1,
+    const panoptic_mapping::MovingBinaryCountVoxel& v2) {
+  EXPECT_EQ(v1.belongs_count, v2.belongs_count);
+  EXPECT_EQ(v1.foreign_count, v2.foreign_count);
+  return v1.belongs_count == v2.belongs_count &&
+         v1.foreign_count == v2.foreign_count;
+}
+
+inline bool checkVoxelEqual(const panoptic_mapping::VariableCountVoxel& v1,
+                            const panoptic_mapping::VariableCountVoxel& v2) {
+  EXPECT_EQ(v1.counts.size(), v2.counts.size());
+  for (const auto& id_count_pair : v1.counts) {
+    auto it = v2.counts.find(id_count_pair.first);
+    if (it == v2.counts.end()) {
+      // This is an ugly work around since FAIL() apparently returns void...
+      const std::string error = "ID " + std::to_string(id_count_pair.first) +
+                                " of v1 not found in v2.";
+      EXPECT_EQ(error, "");
+      return false;
+    }
+    EXPECT_EQ(id_count_pair.first, it->first);
+    EXPECT_EQ(id_count_pair.second, it->second);
+    if (id_count_pair.first != it->first ||
+        id_count_pair.second != it->second) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <typename T>

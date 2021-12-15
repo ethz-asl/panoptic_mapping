@@ -47,6 +47,11 @@ class MovingBinaryCountLayer : public ClassLayerImpl<MovingBinaryCountVoxel> {
   MovingBinaryCountLayer(const Config& config, const float voxel_size,
                          const int voxels_per_side);
 
+  // Overwrite these method since we only need half a word per voxel.
+  bool saveBlockToStream(BlockIndex block_index,
+                         std::fstream* outfile_ptr) const override;
+  bool addBlockFromProto(const voxblox::BlockProto& block_proto) override;
+
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
   static std::unique_ptr<ClassLayer> loadFromStream(

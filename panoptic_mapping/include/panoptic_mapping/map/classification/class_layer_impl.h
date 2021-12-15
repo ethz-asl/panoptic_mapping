@@ -83,6 +83,36 @@ class ClassLayerImpl : public ClassLayer {
   FloatingPoint block_size() const override { return layer_.block_size(); }
 
   // Serialization.
+  bool saveBlockToStream(BlockIndex block_index,
+                         std::fstream* outfile_ptr) const override {
+    CHECK_NOTNULL(outfile_ptr);
+    auto block = layer_.getBlockPtrByIndex(block_index);
+    if (!block) {
+      return false;
+    }
+
+    // Save data.
+    voxblox::BlockProto proto;
+    proto.set_has_data(block->has_data());
+    proto.set_voxels_per_side(block->voxels_per_side());
+    proto.set_voxel_size(block->voxel_size());
+    proto.set_origin_x(block->origin().x());
+    proto.set_origin_y(block->origin().y());
+    proto.set_origin_z(block->origin().z());
+    for (size_t i = 0; i < block->num_voxels(); ++i) {
+      for (uint32_t word :
+           reinterpret_cast<const ClassVoxel&>(block->getVoxelByLinearIndex(i))
+               .serializeVoxelToInt()) {
+        proto.add_voxel_data(word);
+      }
+    }
+    if (!voxblox::utils::writeProtoMsgToStream(proto, outfile_ptr)) {
+      LOG(ERROR) << "Could not write class block proto message to stream.";
+      return false;
+    }
+    return true;
+  }
+
   bool saveBlocksToStream(bool include_all_blocks,
                           voxblox::BlockIndexList blocks_to_include,
                           std::fstream* outfile_ptr) const override {
@@ -94,29 +124,9 @@ class ClassLayerImpl : public ClassLayer {
 
     // Write blocks.
     for (const BlockIndex& index : blocks_to_include) {
-      auto block = layer_.getBlockPtrByIndex(index);
-      if (!block) {
-        continue;
-      }
-
-      // Save data.
-      voxblox::BlockProto proto;
-      proto.set_has_data(block->has_data());
-      proto.set_voxels_per_side(block->voxels_per_side());
-      proto.set_voxel_size(block->voxel_size());
-      proto.set_origin_x(block->origin().x());
-      proto.set_origin_y(block->origin().y());
-      proto.set_origin_z(block->origin().z());
-      for (size_t i = 0; i < block->num_voxels(); ++i) {
-        for (uint32_t word : reinterpret_cast<const ClassVoxel&>(
-                                 block->getVoxelByLinearIndex(i))
-                                 .serializeVoxelToInt()) {
-          proto.add_voxel_data(word);
-        }
-      }
-      if (!voxblox::utils::writeProtoMsgToStream(proto, outfile_ptr)) {
-        LOG(ERROR) << "Could not write class block proto message to stream.";
-        return false;
+      if (!saveBlockToStream(index, outfile_ptr)) {
+        LOG(WARNING) << "Could not save block " << index.transpose()
+                     << " to stream.";
       }
     }
     return true;
@@ -182,8 +192,8 @@ class ClassLayerImpl : public ClassLayer {
   ClassBlock::ConstPtr getClassBlockConstPtr(
       const typename voxblox::Block<VoxelT>::ConstPtr& block_ptr) const {
     // NOTE(schmluk): Since const pointers are returned the const-ness is cast
-    // away to create the ClassBlock Wrapper. The block itself should thus still
-    // be protected.
+    // away to create the ClassBlock Wrapper. The block itself should thus
+    // still be protected.
     if (block_ptr) {
       return ClassBlock::ConstPtr(new ClassBlockImpl<VoxelT>(
           std::const_pointer_cast<voxblox::Block<VoxelT>>(block_ptr)));

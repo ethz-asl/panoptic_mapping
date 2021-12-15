@@ -31,8 +31,8 @@ struct SerializationConfig {
   const Point origin = Point(0, 0, 0);
 
   // Number of random tests to run.
-  const size_t num_voxel_tests = 100;
-  const size_t num_block_tests = 5;
+  const size_t num_voxel_tests = 10000;
+  const size_t num_block_tests = 25;
   const size_t num_layer_tests = 5;
   const size_t num_blocks_per_layer = 10;
 
@@ -176,6 +176,30 @@ TEST(FixedCount, SerializeBlock) {
 
 TEST(FixedCount, SerializeLayer) {
   testLayerSerialization<FixedCountVoxel, FixedCountLayer>();
+}
+
+TEST(MovingBinaryCount, SerializeVoxel) {
+  testVoxelSerialization<MovingBinaryCountVoxel>();
+}
+
+TEST(MovingBinaryCount, SerializeBlock) {
+  testBlockSerialization<MovingBinaryCountVoxel, MovingBinaryCountLayer>();
+}
+
+TEST(MovingBinaryCount, SerializeLayer) {
+  testLayerSerialization<MovingBinaryCountVoxel, MovingBinaryCountLayer>();
+}
+
+TEST(VariableCount, SerializeVoxel) {
+  testVoxelSerialization<VariableCountVoxel>();
+}
+
+TEST(VariableCount, SerializeBlock) {
+  testBlockSerialization<VariableCountVoxel, VariableCountLayer>();
+}
+
+TEST(VariableCount, SerializeLayer) {
+  testLayerSerialization<VariableCountVoxel, VariableCountLayer>();
 }
 
 }  // namespace test

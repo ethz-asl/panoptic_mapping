@@ -18,9 +18,17 @@ inline uint32_t int32FromTwoInt16(uint16_t first, uint16_t second) {
   return ((static_cast<uint32_t>(first) << 16) + second);
 }
 
+inline uint16_t int16FromTwoInt8(uint8_t first, uint8_t second) {
+  return ((static_cast<uint16_t>(first) << 8) + second);
+}
+
 inline std::pair<uint16_t, uint16_t> twoInt16FromInt32(uint32_t data) {
   return {static_cast<uint16_t>(data >> 16),
           static_cast<uint16_t>(data & 0xFFFF)};
+}
+
+inline std::pair<uint8_t, uint8_t> twoInt8FromInt16(uint16_t data) {
+  return {static_cast<uint8_t>(data >> 8), static_cast<uint8_t>(data & 0xFF)};
 }
 
 std::unique_ptr<ClassLayer> loadClassLayerFromStream(
