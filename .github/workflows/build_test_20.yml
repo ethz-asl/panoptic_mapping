@@ -55,7 +55,7 @@ jobs:
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo 
         cd $HOME/catkin_ws/src
         ln -s $GITHUB_WORKSPACE
-        wstool init . ./panoptic_mapping/panoptic_mapping.rosinstall
+        wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall
         wstool update
         catkin build -j$(nproc) -l$(nproc) panoptic_mapping_utils
 
