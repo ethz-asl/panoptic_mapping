@@ -26,9 +26,8 @@ jobs:
       if: ${{ matrix.config.container == 'ros:noetic-ros-base-focal' }}
       run: |
         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-        apt update && apt install -y python3-pip
+        apt update && apt install -y python3-pip python3-wstool python3-catkin-tools autoconf libtool git
         pip3 install osrf-pycommon
-        apt update && apt install -y python3-wstool python3-catkin-tools
       
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
@@ -46,7 +45,6 @@ jobs:
       shell: bash
       run: |
         apt update
-        apt install -y autoconf libtool git
         mkdir -p $HOME/catkin_ws/src;
         cd $HOME/catkin_ws
         catkin init
