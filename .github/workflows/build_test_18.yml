@@ -59,13 +59,14 @@ jobs:
 
     - name: Run Unit Tests
       working-directory:
+      shell: bash
       run: |
         cd $HOME/catkin_ws/src
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
         catkin build terrain_planner --no-deps -i --catkin-make-args tests
         source $HOME/catkin_ws/devel/setup.bash
         status=0 && for f in $HOME/catkin_ws/devel/lib/*/*-test; do $f || exit 1; done
-      shell: bash
+
 
       
 

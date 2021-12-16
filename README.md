@@ -15,9 +15,17 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 * [Datasets](#Datasets)
 
 **Examples**
-* [Running the Panoptic Mapper](#running-the-panoptic-mapper)
-* [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
-* [Running the RIO Dataset](#running-the-rio-dataset)
+- [Panoptic Mapping](#panoptic-mapping)
+- [Table of Contents](#table-of-contents)
+- [Paper](#paper)
+- [Video](#video)
+- [Installation](#installation)
+- [Datasets](#datasets)
+- [Examples](#examples)
+  - [Running the Panoptic Mapper](#running-the-panoptic-mapper)
+  - [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
+  - [Running the RIO Dataset](#running-the-rio-dataset)
+- [Contributing](#contributing)
 
 **Other**
 * [Contributing](#Contributing)
@@ -80,15 +88,17 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
     cd ~/catkin_ws/src
     ```
 
-3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh):
+3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) or HTTPS:
     ```shell script
-    git clone git@github.com:ethz-asl/panoptic_mapping.git
+    git clone git@github.com:ethz-asl/panoptic_mapping.git  # SSH
+    git clone https://github.com/ethz-asl/panoptic_mapping.git  # HTTPS
     ```
 
 4. Download and install package dependencies using ros install:
     * If you created a new workspace.
     ```shell script
-    wstool init . ./panoptic_mapping/panoptic_mapping.rosinstall
+    wstool init . ./panoptic_mapping/panoptic_mapping_ssh.rosinstall    # SSH
+    wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall  # HTTPS
     wstool update
     ```
 
