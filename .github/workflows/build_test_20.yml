@@ -1,0 +1,73 @@
+name: Ubuntu 20 + ROS Noetic
+on:
+  push:
+    branches:
+    - 'main'
+  pull_request:
+    branches:
+    - '*'
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {name: 'Ubuntu 20 + ROS Noetic', rosdistro: 'noetic', container: 'ros:noetic-ros-base-focal'}
+    container: ${{ matrix.config.container }}
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        token: ${{ secrets.ACCESS_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }} 
+        
+    - name: Install System Deps on Noetic
+      if: ${{ matrix.config.container == 'ros:noetic-ros-base-focal' }}
+      run: |
+        apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+        apt update && apt install -y python3-pip
+        pip3 install osrf-pycommon
+        apt update && apt install -y python3-wstool python3-catkin-tools
+      
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1
+      
+    - name: Configure ccache
+      shell: bash
+      run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        ccache --max-size=1G
+        
+    - name: Release Build Test
+      working-directory: 
+      env:
+        DEBIAN_FRONTEND: noninteractiv
+      shell: bash
+      run: |
+        apt update
+        apt install -y autoconf libtool git
+        mkdir -p $HOME/catkin_ws/src;
+        cd $HOME/catkin_ws
+        catkin init
+        catkin config --extend "/opt/ros/${{matrix.config.rosdistro}}"
+        catkin config --merge-devel
+        catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+        cd $HOME/catkin_ws/src
+        ln -s $GITHUB_WORKSPACE
+        wstool init . ./panoptic_mapping/panoptic_mapping.rosinstall
+        wstool update
+        catkin build -j$(nproc) -l$(nproc) panoptic_mapping_utils
+
+    - name: Run Unit Tests
+      working-directory:
+      run: |
+        cd $HOME/catkin_ws/src
+        catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
+        catkin build terrain_planner --no-deps -i --catkin-make-args tests
+        source $HOME/catkin_ws/devel/setup.bash
+        status=0 && for f in $HOME/catkin_ws/devel/lib/*/*-test; do $f || exit 1; done
+      shell: bash
+
+      
+
