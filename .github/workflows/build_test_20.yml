@@ -55,6 +55,8 @@ jobs:
         ln -s $GITHUB_WORKSPACE
         wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall
         wstool update
+        rosdep update
+        rosdep install --from-paths src --ignore-src -y --rosdistro ${{matrix.config.rosdistro}}
         catkin build -j$(nproc) -l$(nproc) panoptic_mapping_utils
 
     - name: Run Unit Tests
