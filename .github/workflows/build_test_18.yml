@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {name: 'Ubuntu 18 + ROS Melodic', rosdistro: 'melodic', container: 'ros:melodic-ros-base-bionic'}
+          - {name: 'Ubuntu 18 + ROS Melodic: Build + Tests', rosdistro: 'melodic', container: 'ros:melodic-ros-base-bionic'}
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v1
@@ -28,15 +28,28 @@ jobs:
         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
         apt update && apt install -y python-wstool python-catkin-tools  autoconf libtool git  
 
-        
-    - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1
-      
-    - name: Configure ccache
-      shell: bash
+ - name: Download ccache
+      id: ccache
+      shell: cmake -P {0}
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
-        ccache --max-size=1G
+        set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v3.7.7/ubuntu-latest.tar.xz")
+        file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
+
+    - name: Prepare ccache timestamp
+      id: ccache_cache_timestamp
+      shell: cmake -P {0}
+      run: |
+        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+        message("::set-output name=timestamp::${current_date}")
+
+    - name: ccache cache files
+      uses: actions/cache@v1.1.0
+      with:
+        path: .ccache
+        key: ${{ matrix.config.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+        restore-keys: |
+          ${{ matrix.config.name }}-ccache-
         
     - name: Release Build Test
       working-directory: 
