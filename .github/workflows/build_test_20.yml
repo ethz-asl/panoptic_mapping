@@ -1,4 +1,4 @@
-name: Ubuntu 20 + ROS Noetic
+name: 'Ubuntu 20 + ROS Noetic: Build + Tests '
 on:
   push:
     branches:
@@ -14,13 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {name: 'Ubuntu 20 + ROS Noetic: Build + Tests: ', rosdistro: 'noetic', container: 'ros:noetic-ros-base-focal'}
+          - {name: 'Ubuntu 20 + ROS Noetic: Build + Tests ', rosdistro: 'noetic', container: 'ros:noetic-ros-base-focal'}
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v1
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
-        github-token: ${{ secrets.GITHUB_TOKEN }} 
 
     - name: Setup ccache
       shell: bash
@@ -34,6 +33,7 @@ jobs:
         echo "Set CCACHE_STAMP=$CCACHE_STAMP"
         echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
         echo "CCACHE_STAMP=$CCACHE_STAMP" >> $GITHUB_ENV
+        echo "PATH=$PATH" >> $GITHUB_ENV
         mkdir -p $CCACHE_DIR
         ccache --max-size=1G
 
@@ -58,7 +58,6 @@ jobs:
         DEBIAN_FRONTEND: noninteractiv
       shell: bash
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
         which g++ gcc
         apt update
         mkdir -p $HOME/catkin_ws/src;

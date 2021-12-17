@@ -20,7 +20,6 @@ jobs:
     - uses: actions/checkout@v1
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup ccache
       shell: bash
@@ -34,6 +33,7 @@ jobs:
         echo "Set CCACHE_STAMP=$CCACHE_STAMP"
         echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
         echo "CCACHE_STAMP=$CCACHE_STAMP" >> $GITHUB_ENV
+        echo "PATH=$PATH" >> $GITHUB_ENV
         mkdir -p $CCACHE_DIR
         ccache --max-size=1G
 
@@ -57,7 +57,6 @@ jobs:
         DEBIAN_FRONTEND: noninteractiv
       shell: bash
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
         which g++ gcc
         apt update
         mkdir -p $HOME/catkin_ws/src;
@@ -78,7 +77,6 @@ jobs:
       working-directory:
       shell: bash
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
         which g++ gcc
         cd $HOME/catkin_ws/src
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
