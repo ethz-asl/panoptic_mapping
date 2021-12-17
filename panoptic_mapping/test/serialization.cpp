@@ -18,6 +18,7 @@
 #include "panoptic_mapping/map/classification/variable_count.h"
 #include "panoptic_mapping/test/comparison_utils.h"
 #include "panoptic_mapping/test/randomization_utils.h"
+#include "panoptic_mapping/test/temporary_file.h"
 
 namespace panoptic_mapping {
 namespace test {
@@ -71,18 +72,14 @@ inline void testBlockSerialization() {
     }
 
     // Save and load via temporary filestream.
-    const std::string file_name =
-        testing::TempDir() + "panoptic_mapping_serialization_test.tmp";
-    std::fstream f(file_name, std::fstream::in | std::fstream::out |
-                                  std::fstream::trunc | std::fstream::binary);
-    EXPECT_TRUE(f.is_open());
-    EXPECT_TRUE(before.saveBlocksToStream(true, voxblox::BlockIndexList(), &f));
+    TempFile tmp("serialization_test");
+    EXPECT_TRUE(tmp);
+    EXPECT_TRUE(before.saveBlocksToStream(true, voxblox::BlockIndexList(),
+                                          &tmp.stream()));
     size_t tmp_byte_offset = 0;
     voxblox::BlockProto block_proto;
-    EXPECT_TRUE(voxblox::utils::readProtoMsgFromStream(&f, &block_proto,
-                                                       &tmp_byte_offset));
-    f.close();
-    std::experimental::filesystem::remove(file_name);
+    EXPECT_TRUE(voxblox::utils::readProtoMsgFromStream(
+        &tmp.stream(), &block_proto, &tmp_byte_offset));
 
     // De-serialize the block and check.
     LayerT after(typename LayerT::Config(), config.voxel_size,
@@ -114,10 +111,8 @@ inline void testLayerSerialization() {
     }
 
     // Save and load via temporary filestream.
-    const std::string file_name =
-        testing::TempDir() + "panoptic_mapping_serialization_test.tmp";
-    std::fstream f(file_name, std::fstream::in | std::fstream::out |
-                                  std::fstream::trunc | std::fstream::binary);
+    TempFile tmp("serialization_test");
+    EXPECT_TRUE(tmp);
     // TODO(schmluk): it might be neater to move submap serialization also to
     // the serialization header.
     SubmapProto submap_proto;
@@ -125,23 +120,21 @@ inline void testLayerSerialization() {
     submap_proto.set_num_class_blocks(before.getNumberOfAllocatedBlocks());
     submap_proto.set_voxel_size(config.voxel_size);
     submap_proto.set_voxels_per_side(config.voxels_per_side);
-    EXPECT_TRUE(f.is_open());
-    EXPECT_TRUE(voxblox::utils::writeProtoMsgToStream(submap_proto, &f));
-    EXPECT_TRUE(before.saveBlocksToStream(true, voxblox::BlockIndexList(), &f));
+    EXPECT_TRUE(
+        voxblox::utils::writeProtoMsgToStream(submap_proto, &tmp.stream()));
+    EXPECT_TRUE(before.saveBlocksToStream(true, voxblox::BlockIndexList(),
+                                          &tmp.stream()));
     size_t tmp_byte_offset = 0;
 
     SubmapProto submap_proto_after;
-    EXPECT_TRUE(voxblox::utils::readProtoMsgFromStream(&f, &submap_proto_after,
-                                                       &tmp_byte_offset));
-    auto loaded =
-        loadClassLayerFromStream(submap_proto_after, &f, &tmp_byte_offset);
+    EXPECT_TRUE(voxblox::utils::readProtoMsgFromStream(
+        &tmp.stream(), &submap_proto_after, &tmp_byte_offset));
+    auto loaded = loadClassLayerFromStream(submap_proto_after, &tmp.stream(),
+                                           &tmp_byte_offset);
     if (!loaded) {
       FAIL() << "Could not loadClassLayerFromStream";
       return;
     }
-
-    f.close();
-    std::experimental::filesystem::remove(file_name);
 
     // Check the layers for type and content.
     EXPECT_EQ(before.getVoxelType(), loaded->getVoxelType());
