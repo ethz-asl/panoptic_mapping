@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {name: 'Ubuntu 18 + ROS Melodic', rosdistro: 'melodic', container: 'ros:melodic-ros-base-bionic'}
+          - {name: 'Ubuntu 18 + ROS Melodic: Build + Tests ', rosdistro: 'melodic', container: 'ros:melodic-ros-base-bionic'}
     container: ${{ matrix.config.container }}
     steps:
     - uses: actions/checkout@v1
@@ -22,34 +22,34 @@ jobs:
         token: ${{ secrets.ACCESS_TOKEN }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Setup ccache
+      shell: bash
+      run: |
+        apt update && apt install -y ccache
+        export PATH="/usr/lib/ccache:$PATH"
+        export CCACHE_DIR=$HOME/catkin_ws/ccache
+        export CCACHE_STAMP=$(date +%Y-%m-%d_%H-%M-%S)
+        echo "Updated PATH=$PATH"
+        echo "Set CCACHE_DIR=$CCACHE_DIR"
+        echo "Set CCACHE_STAMP=$CCACHE_STAMP"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+        echo "CCACHE_STAMP=$CCACHE_STAMP" >> $GITHUB_ENV
+        mkdir -p $CCACHE_DIR
+        ccache --max-size=1G
+
+    - name: Cache ccache files
+      uses: actions/cache@v1.1.0
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ${{ matrix.config.name }}-ccache-${{ env.CCACHE_STAMP }}
+        restore-keys: |
+          ${{ matrix.config.name }}-ccache-
+
     - name: Install System Deps on Melodic
       if: ${{ matrix.config.container == 'ros:melodic-ros-base-bionic' }}
       run: |
         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
         apt update && apt install -y python-wstool python-catkin-tools  autoconf libtool git  
-
-    - name: Download ccache
-      id: ccache
-      shell: cmake -P {0}
-      run: |
-        set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v3.7.7/ubuntu-latest.tar.xz")
-        file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
-
-    - name: Prepare ccache timestamp
-      id: ccache_cache_timestamp
-      shell: cmake -P {0}
-      run: |
-        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
-        message("::set-output name=timestamp::${current_date}")
-
-    - name: ccache cache files
-      uses: actions/cache@v1.1.0
-      with:
-        path: .ccache
-        key: ${{ matrix.config.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
-        restore-keys: |
-          ${{ matrix.config.name }}-ccache-
 
     - name: Release Build Test
       working-directory: 
@@ -57,6 +57,8 @@ jobs:
         DEBIAN_FRONTEND: noninteractiv
       shell: bash
       run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        which g++ gcc
         apt update
         mkdir -p $HOME/catkin_ws/src;
         cd $HOME/catkin_ws
@@ -76,6 +78,8 @@ jobs:
       working-directory:
       shell: bash
       run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        which g++ gcc
         cd $HOME/catkin_ws/src
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
         catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
