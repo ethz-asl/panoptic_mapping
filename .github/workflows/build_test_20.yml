@@ -6,7 +6,7 @@ on:
   pull_request:
     branches:
     - '*'
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
         apt update && apt install -y python3-pip python3-wstool python3-catkin-tools autoconf libtool git
         pip3 install osrf-pycommon
-      
+
    - name: Download ccache
       id: ccache
       shell: cmake -P {0}
@@ -51,7 +51,7 @@ jobs:
         key: ${{ matrix.config.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
         restore-keys: |
           ${{ matrix.config.name }}-ccache-
-        
+
     - name: Release Build Test
       working-directory: 
       env:
@@ -82,7 +82,3 @@ jobs:
         catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
         source $HOME/catkin_ws/devel/setup.bash
         status=0 && for f in $HOME/catkin_ws/devel/lib/panoptic_mapping/*-test; do $f || exit 1; done
-
-
-      
-

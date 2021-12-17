@@ -21,7 +21,7 @@ jobs:
       with:
         token: ${{ secrets.ACCESS_TOKEN }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Install System Deps on Melodic
       if: ${{ matrix.config.container == 'ros:melodic-ros-base-bionic' }}
       run: |
@@ -50,7 +50,7 @@ jobs:
         key: ${{ matrix.config.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
         restore-keys: |
           ${{ matrix.config.name }}-ccache-
-        
+
     - name: Release Build Test
       working-directory: 
       env:
@@ -80,8 +80,5 @@ jobs:
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
         catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
         source $HOME/catkin_ws/devel/setup.bash
-        status=0 && for f in $HOME/catkin_ws/devel/lib/panoptic_mapping/*-test; do $f || exit 1; done
-
-
-      
-
+        status=0 && for f in $HOME/catkin_ws/devel/lib/panoptic_mapping/*-test; do $f || exit 1; done   
+        
