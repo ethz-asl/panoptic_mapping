@@ -65,9 +65,9 @@ jobs:
       run: |
         cd $HOME/catkin_ws/src
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
-        catkin build terrain_planner --no-deps -i --catkin-make-args tests
+        catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
         source $HOME/catkin_ws/devel/setup.bash
-        status=0 && for f in $HOME/catkin_ws/devel/lib/*/*-test; do $f || exit 1; done
+        status=0 && for f in $HOME/catkin_ws/devel/lib/panoptic_mapping/*-test; do $f || exit 1; done
 
 
       
