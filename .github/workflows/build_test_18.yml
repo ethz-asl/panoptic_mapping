@@ -1,4 +1,4 @@
-name: Ubuntu 18 + ROS Melodic
+name: 'Ubuntu 18 + ROS Melodic: Build + Tests '
 on:
   push:
     branches:
