@@ -29,7 +29,7 @@ jobs:
         apt update && apt install -y python3-pip python3-wstool python3-catkin-tools autoconf libtool git
         pip3 install osrf-pycommon
 
-   - name: Download ccache
+    - name: Download ccache
       id: ccache
       shell: cmake -P {0}
       run: |

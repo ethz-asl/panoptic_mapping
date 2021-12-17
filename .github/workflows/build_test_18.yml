@@ -28,7 +28,7 @@ jobs:
         apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
         apt update && apt install -y python-wstool python-catkin-tools  autoconf libtool git  
 
- - name: Download ccache
+    - name: Download ccache
       id: ccache
       shell: cmake -P {0}
       run: |
@@ -81,4 +81,3 @@ jobs:
         catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
         source $HOME/catkin_ws/devel/setup.bash
         status=0 && for f in $HOME/catkin_ws/devel/lib/panoptic_mapping/*-test; do $f || exit 1; done   
-        
