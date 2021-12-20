@@ -58,7 +58,6 @@ jobs:
         DEBIAN_FRONTEND: noninteractiv
       shell: bash
       run: |
-        which g++ gcc
         apt update
         mkdir -p $HOME/catkin_ws/src;
         cd $HOME/catkin_ws
@@ -78,8 +77,6 @@ jobs:
       working-directory:
       shell: bash
       run: |
-        export PATH="/usr/lib/ccache:$PATH"
-        which g++ gcc
         cd $HOME/catkin_ws/src
         catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCATKIN_ENABLE_TESTING=True
         catkin build panoptic_mapping --no-deps -i --catkin-make-args tests
