@@ -51,52 +51,45 @@ If you find this package useful for your research, please consider citing our pa
 A short video overview explaining the approach will be released upon publication.
 
 # Installation
-Installation instructions for Linux. The repository was developed on Ubuntu 18.04 with ROS melodic. The repository was also tested on Ubuntu 20.04 with ROS noetic, replace python with python3 in the installation instructions..
+Installation instructions for Linux. The repository was developed and tested on Ubuntu 18.04 with ROS melodic and Ubuntu 20.04 with ROS noetic.
 
-**Prerequisites**
+<details>
+  <summary>Ubuntu 18.04 + ROS Melodic.</summary>
 
-1. If not already done so, install [ROS](http://wiki.ros.org/ROS/Installation) (Desktop-Full is recommended).
+  **Prerequisites**
 
-2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
+  1. If not already done so, install [ROS](http://wiki.ros.org/ROS/Installation) (Desktop-Full is recommended).
+
+  2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
     ```shell script    
-    # Create a new workspace
-    sudo apt-get install python-catkin-tools  #python3-catkin-tools for noetic
+    sudo apt-get install python-catkin-tools  
     mkdir -p ~/catkin_ws/src
     cd ~/catkin_ws
     catkin init
-    catkin config --extend /opt/ros/$ROS_DISTRO
+    catkin config --extend /opt/ros/melodic
     catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
     catkin config --merge-devel
     ```
 
-**Installation**
+  **Installation**
 
-1. Install system dependencies:
+  1. Install system dependencies:
+    ```shell script
+    sudo apt-get install python-wstool python-catkin-tools autoconf libtool git  
+    ```
     
-      Ubuntu 18.04 + ROS Melodic:
-    
-      ```shell script
-      sudo apt-get install python-wstool python-catkin-tools
-      ```
-      
-      Ubuntu 20.04 + ROS Noetic:
-    
-      ```shell script
-      sudo apt-get install python3-wstool python3-catkin-tools
-      ```
-    
-2. Move to your catkin workspace:
+  2. Move to your catkin workspace:
     ```shell script
     cd ~/catkin_ws/src
     ```
 
-3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) or HTTPS:
+  3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) or HTTPS:
     ```shell script
     git clone git@github.com:ethz-asl/panoptic_mapping.git  # SSH
     git clone https://github.com/ethz-asl/panoptic_mapping.git  # HTTPS
     ```
 
-4. Download and install package dependencies using ros install:
+  4. Download and install package dependencies using ros install:
     * If you created a new workspace.
     ```shell script
     wstool init . ./panoptic_mapping/panoptic_mapping_ssh.rosinstall    # SSH
@@ -110,11 +103,74 @@ Installation instructions for Linux. The repository was developed on Ubuntu 18.0
     wstool update
     ```
 
-5. Compile and source:
+  5. Compile and source:
     ```shell script
     catkin build panoptic_mapping_utils
     source ../devel/setup.bash
     ```
+
+</details>
+
+<details>
+  <summary>Ubuntu 20.04 + ROS Noetic.</summary>
+
+  **Prerequisites**
+
+  1. If not already done so, install [ROS](http://wiki.ros.org/ROS/Installation) (Desktop-Full is recommended).
+
+  2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
+    ```shell script    
+    sudo apt-get install python3-catkin-tools
+    mkdir -p ~/catkin_ws/src
+    cd ~/catkin_ws
+    catkin init
+    catkin config --extend /opt/ros/noetic
+    catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    catkin config --merge-devel
+    ```
+
+  **Installation**
+
+  1. Install system dependencies:
+    ```shell script
+    sudo apt-get install python3-pip python3-wstool python3-catkin-tools autoconf libtool git
+    pip3 install osrf-pycommon
+    ```
+    
+  2. Move to your catkin workspace:
+    ```shell script
+    cd ~/catkin_ws/src
+    ```
+
+  3. Download repo using [SSH](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) or HTTPS:
+    ```shell script
+    git clone git@github.com:ethz-asl/panoptic_mapping.git  # SSH
+    git clone https://github.com/ethz-asl/panoptic_mapping.git  # HTTPS
+    ```
+
+  4. Download and install package dependencies using ros install:
+    * If you created a new workspace.
+    ```shell script
+    wstool init . ./panoptic_mapping/panoptic_mapping_ssh.rosinstall    # SSH
+    wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall  # HTTPS
+    wstool update
+    ```
+
+    * If you use an existing workspace. Notice that some dependencies require specific branches that will be checked out.
+    ```shell script
+    wstool merge -t . ./panoptic_mapping/panoptic_mapping.rosinstall
+    wstool update
+    ```
+
+  5. Compile and source:
+    ```shell script
+    catkin build panoptic_mapping_utils
+    source ../devel/setup.bash
+    ```
+
+</details>
+
+
 # Datasets
 The datasets described in the paper and used for the demo can be downloaded from the [ASL Datasets](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
 
