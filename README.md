@@ -17,17 +17,9 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 * [Datasets](#Datasets)
 
 **Examples**
-- [Panoptic Mapping](#panoptic-mapping)
-- [Table of Contents](#table-of-contents)
-- [Paper](#paper)
-- [Video](#video)
-- [Installation](#installation)
-- [Datasets](#datasets)
-- [Examples](#examples)
-  - [Running the Panoptic Mapper](#running-the-panoptic-mapper)
-  - [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
-  - [Running the RIO Dataset](#running-the-rio-dataset)
-- [Contributing](#contributing)
+- [Running the Panoptic Mapper](#running-the-panoptic-mapper)
+- [Monolithic Semantic Mapping](#monolithic-semantic-mapping)
+- [Running the RIO Dataset](#running-the-rio-dataset)
 
 **Other**
 * [Contributing](#Contributing)
