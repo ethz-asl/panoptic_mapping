@@ -20,11 +20,13 @@ void SingleTSDFTracker::Config::checkParams() const {
 
 void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
+  setupParam("tracking_metric", &tracking_metric);
   setupParam("submap", &submap);
   setupParam("use_detectron", &use_detectron);
   setupParam("use_detectron_panoptic", &use_detectron_panoptic);
   setupParam("renderer", &renderer);
   setupParam("min_new_instance_size", &min_new_instance_size);
+  setupParam("match_acceptance_threshold", &match_acceptance_threshold);
 }
 
 SingleTSDFTracker::SingleTSDFTracker(const Config& config,
@@ -61,11 +63,12 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   }
 
   // Use only semantic information
-  if (config_.use_detectron) {
+  if (config_.use_detectron && !config_.use_detectron_panoptic) {
     parseDetectronClasses(input);
   }
+
   // Use both semantic and instance level information
-  else if (config_.use_detectron_panoptic) {
+  if (config_.use_detectron_panoptic) {
     // Convert the IDs in the ID image to panoptic ids
     parseDetectronPanopticLabels(input);
 
@@ -77,7 +80,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
     // Render all the panoptic entities visible in the map
     TrackingInfoAggregator tracking_data = computeTrackingData(submaps, input);
-
+    std::set<int> matched_ids;
     for (const int input_id : tracking_data.getInputIDs()) {
       bool matched = false;
       int matched_id = 0;
@@ -85,8 +88,8 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
       // Compute IoU with all rendered segments
       std::vector<std::pair<int, float>> ids_values;
-      bool any_overlap =
-          tracking_data.getAllMetrics(input_id, &ids_values, "iou");
+      bool any_overlap = tracking_data.getAllMetrics(input_id, &ids_values,
+                                                     config_.tracking_metric);
       if (!any_overlap) {
         continue;
       }
@@ -94,28 +97,33 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       const auto input_class_id = input_id / kPanopticLabelDivisor_;
 
       for (const auto& id_value : ids_values) {
-        // FIXME: this threshold should be either configurable or a constexpr!
-        if (id_value.second < 0.5) {
+        if (id_value.second < config_.match_acceptance_threshold) {
           // No more matches possible as matches are ordered in decreasing order
           break;
-        } else {
-          // Check the semantic class is the same
-          const auto class_id = id_value.first / kPanopticLabelDivisor_;
-          if (class_id != input_class_id) {
-            continue;
-          }
-
-          // Found the best match.
-          matched = true;
-          matched_id = id_value.first;
-          score = id_value.second;
-          break;
         }
+
+        // Check that the semantic class is the same
+        const auto class_id = id_value.first / kPanopticLabelDivisor_;
+        if (class_id != input_class_id) {
+          continue;
+        }
+
+        // Make sure rendered and predicted segments are matched 1-to-1
+        if (matched_ids.find(id_value.first) != matched_ids.end()) {
+          continue;
+        }
+
+        // Found the best match.
+        matched = true;
+        matched_id = id_value.first;
+        score = id_value.second;
+        break;
       }
 
       if (matched) {
         ++n_matched;
         input_to_output[input_id] = matched_id;
+        matched_ids.insert(matched_id);
       } else {
         bool new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
                             config_.min_new_instance_size;

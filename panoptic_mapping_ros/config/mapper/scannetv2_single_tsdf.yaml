@@ -36,6 +36,9 @@ id_tracker:
   use_class_layer: true
   use_detectron: true
   use_detectron_panoptic: true
+  min_new_instance_size: 1000
+  tracking_metric: IoU # IoU, overlap
+  match_acceptance_threshold: 0.6
   classification:
     type: variable_count
 

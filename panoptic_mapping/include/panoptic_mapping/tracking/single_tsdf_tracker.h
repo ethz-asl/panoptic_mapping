@@ -38,6 +38,9 @@ class SingleTSDFTracker : public IDTrackerBase {
     // multiples of the voxel size.
     float depth_tolerance = -1.0;
 
+    // Which tracking metric to compute. Supported are 'IoU' and 'overlap'.
+    std::string tracking_metric = "IoU";
+
     // Accept matches that have at least this value in the computed tracking
     // metric.
     float match_acceptance_threshold = 0.5;
@@ -47,7 +50,7 @@ class SingleTSDFTracker : public IDTrackerBase {
     int rendering_subsampling = 1;
 
     // Only initialize a new instance for masks with this many pixels
-    int min_new_instance_size = 1000;
+    int min_new_instance_size = 0;
 
     // Renderer settings. The renderer is only used for visualization purposes.
     MapRenderer::Config renderer;
