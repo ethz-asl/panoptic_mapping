@@ -35,9 +35,9 @@ id_tracker:
   voxels_per_side: 16
   use_class_layer: true
   use_detectron: true
-  use_instance_classification: false
+  use_detectron_panoptic: true
   classification:
-    type: fixed_count
+    type: variable_count
 
 tsdf_integrator:
   type: single_tsdf
@@ -101,14 +101,7 @@ visualization:
     visualize_tracking: true
 
 data_writer:
-  type: evaluation
-  verbosity: 4
-  store_map_every_n_frames: 4
-
-  log_data_writer_config:
-    output_directory: /home/giuliano/mt_ipp_panoptic_mapping/logs/single_tsdf
-    file_name: logs
-    verbosity: 4
-    evaluate_number_of_submaps: true
-    evaluate_number_of_objects: true
+  type: log
+  verbosity: 1
+  output_directory: /tmp/logs
     

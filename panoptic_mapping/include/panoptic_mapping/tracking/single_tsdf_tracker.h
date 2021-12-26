@@ -8,9 +8,13 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/labels/label_handler_base.h"
 #include "panoptic_mapping/map/classification/class_layer.h"
+#include "panoptic_mapping/tools/map_renderer.h"
 #include "panoptic_mapping/tracking/id_tracker_base.h"
 
 namespace panoptic_mapping {
+
+class TrackingInfo;
+class TrackingInfoAggregator;
 
 /**
  * @brief Allocates a single submap to emulate running a monolithic TSDF grid as
@@ -27,7 +31,26 @@ class SingleTSDFTracker : public IDTrackerBase {
 
     // System params.
     bool use_detectron = false;
-    bool use_instance_classification = false;
+    bool use_detectron_panoptic = false;
+
+    // Count as valid iso-surface points whose projected depth is within this
+    // distance in meters of the measured depth. Negative values indicate
+    // multiples of the voxel size.
+    float depth_tolerance = -1.0;
+
+    // Accept matches that have at least this value in the computed tracking
+    // metric.
+    float match_acceptance_threshold = 0.5;
+
+    // Subsample the number of looked up vertices when using
+    // 'use_approximate_rendering=false' by this factor squared.
+    int rendering_subsampling = 1;
+
+    // Only initialize a new instance for masks with this many pixels
+    int min_new_instance_size = 1000;
+
+    // Renderer settings. The renderer is only used for visualization purposes.
+    MapRenderer::Config renderer;
 
     Config() { setConfigName("SingleTSDFTracker"); }
 
@@ -47,7 +70,43 @@ class SingleTSDFTracker : public IDTrackerBase {
 
   void parseDetectronClasses(InputData* input);
 
+  /**
+   * @brief Convert ids in the ID image to panoptic ids using Detectron labels
+   *
+   * @param input
+   */
+  void parseDetectronPanopticLabels(InputData* input);
+
+  /**
+   * @brief Render submap for tracking using approximate rendering algorithm.
+   *
+   * @param submap
+   * @param input
+   * @return TrackingInfo
+   */
+  std::vector<TrackingInfo> renderTrackingInfoApproximate(
+      const Submap& submap, const InputData& input);
+
+  /**
+   * @brief Renders the vertex map for tracking.
+   *
+   * Adapted from ProjectiveIDTracker::renderTrackingInfoVertices
+   *
+   * @param map
+   * @param input
+   * @return TrackingInfo
+   */
+  std::vector<TrackingInfo> renderTrackingInfoVertices(const Submap& submap,
+                                                       const InputData& input);
+
+  TrackingInfoAggregator computeTrackingData(SubmapCollection* submaps,
+                                             InputData* input);
+
  private:
+  // A label divisor used to compute a panoptic id from instance and
+  // class id as panoptic_id = class_id * label_divisor + instance_id
+  static constexpr int kPanopticLabelDivisor_ = 1000;
+
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, SingleTSDFTracker, std::shared_ptr<Globals>>
       registration_;
@@ -55,6 +114,9 @@ class SingleTSDFTracker : public IDTrackerBase {
 
   int map_id_;
   bool is_setup_ = false;
+
+  MapRenderer renderer_;  // The renderer is only used if visualization is on.
+  cv::Mat rendered_vis_;  // Store visualization data.
 };
 
 }  // namespace panoptic_mapping
