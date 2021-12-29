@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -624,10 +625,13 @@ void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
       continue;
     }
 
+    LOG(INFO) << "Exporting submap " << submap.getID()
+              << ".\n\tClass: " << submap.getClassID()
+              << ".\n\tInstance: " << submap.getInstanceID();
+
     // Parse all mesh vertices.
     voxblox::BlockIndexList block_list;
     submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
-
     for (auto& block_index : block_list) {
       auto const& mesh = submap.getMeshLayer().getMeshByIndex(block_index);
 
@@ -645,9 +649,27 @@ void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
           // Lookup the class voxel
           const ClassVoxel* class_voxel =
               class_block->getVoxelPtrByCoordinates(vertex);
-          label = static_cast<std::uint32_t>(class_voxel->getBelongingID());
-        }
 
+          switch (class_voxel->getVoxelType()) {
+            case ClassVoxelType::kBinaryCount:
+            case ClassVoxelType::kMovingBinaryCount: {
+              // Keep only voxels belonging to the submaps
+              if (class_voxel->getBelongingID() == 0) {
+                continue;
+              }
+              label = submap.getClassID() * 1000;
+              if (submap.getLabel() == PanopticLabel::kInstance) {
+                label += submap.getInstanceID();
+              }
+            }
+            case ClassVoxelType::kFixedCount:
+            case ClassVoxelType::kVariableCount: {
+              if (request.is_single_tsdf) {
+                label = class_voxel->getBelongingID();
+              }
+            }
+          }
+        }
         pcl::PointXYZRGBL point(color.r, color.g, color.b, label);
         point.x = vertex.x();
         point.y = vertex.y();
