@@ -10,6 +10,8 @@
 #include <pcl/io/ply_io.h>
 #include <ros/ros.h>
 #include <voxblox/interpolator/interpolator.h>
+#include <voxblox/io/mesh_ply.h>
+#include <voxblox/mesh/mesh_utils.h>
 
 #include "panoptic_mapping_utils/evaluation/progress_bar.h"
 
@@ -34,6 +36,10 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("ignore_truncated_points", &ignore_truncated_points);
   setupParam("inlier_distance", &inlier_distance);
   setupParam("is_single_tsdf", &is_single_tsdf);
+  setupParam("export_mesh", &export_mesh);
+  setupParam("export_mesh_as_point_cloud", &export_mesh_as_point_cloud);
+  setupParam("export_voxel_grid_as_point_cloud",
+             &export_voxel_grid_as_point_cloud);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -169,6 +175,14 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
                  << "UnknownPoints [1],TruncatedPoints [1]\n";
     output_file_ << computeReconstructionError(request);
     output_file_.close();
+  }
+
+  if (request.export_mesh) {
+    exportMesh(request);
+  }
+
+  if (request.export_mesh_as_point_cloud) {
+    exportMeshAsPointCloud(request);
   }
 
   // Compute visualization if required.
@@ -581,6 +595,73 @@ void MapEvaluator::buildKdTree() {
 void MapEvaluator::publishVisualization() {
   // Make sure the tfs arrive otherwise the mesh will be discarded.
   visualizer_->visualizeAll(submaps_.get());
+}
+
+void MapEvaluator::exportMesh(const EvaluationRequest& request) {
+  // Collect all the meshes
+  voxblox::AlignedVector<voxblox::Mesh::ConstPtr> meshes;
+  for (auto& submap : *submaps_) {
+    auto mesh = voxblox::Mesh::Ptr(new voxblox::Mesh());
+    submap.getMeshLayer().getMesh(mesh.get());
+    meshes.push_back(std::const_pointer_cast<const voxblox::Mesh>(mesh));
+  }
+
+  // Merge all the meshes into one
+  auto combined_mesh = voxblox::Mesh::Ptr(new voxblox::Mesh());
+  voxblox::createConnectedMesh(meshes, combined_mesh.get());
+
+  // Export the mesh as ply
+  const std::string out_mesh_file = target_directory_ + "/mesh.ply";
+  voxblox::outputMeshAsPly(out_mesh_file, *combined_mesh);
+}
+
+void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
+  // Create PCL point cloud
+  pcl::PointCloud<pcl::PointXYZRGBL> cloud;
+
+  for (auto& submap : *submaps_) {
+    if (!submap.hasClassLayer()) {
+      continue;
+    }
+
+    // Parse all mesh vertices.
+    voxblox::BlockIndexList block_list;
+    submap.getMeshLayer().getAllAllocatedMeshes(&block_list);
+
+    for (auto& block_index : block_list) {
+      auto const& mesh = submap.getMeshLayer().getMeshByIndex(block_index);
+
+      ClassBlock::ConstPtr class_block;
+      if (submap.getClassLayer().hasBlock(block_index)) {
+        class_block =
+            submap.getClassLayer().getBlockConstPtrByIndex(block_index);
+      }
+
+      for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+        auto const& vertex = mesh.vertices.at(i);
+        auto const& color = mesh.colors.at(i);
+        std::uint32_t label = 0;
+        if (class_block) {
+          // Lookup the class voxel
+          const ClassVoxel* class_voxel =
+              class_block->getVoxelPtrByCoordinates(vertex);
+          label = static_cast<std::uint32_t>(class_voxel->getBelongingID());
+        }
+
+        pcl::PointXYZRGBL point(color.r, color.g, color.b, label);
+        point.x = vertex.x();
+        point.y = vertex.y();
+        point.z = vertex.z();
+
+        // Add mesh vertex to the point cloud
+        cloud.push_back(point);
+      }
+    }
+  }
+
+  // Now save the point cloud as PLY
+  std::string out_pcl_file_name = target_directory_ + "/point_cloud.ply";
+  pcl::io::savePLYFileBinary(out_pcl_file_name, cloud);
 }
 
 }  // namespace panoptic_mapping

@@ -46,6 +46,10 @@ class MapEvaluator {
         true;  // true: iterate through mesh, false: iterate over gt points.
     bool is_single_tsdf = false;
 
+    bool export_mesh = false;
+    bool export_mesh_as_point_cloud = false;
+    bool export_voxel_grid_as_point_cloud = false;
+
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 
    protected:
@@ -96,6 +100,13 @@ class MapEvaluator {
   std::string computeMeshError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
   void buildKdTree();
+  void exportMeshAsPointCloud(const EvaluationRequest& request);
+  /**
+   * @brief Merge all the meshes into one and export as PLY
+   *
+   * @param request
+   */
+  void exportMesh(const EvaluationRequest& request);
 
  private:
   // ROS.
