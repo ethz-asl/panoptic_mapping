@@ -31,7 +31,7 @@ class MapEvaluator {
 
     // Data handling.
     std::string map_file;
-    std::string ground_truth_pointcloud_file;
+    std::string ground_truth_pointcloud_file = "/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2-dvc/scans/scene0587_02/scene0587_02_vh_clean_2.pointcloud.ply";
     std::string output_suffix = "evaluation_data";
 
     // Evaluation
@@ -48,7 +48,7 @@ class MapEvaluator {
 
     bool export_mesh = false;
     bool export_mesh_as_point_cloud = false;
-    bool export_voxel_grid_as_point_cloud = false;
+    bool export_point_cloud_labels = false;
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 
@@ -100,7 +100,7 @@ class MapEvaluator {
   std::string computeMeshError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
   void buildKdTree();
-  void exportMeshAsPointCloud(const EvaluationRequest& request);
+  void exportMeshAsLabeledPointCloud(const EvaluationRequest& request);
   /**
    * @brief Merge all the meshes into one and export as PLY
    *
@@ -117,7 +117,7 @@ class MapEvaluator {
   std::ofstream output_file_;
 
   // Stored data.
-  std::unique_ptr<pcl::PointCloud<pcl::PointXYZ>> gt_ptcloud_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr gt_ptcloud_;
   std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<TsdfLayer> voxblox_;
   bool use_voxblox_;

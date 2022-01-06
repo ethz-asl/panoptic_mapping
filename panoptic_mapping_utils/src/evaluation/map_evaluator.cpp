@@ -8,6 +8,8 @@
 #include <vector>
 
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <pcl/features/moment_of_inertia_estimation.h>
+#include <pcl/filters/crop_box.h>
 #include <pcl/io/ply_io.h>
 #include <ros/ros.h>
 #include <voxblox/interpolator/interpolator.h>
@@ -39,8 +41,7 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("is_single_tsdf", &is_single_tsdf);
   setupParam("export_mesh", &export_mesh);
   setupParam("export_mesh_as_point_cloud", &export_mesh_as_point_cloud);
-  setupParam("export_voxel_grid_as_point_cloud",
-             &export_voxel_grid_as_point_cloud);
+  setupParam("export_point_cloud_labels", &export_point_cloud_labels);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -106,7 +107,8 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   // Load the groundtruth pointcloud.
   if (request.evaluate || request.compute_coloring) {
     if (!request.ground_truth_pointcloud_file.empty()) {
-      gt_ptcloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
+      gt_ptcloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
+          new pcl::PointCloud<pcl::PointXYZ>());
       if (pcl::io::loadPLYFile<pcl::PointXYZ>(
               request.ground_truth_pointcloud_file, *gt_ptcloud_) != 0) {
         LOG(ERROR) << "Could not load ground truth point cloud from '"
@@ -183,7 +185,7 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   }
 
   if (request.export_mesh_as_point_cloud) {
-    exportMeshAsPointCloud(request);
+    exportMeshAsLabeledPointCloud(request);
   }
 
   // Compute visualization if required.
@@ -616,18 +618,16 @@ void MapEvaluator::exportMesh(const EvaluationRequest& request) {
   voxblox::outputMeshAsPly(out_mesh_file, *combined_mesh);
 }
 
-void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
+pcl::PointCloud<pcl::PointXYZRGBL>::Ptr
+convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
   // Create PCL point cloud
-  pcl::PointCloud<pcl::PointXYZRGBL> cloud;
+  pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud_ptr(
+      new pcl::PointCloud<pcl::PointXYZRGBL>());
 
-  for (auto& submap : *submaps_) {
+  for (auto& submap : submaps) {
     if (!submap.hasClassLayer()) {
       continue;
     }
-
-    LOG(INFO) << "Exporting submap " << submap.getID()
-              << ".\n\tClass: " << submap.getClassID()
-              << ".\n\tInstance: " << submap.getInstanceID();
 
     // Parse all mesh vertices.
     voxblox::BlockIndexList block_list;
@@ -664,9 +664,7 @@ void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
             }
             case ClassVoxelType::kFixedCount:
             case ClassVoxelType::kVariableCount: {
-              if (request.is_single_tsdf) {
-                label = class_voxel->getBelongingID();
-              }
+              label = class_voxel->getBelongingID();
             }
           }
         }
@@ -676,14 +674,50 @@ void MapEvaluator::exportMeshAsPointCloud(const EvaluationRequest& request) {
         point.z = vertex.z();
 
         // Add mesh vertex to the point cloud
-        cloud.push_back(point);
+        cloud_ptr->push_back(point);
       }
     }
   }
 
+  return cloud_ptr;
+}
+
+void MapEvaluator::exportMeshAsLabeledPointCloud(
+    const EvaluationRequest& request) {
+  // Convert submaps collection to pointcloud
+  auto cloud_ptr = convertSubmapCollectionToColoredPointcloud(*submaps_);
+
+  // Clip the pointcloud using the bounding box of the gt pointcloud
+  if (!gt_ptcloud_) {
+    gt_ptcloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
+        new pcl::PointCloud<pcl::PointXYZ>());
+    if (pcl::io::loadPLYFile<pcl::PointXYZ>(
+            request_.ground_truth_pointcloud_file, *gt_ptcloud_) == -1) {
+      LOG(FATAL) << "Could not load ground truth point cloud from '"
+                 << request_.ground_truth_pointcloud_file << "'.";
+    }
+  }
+
+  pcl::MomentOfInertiaEstimation<pcl::PointXYZ> feature_extractor;
+  feature_extractor.setInputCloud(gt_ptcloud_);
+  feature_extractor.compute();
+
+  pcl::PointXYZ min_AABB, max_AABB;
+  feature_extractor.getAABB(min_AABB, max_AABB);
+
+  pcl::CropBox<pcl::PointXYZRGBL> box_filter;
+  box_filter.setMin(Eigen::Vector4f(min_AABB.x, min_AABB.y, min_AABB.z, 1.f));
+  box_filter.setMax(Eigen::Vector4f(max_AABB.x, max_AABB.y, max_AABB.z, 1.f));
+  box_filter.setInputCloud(cloud_ptr);
+
+  pcl::PointCloud<pcl::PointXYZRGBL>::Ptr clipped_cloud_ptr(
+      new pcl::PointCloud<pcl::PointXYZRGBL>());
+  box_filter.filter(*clipped_cloud_ptr);
+
   // Now save the point cloud as PLY
-  std::string out_pcl_file_name = target_directory_ + "/point_cloud.ply";
-  pcl::io::savePLYFileBinary(out_pcl_file_name, cloud);
+  std::string out_pcl_file_name =
+      target_directory_ + "/" + target_map_name_ + ".pointcloud.ply";
+  pcl::io::savePLYFile(out_pcl_file_name, *clipped_cloud_ptr);
 }
 
 }  // namespace panoptic_mapping
