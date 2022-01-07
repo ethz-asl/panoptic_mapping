@@ -32,8 +32,8 @@ class EvaluationManager(object):
             rospy.logfatal("The 'map_file' must be the target directory.")
 
         # RIO
-        use_rio = rospy.get_param('~use_rio', False)
-        if use_rio:
+        dataset = rospy.get_param('~dataset', False)
+        if dataset == "rio":
             scene_id = rospy.get_param('~scene_id', 0)
             scan_id = rospy.get_param('~scan_id', 0)
             if len(DATA_IDS) <= scene_id:
@@ -48,6 +48,12 @@ class EvaluationManager(object):
                 "/multi_map_evaluation/ground_truth_pointcloud_file",
                 "/home/lukas/Documents/Datasets/3RScan/%s/gt_10000.ply" %
                 DATA_IDS[scene_id][scan_id])
+        elif dataset == "scannetv2":
+            pass
+        elif dataset == "flat":
+            pass
+        else:
+            rospy.logfatal("Invalid dataset!")
 
         # Setup rosservice
         rospy.wait_for_service(self.eval_srv_name)

@@ -91,6 +91,9 @@ bool MapEvaluator::setupMultiMapEvaluation() {
       << "UnknownPoints [1],TruncatedPoints [1],GTInliers [1],MeanMapError [m],"
       << "StdMapError [m],MapRMSE[m],MapInliers[1],MapOutliers[1]\n ";
 
+  // Save the generated eval artifacts also to this directory
+  target_directory_ = request_.map_file;
+
   // Advertise evaluation service.
   process_map_srv_ = nh_private_.advertiseService(
       "process_map", &MapEvaluator::evaluateMapCallback, this);
@@ -402,6 +405,22 @@ bool MapEvaluator::evaluateMapCallback(
   output_file_ << computeReconstructionError(request_) << ","
                << computeMeshError(request_) << "\n";
   output_file_.flush();
+
+  const std::string extension =
+      request.file_path.substr(request.file_path.find_last_of('.'));
+  size_t separator = request.file_path.find_last_of('/');
+  target_map_name_ = request.file_path.substr(
+      separator + 1,
+      request.file_path.length() - separator - extension.length() - 1);
+
+  if (request_.export_mesh) {
+    exportMesh(request_);
+  }
+
+  if (request_.export_mesh_as_point_cloud) {
+    exportMeshAsLabeledPointCloud(request_);
+  }
+
   return true;
 }
 
@@ -614,7 +633,8 @@ void MapEvaluator::exportMesh(const EvaluationRequest& request) {
   voxblox::createConnectedMesh(meshes, combined_mesh.get());
 
   // Export the mesh as ply
-  const std::string out_mesh_file = target_directory_ + "/mesh.ply";
+  const std::string out_mesh_file =
+      target_directory_ + "/" + target_map_name_ + ".mesh.ply";
   voxblox::outputMeshAsPly(out_mesh_file, *combined_mesh);
 }
 
