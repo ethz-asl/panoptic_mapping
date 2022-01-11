@@ -41,12 +41,17 @@ class ThreadSafeSubmapCollection {
     return *submaps_;
   }
 
+  const std::shared_ptr<const SubmapCollection>& getSubmapsPtr() const {
+    *updated_ = false;
+    return submaps_;
+  }
+
  private:
   // Reference to the original submap collection.
   std::shared_ptr<SubmapCollection> submaps_source_;
 
   // Deep copy of the submap collection for thread-safe read-only access.
-  std::unique_ptr<SubmapCollection> submaps_;
+  std::shared_ptr<SubmapCollection> submaps_;
 
   // Track whether the submaps were updated since last lookup.
   std::unique_ptr<bool> updated_;
