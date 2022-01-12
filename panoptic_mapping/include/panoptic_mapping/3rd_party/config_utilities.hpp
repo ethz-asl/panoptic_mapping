@@ -2,7 +2,7 @@
 AUTHOR:       Lukas Schmid <schmluk@mavt.ethz.ch>
 AFFILIATION:  Autonomous Systems Lab (ASL), ETH Zürich
 SOURCE:       https://github.com/ethz-asl/config_utilities
-VERSION:      1.2.1
+VERSION:      1.2.2
 LICENSE:      BSD-3-Clause
 
 Copyright 2020 Autonomous Systems Lab (ASL), ETH Zürich.
@@ -34,7 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 // Raises a redefined warning if different versions are used. v=MMmmPP.
-#define CONFIG_UTILITIES_VERSION 010201
+#define CONFIG_UTILITIES_VERSION 010202
 
 /**
  * Depending on which headers are available, ROS dependencies are included in
@@ -1010,8 +1010,10 @@ struct ConfigInternal : public ConfigInternalVerificator {
       }
       return;
     }
+    if (!meta_data_->use_printing_to_get_values) {
     meta_data_->messages->emplace_back(
         std::string(meta_data_->indent, ' ').append(text));
+    }
   }
 
  private:
