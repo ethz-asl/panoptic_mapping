@@ -132,6 +132,10 @@ class PanopticMapper {
   const ThreadSafeSubmapCollection& getThreadSafeSubmapCollection() const {
     return *thread_safe_submaps_;
   }
+  const std::shared_ptr<const ThreadSafeSubmapCollection>&
+  getThreadSafeSubmapCollectionPtr() const {
+    return thread_safe_submaps_;
+  }
   const PlanningInterface& getPlanningInterface() const {
     return *planning_interface_;
   }
