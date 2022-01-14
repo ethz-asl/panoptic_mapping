@@ -2,6 +2,7 @@
 #define PANOPTIC_MAPPING_TOOLS_THREAD_SAFE_SUBMAP_COLLECTION_H_
 
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include "panoptic_mapping/common/common.h"
@@ -17,8 +18,11 @@ namespace panoptic_mapping {
 class ThreadSafeSubmapCollection {
  public:
   /* Construction */
-  explicit ThreadSafeSubmapCollection(std::shared_ptr<SubmapCollection> submaps)
-      : submaps_source_(std::move(submaps)), updated_(new bool()) {
+  explicit ThreadSafeSubmapCollection(
+      std::shared_ptr<const SubmapCollection> submaps_source)
+      : submaps_source_(std::move(submaps_source)),
+        updated_(new bool()),
+        submap_mutex_(new std::mutex()) {
     update();
   }
   virtual ~ThreadSafeSubmapCollection() = default;
@@ -26,30 +30,45 @@ class ThreadSafeSubmapCollection {
   /* Interaction */
   // Update the lookup submaps based on the source submaps.
   void update() {
+    std::cout << "Update lock" << std::endl;
+    if (!submap_mutex_) {
+      std::cout << "Submap mutex is not initialized" << std::endl;
+    }
+    const std::lock_guard<std::mutex> lock(*submap_mutex_);
     Timer timer("tools/thread_safe_submap_collection/update");
+    std::cout << "clone" << std::endl;
     submaps_ = submaps_source_->clone();
     timer.Stop();
     *updated_ = true;
+    std::cout << "done" << std::endl;
   }
 
   // Check whether there were any updates since the last lookup.
   bool wasUpdated() const { return *updated_; }
 
   // Get thread-safe read-only access to the collection
-  const SubmapCollection& getSubmaps() const {
+  std::shared_ptr<const SubmapCollection> getSubmaps() const {
+    std::cout << "getSubmapLock" << std::endl;
+    if (!submap_mutex_) {
+      std::cout << "Submap mutex is not initialized" << std::endl;
+    }
+    const std::lock_guard<std::mutex> lock(*submap_mutex_);
     *updated_ = false;
-    return *submaps_;
+    std::cout << "done" << std::endl;
+
+    return submaps_;
   }
 
  private:
   // Reference to the original submap collection.
-  std::shared_ptr<SubmapCollection> submaps_source_;
+  std::shared_ptr<const SubmapCollection> submaps_source_;
 
   // Deep copy of the submap collection for thread-safe read-only access.
-  std::shared_ptr<SubmapCollection> submaps_;
+  std::shared_ptr<const SubmapCollection> submaps_;
+  const std::unique_ptr<std::mutex> submap_mutex_;
 
   // Track whether the submaps were updated since last lookup.
-  std::unique_ptr<bool> updated_;
+  const std::unique_ptr<bool> updated_;
 };
 
 }  // namespace panoptic_mapping
