@@ -20,6 +20,7 @@ struct UncertaintyVoxel : public FixedCountVoxel {
  public:
   // Implement interfaces.
   ClassVoxelType getVoxelType() const override;
+  bool mergeVoxel(const ClassVoxel& other) override;
   std::vector<uint32_t> serializeVoxelToInt() const override;
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;

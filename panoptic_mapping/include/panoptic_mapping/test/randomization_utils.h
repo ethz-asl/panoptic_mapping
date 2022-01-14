@@ -44,7 +44,7 @@ void randomizeVoxel(TsdfVoxel* voxel) {
 
 void randomizeVoxel(BinaryCountVoxel* voxel) {
   voxel->belongs_count = getRandomInt<ClassificationCount>();
-  voxel->belongs_count = getRandomInt<ClassificationCount>();
+  voxel->foreign_count = getRandomInt<ClassificationCount>();
 }
 
 void randomizeVoxel(FixedCountVoxel* voxel) {
@@ -52,14 +52,45 @@ void randomizeVoxel(FixedCountVoxel* voxel) {
   voxel->counts.resize(num_classes);
   voxel->current_count = 0;
   voxel->current_index = -1;
+  voxel->total_count = 0;
   for (size_t i = 0; i < num_classes; ++i) {
     const ClassificationCount count = getRandomInt<ClassificationCount>();
     voxel->counts[i] = count;
+    voxel->total_count += count;
     if (count > voxel->current_count) {
       voxel->current_count = count;
       voxel->current_index = i;
     }
   }
+}
+
+void randomizeVoxel(MovingBinaryCountVoxel* voxel) {
+  voxel->belongs_count = getRandomInt<uint8_t>();
+  voxel->foreign_count = getRandomInt<uint8_t>();
+}
+
+void randomizeVoxel(VariableCountVoxel* voxel) {
+  voxel->counts.clear();
+  for (size_t i = 0; i < getRandomInt<size_t>(0, kMaxNumClasses); ++i) {
+    voxel->counts[getRandomInt<int16_t>()] =
+        getRandomInt<ClassificationCount>();
+  }
+  voxel->total_count = 0;
+  voxel->current_count = 0;
+  voxel->current_index = -1;
+  for (const auto& id_count_pair : voxel->counts) {
+    voxel->total_count += id_count_pair.second;
+    if (id_count_pair.second > voxel->current_count) {
+      voxel->current_count = id_count_pair.second;
+      voxel->current_index = id_count_pair.first;
+    }
+  }
+}
+
+void randomizeVoxel(UncertaintyVoxel* voxel) {
+  randomizeVoxel(static_cast<FixedCountVoxel*>(voxel));
+  voxel->is_ground_truth = getRandomInt(0, 1);
+  voxel->uncertainty = getRandomReal<float>();
 }
 
 }  // namespace test

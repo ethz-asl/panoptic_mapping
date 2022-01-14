@@ -52,6 +52,8 @@ class ClassLayer {
   virtual std::unique_ptr<ClassLayer> clone() const = 0;
 
   // Serialization
+  virtual bool saveBlockToStream(BlockIndex block_index,
+                                 std::fstream* outfile_ptr) const = 0;
   virtual bool saveBlocksToStream(bool include_all_blocks,
                                   voxblox::BlockIndexList blocks_to_include,
                                   std::fstream* outfile_ptr) const = 0;

@@ -72,6 +72,46 @@ void FixedCountVoxel::incrementCount(const int id, const float weight) {
   ++total_count;
 }
 
+bool FixedCountVoxel::mergeVoxel(const ClassVoxel& other) {
+  // Check type compatibility.
+  auto voxel = dynamic_cast<const FixedCountVoxel*>(&other);
+  if (!voxel) {
+    LOG(WARNING)
+        << "Can not merge voxels that are not of same type (FixedCountVoxel).";
+    return false;
+  }
+  // Since in both cases the belonging submap is at index 0 we just merge the
+  // full vector. Also works for semantic segmentation with consistent labels.
+  // NOTE(schmluk): For inconsistent labels the belonging counts of other are
+  // somewhere in [1, kNumCounts], which is not corrected for here!
+  if (voxel->counts.empty()) {
+    return true;
+  }
+  if (counts.empty()) {
+    counts = voxel->counts;
+    current_count = voxel->current_count;
+    current_index = voxel->current_index;
+    total_count = voxel->total_count;
+    return true;
+  }
+  current_index = -1;
+  current_count = 0;
+  total_count += voxel->total_count;
+  if (counts.size() != voxel->counts.size()) {
+    LOG(WARNING) << "Can not merge FixedCount Voxels of different sizes ("
+                 << counts.size() << " vs " << voxel->counts.size() << ").";
+    return false;
+  }
+  for (size_t i = 0; i < counts.size(); ++i) {
+    counts[i] += voxel->counts[i];
+    if (counts[i] > current_count) {
+      current_count = counts[i];
+      current_index = i;
+    }
+  }
+  return true;
+}
+
 std::vector<uint32_t> FixedCountVoxel::serializeVoxelToInt() const {
   // Store the number of counts first followed by all the values.
   const size_t length = (counts.size() + 3u) / 2u;
@@ -110,6 +150,7 @@ bool FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
   counts.resize(num_counts);
   current_count = 0;
   current_index = -1;
+  total_count = 0;
   std::pair<uint16_t, uint16_t> datum;
   for (size_t i = 0; i < num_counts; ++i) {
     if (i % 2 == 0) {
@@ -124,6 +165,7 @@ bool FixedCountVoxel::deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
       current_count = counts[i];
       current_index = i;
     }
+    total_count += counts[i];
   }
   *data_index += length;
   return true;

@@ -74,6 +74,16 @@ struct ClassVoxel {
   virtual void incrementCount(const int id, const float weight = 1.f) = 0;
 
   /**
+   * @brief Merge another voxel into this voxel. If the default merging
+   * behavior is not desired, the voxel members are exposed to custom
+   * manipulation.
+   *
+   * @param other Voxel to merge into this one.
+   * @return True if the merging was successful.
+   */
+  virtual bool mergeVoxel(const ClassVoxel& other) = 0;
+
+  /**
    * @brief Serialization tool to serialize voxels and layers to integer data.
    *
    * @param data The current binary data to append the voxel to.

@@ -26,6 +26,7 @@ struct MovingBinaryCountVoxel : public ClassVoxel {
   int getBelongingID() const override;
   float getProbability(const int id) const override;
   void incrementCount(const int id, const float weight = 1.f) override;
+  bool mergeVoxel(const ClassVoxel& other) override;
   std::vector<uint32_t> serializeVoxelToInt() const override;
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
@@ -46,6 +47,11 @@ class MovingBinaryCountLayer : public ClassLayerImpl<MovingBinaryCountVoxel> {
 
   MovingBinaryCountLayer(const Config& config, const float voxel_size,
                          const int voxels_per_side);
+
+  // Overwrite these method since we only need half a word per voxel.
+  bool saveBlockToStream(BlockIndex block_index,
+                         std::fstream* outfile_ptr) const override;
+  bool addBlockFromProto(const voxblox::BlockProto& block_proto) override;
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;

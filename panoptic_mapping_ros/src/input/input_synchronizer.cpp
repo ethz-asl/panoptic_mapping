@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -183,6 +184,27 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
               [](const auto& lhs, const auto& rhs) -> bool {
                 return lhs->timestamp < rhs->timestamp;
               });
+    // Print missing topics if required.
+    std::stringstream info;
+    if (config_.verbosity >= 3 && *data_queue_.begin() &&
+        data_queue_.begin()->get()->data) {
+      const InputData data = *data_queue_.begin()->get()->data;
+      std::vector<std::string> missing_data;
+      for (const auto& type : subscribed_inputs_) {
+        if (!data.has(type)) {
+          missing_data.push_back(InputData::inputTypeToString(type));
+        }
+      }
+      if (!missing_data.empty()) {
+        info << " (Missing inputs: " << missing_data[0];
+        for (size_t i = 1; i < missing_data.size(); ++i) {
+          info << ", " << missing_data[i];
+        }
+        info << ")";
+      }
+    }
+
+    // Erase first element and update queue.
     data_queue_.erase(data_queue_.begin());
     data_is_ready_ = false;
     for (size_t i = 0; i < data_queue_.size(); ++i) {
@@ -192,7 +214,8 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
       }
     }
     LOG_IF(WARNING, config_.verbosity >= 2)
-        << "Input queue is getting too long, dropping oldest data.";
+        << "Input queue is getting too long, dropping oldest data" << info.str()
+        << ".";
     oldest_time_ = data_queue_.front()->timestamp;
   }
 

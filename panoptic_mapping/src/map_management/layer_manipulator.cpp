@@ -74,71 +74,62 @@ void LayerManipulator::mergeSubmapAintoB(const Submap& A, Submap* B) const {
   // TODO(schmluk): At the moment abuses the fact that all transforms are the
   //  identity and that equal classes have equal layer layout!
 
-  if (!(A.hasClassLayer() && B->hasClassLayer())) {
-    LOG(WARNING) << "Currently can only fuse submaps with class layers.";
+  if (A.hasClassLayer() != B->hasClassLayer()) {
+    LOG(WARNING)
+        << "Submap merging currently can only fuse submaps with class layers.";
     return;
   }
+  const bool use_class_layer = A.hasClassLayer();
 
   // Currently just use the voxels...
   voxblox::BlockIndexList block_indices;
   A.getTsdfLayer().getAllAllocatedBlocks(&block_indices);
   for (const auto& block_index : block_indices) {
-    TsdfBlock::Ptr block_B =
+    TsdfBlock::Ptr tsdf_block_B =
         B->getTsdfLayerPtr()->allocateBlockPtrByIndex(block_index);
-    block_B->setUpdatedAll();
-    const TsdfBlock::ConstPtr block_A =
+    tsdf_block_B->setUpdatedAll();
+    const TsdfBlock::ConstPtr tsdf_block_A =
         A.getTsdfLayer().getBlockPtrByIndex(block_index);
-    ClassBlock::ConstPtr class_A =
-        A.getClassLayer().getBlockConstPtrByIndex(block_index);
-    ClassBlock::Ptr class_B =
-        B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
+    ClassBlock::ConstPtr class_block_A;
+    ClassBlock::Ptr class_block_B;
+    if (use_class_layer) {
+      class_block_A = A.getClassLayer().getBlockConstPtrByIndex(block_index);
+      class_block_B =
+          B->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
+    }
 
-    for (size_t i = 0; i < block_B->num_voxels(); ++i) {
-      // Merge the voxels.
-      const TsdfVoxel& voxel_A = block_A->getVoxelByLinearIndex(i);
-      TsdfVoxel& voxel_B = block_B->getVoxelByLinearIndex(i);
+    for (size_t i = 0; i < tsdf_block_B->num_voxels(); ++i) {
+      // Get the voxels and meta data.
+      const TsdfVoxel& tsdf_voxel_A = tsdf_block_A->getVoxelByLinearIndex(i);
+      TsdfVoxel& tsdf_voxel_B = tsdf_block_B->getVoxelByLinearIndex(i);
       const ClassVoxel* class_voxel_A = nullptr;
       ClassVoxel* class_voxel_B = nullptr;
       bool belongs_A = true;
-      if (class_A) {
-        class_voxel_A = &class_A->getVoxelByLinearIndex(i);
+      if (class_block_A) {
+        class_voxel_A = &class_block_A->getVoxelByLinearIndex(i);
         belongs_A = class_voxel_A->belongsToSubmap();
       }
       bool belongs_B = true;
-      if (class_B) {
-        class_voxel_B = &class_B->getVoxelByLinearIndex(i);
+      if (class_block_B) {
+        class_voxel_B = &class_block_B->getVoxelByLinearIndex(i);
         belongs_B = class_voxel_B->belongsToSubmap();
       }
       if (belongs_A && belongs_B) {
-        voxblox::mergeVoxelAIntoVoxelB(voxel_A, &voxel_B);
+        voxblox::mergeVoxelAIntoVoxelB(tsdf_voxel_A, &tsdf_voxel_B);
         if (class_voxel_A && class_voxel_B) {
-          // NOTE(schmluk): Currently just implemented for the binary case with
-          // normalization!
-          // TODO
-          // const int belongs_count =
-          //     static_cast<int>(class_voxel_A->belongs_count) +
-          //     static_cast<int>(class_voxel_B->belongs_count);
-          // const int foreign_count =
-          //     static_cast<int>(class_voxel_A->foreign_count) +
-          //     static_cast<int>(class_voxel_B->foreign_count);
-          // const int normalization =
-          //     (belongs_count > 255 || foreign_count > 255) ? 2 : 1;
-          // class_voxel_B->belongs_count =
-          //     static_cast<ClassVoxel::Counter>(belongs_count /
-          //     normalization);
-          // class_voxel_B->foreign_count =
-          //     static_cast<ClassVoxel::Counter>(foreign_count /
-          //     normalization);
+          // Voxels that belong to A and B are merged.
+          class_voxel_B->mergeVoxel(*class_voxel_A);
         }
       } else if (belongs_A) {
-        // voxel_B.distance = voxel_A.distance;
-        // voxel_B.weight = voxel_A.weight;
-        // if (class_voxel_A && class_voxel_B) {
-        //   class_voxel_B->belongs_count = class_voxel_A->belongs_count;
-        //   class_voxel_B->foreign_count = class_voxel_A->foreign_count;
-        // }
-        // voxel_B.color = voxel_A.color;
+        // If it only belongs to A but not to B overwrite B.
+        tsdf_voxel_B.distance = tsdf_voxel_A.distance;
+        tsdf_voxel_B.weight = tsdf_voxel_A.weight;
+        tsdf_voxel_B.color = tsdf_voxel_A.color;
+        if (class_voxel_A && class_voxel_B) {
+          *class_voxel_B = *class_voxel_A;
+        }
       }
+      // If it does not belong to A or neither then no action is required.
     }
   }
 }
