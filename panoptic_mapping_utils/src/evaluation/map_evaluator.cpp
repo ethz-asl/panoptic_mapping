@@ -681,10 +681,12 @@ convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
               if (submap.getLabel() == PanopticLabel::kInstance) {
                 label += submap.getInstanceID();
               }
+              break;
             }
             case ClassVoxelType::kFixedCount:
             case ClassVoxelType::kVariableCount: {
               label = class_voxel->getBelongingID();
+              break;
             }
           }
         }
