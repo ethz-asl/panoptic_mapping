@@ -53,12 +53,14 @@ class LogDataWriter : public DataWriterBase {
 
  protected:
   // Data.
+  bool is_setup_ = false;
   std::string output_path_;
   std::string outfile_name_;
   std::ofstream outfile_;
   std::vector<std::function<void(const SubmapCollection&)>> evaluations_;
 
   // Methods.
+  virtual void setup();
   virtual void setupLogFile();
   virtual void setupEvaluations();
   void writeEntry(const std::string& value);
