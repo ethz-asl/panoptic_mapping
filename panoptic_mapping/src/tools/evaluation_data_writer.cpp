@@ -60,6 +60,8 @@ void EvaluationDataWriter::setupLogFile() {
 }
 
 void EvaluationDataWriter::setupEvaluations() {
+  LogDataWriter::setupEvaluations();
+
   // Additional evaluations of the evaluation writer.
   if (config_.store_map_every_n_frames > 0) {
     writeEntry("SavedMapName [-]");
@@ -67,7 +69,6 @@ void EvaluationDataWriter::setupEvaluations() {
       this->storeSubmaps(submaps);
     });
   }
-  LogDataWriter::setupEvaluations();
 }
 
 void EvaluationDataWriter::storeSubmaps(const SubmapCollection& submaps) {
