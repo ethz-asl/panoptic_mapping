@@ -25,8 +25,9 @@ void LogDataWriter::Config::setupParamsAndPrinting() {
 void LogDataWriter::Config::checkParams() const {
   // Check the specified path exists.
   struct stat buffer;
-  checkParamCond(stat(output_directory.c_str(), &buffer) == 0,
-                 "Output directory '" + output_directory + "' does not exist.");
+  checkParamCond(
+      stat(output_directory.c_str(), &buffer) == 0,
+      "'output_directory' '" + output_directory + "' does not exist.");
 }
 
 LogDataWriter::LogDataWriter(const Config& config, bool print_config)

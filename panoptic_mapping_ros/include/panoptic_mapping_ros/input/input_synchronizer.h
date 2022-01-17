@@ -36,7 +36,11 @@ class InputSynchronizer : public InputSynchronizerBase {
         "";  // Empty (default) take the frame of the depth message header.
     float transform_lookup_time =
         0.1f;  // s, Maximum time to wait for transforms.
-    double max_delay = 0.0; // s, Maximum delay between Image messages that should be synced
+    double max_delay =
+        0.0;  // s, Maximum delay between Image messages that should be synced
+
+    bool warn_when_dropping_messages =
+        true;  // If true print when messages are dropped from the queue.
 
     Config() { setConfigName("InputSynchronizer"); }
 
