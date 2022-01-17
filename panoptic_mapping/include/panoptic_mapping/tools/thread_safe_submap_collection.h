@@ -30,17 +30,11 @@ class ThreadSafeSubmapCollection {
   /* Interaction */
   // Update the lookup submaps based on the source submaps.
   void update() {
-    std::cout << "Update lock" << std::endl;
-    if (!submap_mutex_) {
-      std::cout << "Submap mutex is not initialized" << std::endl;
-    }
     const std::lock_guard<std::mutex> lock(*submap_mutex_);
     Timer timer("tools/thread_safe_submap_collection/update");
-    std::cout << "clone" << std::endl;
     submaps_ = submaps_source_->clone();
     timer.Stop();
     *updated_ = true;
-    std::cout << "done" << std::endl;
   }
 
   // Check whether there were any updates since the last lookup.
@@ -48,14 +42,8 @@ class ThreadSafeSubmapCollection {
 
   // Get thread-safe read-only access to the collection
   std::shared_ptr<const SubmapCollection> getSubmaps() const {
-    std::cout << "getSubmapLock" << std::endl;
-    if (!submap_mutex_) {
-      std::cout << "Submap mutex is not initialized" << std::endl;
-    }
     const std::lock_guard<std::mutex> lock(*submap_mutex_);
     *updated_ = false;
-    std::cout << "done" << std::endl;
-
     return submaps_;
   }
 
