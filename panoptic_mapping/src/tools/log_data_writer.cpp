@@ -25,15 +25,30 @@ void LogDataWriter::Config::setupParamsAndPrinting() {
 void LogDataWriter::Config::checkParams() const {
   // Check the specified path exists.
   struct stat buffer;
-  checkParamCond(stat(output_directory.c_str(), &buffer) == 0,
-                 "Output directory '" + output_directory + "' does not exist.");
+  checkParamCond(
+      stat(output_directory.c_str(), &buffer) == 0,
+      "'output_directory' '" + output_directory + "' does not exist.");
 }
 
 LogDataWriter::LogDataWriter(const Config& config, bool print_config)
     : config_(config.checkValid()) {
   LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
                                                        << config_.toString();
+}
 
+LogDataWriter::~LogDataWriter() {
+  // NOTE(schmluk): Apparently the destructor doesn't get called from ROS usage.
+  if (outfile_.is_open()) {
+    outfile_.close();
+    LOG_IF(INFO, config_.verbosity >= 1)
+        << "Finished writing data to file '" << outfile_name_ << "'.";
+  }
+}
+
+void LogDataWriter::setup() {
+  if (is_setup_) {
+    return;
+  }
   // Setup the output file.
   setupLogFile();
 
@@ -45,15 +60,7 @@ LogDataWriter::LogDataWriter(const Config& config, bool print_config)
   // Finish.
   LOG_IF(INFO, config_.verbosity >= 1)
       << "Started writing to data file '" << outfile_name_ << "'.";
-}
-
-LogDataWriter::~LogDataWriter() {
-  // NOTE(schmluk): Apparently the destructor doesn't get called from ROS usage.
-  if (outfile_.is_open()) {
-    outfile_.close();
-    LOG_IF(INFO, config_.verbosity >= 1)
-        << "Finished writing data to file '" << outfile_name_ << "'.";
-  }
+  is_setup_ = true;
 }
 
 void LogDataWriter::setupLogFile() {
@@ -110,6 +117,11 @@ void LogDataWriter::writeEntry(const std::string& value) {
 
 void LogDataWriter::writeData(double time_stamp,
                               const SubmapCollection& submaps) {
+  // Lazy initialization of the log files.
+  if (!is_setup_) {
+    setup();
+  }
+
   // Log the timestamp.
   outfile_ << std::to_string(time_stamp);
 
