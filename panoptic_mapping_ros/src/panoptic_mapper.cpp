@@ -194,6 +194,7 @@ void PanopticMapper::setupCollectionDependentMembers() {
           defaultNh("vis_planning")),
       planning_interface_);
   planning_visualizer_->setGlobalFrameName(config_.global_frame_name);
+  planning_visualizer_->setGlobals(globals_);
 }
 
 void PanopticMapper::setupRos() {
@@ -264,6 +265,7 @@ void PanopticMapper::processInput(InputData* input) {
   CHECK_NOTNULL(input);
   Timer timer("input");
   frame_timer_ = std::make_unique<Timer>("frame");
+  globals_->setT_W_C(input->T_M_C());
 
   // Compute and store the validity image.
   if (compute_validity_image_) {

@@ -25,11 +25,14 @@ class Globals {
   const std::shared_ptr<LabelHandlerBase>& labelHandler() const {
     return label_handler_;
   }
+  const Transformation& getT_W_C() const { return T_W_C_; }
+  void setT_W_C(const Transformation& T_W_C) { T_W_C_ = T_W_C; }
 
  private:
   // Components.
   std::shared_ptr<Camera> camera_;
   std::shared_ptr<LabelHandlerBase> label_handler_;
+  Transformation T_W_C_;  // Pose of the camera in the global frame.
 };
 
 }  // namespace panoptic_mapping

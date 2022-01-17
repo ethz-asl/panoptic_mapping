@@ -142,6 +142,10 @@ class PanopticMapper {
   MapManagerBase* getMapManagerPtr() { return map_manager_.get(); }
   const Config& getConfig() const { return config_; }
 
+  std::shared_ptr<SubmapCollection> getSubmapCollectionPtr() const {
+    return submaps_;
+  }
+
  private:
   // Setup.
   void setupMembers();

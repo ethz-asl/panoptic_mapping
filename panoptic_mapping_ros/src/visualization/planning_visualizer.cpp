@@ -8,10 +8,15 @@
 #include <utility>
 #include <vector>
 
+#include <panoptic_mapping/common/globals.h>
+#include <std_msgs/Header.h>
+
 namespace panoptic_mapping {
 
 void PlanningVisualizer::Config::checkParams() const {
   checkParamGT(slice_resolution, 0.f, "slice_resolution");
+  checkParamGT(turtlebot_map_size, 0.f, "turtlebot_map_size");
+  checkParamGT(turtlebot_resolution, 0.f, "turtlebot_resolution");
 }
 
 void PlanningVisualizer::Config::setupParamsAndPrinting() {
@@ -19,6 +24,8 @@ void PlanningVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_planning_slice", &visualize_planning_slice);
   setupParam("slice_resolution", &slice_resolution);
   setupParam("slice_height", &slice_height);
+  setupParam("turtlebot_map_size", &turtlebot_map_size);
+  setupParam("turtlebot_resolution", &turtlebot_resolution);
 }
 
 void PlanningVisualizer::Config::fromRosParam() {
@@ -40,15 +47,58 @@ PlanningVisualizer::PlanningVisualizer(
     slice_pub_ =
         nh_.advertise<visualization_msgs::Marker>("planning_slice", 100);
   }
+  turtlebot_pub_ =
+      nh_.advertise<sensor_msgs::Image>("turtlebot_local_map", 100);
 }
 
-void PlanningVisualizer::visualizeAll() { visualizePlanningSlice(); }
+void PlanningVisualizer::visualizeAll() {
+  visualizePlanningSlice();
+  publishTurtlebotMap();
+}
 
 void PlanningVisualizer::visualizePlanningSlice() {
   if (config_.visualize_planning_slice && slice_pub_.getNumSubscribers() > 0) {
     visualization_msgs::Marker msg = generateSliceMsg();
     slice_pub_.publish(msg);
   }
+}
+
+void PlanningVisualizer::publishTurtlebotMap() {
+  const Transformation T_W_C = globals_->getT_W_C();
+  const int extent =
+      config_.turtlebot_map_size / config_.turtlebot_resolution;  // px
+  const float half_extent = config_.turtlebot_map_size / 2.f;
+  cv::Mat result(extent, extent, CV_8UC1, cv::Scalar(2));
+
+  // Get image data from map.
+  for (size_t x = 0; x < extent; ++x) {
+    for (size_t y = 0; y < extent; ++y) {
+      Point position_C(
+          static_cast<float>(y) * config_.turtlebot_resolution - half_extent, 0,
+          half_extent - static_cast<float>(x) * config_.turtlebot_resolution);
+      Point position_W = T_W_C * position_C;
+      position_W.z() = config_.slice_height;
+
+      PlanningInterface::VoxelState state =
+          planning_interface_->getVoxelState(position_W);
+
+      if (state == PlanningInterface::VoxelState::kKnownFree) {
+        result.at<uchar>(x, y) = 0;
+      } else if (state == PlanningInterface::VoxelState::kKnownOccupied) {
+        result.at<uchar>(x, y) = 100;
+      } else {
+        result.at<uchar>(x, y) = 200;
+      }
+    }
+  }
+
+  // Publish.
+  std_msgs::Header header;
+  header.stamp = ros::Time::now();
+  turtlebot_pub_.publish(
+      cv_bridge::CvImage(header, sensor_msgs::image_encodings::TYPE_8UC1,
+                         result)
+          .toImageMsg());
 }
 
 visualization_msgs::Marker PlanningVisualizer::generateSliceMsg() {

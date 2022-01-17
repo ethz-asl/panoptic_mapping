@@ -70,6 +70,9 @@ void InputSynchronizer::advertiseInputTopics() {
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(
             type, [this](const MsgT& msg, InputSynchronizerData* data) {
+              if (msg->height == 0 || msg->width == 0) {
+                return;
+              }
               const cv_bridge::CvImageConstPtr depth =
                   cv_bridge::toCvCopy(msg, "32FC1");
               data->data->depth_image_ = depth->image;
@@ -90,6 +93,9 @@ void InputSynchronizer::advertiseInputTopics() {
       case InputData::InputType::kColorImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
+          if (msg->height == 0 || msg->width == 0) {
+            return;
+          }
           const cv_bridge::CvImageConstPtr color =
               cv_bridge::toCvCopy(msg, "bgr8");
           data->data->color_image_ = color->image;
@@ -103,6 +109,9 @@ void InputSynchronizer::advertiseInputTopics() {
       case InputData::InputType::kSegmentationImage: {
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(type, [](const MsgT& msg, InputSynchronizerData* data) {
+          if (msg->height == 0 || msg->width == 0) {
+            return;
+          }
           const cv_bridge::CvImageConstPtr seg =
               cv_bridge::toCvCopy(msg, "32SC1");
           data->data->id_image_ = seg->image;
@@ -128,6 +137,9 @@ void InputSynchronizer::advertiseInputTopics() {
         using MsgT = sensor_msgs::ImageConstPtr;
         addQueue<MsgT>(
             type, [this](const MsgT& msg, InputSynchronizerData* data) {
+              if (msg->height == 0 || msg->width == 0) {
+                return;
+              }
               const cv_bridge::CvImageConstPtr uncertainty =
                   cv_bridge::toCvCopy(msg, "32FC1");
               data->data->uncertainty_image_ = uncertainty->image;
