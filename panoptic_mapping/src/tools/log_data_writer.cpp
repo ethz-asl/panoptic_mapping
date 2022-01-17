@@ -52,7 +52,7 @@ void LogDataWriter::setup() {
   // Setup the output file.
   setupLogFile();
 
-  // Setup evaluations.
+  // Setup what to evaluate and log headers.
   outfile_ << "Timestamp [s]";
   setupEvaluations();
   outfile_ << std::endl;
@@ -87,8 +87,6 @@ void LogDataWriter::setupLogFile() {
 }
 
 void LogDataWriter::setupEvaluations() {
-  outfile_ << "Timestamp [s]";
-
   // Setup all data headers [with units] and evaluation functions to be used.
   if (config_.evaluate_number_of_submaps) {
     writeEntry("NoSubmaps [1]");
