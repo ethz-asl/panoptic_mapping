@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -174,6 +175,7 @@ class PanopticMapper {
   // Map.
   std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<ThreadSafeSubmapCollection> thread_safe_submaps_;
+  std::mutex map_mutex_;
 
   // Mapping.
   std::unique_ptr<IDTrackerBase> id_tracker_;

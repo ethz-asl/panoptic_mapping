@@ -175,6 +175,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   cfg.voxel_size = submap_proto.voxel_size();
   cfg.voxels_per_side = submap_proto.voxels_per_side();
   cfg.truncation_distance = submap_proto.truncation_distance();
+  // TODO: proper class layer config loading.
   auto submap = std::make_unique<Submap>(cfg, id_manager, instance_manager);
 
   // Load the submap data.
@@ -201,6 +202,9 @@ std::unique_ptr<Submap> Submap::loadFromStream(
       LOG(ERROR) << "Could not load the classification layer from stream.";
       return nullptr;
     }
+    submap->has_class_layer_ = true;
+  } else {
+    submap->has_class_layer_ = false;
   }
 
   // Load the transformation.

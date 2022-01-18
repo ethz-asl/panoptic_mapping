@@ -58,6 +58,7 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
                       voxblox_msgs::MeshBlock* mesh_block);
   std::function<Color(const ClassVoxel&)> getColoring() const;
   void updateVisInfos(const SubmapCollection& submaps) override;
+  voxblox_msgs::MultiMesh generateMeshMsg(Submap* submap);
 
  private:
   const Config config_;

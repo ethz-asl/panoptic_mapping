@@ -631,6 +631,16 @@ def create_label_ids_active_change(ir_correction_file):
 
     print("Created a labeling with %i instances and %i classes." %
           (len(labler.get_labels()), labler.class_counter))
+
+    # Newly Added Objects
+    labler.add_instance(["DawnMug_1"], "cup")
+    labler.add_instance(["FoxPlushy_1"], "plushy")
+    labler.add_instance(["CoffeeMaker_2"], "coffee_machine")
+    labler.add_instance(["ChildCoat_1"], "coat")
+    labler.add_instance(["SwanPot_2"], "pot")
+    labler.add_instance(["ClassroomPictureFrameOval_1"], "picture")
+    labler.add_instance(["JewelryBox_1"], "jewelry_box")
+
     return labler.get_labels(), labler.get_meshes_to_label()
 
 

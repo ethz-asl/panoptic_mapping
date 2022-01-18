@@ -260,6 +260,8 @@ void PanopticMapper::processInput(InputData* input) {
     input->setVertexMap(
         globals_->camera()->computeVertexMap(input->depthImage()));
   }
+
+  std::lock_guard<std::mutex> lock(map_mutex_);
   ros::WallTime t0 = ros::WallTime::now();
 
   // Track the segmentation images and allocate new submaps.
@@ -317,6 +319,7 @@ void PanopticMapper::processInput(InputData* input) {
 }
 
 void PanopticMapper::finishMapping() {
+  std::lock_guard<std::mutex> lock(map_mutex_);
   map_manager_->finishMapping(submaps_.get());
   submap_visualizer_->visualizeAll(submaps_.get());
   LOG_IF(INFO, config_.verbosity >= 2) << "Finished mapping.";
@@ -329,6 +332,7 @@ void PanopticMapper::publishVisualization() {
 }
 
 bool PanopticMapper::saveMap(const std::string& file_path) {
+  std::lock_guard<std::mutex> lock(map_mutex_);
   bool success = submaps_->saveToFile(file_path);
   LOG_IF(INFO, success) << "Successfully saved " << submaps_->size()
                         << " submaps to '" << file_path << "'.";
@@ -353,7 +357,8 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     }
   }
 
-  // Set the map.
+  // Set the map. These are modifying actions needing the map mutex.
+  std::lock_guard<std::mutex> lock(map_mutex_);
   submaps_ = loaded_map;
 
   // Setup the interfaces that use the new collection.
@@ -363,6 +368,10 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
   submap_visualizer_->clearMesh();
   submap_visualizer_->reset();
   submap_visualizer_->visualizeAll(submaps_.get());
+
+  // TEST
+  loaded_map->setActiveFreeSpaceSubmapID(
+      -1);  // Such that the sinlge tsdf tracker can allocate a new one.
 
   LOG_IF(INFO, config_.verbosity >= 1)
       << "Successfully loaded " << submaps_->size() << " submaps.";

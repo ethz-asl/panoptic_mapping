@@ -66,28 +66,44 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
   // If the freespace map ID is not yet setup (loaded map) assume it's the first
   // submap in the collection.
   if (submaps->getActiveFreeSpaceSubmapID() < 0) {
-    submaps->setActiveFreeSpaceSubmapID(submaps->begin()->getID());
+    // TEST
+    return result;
+    // submaps->setActiveFreeSpaceSubmapID(submaps->begin()->getID());
   }
 
-  // Get the single map.
-  Submap& submap =
-      *submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());
+  // visualize the single map.
+  result.emplace_back(generateMeshMsg(
+      submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID())));
 
+  // TEST past map.
+  if (submaps->size() >= 2) {
+    voxblox_msgs::MultiMesh past_msg =
+        generateMeshMsg(submaps->getSubmapPtr(0));
+    past_msg.alpha = 0.4;
+    past_msg.name_space = map_name_space_ + "_past";
+    past_msg.header.frame_id = global_frame_name_;
+    LOG(INFO) << "Sending second mesh with ns: " << past_msg.name_space;
+    result.emplace_back(std::move(past_msg));
+  }
+  return result;
+}
+
+voxblox_msgs::MultiMesh SingleTsdfVisualizer::generateMeshMsg(Submap* submap) {
   // Setup message.
   voxblox_msgs::MultiMesh msg;
   msg.header.stamp = ros::Time::now();
-  msg.header.frame_id = submap.getFrameName();
+  msg.header.frame_id = submap->getFrameName();
   msg.name_space = map_name_space_;
 
   // Update the mesh.
-  submap.updateMesh(true, false);
+  submap->updateMesh(true, false);
 
   // Mark the whole mesh for re-publishing if requested.
   if (info_.republish_everything) {
     voxblox::BlockIndexList mesh_indices;
-    submap.getMeshLayer().getAllAllocatedMeshes(&mesh_indices);
+    submap->getMeshLayer().getAllAllocatedMeshes(&mesh_indices);
     for (const auto& block_index : mesh_indices) {
-      submap.getMeshLayerPtr()->getMeshPtrByIndex(block_index)->updated = true;
+      submap->getMeshLayerPtr()->getMeshPtrByIndex(block_index)->updated = true;
     }
     info_.republish_everything = false;
   }
@@ -100,12 +116,12 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
     color_mode_voxblox = voxblox::ColorMode::kNormals;
   }
 
-  voxblox::generateVoxbloxMeshMsg(submap.getMeshLayerPtr(), color_mode_voxblox,
+  voxblox::generateVoxbloxMeshMsg(submap->getMeshLayerPtr(), color_mode_voxblox,
                                   &msg.mesh);
 
   // Add removed blocks so they are cleared from the visualization as well.
   voxblox::BlockIndexList block_indices;
-  submap.getTsdfLayer().getAllAllocatedBlocks(&block_indices);
+  submap->getTsdfLayer().getAllAllocatedBlocks(&block_indices);
   for (const auto& block_index : info_.previous_blocks) {
     if (std::find(block_indices.begin(), block_indices.end(), block_index) ==
         block_indices.end()) {
@@ -120,24 +136,23 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
 
   if (msg.mesh.mesh_blocks.empty()) {
     // Nothing changed, don't send an empty msg which would reset the mesh.
-    return result;
+    return voxblox_msgs::MultiMesh();
   }
 
   // Apply the submap color if necessary.
   if (color_mode_voxblox == voxblox::ColorMode::kGray) {
-    if (!submap.hasClassLayer()) {
+    if (!submap->hasClassLayer()) {
       LOG_IF(WARNING, config_.verbosity >= 2)
           << "Can not create color for mode '" << colorModeToString(color_mode_)
           << "' without existing class layer.";
     } else {
       for (auto& mesh_block : msg.mesh.mesh_blocks) {
-        colorMeshBlock(submap, &mesh_block);
+        colorMeshBlock(*submap, &mesh_block);
       }
     }
   }
 
-  result.emplace_back(std::move(msg));
-  return result;
+  return msg;
 }
 
 void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,

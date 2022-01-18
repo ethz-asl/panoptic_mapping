@@ -28,6 +28,7 @@ class SingleTSDFTracker : public IDTrackerBase {
     // System params.
     bool use_detectron = false;
     bool use_instance_classification = false;
+    bool continue_using_loaded_map = false;
 
     Config() { setConfigName("SingleTSDFTracker"); }
 
@@ -54,7 +55,6 @@ class SingleTSDFTracker : public IDTrackerBase {
   const Config config_;
 
   int map_id_;
-  bool is_setup_ = false;
 };
 
 }  // namespace panoptic_mapping

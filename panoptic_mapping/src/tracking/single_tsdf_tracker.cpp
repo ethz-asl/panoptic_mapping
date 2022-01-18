@@ -20,6 +20,7 @@ void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("submap", &submap);
   setupParam("use_detectron", &use_detectron);
   setupParam("use_instance_classification", &use_instance_classification);
+  setupParam("continue_using_loaded_map", &continue_using_loaded_map);
 }
 
 SingleTSDFTracker::SingleTSDFTracker(const Config& config,
@@ -43,7 +44,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
   CHECK(inputIsValid(*input));
 
   // Check whether the map is already allocated.
-  if (!is_setup_) {
+  if (submaps->getActiveFreeSpaceSubmapID() < 0) {
     setup(submaps);
   }
 
@@ -74,7 +75,7 @@ void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
-  if (submaps->size() > 0) {
+  if (submaps->size() > 0 && config_.continue_using_loaded_map) {
     Submap& map = *(submaps->begin());
     if (map.getConfig().voxel_size != config_.submap.voxel_size ||
         map.getConfig().voxels_per_side != config_.submap.voxels_per_side ||
@@ -93,7 +94,6 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
     map_id_ = new_submap->getID();
   }
   submaps->setActiveFreeSpaceSubmapID(map_id_);
-  is_setup_ = true;
 }
 
 }  // namespace panoptic_mapping
