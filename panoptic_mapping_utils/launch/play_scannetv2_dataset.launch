@@ -1,8 +1,10 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="base_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0587_02"/>
+  <arg name="base_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0645_01"/>
+  <arg name="scan_id" default="scene0645_01"/>
   <arg name="play_rate" default="1"/>
-  <arg name="wait" default="false"/>
+  <arg name="wait" default="true"/>
+  <arg name="use_uncertainty" default="false"/>
   <arg name="namespace" default="data"/>
   <arg name="global_frame_name" default="world"/>
   <arg name="sensor_frame_name" default="depth_camera"/>
@@ -11,16 +13,19 @@
 <!-- ============ Play Data ============ -->
    <node pkg="panoptic_mapping_utils" type="scannetv2_data_player.py" name="scannetv2_data_player" output="screen">
     <param name="data_path" value="$(arg base_path)" /> 
+    <param name="scan_id" value="$(arg scan_id)" />
     <param name="play_rate" value="$(arg play_rate)" /> 
     <param name="global_frame_name" value="$(arg global_frame_name)" /> 
     <param name="sensor_frame_name" value="$(arg sensor_frame_name)" /> 
     <param name="wait" value="$(arg wait)" /> 
+    <param name="use_uncertainty" value="$(arg use_uncertainty)" />
             
     <remap from="~color_image" to="$(arg namespace)/color_image" />  
     <remap from="~depth_image" to="$(arg namespace)/depth_image" />  
     <remap from="~id_image" to="$(arg namespace)/segmentation_image" />  
+    <remap from="~uncertainty_image" to="$(arg namespace)/uncertainty_image" />
     <remap from="~labels" to="$(arg namespace)/segmentation_labels" />  
-    <remap from="~pose" to="$(arg namespace)/pose" />  
+    <remap from="~pose" to="$(arg namespace)/pose" />
   </node>
 
 </launch>

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os
 import json
 import csv
 from pathlib import Path
@@ -20,7 +19,7 @@ from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 _COLOR_IMAGES_DIR = "color"
 _DEPTH_IMAGES_DIR = "depth"
-_LABEL_DIR = "label-detectron"
+_PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
 _DEPTH_SHIFT = 1000
 
@@ -36,19 +35,19 @@ class ScannetV2DataPlayer:
         self.global_frame_name = rospy.get_param("~global_frame_name", "world")
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name", "depth_cam")
         self.play_rate = rospy.get_param("~play_rate", 1.0)
-        self.use_predicted_labels = rospy.get_param("~use_predicted_labels", False)
         self.wait = rospy.get_param("~wait", False)
         self.refresh_rate = 30  # Hz
-
-        self.wait = rospy.get_param("~wait")
+        self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
 
         # Configure sensor data publishers
         self.color_pub = rospy.Publisher("~color_image", Image, queue_size=100)
         self.depth_pub = rospy.Publisher("~depth_image", Image, queue_size=100)
         self.id_pub = rospy.Publisher("~id_image", Image, queue_size=100)
+        if self.use_uncertainty:
+            self.uncertainty_pub = rospy.Publisher(
+                "~uncertainty_image", Image, queue_size=100
+            )
         self.label_pub = rospy.Publisher("~labels", DetectronLabels, queue_size=100)
-        if self.use_predicted_labels:
-            raise NotImplementedError
         self.pose_pub = rospy.Publisher("~pub", PoseStamped, queue_size=100)
         self.tf_broadcaster = tf.TransformBroadcaster()
 
@@ -126,6 +125,20 @@ class ScannetV2DataPlayer:
                 label_msg.labels.append(label)
         self.label_pub.publish(label_msg)
 
+    def _load_and_publish_uncertainty(self, uncertainty_image_file_path, timestamp):
+        if not uncertainty_image_file_path.exists():
+            rospy.logwarn(
+                f"Uncertainty image file {uncertainty_image_file_path} not found!"
+            )
+            return
+
+        uncertainty_image = np.array(PilImage.open(str(uncertainty_image_file_path)))
+        # Convert depth to meters
+        img_msg = self.cv_bridge.cv2_to_imgmsg(uncertainty_image, "32FC1")
+        img_msg.header.stamp = timestamp
+        img_msg.header.frame_id = self.sensor_frame_name
+        self.uncertainty_pub.publish(img_msg)
+
     def _load_and_publish_pose(self, pose_file_path, timestamp):
         # Load the transformation matrix from a text file
         pose_mat = np.loadtxt(str(pose_file_path))
@@ -186,21 +199,29 @@ class ScannetV2DataPlayer:
             self.data_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
         )
         instance_map_file_path = (
-            self.data_dir_path / _LABEL_DIR / f"{frame_id}_predicted.png"
+            self.data_dir_path
+            / _PANOPTIC_PRED_DIR
+            / "{:05d}_predicted.png".format(int(frame_id))
         )
-        labels_file_path = self.data_dir_path / _LABEL_DIR / f"{frame_id}_labels.json"
-
-        for f in [color_image_file_path, depth_image_file_path, pose_file_path]:
-            if not f.is_file():
-                rospy.logwarn(f"Could not find file '{str(f)}', skipping frame.")
-                self.current_index += 1
-                return
+        labels_file_path = (
+            self.data_dir_path
+            / _PANOPTIC_PRED_DIR
+            / "{:05d}_labels.json".format(int(frame_id))
+        )
 
         self._load_and_publish_color(color_image_file_path, now)
         self._load_and_publish_instance(instance_map_file_path, now)
         self._load_and_publish_labels(labels_file_path, now)
         self._load_and_publish_depth(depth_image_file_path, now)
         self._load_and_publish_pose(pose_file_path, now)
+
+        if self.use_uncertainty:
+            uncertainty_image_file_path = (
+                self.data_dir_path
+                / _PANOPTIC_PRED_DIR
+                / "{:05d}_uncertainty.tiff".format(int(frame_id))
+            )
+            self._load_and_publish_uncertainty(uncertainty_image_file_path, now)
 
         self.current_index += 1
         if self.current_index >= len(self.ids):

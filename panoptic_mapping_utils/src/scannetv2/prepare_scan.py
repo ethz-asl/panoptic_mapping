@@ -3,6 +3,7 @@ import csv
 import json
 import re
 import time
+import tempfile
 from pathlib import Path
 from typing import List, Optional
 from zipfile import ZipFile
@@ -12,8 +13,10 @@ from PIL import Image
 
 from scannetv2_to_nyu40 import SCANNETV2_TO_NYU40
 
-_LABEL_DIR = "label-filt"
-_INSTANCE_DIR = "instance-filt"
+_LABEL_DIR_NAME = "label-filt"
+_INSTANCE_DIR_NAME = "instance-filt"
+_LABEL_ARCHIVE_NAME_PATTERN = "{}_2d-label-filt.zip"
+_INSTANCE_ARCHIVE_NAME_PATTERN = "{}_2d-instance-filt.zip"
 _LABEL_DETECTRON_DIR = "label-detectron"
 _NYU40_STUFF_CLASSES = [1, 2, 22]
 _DEFAULT_THING_SCORE = 0.9
@@ -103,7 +106,7 @@ def make_predicted_map_and_segment_labels(
                     (
                         x["score"]
                         for x in instance_scores
-                        if x["id"] == class_id and x["instance"] == instance_id
+                        if x["class_id"] == class_id and x["instance_id"] == instance_id
                     ),
                     0.0,
                 )
@@ -131,58 +134,51 @@ def convert_labels_to_nyu40(labels: np.ndarray):
 
 
 def create_panoptic_labels_from_grountruth(scan_dir_path: Path):
-    instance_dir_path = scan_dir_path / _INSTANCE_DIR
-    if not instance_dir_path.exists():
-        instance_archive_glob_pattern = f"*{_INSTANCE_DIR}.zip"
-        # Try to extract the archive
-        try:
-            instance_archive_path = list(
-                scan_dir_path.glob(instance_archive_glob_pattern)
-            )[0]
-        except IndexError:
-            print("Instance archive or dir not found!")
-            return
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_dir_path = Path(tmpdir)
+        # Extract instance id maps
+        instance_archive_path = scan_dir_path / _INSTANCE_ARCHIVE_NAME_PATTERN.format(
+            scan_dir_path.name
+        )
         instance_archive = ZipFile(str(instance_archive_path))
-        instance_archive.extractall(path=str(scan_dir_path))
+        instance_archive.extractall(path=str(temp_dir_path))
+        instance_dir_path = temp_dir_path / _INSTANCE_DIR_NAME
 
-    label_dir_path = scan_dir_path / _LABEL_DIR
-    if not label_dir_path.exists():
-        # Try to extract the archive
-        label_archive_glob_pattern = f"*{_LABEL_DIR}.zip"
-        try:
-            label_archive_path = list(scan_dir_path.glob(label_archive_glob_pattern))[0]
-        except IndexError:
-            print("Instance archive or dir not found!")
-            return
+        # Extract semantic id maps
+        label_archive_path = scan_dir_path / _LABEL_ARCHIVE_NAME_PATTERN.format(
+            scan_dir_path.name
+        )
+        label_dir_path = temp_dir_path / _LABEL_DIR_NAME
         label_archive = ZipFile(str(label_archive_path))
-        label_archive.extractall(path=str(scan_dir_path))
+        label_archive.extractall(path=str(temp_dir_path))
 
-    label_detectron_dir_path = scan_dir_path / _LABEL_DETECTRON_DIR
-    label_detectron_dir_path.mkdir(exist_ok=True)
-    for labels_file_path in label_dir_path.glob("*.png"):
-        instance_file_path = instance_dir_path / labels_file_path.name
+        label_detectron_dir_path = scan_dir_path / _LABEL_DETECTRON_DIR
+        label_detectron_dir_path.mkdir(exist_ok=True)
+        for labels_file_path in label_dir_path.glob("*.png"):
+            instance_file_path = instance_dir_path / labels_file_path.name
 
-        labels = np.array(Image.open(labels_file_path))
-        labels_nyu40 = convert_labels_to_nyu40(labels)
+            labels = np.array(Image.open(labels_file_path))
+            labels_nyu40 = convert_labels_to_nyu40(labels)
 
-        instance_map = np.array(Image.open(instance_file_path))
+            instance_map = np.array(Image.open(instance_file_path))
 
-        predicted_map, segment_labels = make_predicted_map_and_segment_labels(
-            instance_map,
-            labels_nyu40,
-            _NYU40_STUFF_CLASSES,
-        )
+            predicted_map, segment_labels = make_predicted_map_and_segment_labels(
+                instance_map,
+                labels_nyu40,
+                None,
+            )
 
-        predicted_map_file_path = label_detectron_dir_path / (
-            instance_file_path.stem + "_predicted.png"
-        )
-        Image.fromarray(predicted_map).save(predicted_map_file_path)
+            predicted_map_file_path = label_detectron_dir_path / (
+                instance_file_path.stem + "_predicted.png"
+            )
+            Image.fromarray(predicted_map).save(predicted_map_file_path)
 
-        segment_labels_file_path = label_detectron_dir_path / (
-            instance_file_path.stem + "_labels.json"
-        )
-        with segment_labels_file_path.open("w") as f:
-            json.dump(segment_labels, f)
+            segment_labels_file_path = label_detectron_dir_path / (
+                instance_file_path.stem + "_labels.json"
+            )
+            with segment_labels_file_path.open("w") as f:
+                json.dump(segment_labels, f)
 
 
 def create_panoptic_labels_from_deeplab_predictions(
@@ -203,7 +199,7 @@ def create_panoptic_labels_from_deeplab_predictions(
 
         # Load the instance scores file
         instance_scores_file_path = predicted_labels_dir_path / (
-            panoptic_map_file_path.name + "_instance_scores.json"
+            panoptic_map_file_path.stem + "_instance_scores.json"
         )
         with open(instance_scores_file_path, "r") as j:
             instance_scores = json.load(j)
@@ -271,20 +267,20 @@ def _parse_args():
 
     parser.add_argument(
         "scan_dir_path",
-        type=lambda p: Path(p).expanduser(),
+        type=lambda p: Path(p).absolute(),
         help="Path to the scan directory.",
     )
 
     parser.add_argument(
-        "panoptic_labels",
+        "--panoptic_labels",
         type=str,
         choices=_PANOPTIC_LABELS_CHOICES,
         default="groundtruth",
-        help="How the labels should be generated",
+        help="Where panoptic labels should be generated from.",
     )
 
     parser.add_argument(
-        "predicted_labels_dir",
+        "--predicted_labels_dir",
         type=str,
         default=None,
         help="Name of the subdirectory containing the predicted labels.",
@@ -298,5 +294,5 @@ if __name__ == "__main__":
     prepare_scan(
         scan_dir_path=args.scan_dir_path,
         panoptic_labels=args.panoptic_labels,
-        deeplab_labels_dir=args.predicted_labels_dir,
+        predicted_labels_dir=args.predicted_labels_dir,
     )
