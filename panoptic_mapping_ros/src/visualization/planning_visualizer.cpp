@@ -26,6 +26,7 @@ void PlanningVisualizer::Config::setupParamsAndPrinting() {
   setupParam("slice_height", &slice_height);
   setupParam("turtlebot_map_size", &turtlebot_map_size);
   setupParam("turtlebot_resolution", &turtlebot_resolution);
+  setupParam("turtlebot_orientation_is_fixed", &turtlebot_orientation_is_fixed);
 }
 
 void PlanningVisualizer::Config::fromRosParam() {
@@ -76,7 +77,14 @@ void PlanningVisualizer::publishTurtlebotMap() {
       Point position_C(
           static_cast<float>(y) * config_.turtlebot_resolution - half_extent, 0,
           half_extent - static_cast<float>(x) * config_.turtlebot_resolution);
-      Point position_W = T_W_C * position_C;
+      Point position_W;
+      if (config_.turtlebot_orientation_is_fixed) {
+        // Only position offset.
+        position_W = position_C + T_W_C.getPosition();
+      } else {
+        // This includes rotation.
+        position_W = T_W_C * position_C;
+      }
       position_W.z() = config_.slice_height;
 
       PlanningInterface::VoxelState state =

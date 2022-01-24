@@ -11,6 +11,7 @@
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <ros/node_handle.h>
 #include <sensor_msgs/Image.h>
+#include <utilitiy>
 #include <visualization_msgs/MarkerArray.h>
 
 namespace panoptic_mapping {
@@ -31,6 +32,10 @@ class PlanningVisualizer {
 
     // Voxel size of the local and global map.
     float turtlebot_resolution = 0.1f;
+
+    // If true, get the local map global-map-aligned, if false get it
+    // robot-orientation-aligned.
+    bool turtlebot_orientation_is_fixed = true;
 
     Config() { setConfigName("PlanningVisualizer"); }
 
