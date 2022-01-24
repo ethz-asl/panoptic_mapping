@@ -74,15 +74,21 @@ void PlanningVisualizer::publishTurtlebotMap() {
   // Get image data from map.
   for (size_t x = 0; x < extent; ++x) {
     for (size_t y = 0; y < extent; ++y) {
-      Point position_C(
-          static_cast<float>(y) * config_.turtlebot_resolution - half_extent, 0,
-          half_extent - static_cast<float>(x) * config_.turtlebot_resolution);
       Point position_W;
       if (config_.turtlebot_orientation_is_fixed) {
         // Only position offset.
-        position_W = position_C + T_W_C.getPosition();
+        position_W = T_W_C.getPosition() +
+                     Point(half_extent - static_cast<float>(x) *
+                                             config_.turtlebot_resolution,
+                           half_extent - static_cast<float>(y) *
+                                             config_.turtlebot_resolution,
+                           0);
       } else {
         // This includes rotation.
+        Point position_C(
+            static_cast<float>(y) * config_.turtlebot_resolution - half_extent,
+            0,
+            half_extent - static_cast<float>(x) * config_.turtlebot_resolution);
         position_W = T_W_C * position_C;
       }
       position_W.z() = config_.slice_height;
@@ -90,6 +96,8 @@ void PlanningVisualizer::publishTurtlebotMap() {
       PlanningInterface::VoxelState state =
           planning_interface_->getVoxelState(position_W);
 
+      // NOTE(schmluk): Convention is 0,1,2, the x100 is for visualization
+      // purposes.
       if (state == PlanningInterface::VoxelState::kKnownFree) {
         result.at<uchar>(x, y) = 0;
       } else if (state == PlanningInterface::VoxelState::kKnownOccupied) {

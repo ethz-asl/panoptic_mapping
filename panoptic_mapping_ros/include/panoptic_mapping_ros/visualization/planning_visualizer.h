@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <cv_bridge/cv_bridge.h>
 #include <panoptic_mapping/common/common.h>
@@ -11,7 +12,6 @@
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <ros/node_handle.h>
 #include <sensor_msgs/Image.h>
-#include <utilitiy>
 #include <visualization_msgs/MarkerArray.h>
 
 namespace panoptic_mapping {
