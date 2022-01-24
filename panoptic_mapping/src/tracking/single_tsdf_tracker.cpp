@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 #include "panoptic_mapping/tracking/tracking_info.h"
@@ -24,6 +23,8 @@ void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("submap", &submap);
   setupParam("use_detectron", &use_detectron);
   setupParam("use_detectron_panoptic", &use_detectron_panoptic);
+  setupParam("use_class_for_instance_tracking",
+             &use_class_for_instance_tracking);
   setupParam("renderer", &renderer);
   setupParam("min_new_instance_size", &min_new_instance_size);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
@@ -86,6 +87,14 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       int matched_id = 0;
       float score = 0.f;
 
+      const auto input_class_id = input_id / kPanopticLabelDivisor_;
+      const auto input_instance_id = input_id % kPanopticLabelDivisor_;
+
+      // Stuff segments don't need to be matched
+      if (input_instance_id == 0) {
+        input_to_output[input_id] = input_id;
+      }
+
       // Compute IoU with all rendered segments
       std::vector<std::pair<int, float>> ids_values;
       bool any_overlap = tracking_data.getAllMetrics(input_id, &ids_values,
@@ -94,17 +103,16 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         continue;
       }
 
-      const auto input_class_id = input_id / kPanopticLabelDivisor_;
-
       for (const auto& id_value : ids_values) {
         if (id_value.second < config_.match_acceptance_threshold) {
           // No more matches possible as matches are ordered in decreasing order
           break;
         }
 
-        // Check that the semantic class is the same
+        // Check that classes match, if enabled
         const auto class_id = id_value.first / kPanopticLabelDivisor_;
-        if (class_id != input_class_id) {
+        if (class_id != input_class_id &&
+            config_.use_class_for_instance_tracking) {
           continue;
         }
 
@@ -125,17 +133,25 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
       } else {
-        bool new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
-                            config_.min_new_instance_size;
-        if (new_instance) {
-          input_to_output[input_id] = input_id;
+        // Filter segments that are too small
+        bool is_new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
+                               config_.min_new_instance_size;
+        if (is_new_instance) {
+          // Generate new globally unique InstanceID
+          auto new_instance_id_iter =
+              used_instance_ids_.emplace(&instance_id_manager_).first;
+          // Update the instance id in the panoptic label
+          input_to_output[input_id] = input_class_id * kPanopticLabelDivisor_ +
+                                      static_cast<int>(*new_instance_id_iter);
+          LOG_IF(INFO, config_.verbosity >= 1)
+              << "Generated new instance id for class " << input_class_id;
         } else {
           input_to_output[input_id] = -1;
         }
       }
     }
 
-    // Translate the id image - this will mostly affect thing classes`
+    // Translate the id image - this will mostly affect thing classes
     for (auto it = input->idImagePtr()->begin<int>();
          it != input->idImagePtr()->end<int>(); ++it) {
       *it = input_to_output[*it];

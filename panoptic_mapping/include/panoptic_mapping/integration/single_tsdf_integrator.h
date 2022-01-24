@@ -74,7 +74,7 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
       registration_;
 
   void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
-                        ClassVoxel* class_voxel) const;
+                        ClassVoxel* class_voxel, float weight = 1.f) const;
 
   void updateUncertaintyVoxel(InterpolatorBase* interpolator,
                               const InputData& input,

@@ -40,7 +40,7 @@ id_tracker:
   tracking_metric: IoU # IoU, overlap
   match_acceptance_threshold: 0.6
   classification:
-    type: variable_count
+    type: panoptic_weight
 
 tsdf_integrator:
   type: single_tsdf
@@ -104,7 +104,9 @@ visualization:
     visualize_tracking: true
 
 data_writer:
-  type: log
+  type: evaluation
   verbosity: 1
-  output_directory: /tmp/logs
+  store_map_every_n_frames: 50
+  log_data_writer:
+    output_directory: /home/giuliano/mt_ipp_panoptic_mapping/runs/scene0587_02/single_tsdf
     

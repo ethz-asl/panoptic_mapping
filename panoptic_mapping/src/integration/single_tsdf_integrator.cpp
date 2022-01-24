@@ -208,8 +208,12 @@ bool SingleTsdfIntegrator::updateVoxel(
           class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
         updateUncertaintyVoxel(interpolator, input,
                                static_cast<UncertaintyVoxel*>(class_voxel));
+      } else if (class_voxel->getVoxelType() ==
+                 ClassVoxelType::kPanopticWeight) {
+        // For the panoptic weight voxel, use TSDF update quadric weight
+        updateClassVoxel(interpolator, input, class_voxel, weight);
       } else {
-        updateClassVoxel(interpolator, input, class_voxel);
+        updateClassVoxel(interpolator, input, class_voxel, 1.f);
       }
     }
   } else {
@@ -220,11 +224,12 @@ bool SingleTsdfIntegrator::updateVoxel(
 
 void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
                                             const InputData& input,
-                                            ClassVoxel* class_voxel) const {
+                                            ClassVoxel* class_voxel,
+                                            float weight) const {
   // For the single TSDF case there is no belonging submap, just use the ID
   // directly.
   const int id = interpolator->interpolateID(input.idImage());
-  class_voxel->incrementCount(id);
+  class_voxel->incrementCount(id, weight);
 }
 
 void SingleTsdfIntegrator::updateUncertaintyVoxel(

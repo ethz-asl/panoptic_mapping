@@ -37,6 +37,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/classification/fixed_count.cpp
         src/map/classification/variable_count.cpp
         src/map/classification/uncertainty.cpp
+        src/map/classification/panoptic_weight.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp
