@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -123,19 +124,19 @@ void InputSynchronizer::advertiseInputTopics() {
         break;
       }
       case InputData::InputType::kUncertaintyImage: {
-            using MsgT = sensor_msgs::ImageConstPtr;
-            addQueue<MsgT>(
-                    type, [this](const MsgT& msg, InputSynchronizerData* data) {
-                        const cv_bridge::CvImageConstPtr uncertainty =
-                                cv_bridge::toCvCopy(msg, "32FC1");
-                        data->data->uncertainty_image_ = uncertainty->image;
-                        const std::lock_guard<std::mutex> lock(data->write_mutex_);
-                        data->data->contained_inputs_.insert(
-                                InputData::InputType::kUncertaintyImage);
-                    });
-            subscribed_inputs_.insert(InputData::InputType::kUncertaintyImage);
-            break;
-        }
+        using MsgT = sensor_msgs::ImageConstPtr;
+        addQueue<MsgT>(
+            type, [this](const MsgT& msg, InputSynchronizerData* data) {
+              const cv_bridge::CvImageConstPtr uncertainty =
+                  cv_bridge::toCvCopy(msg, "32FC1");
+              data->data->uncertainty_image_ = uncertainty->image;
+              const std::lock_guard<std::mutex> lock(data->write_mutex_);
+              data->data->contained_inputs_.insert(
+                  InputData::InputType::kUncertaintyImage);
+            });
+        subscribed_inputs_.insert(InputData::InputType::kUncertaintyImage);
+        break;
+      }
     }
   }
 }
@@ -151,9 +152,11 @@ bool InputSynchronizer::getDataInQueue(const ros::Time& timestamp,
     return false;
   }
   double max_delay = config_.max_delay;
-  auto it = find_if(
-      data_queue_.begin(), data_queue_.end(),
-      [&timestamp, &max_delay](const auto& arg) { return abs(arg->timestamp.toSec() - timestamp.toSec()) <= max_delay; });
+  auto it = find_if(data_queue_.begin(), data_queue_.end(),
+                    [&timestamp, &max_delay](const auto& arg) {
+                      return abs(arg->timestamp.toSec() - timestamp.toSec()) <=
+                             max_delay;
+                    });
   if (it != data_queue_.end()) {
     // There already exists a data point.
     if (!it->get()->valid) {
@@ -180,6 +183,27 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
               [](const auto& lhs, const auto& rhs) -> bool {
                 return lhs->timestamp < rhs->timestamp;
               });
+    // Print missing topics if required.
+    std::stringstream info;
+    if (config_.verbosity >= 3 && *data_queue_.begin() &&
+        data_queue_.begin()->get()->data) {
+      const InputData data = *data_queue_.begin()->get()->data;
+      std::vector<std::string> missing_data;
+      for (const auto& type : subscribed_inputs_) {
+        if (!data.has(type)) {
+          missing_data.push_back(InputData::inputTypeToString(type));
+        }
+      }
+      if (!missing_data.empty()) {
+        info << " (Missing inputs: " << missing_data[0];
+        for (size_t i = 1; i < missing_data.size(); ++i) {
+          info << ", " << missing_data[i];
+        }
+        info << ")";
+      }
+    }
+
+    // Erase first element and update queue.
     data_queue_.erase(data_queue_.begin());
     data_is_ready_ = false;
     for (size_t i = 0; i < data_queue_.size(); ++i) {
@@ -189,7 +213,8 @@ bool InputSynchronizer::allocateDataInQueue(const ros::Time& timestamp) {
       }
     }
     LOG_IF(WARNING, config_.verbosity >= 2)
-        << "Input queue is getting too long, dropping oldest data.";
+        << "Input queue is getting too long, dropping oldest data" << info.str()
+        << ".";
     oldest_time_ = data_queue_.front()->timestamp;
   }
 
