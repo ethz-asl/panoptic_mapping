@@ -3,6 +3,7 @@
   <arg name="base_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0645_01"/>
   <arg name="scan_id" default="scene0645_01"/>
   <arg name="play_rate" default="1"/>
+  <arg name="refresh_rate" default="10"/>
   <arg name="wait" default="true"/>
   <arg name="use_uncertainty" default="false"/>
   <arg name="namespace" default="data"/>
@@ -15,6 +16,7 @@
     <param name="data_path" value="$(arg base_path)" /> 
     <param name="scan_id" value="$(arg scan_id)" />
     <param name="play_rate" value="$(arg play_rate)" /> 
+    <param name="refresh_rate" value="$(arg refresh_rate)"/>
     <param name="global_frame_name" value="$(arg global_frame_name)" /> 
     <param name="sensor_frame_name" value="$(arg sensor_frame_name)" /> 
     <param name="wait" value="$(arg wait)" /> 

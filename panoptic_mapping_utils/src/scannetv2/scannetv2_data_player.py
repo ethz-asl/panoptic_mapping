@@ -36,7 +36,7 @@ class ScannetV2DataPlayer:
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name", "depth_cam")
         self.play_rate = rospy.get_param("~play_rate", 1.0)
         self.wait = rospy.get_param("~wait", False)
-        self.refresh_rate = 30  # Hz
+        self.refresh_rate = rospy.get_param("~refresh_rate", 10)  # Hz
         self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
 
         # Configure sensor data publishers
