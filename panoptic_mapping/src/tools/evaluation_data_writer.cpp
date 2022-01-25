@@ -26,7 +26,6 @@ EvaluationDataWriter::EvaluationDataWriter(const Config& config)
     : config_(config.checkValid()),
       LogDataWriter(config.log_data_writer_config, false) {
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-  setupEvaluations();
 }
 
 void EvaluationDataWriter::setupLogFile() {
@@ -61,9 +60,10 @@ void EvaluationDataWriter::setupLogFile() {
 }
 
 void EvaluationDataWriter::setupEvaluations() {
-
+  LogDataWriter::setupEvaluations();
   // Additional evaluations of the evaluation writer.
   if (config_.store_map_every_n_frames > 0) {
+    writeEntry("SavedMapName [-]");
     evaluations_.emplace_back([this](const SubmapCollection& submaps) {
       this->storeSubmaps(submaps);
     });
@@ -73,6 +73,7 @@ void EvaluationDataWriter::setupEvaluations() {
 void EvaluationDataWriter::storeSubmaps(const SubmapCollection& submaps) {
   store_submap_frame_++;
   if (store_submap_frame_ < config_.store_map_every_n_frames) {
+    writeEntry("");
     return;
   }
   store_submap_frame_ = 0;
@@ -80,6 +81,7 @@ void EvaluationDataWriter::storeSubmaps(const SubmapCollection& submaps) {
   ss << std::setw(6) << std::setfill('0') << store_submap_counter_;
   store_submap_counter_++;
   submaps.saveToFile(output_path_ + "/" + ss.str());
+  writeEntry(ss.str());
 }
 
 }  // namespace panoptic_mapping
