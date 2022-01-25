@@ -1,6 +1,6 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="base_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0645_01"/>
+  <arg name="scans_dir_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans"/>
   <arg name="scan_id" default="scene0645_01"/>
   <arg name="play_rate" default="1"/>
   <arg name="refresh_rate" default="10"/>
@@ -13,7 +13,7 @@
    
 <!-- ============ Play Data ============ -->
    <node pkg="panoptic_mapping_utils" type="scannetv2_data_player.py" name="scannetv2_data_player" output="screen">
-    <param name="data_path" value="$(arg base_path)" /> 
+    <param name="scans_dir_path" value="$(arg scans_dir_path)" /> 
     <param name="scan_id" value="$(arg scan_id)" />
     <param name="play_rate" value="$(arg play_rate)" /> 
     <param name="refresh_rate" value="$(arg refresh_rate)"/>

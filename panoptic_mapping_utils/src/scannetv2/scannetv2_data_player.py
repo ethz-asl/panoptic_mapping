@@ -28,9 +28,11 @@ class ScannetV2DataPlayer:
     def __init__(self):
 
         # node params
-        self.data_dir_path = Path(rospy.get_param("~data_path"))
-        if not self.data_dir_path.exists():
-            raise RuntimeError("Invalid data dir path!")
+        self.scans_dir_path = Path(rospy.get_param("~scans_dir_path"))
+        self.scan_id = rospy.get_param("~scan_id")
+        self.scan_dir_path = self.scans_dir_path / self.scan_id
+        if not self.scan_dir_path.exists():
+            raise RuntimeError("Invalid scan dir path!")
 
         self.global_frame_name = rospy.get_param("~global_frame_name", "world")
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name", "depth_cam")
@@ -56,7 +58,7 @@ class ScannetV2DataPlayer:
         self.current_index = 0
         self.times = []
         self.ids = []
-        timestamps_file_path = self.data_dir_path / "timestamps.csv"
+        timestamps_file_path = self.scan_dir_path / "timestamps.csv"
         if not timestamps_file_path.is_file():
             rospy.logfatal("Timestamps file not found!")
         with timestamps_file_path.open("r") as f:
@@ -190,21 +192,21 @@ class ScannetV2DataPlayer:
         frame_id = self.ids[self.current_index]
 
         color_image_file_path = (
-            self.data_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
+            self.scan_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
         )
         depth_image_file_path = (
-            self.data_dir_path / _DEPTH_IMAGES_DIR / "{:05d}.png".format(int(frame_id))
+            self.scan_dir_path / _DEPTH_IMAGES_DIR / "{:05d}.png".format(int(frame_id))
         )
         pose_file_path = (
-            self.data_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
+            self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
         )
         instance_map_file_path = (
-            self.data_dir_path
+            self.scan_dir_path
             / _PANOPTIC_PRED_DIR
             / "{:05d}_predicted.png".format(int(frame_id))
         )
         labels_file_path = (
-            self.data_dir_path
+            self.scan_dir_path
             / _PANOPTIC_PRED_DIR
             / "{:05d}_labels.json".format(int(frame_id))
         )
@@ -217,7 +219,7 @@ class ScannetV2DataPlayer:
 
         if self.use_uncertainty:
             uncertainty_image_file_path = (
-                self.data_dir_path
+                self.scan_dir_path
                 / _PANOPTIC_PRED_DIR
                 / "{:05d}_uncertainty.tiff".format(int(frame_id))
             )
