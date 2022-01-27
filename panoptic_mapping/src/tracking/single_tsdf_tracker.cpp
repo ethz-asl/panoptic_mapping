@@ -93,46 +93,45 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       // Stuff segments don't need to be matched
       if (input_instance_id == 0) {
         input_to_output[input_id] = input_id;
+        continue;
       }
 
       // Compute IoU with all rendered segments
       std::vector<std::pair<int, float>> ids_values;
       bool any_overlap = tracking_data.getAllMetrics(input_id, &ids_values,
                                                      config_.tracking_metric);
-      if (!any_overlap) {
-        continue;
-      }
+      if (any_overlap) {
+        for (const auto& id_value : ids_values) {
+          if (id_value.second < config_.match_acceptance_threshold) {
+            // No more matches possible as matches are ordered in decreasing order
+            break;
+          }
 
-      for (const auto& id_value : ids_values) {
-        if (id_value.second < config_.match_acceptance_threshold) {
-          // No more matches possible as matches are ordered in decreasing order
+          // Check that classes match, if enabled
+          const auto class_id = id_value.first / kPanopticLabelDivisor_;
+          if (class_id != input_class_id &&
+              config_.use_class_for_instance_tracking) {
+            continue;
+          }
+
+          // Make sure rendered and predicted segments are matched 1-to-1
+          if (matched_ids.find(id_value.first) != matched_ids.end()) {
+            continue;
+          }
+
+          // Found the best match.
+          matched = true;
+          matched_id = id_value.first;
+          score = id_value.second;
           break;
         }
-
-        // Check that classes match, if enabled
-        const auto class_id = id_value.first / kPanopticLabelDivisor_;
-        if (class_id != input_class_id &&
-            config_.use_class_for_instance_tracking) {
-          continue;
-        }
-
-        // Make sure rendered and predicted segments are matched 1-to-1
-        if (matched_ids.find(id_value.first) != matched_ids.end()) {
-          continue;
-        }
-
-        // Found the best match.
-        matched = true;
-        matched_id = id_value.first;
-        score = id_value.second;
-        break;
       }
 
       if (matched) {
         ++n_matched;
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
-      } else {
+      } else if(input_instance_id > 0) {
         // Filter segments that are too small
         bool is_new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
                                config_.min_new_instance_size;
