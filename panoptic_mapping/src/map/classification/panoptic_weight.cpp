@@ -26,8 +26,12 @@ float PanopticWeightVoxel::getProbability(const int id) const { return 0.f; }
 void PanopticWeightVoxel::incrementCount(const int id, const float weight) {
   // If the predicted id is the same as the current one increase the weight
   if (id == label) {
-    this->weight += weight;
-    return;
+    // If label is unknown, no need to reinforce
+    if (label == 0) {
+      this->weight = 0.f;
+    } else {
+      this->weight += weight;
+    }
   } else {
     // If the predicted id is different subtract the weight
     if (this->weight < weight) {
@@ -56,14 +60,13 @@ std::vector<uint32_t> PanopticWeightVoxel::serializeVoxelToInt() const {
 
 bool PanopticWeightVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {
-  
   if (*data_index >= data.size()) {
     LOG(WARNING)
         << "Can not deserialize voxel from integer data: Out of range (index: "
         << *data_index << ", data: " << data.size() << ")";
     return false;
   }
-  
+
   // Load data
   label = static_cast<int>(data[*data_index]);
   weight = x32FromInt32<float>(data[*data_index + 1u]);
