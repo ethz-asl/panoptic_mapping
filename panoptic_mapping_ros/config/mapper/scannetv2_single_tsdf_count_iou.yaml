@@ -18,10 +18,10 @@ camera:
   verbosity: 1
   width: 640 # Px
   height: 480
-  vx: 319.500000
-  vy: 239.500000
-  fx: 577.870605
-  fy: 577.870605
+  vx: 319.876543
+  vy: 239.876033
+  fx: 577.870611
+  fy: 580.258507
   max_range: 5 # m
   min_range: 0.1
 
@@ -40,7 +40,7 @@ id_tracker:
   tracking_metric: IoU # IoU, overlap
   match_acceptance_threshold: 0.6
   classification:
-    type: panoptic_weight
+    type: variable_count
 
 tsdf_integrator:
   type: single_tsdf
@@ -66,9 +66,9 @@ submap_allocator:
   required_belonging_corners: 1
 
   # Semantic
-  small_instance_voxel_size: 0.02
-  medium_instance_voxel_size: 0.03
-  large_instance_voxel_size: 0.04
+  small_instance_voxel_size: 0.05
+  medium_instance_voxel_size: 0.05
+  large_instance_voxel_size: 0.05
   background_voxel_size: 0.05
   unknown_voxel_size: 0.05
 
@@ -108,5 +108,5 @@ data_writer:
   verbosity: 1
   store_map_every_n_frames: 50
   log_data_writer:
-    output_directory: /home/giuliano/mt_ipp_panoptic_mapping/runs/scene0587_02/single_tsdf
+    output_directory: /media/giuliano/tcsb_ssd/runs/scene0187_00/single_tsdf_count_iou
     
