@@ -92,11 +92,15 @@ class SingleTSDFTracker : public IDTrackerBase {
   void parseDetectronClasses(InputData* input);
 
   /**
-   * @brief Convert ids in the ID image to panoptic ids using Detectron labels
+   * @brief Parse detectron panoptic labels
+   *
+   * Convert detectron ids
    *
    * @param input
+   * @return std::map<int, std::pair<int, float>>
    */
-  void parseDetectronPanopticLabels(InputData* input);
+  std::map<int, std::pair<int, float>> parseDetectronPanopticLabels(
+      InputData* input);
 
   /**
    * @brief Render submap for tracking using approximate rendering algorithm.
@@ -131,10 +135,10 @@ class SingleTSDFTracker : public IDTrackerBase {
                                              InputData* input);
 
  private:
-  // A label divisor used to compute a panoptic id from instance and
-  // class id as panoptic_id = class_id * label_divisor + instance_id
-  // TODO(albanesg): this should be read from mapper config or param server
-  static constexpr int kPanopticLabelDivisor_ = 1000;
+  // The offset for generating new panoptic instance ids
+  // TODO(albanesg): this should be higher than the largest class id
+  // since for stuff classes we use the class label as panoptic id
+  static constexpr int kInstanceIdOffset_ = 256;
 
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, SingleTSDFTracker, std::shared_ptr<Globals>>
@@ -144,8 +148,8 @@ class SingleTSDFTracker : public IDTrackerBase {
   int map_id_;
   bool is_setup_ = false;
 
-  InstanceIDManager instance_id_manager_;  // Track instances globally
-  std::unordered_set<InstanceID> used_instance_ids_;  // Used instance ids
+  int instance_count_ = 0;
+  std::unordered_map<int, std::pair<int, float>> tracked_instances_info_;
 
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
   cv::Mat rendered_vis_;  // Store visualization data.

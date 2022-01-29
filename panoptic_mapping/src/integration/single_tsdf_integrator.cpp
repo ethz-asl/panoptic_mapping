@@ -229,6 +229,10 @@ void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
   // For the single TSDF case there is no belonging submap, just use the ID
   // directly.
   const int id = interpolator->interpolateID(input.idImage());
+  // Do not increase for the unknown label
+  if(id == 0) {
+    return;
+  }
   class_voxel->incrementCount(id, weight);
 }
 

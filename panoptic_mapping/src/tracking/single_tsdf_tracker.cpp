@@ -70,8 +70,8 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
   // Use both semantic and instance level information
   if (config_.use_detectron_panoptic) {
-    // Convert the IDs in the ID image to panoptic ids
-    parseDetectronPanopticLabels(input);
+    const std::map<int, std::pair<int, float>> instance_infos =
+        parseDetectronPanopticLabels(input);
 
     int n_matched = 0;
     int n_new = 0;
@@ -83,18 +83,19 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
     TrackingInfoAggregator tracking_data = computeTrackingData(submaps, input);
     std::set<int> matched_ids;
     for (const int input_id : tracking_data.getInputIDs()) {
-      bool matched = false;
-      int matched_id = 0;
-      float score = 0.f;
-
-      const auto input_class_id = input_id / kPanopticLabelDivisor_;
-      const auto input_instance_id = input_id % kPanopticLabelDivisor_;
-
-      // Stuff segments don't need to be matched
-      if (input_instance_id == 0) {
+      // Skip non-instance segments
+      auto id_instance_info_pair_iter = instance_infos.find(input_id);
+      if (id_instance_info_pair_iter == instance_infos.end()) {
         input_to_output[input_id] = input_id;
         continue;
       }
+      auto const& instance_info = id_instance_info_pair_iter->second;
+      int input_class_id = instance_info.first;
+      int input_score = instance_info.second;
+
+      bool matched = false;
+      int matched_id = 0;
+      float score = 0.f;
 
       // Compute IoU with all rendered segments
       std::vector<std::pair<int, float>> ids_values;
@@ -103,15 +104,22 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       if (any_overlap) {
         for (const auto& id_value : ids_values) {
           if (id_value.second < config_.match_acceptance_threshold) {
-            // No more matches possible as matches are ordered in decreasing order
+            // No more matches possible as matches are ordered in decreasing
+            // order
             break;
           }
 
-          // Check that classes match, if enabled
-          const auto class_id = id_value.first / kPanopticLabelDivisor_;
-          if (class_id != input_class_id &&
-              config_.use_class_for_instance_tracking) {
+          // Avoid matching with stuff segments
+          if (id_value.first < kInstanceIdOffset_) {
             continue;
+          }
+
+          // Check that classes match, if enabled
+          if (config_.use_class_for_instance_tracking) {
+            int class_id = tracked_instances_info_[id_value.first].first;
+            if (class_id != input_class_id) {
+              continue;
+            }
           }
 
           // Make sure rendered and predicted segments are matched 1-to-1
@@ -131,24 +139,31 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         ++n_matched;
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
-      } else if(input_instance_id > 0) {
+      } else {
         // Filter segments that are too small
         bool is_new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
                                config_.min_new_instance_size;
         if (is_new_instance) {
-          // Generate new globally unique InstanceID
-          auto new_instance_id_iter =
-              used_instance_ids_.emplace(&instance_id_manager_).first;
-          // Update the instance id in the panoptic label
-          input_to_output[input_id] = input_class_id * kPanopticLabelDivisor_ +
-                                      static_cast<int>(*new_instance_id_iter);
-          LOG_IF(INFO, config_.verbosity >= 1)
+          n_new++;
+          instance_count_++;
+          // Create new global panoptic id
+          int panoptic_id = kInstanceIdOffset_ + instance_count_;
+          // Map input panoptic id to global panoptic id
+          input_to_output[input_id] = panoptic_id;
+          // Store instance info
+          tracked_instances_info_[panoptic_id] =
+              std::make_pair(input_class_id, input_score);
+          LOG_IF(INFO, config_.verbosity >= 2)
               << "Generated new instance id for class " << input_class_id;
         } else {
-          input_to_output[input_id] = -1;
+          input_to_output[input_id] = 0;
         }
       }
     }
+
+    LOG_IF(INFO, config_.verbosity >= 1)
+        << "Matched instances: " << n_matched << ". New instances: " << n_new
+        << ". Number of tracked instances: " << tracked_instances_info_.size();
 
     // Translate the id image - this will mostly affect thing classes
     for (auto it = input->idImagePtr()->begin<int>();
@@ -187,8 +202,15 @@ void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
   }
 }
 
-void SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
-  std::unordered_map<int, int> detectron_to_panoptic_ids;
+std::map<int, std::pair<int, float>>
+SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
+  size_t instance_count = 0;
+  std::map<int, int> detectron_to_panoptic_ids;
+  std::map<int, std::pair<int, float>> instance_infos;
+
+  // FIXME(albanesg): this assumes that class ids range is continuous
+  // e.g. classes are all the integers between 0 and 40 but this is not
+  // necessarily true i.e.
   for (auto it = input->idImagePtr()->begin<int>();
        it != input->idImagePtr()->end<int>(); ++it) {
     if (*it == 0) {
@@ -198,17 +220,29 @@ void SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
     auto panoptic_id_it = detectron_to_panoptic_ids.find(*it);
     if (panoptic_id_it == detectron_to_panoptic_ids.end()) {
       const auto& label = input->detectronLabels().at(*it);
-      int panoptic_id = label.category_id * kPanopticLabelDivisor_;
+      // For thing labels, generate a new unique panoptic id
       if (label.is_thing) {
-        // Instance ids should start from 1 so we reserve 0 for stuff classes
-        panoptic_id += label.instance_id + 1;
+        instance_count++;
+        // Create new instance id
+        int panoptic_id = kInstanceIdOffset_ + instance_count;
+        detectron_to_panoptic_ids[*it] = panoptic_id;
+        // Assign it to id image pixel
+        *it = panoptic_id;
+        // Save instance info for this panoptic id
+        instance_infos[panoptic_id] =
+            std::make_pair(label.category_id, label.score);
       }
-      detectron_to_panoptic_ids[*it] = panoptic_id;
-      *it = panoptic_id;
+      // For stuff labels, the panoptic id is the class id
+      else {
+        detectron_to_panoptic_ids[*it] = label.category_id;
+        *it = label.category_id;
+      }
     } else {
       *it = panoptic_id_it->second;
     }
   }
+
+  return instance_infos;
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
