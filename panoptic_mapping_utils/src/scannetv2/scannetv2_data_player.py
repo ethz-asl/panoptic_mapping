@@ -2,8 +2,9 @@
 
 import json
 import csv
+from dataclasses import dataclass
 from pathlib import Path
-from time import time
+from typing import Tuple
 
 import cv2
 import numpy as np
@@ -38,7 +39,8 @@ class ScannetV2DataPlayer:
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name", "depth_cam")
         self.play_rate = rospy.get_param("~play_rate", 1.0)
         self.wait = rospy.get_param("~wait", False)
-        self.refresh_rate = rospy.get_param("~refresh_rate", 10)  # Hz
+        self.frame_skip = rospy.get_param("~frame_skip", 0)
+        self.refresh_rate = 30  # Hz
         self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
 
         # Configure sensor data publishers
@@ -50,11 +52,12 @@ class ScannetV2DataPlayer:
                 "~uncertainty_image", Image, queue_size=100
             )
         self.label_pub = rospy.Publisher("~labels", DetectronLabels, queue_size=100)
-        self.pose_pub = rospy.Publisher("~pub", PoseStamped, queue_size=100)
+        self.pose_pub = rospy.Publisher("~pose", PoseStamped, queue_size=100)
         self.tf_broadcaster = tf.TransformBroadcaster()
 
         # Setup
         self.cv_bridge = CvBridge()
+
         self.current_index = 0
         self.times = []
         self.ids = []
@@ -71,6 +74,16 @@ class ScannetV2DataPlayer:
 
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
         self.times = sorted(self.times)
+
+        # Drop frames
+        if self.frame_skip > 0:
+            self.ids = [
+                x for idx, x in enumerate(self.ids) if idx % self.frame_skip == 0
+            ]
+            self.times = [
+                x for idx, x in enumerate(self.times) if idx % self.frame_skip == 0
+            ]
+
         self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
         self.start_time = None
 
