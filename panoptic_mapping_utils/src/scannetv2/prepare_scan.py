@@ -11,13 +11,14 @@ from zipfile import ZipFile
 import numpy as np
 from PIL import Image
 
-from scannetv2_to_nyu40 import SCANNETV2_TO_NYU40
+from scannetv2_constants import SCANNETV2_TO_NYU40
 
 _LABEL_DIR_NAME = "label-filt"
 _INSTANCE_DIR_NAME = "instance-filt"
 _LABEL_ARCHIVE_NAME_PATTERN = "{}_2d-label-filt.zip"
 _INSTANCE_ARCHIVE_NAME_PATTERN = "{}_2d-instance-filt.zip"
-_LABEL_DETECTRON_DIR = "panoptic_pred"
+_GROUNDTRUTH_PANOPTIC_LABELS_DIR = "panoptic"
+_PREDICTED_PANOPTIC_LABELS_DIR = "panoptic_pred"
 _NYU40_STUFF_CLASSES = [1, 2, 22]
 _DEFAULT_THING_SCORE = 0.9
 _TIMESTAMPS_FILE = "timestamps.csv"
@@ -153,7 +154,7 @@ def create_panoptic_labels_from_grountruth(scan_dir_path: Path):
         label_archive = ZipFile(str(label_archive_path))
         label_archive.extractall(path=str(temp_dir_path))
 
-        label_detectron_dir_path = scan_dir_path / _LABEL_DETECTRON_DIR
+        label_detectron_dir_path = scan_dir_path / _GROUNDTRUTH_PANOPTIC_LABELS_DIR
         label_detectron_dir_path.mkdir(exist_ok=True)
         for labels_file_path in label_dir_path.glob("*.png"):
             instance_file_path = instance_dir_path / labels_file_path.name
@@ -188,7 +189,7 @@ def create_panoptic_labels_from_deeplab_predictions(
     predicted_labels_dir_path = scan_dir_path / predicted_labels_dir
     assert predicted_labels_dir_path.is_dir()
 
-    label_detectron_dir_path = scan_dir_path / _LABEL_DETECTRON_DIR
+    label_detectron_dir_path = scan_dir_path / _PREDICTED_PANOPTIC_LABELS_DIR
     label_detectron_dir_path.mkdir(exist_ok=True)
 
     for panoptic_map_file_path in predicted_labels_dir_path.glob("*.png"):
@@ -239,25 +240,34 @@ def create_timestamps_file(scan_dir_path: Path):
 
 def prepare_scan(
     scan_dir_path: Path,
-    panoptic_labels: str,
+    create_timestamps: bool,
+    create_panoptic_labels: bool,
+    panoptic_labels_type: Optional[str],
     predicted_labels_dir: Optional[str],
 ):
     assert scan_dir_path.is_dir()
 
-    # Create timestamps file
-    create_timestamps_file(scan_dir_path)
+    if create_timestamps:
+        # Create timestamps file
+        create_timestamps_file(scan_dir_path)
 
-    # Create panoptic labels
-    if panoptic_labels == "groundtruth":
-        create_panoptic_labels_from_grountruth(scan_dir_path)
-    else:
-        assert (
-            predicted_labels_dir is not None
-        ), "The name of directory containing predicted labels must be provided"
-        create_panoptic_labels_from_deeplab_predictions(
-            scan_dir_path,
-            predicted_labels_dir,
-        )
+    if create_panoptic_labels:
+        # Create panoptic labels
+        if panoptic_labels_type == "groundtruth":
+            create_panoptic_labels_from_grountruth(scan_dir_path)
+        else:
+            if predicted_labels_dir is None:
+                raise ValueError(
+                    "The name of the scan subdirectory containing panoptic"
+                    " segmentation predictions must be provided"
+                )
+            if panoptic_labels_type == "deeplab":
+                create_panoptic_labels_from_deeplab_predictions(
+                    scan_dir_path,
+                    predicted_labels_dir,
+                )
+            else:
+                raise NotImplementedError
 
 
 def _parse_args():
@@ -272,7 +282,19 @@ def _parse_args():
     )
 
     parser.add_argument(
-        "--panoptic_labels",
+        "--create_timestamps",
+        action="store_true",
+        help="Create a timestamps.csv file for the selected scan. Assumes framerate is 30FPS.",
+    )
+
+    parser.add_argument(
+        "--create_panoptic_labels",
+        action="store_true",
+        help="Create panoptic labels for the selected scans in the detectron format.",
+    )
+
+    parser.add_argument(
+        "--panoptic_labels_type",
         type=str,
         choices=_PANOPTIC_LABELS_CHOICES,
         default="groundtruth",
@@ -283,7 +305,7 @@ def _parse_args():
         "--predicted_labels_dir",
         type=str,
         default=None,
-        help="Name of the subdirectory containing the predicted labels.",
+        help="Name of the subdirectory of the scan directory containing the predicted labels.",
     )
 
     return parser.parse_args()
@@ -293,6 +315,8 @@ if __name__ == "__main__":
     args = _parse_args()
     prepare_scan(
         scan_dir_path=args.scan_dir_path,
-        panoptic_labels=args.panoptic_labels,
+        create_timestamps=args.create_timestamps,
+        create_panoptic_labels=args.create_panoptic_labels,
+        panoptic_labels_type=args.panoptic_labels_type,
         predicted_labels_dir=args.predicted_labels_dir,
     )
