@@ -217,28 +217,32 @@ namespace panoptic_mapping {
                 Eigen::Vector3f direction;
 
                 for (int v = 0; v < rendered_image->rows; v++) {
-                    std::cout<< "row " << v<< " of " <<  rendered_image->rows << std::endl;
                     for (int u = 0; u < rendered_image->cols; u++) {
-                        std::cout<< "col " << u<< " of " <<  rendered_image->cols << std::endl;
                         direction.x() = (static_cast<float>(u) - cam_config_.vx) * fx_inv;
                         direction.y() = (static_cast<float>(v) - cam_config_.vy) * fy_inv;
                         direction.z() = 1;
                         direction.normalize();
-                        depth_image->at<float>(u, v) = 0;
-                        rendered_image->at<cv::uint8_t>(u, v) = 0;
+                        depth_image->at<float>(v, u) = 0;
+                        rendered_image->at<cv::uint8_t>(v, u) = 255;
                         float distance = cam_config_.min_range; // Min distance
                         while (distance <= cam_config_.max_range) {
                             auto coordinates_c = distance * direction; // Coordinates in camera frame
                             auto coordinates_m = submap.getT_M_S().inverse() * T_M_C * coordinates_c;
                             auto voxel = submap.getTsdfLayer().getVoxelPtrByCoordinates(coordinates_m);
+
+                            distance += voxel_size_;
+                            if(!voxel)  continue;
+
                             if (abs(voxel->distance) < voxel_size_) {
+                                auto c_voxel = submap.getClassLayer().getVoxelPtrByCoordinates(
+                                        coordinates_m);
+                                if (!c_voxel || c_voxel->current_index == -1 || c_voxel->counts.size() == 0)
+                                    continue;
                                 // Found intersection.
-                                depth_image->at<float>(u, v) = distance;
-                                rendered_image->at<cv::uint8_t>(u, v) = submap.getClassLayer().getVoxelPtrByCoordinates(
-                                        coordinates_m)->current_index;
+                                depth_image->at<float>(v, u) = distance;
+                                rendered_image->at<cv::uint8_t>(v, u) = c_voxel->current_index;
                                 break;
                             }
-                            distance += voxel_size_;
                         }
                     }
                 }
