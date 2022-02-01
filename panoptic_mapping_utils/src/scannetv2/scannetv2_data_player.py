@@ -26,15 +26,16 @@ _PANOPTIC_GROUNDTRUTH_DIR = "panoptic"
 _PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
 _DEPTH_SHIFT = 1000
+_INPUT_IMAGE_DIMS = (320, 250)
 
 
 @dataclass
 class FrameData:
-    color: np.ndarray = None
-    depth: np.ndarray = None
-    pose: np.ndarray = None
-    segmentation: np.ndarray = None
-    segments_info: List[Dict] = None
+    color: np.ndarray
+    depth: np.ndarray
+    pose: np.ndarray
+    segmentation: np.ndarray
+    segments_info: List[Dict]
     uncertainty: Optional[np.ndarray] = None
 
 
@@ -113,31 +114,39 @@ class ScannetV2DataPlayer:
         return EmptyResponse
 
     def _load_frame_data(self, frame_id) -> FrameData:
-        frame_data = FrameData()
         color_image_file_path = (
             self.scan_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
         )
-        frame_data.color = cv2.imread(str(color_image_file_path))
+        color = cv2.resize(
+            cv2.imread(str(color_image_file_path)),
+            dsize=_INPUT_IMAGE_DIMS,
+            interpolation=cv2.INTER_AREA,
+        )
 
         depth_image_file_path = (
             self.scan_dir_path / _DEPTH_IMAGES_DIR / "{:05d}.png".format(int(frame_id))
         )
-        raw_depth = np.array(PilImage.open(str(depth_image_file_path)))
-        frame_data.depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
+        raw_depth = cv2.resize(
+            np.array(PilImage.open(str(depth_image_file_path))),
+            dsize=_INPUT_IMAGE_DIMS,
+            interpolation=cv2.INTER_NEAREST,
+        )
+        depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
 
         pose_file_path = (
             self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
         )
-        frame_data.pose = np.loadtxt(str(pose_file_path))
+        pose = np.loadtxt(str(pose_file_path))
 
         segmentation_file_path = (
             self.scan_dir_path / _PANOPTIC_PRED_DIR / "{:05d}.png".format(int(frame_id))
         )
-        segmentation_rgb = np.array(PilImage.open(segmentation_file_path))
-        segmentation = (
-            segmentation_rgb[..., 0] * _LABEL_DIVISOR + segmentation_rgb[..., 1]
+        segmentation = cv2.resize(
+            np.array(PilImage.open(segmentation_file_path)),
+            dsize=_INPUT_IMAGE_DIMS,
+            interpolation=cv2.INTER_NEAREST,
         )
-        frame_data.segmentation = segmentation.astype(np.int32)
+        segmentation = segmentation.astype(np.int32)
 
         segments_info_file_path = (
             self.scan_dir_path
@@ -145,7 +154,15 @@ class ScannetV2DataPlayer:
             / "{:05d}_segments_info.json".format(int(frame_id))
         )
         with segments_info_file_path.open("r") as f:
-            frame_data.segments_info = json.load(f)
+            segments_info = json.load(f)
+
+        frame_data = FrameData(
+            color=color,
+            depth=depth,
+            pose=pose,
+            segmentation=segmentation,
+            segments_info=segments_info,
+        )
 
         if self.use_uncertainty:
             uncertainty_image_file_path = (

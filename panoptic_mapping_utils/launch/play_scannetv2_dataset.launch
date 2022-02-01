@@ -1,7 +1,7 @@
 <launch>
 <!-- ============ Arguments ============ -->
   <arg name="scans_dir_path" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans"/>
-  <arg name="scan_id" default="scene0645_01"/>
+  <arg name="scan_id" default="scene0015_00"/>
   <arg name="play_rate" default="1"/>
   <arg name="frame_skip" default="0"/>
   <arg name="wait" default="true"/>
