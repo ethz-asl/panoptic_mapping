@@ -14,6 +14,7 @@ from PIL import Image
 from scannetv2_constants import SCANNETV2_TO_NYU40
 
 _LABEL_DIR_NAME = "label-filt"
+_LABEL_DIVISOR = 1000
 _INSTANCE_DIR_NAME = "instance-filt"
 _LABEL_ARCHIVE_NAME_PATTERN = "{}_2d-label-filt.zip"
 _INSTANCE_ARCHIVE_NAME_PATTERN = "{}_2d-instance-filt.zip"
@@ -69,21 +70,21 @@ def make_detectron_thing_label(
     }
 
 
-def make_predicted_map_and_segment_labels(
+def make_panoptic_segmentation_and_labels_from_groundtruth(
     instance_map: np.ndarray,
-    labels: np.ndarray,
-    instance_scores: List = None,
+    semantic_map: np.ndarray,
 ):
     predicted_map = np.zeros_like(instance_map)
     segment_labels = []
 
     next_new_segment_id = 1
     next_new_instance_id = 0
-    for class_id in np.unique(labels):
+
+    for class_id in np.unique(semantic_map):
         if class_id == 0:
             continue
 
-        class_mask = labels == class_id
+        class_mask = semantic_map == class_id
 
         if class_id in _NYU40_STUFF_CLASSES:
             area = np.count_nonzero(class_mask)
@@ -101,18 +102,7 @@ def make_predicted_map_and_segment_labels(
             area = np.count_nonzero(instance_mask)
 
             predicted_map[instance_mask] = next_new_segment_id
-
-            if instance_scores is not None:
-                instance_score = next(
-                    (
-                        x["score"]
-                        for x in instance_scores
-                        if x["class_id"] == class_id and x["instance_id"] == instance_id
-                    ),
-                    0.0,
-                )
-            else:
-                instance_score = _DEFAULT_THING_SCORE
+            instance_score = _DEFAULT_THING_SCORE
 
             segment_labels.append(
                 make_detectron_thing_label(
@@ -164,7 +154,10 @@ def create_panoptic_labels_from_grountruth(scan_dir_path: Path):
 
             instance_map = np.array(Image.open(instance_file_path))
 
-            predicted_map, segment_labels = make_predicted_map_and_segment_labels(
+            (
+                predicted_map,
+                segment_labels,
+            ) = make_panoptic_segmentation_and_labels_from_groundtruth(
                 instance_map,
                 labels_nyu40,
                 None,
@@ -182,6 +175,26 @@ def create_panoptic_labels_from_grountruth(scan_dir_path: Path):
                 json.dump(segment_labels, f)
 
 
+def normalize_panoptic_segmentation(
+    segmentation,
+    segments_info,
+):
+    next_new_segment_id = 1
+    next_new_instance_id = 0
+    for segment_info in segments_info:
+        segment_id = segment_info["id"]
+
+        segmentation[segmentation == segment_id] = next_new_segment_id
+        segment_info["id"] = next_new_segment_id
+        next_new_segment_id += 1
+
+        if segment_info["isthing"]:
+            segment_info["instance_id"] = next_new_instance_id
+            next_new_instance_id += 1
+
+    return segmentation, segments_info
+
+
 def create_panoptic_labels_from_deeplab_predictions(
     scan_dir_path: Path,
     predicted_labels_dir: str,
@@ -193,31 +206,30 @@ def create_panoptic_labels_from_deeplab_predictions(
     label_detectron_dir_path.mkdir(exist_ok=True)
 
     for panoptic_map_file_path in predicted_labels_dir_path.glob("*.png"):
-        # Load the predicted panoptic map
-        panoptic_map = np.array(Image.open(panoptic_map_file_path))
-        semantic_map = panoptic_map[:, :, 0]
-        instance_map = panoptic_map[:, :, 1]
+        # Load the predicted panoptic map and convert to one channel format
+        segmentation_rgb = np.array(Image.open(panoptic_map_file_path))
+        segmentation = (
+            segmentation_rgb[..., 0] * _LABEL_DIVISOR + segmentation_rgb[..., 1]
+        )
 
         # Load the instance scores file
-        instance_scores_file_path = predicted_labels_dir_path / (
-            panoptic_map_file_path.stem + "_instance_scores.json"
+        segments_info_file_path = predicted_labels_dir_path / (
+            panoptic_map_file_path.stem + "_segments_info.json"
         )
-        with open(instance_scores_file_path, "r") as j:
-            instance_scores = json.load(j)
-        predicted_map, segment_labels = make_predicted_map_and_segment_labels(
-            instance_map, semantic_map, instance_scores
+        with open(segments_info_file_path, "r") as j:
+            segments_info = json.load(j)
+        segmentation, segments_info = normalize_panoptic_segmentation(
+            segmentation, segments_info
         )
 
-        predicted_map_file_path = label_detectron_dir_path / (
-            panoptic_map_file_path.stem + "_predicted.png"
-        )
-        Image.fromarray(predicted_map).save(predicted_map_file_path)
+        segmentation_file_path = label_detectron_dir_path / panoptic_map_file_path.name
+        Image.fromarray(segmentation).save(segmentation_file_path)
 
-        segment_labels_file_path = label_detectron_dir_path / (
-            panoptic_map_file_path.stem + "_labels.json"
+        segment_labels_file_path = (
+            label_detectron_dir_path / segments_info_file_path.name
         )
         with segment_labels_file_path.open("w") as f:
-            json.dump(segment_labels, f)
+            json.dump(segments_info, f)
 
 
 def create_timestamps_file(scan_dir_path: Path):
