@@ -4,7 +4,8 @@ import json
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from tkinter import Frame
+from typing import List, Dict, Optional
 
 import cv2
 import numpy as np
@@ -20,9 +21,21 @@ from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 _COLOR_IMAGES_DIR = "color"
 _DEPTH_IMAGES_DIR = "depth"
+_LABEL_DIVISOR = 1000
+_PANOPTIC_GROUNDTRUTH_DIR = "panoptic"
 _PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
 _DEPTH_SHIFT = 1000
+
+
+@dataclass
+class FrameData:
+    color: np.ndarray = None
+    depth: np.ndarray = None
+    pose: np.ndarray = None
+    segmentation: np.ndarray = None
+    segments_info: List[Dict] = None
+    uncertainty: Optional[np.ndarray] = None
 
 
 class ScannetV2DataPlayer:
@@ -42,6 +55,8 @@ class ScannetV2DataPlayer:
         self.frame_skip = rospy.get_param("~frame_skip", 0)
         self.refresh_rate = 30  # Hz
         self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
+
+        self.use_groundtruth = rospy.get_param("~use_groundtruth", False)
 
         # Configure sensor data publishers
         self.color_pub = rospy.Publisher("~color_image", Image, queue_size=100)
@@ -97,69 +112,92 @@ class ScannetV2DataPlayer:
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.refresh_rate), self.callback)
         return EmptyResponse
 
-    def _load_and_publish_color(self, color_image_file_path, timestamp):
-        image = cv2.imread(str(color_image_file_path))
-        img_msg = self.cv_bridge.cv2_to_imgmsg(image, "bgr8")
-        img_msg.header.stamp = timestamp
-        img_msg.header.frame_id = self.sensor_frame_name
-        self.color_pub.publish(img_msg)
+    def _load_frame_data(self, frame_id) -> FrameData:
+        frame_data = FrameData()
+        color_image_file_path = (
+            self.scan_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
+        )
+        frame_data.color = cv2.imread(str(color_image_file_path))
 
-    def _load_and_publish_depth(self, depth_image_file_path, timestamp):
+        depth_image_file_path = (
+            self.scan_dir_path / _DEPTH_IMAGES_DIR / "{:05d}.png".format(int(frame_id))
+        )
         raw_depth = np.array(PilImage.open(str(depth_image_file_path)))
-        # Convert depth to meters
-        depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
-        img_msg = self.cv_bridge.cv2_to_imgmsg(depth, "32FC1")
-        img_msg.header.stamp = timestamp
-        img_msg.header.frame_id = self.sensor_frame_name
-        self.depth_pub.publish(img_msg)
+        frame_data.depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
 
-    def _load_and_publish_instance(self, instance_file_path, timestamp):
-        # Load instance and publish instance
-        instance_map = np.array(PilImage.open(instance_file_path))
-        img_msg = self.cv_bridge.cv2_to_imgmsg(instance_map, "8UC1")
-        img_msg.header.stamp = timestamp
-        img_msg.header.frame_id = self.sensor_frame_name
-        self.id_pub.publish(img_msg)
+        pose_file_path = (
+            self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
+        )
+        frame_data.pose = np.loadtxt(str(pose_file_path))
 
-    def _load_and_publish_labels(self, label_file_path, timestamp):
+        segmentation_file_path = (
+            self.scan_dir_path / _PANOPTIC_PRED_DIR / "{:05d}.png".format(int(frame_id))
+        )
+        segmentation_rgb = np.array(PilImage.open(segmentation_file_path))
+        segmentation = (
+            segmentation_rgb[..., 0] * _LABEL_DIVISOR + segmentation_rgb[..., 1]
+        )
+        frame_data.segmentation = segmentation.astype(np.int32)
+
+        segments_info_file_path = (
+            self.scan_dir_path
+            / _PANOPTIC_PRED_DIR
+            / "{:05d}_segments_info.json".format(int(frame_id))
+        )
+        with segments_info_file_path.open("r") as f:
+            frame_data.segments_info = json.load(f)
+
+        if self.use_uncertainty:
+            uncertainty_image_file_path = (
+                self.scan_dir_path
+                / _PANOPTIC_PRED_DIR
+                / "{:05d}_uncertainty.tiff".format(int(frame_id))
+            )
+            frame_data.uncertainty = np.array(
+                PilImage.open(str(uncertainty_image_file_path))
+            )
+
+        return frame_data
+
+    def _publish_frame_data(self, frame_data: FrameData, timestamp):
+        # Color
+        color_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.color, "bgr8")
+        color_img_msg.header.stamp = timestamp
+        color_img_msg.header.frame_id = self.sensor_frame_name
+        self.color_pub.publish(color_img_msg)
+
+        # Depth
+        depth_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.depth, "32FC1")
+        depth_img_msg.header.stamp = timestamp
+        depth_img_msg.header.frame_id = self.sensor_frame_name
+        self.depth_pub.publish(depth_img_msg)
+
+        # Segmentation
+        id_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.segmentation, "32SC1")
+        id_img_msg.header.stamp = timestamp
+        id_img_msg.header.frame_id = self.sensor_frame_name
+        self.id_pub.publish(id_img_msg)
+
+        # Segments info (Detectron labels)
         label_msg = DetectronLabels()
         label_msg.header.stamp = timestamp
-        with label_file_path.open("r") as f:
-            data = json.load(f)
-            for d in data:
-                if "instance_id" not in d:
-                    d["instance_id"] = 0
-                if "score" not in d:
-                    d["score"] = 0
-                label = DetectronLabel()
-                label.id = d["id"]
-                label.instance_id = d["instance_id"]
-                label.is_thing = d["isthing"]
-                label.category_id = d["category_id"]
-                label.score = d["score"]
-                label_msg.labels.append(label)
+        for d in frame_data.segments_info:
+            if "instance_id" not in d:
+                d["instance_id"] = 0
+            if "score" not in d:
+                d["score"] = 0
+            label = DetectronLabel()
+            label.id = d["id"]
+            label.instance_id = d["instance_id"]
+            label.is_thing = d["isthing"]
+            label.category_id = d["category_id"]
+            label.score = d["score"]
+            label_msg.labels.append(label)
         self.label_pub.publish(label_msg)
 
-    def _load_and_publish_uncertainty(self, uncertainty_image_file_path, timestamp):
-        if not uncertainty_image_file_path.exists():
-            rospy.logwarn(
-                f"Uncertainty image file {uncertainty_image_file_path} not found!"
-            )
-            return
-
-        uncertainty_image = np.array(PilImage.open(str(uncertainty_image_file_path)))
-        # Convert depth to meters
-        img_msg = self.cv_bridge.cv2_to_imgmsg(uncertainty_image, "32FC1")
-        img_msg.header.stamp = timestamp
-        img_msg.header.frame_id = self.sensor_frame_name
-        self.uncertainty_pub.publish(img_msg)
-
-    def _load_and_publish_pose(self, pose_file_path, timestamp):
-        # Load the transformation matrix from a text file
-        pose_mat = np.loadtxt(str(pose_file_path))
-        # Extract rotation and translation
-        rotation = tf.transformations.quaternion_from_matrix(pose_mat)
-        translation = tuple(pose_mat[0:3, -1])
+        # Pose
+        rotation = tf.transformations.quaternion_from_matrix(frame_data.pose)
+        translation = tuple(frame_data.pose[0:3, -1])
 
         self.tf_broadcaster.sendTransform(
             translation=translation,
@@ -189,6 +227,15 @@ class ScannetV2DataPlayer:
         )
         self.pose_pub.publish(pose_msg)
 
+        # Dense semantic uncertainty
+        if self.use_uncertainty:
+            uncertainty_img_msg = self.cv_bridge.cv2_to_imgmsg(
+                frame_data.uncertainty, "32FC1"
+            )
+            uncertainty_img_msg.header.stamp = timestamp
+            uncertainty_img_msg.header.frame_id = self.sensor_frame_name
+            self.uncertainty_pub.publish(uncertainty_img_msg)
+
     def callback(self, _):
 
         if not self.running:
@@ -201,42 +248,11 @@ class ScannetV2DataPlayer:
         if self.times[self.current_index] > (now - self.start_time).to_sec():
             return
 
-        # Load and publish the next image
         frame_id = self.ids[self.current_index]
 
-        color_image_file_path = (
-            self.scan_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
-        )
-        depth_image_file_path = (
-            self.scan_dir_path / _DEPTH_IMAGES_DIR / "{:05d}.png".format(int(frame_id))
-        )
-        pose_file_path = (
-            self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
-        )
-        instance_map_file_path = (
-            self.scan_dir_path
-            / _PANOPTIC_PRED_DIR
-            / "{:05d}_predicted.png".format(int(frame_id))
-        )
-        labels_file_path = (
-            self.scan_dir_path
-            / _PANOPTIC_PRED_DIR
-            / "{:05d}_labels.json".format(int(frame_id))
-        )
-
-        self._load_and_publish_color(color_image_file_path, now)
-        self._load_and_publish_instance(instance_map_file_path, now)
-        self._load_and_publish_labels(labels_file_path, now)
-        self._load_and_publish_depth(depth_image_file_path, now)
-        self._load_and_publish_pose(pose_file_path, now)
-
-        if self.use_uncertainty:
-            uncertainty_image_file_path = (
-                self.scan_dir_path
-                / _PANOPTIC_PRED_DIR
-                / "{:05d}_uncertainty.tiff".format(int(frame_id))
-            )
-            self._load_and_publish_uncertainty(uncertainty_image_file_path, now)
+        # Load and publish next frame data
+        frame_data = self._load_frame_data(frame_id)
+        self._publish_frame_data(frame_data, now)
 
         self.current_index += 1
         if self.current_index >= len(self.ids):
