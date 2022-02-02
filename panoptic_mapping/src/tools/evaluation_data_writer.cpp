@@ -86,6 +86,32 @@ void EvaluationDataWriter::storeSubmaps(const SubmapCollection& submaps) {
   store_submap_counter_++;
   submaps.saveToFile(output_path_ + "/" + ss.str());
   writeEntry(ss.str());
+
+  // Serialize tracked instances info table
+  if (submaps.isSingleTsdf()) {
+    auto& tracked_instances_info_table = submaps.getTrackedInstancesInfoTable();
+
+    std::string instances_info_file_path =
+        output_path_ + "/" + ss.str() + ".csv";
+    std::ofstream ofs;
+    ofs.open(instances_info_file_path, std::ofstream::out);
+    if (!ofs.is_open()) {
+      LOG(ERROR) << "Could not open file " << instances_info_file_path;
+      return;
+    }
+
+    // Write header
+    ofs << "InstanceID,ClassID\n";
+
+    // Write instance id to class id mapping
+    for (const auto& tracked_instance_id_info_pair :
+         tracked_instances_info_table) {
+      int class_id = tracked_instance_id_info_pair.second.current_index;
+      ofs << tracked_instance_id_info_pair.first << "," << class_id << "\n";
+    }
+
+    ofs.close();
+  }
 }
 
 }  // namespace panoptic_mapping

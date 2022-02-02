@@ -101,6 +101,8 @@ class SubmapCollection {
     return instance_to_submap_ids_;
   }
 
+  bool isSingleTsdf() const { return is_single_tsdf_; }
+
   const std::unordered_map<int, TrackedInstanceInfo>&
   getTrackedInstancesInfoTable() const {
     return tracked_instances_info_;
