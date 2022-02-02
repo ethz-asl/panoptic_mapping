@@ -149,7 +149,6 @@ class SingleTSDFTracker : public IDTrackerBase {
   bool is_setup_ = false;
 
   int instance_count_ = 0;
-  std::unordered_map<int, std::pair<int, float>> tracked_instances_info_;
 
   MapRenderer renderer_;  // The renderer is only used if visualization is on.
   cv::Mat rendered_vis_;  // Store visualization data.

@@ -95,7 +95,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
       bool matched = false;
       int matched_id = 0;
-      float score = 0.f;
+      float matching_score = 0.f;
 
       // Compute IoU with all rendered segments
       std::vector<std::pair<int, float>> ids_values;
@@ -114,14 +114,6 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
             continue;
           }
 
-          // Check that classes match, if enabled
-          if (config_.use_class_for_instance_tracking) {
-            int class_id = tracked_instances_info_[id_value.first].first;
-            if (class_id != input_class_id) {
-              continue;
-            }
-          }
-
           // Make sure rendered and predicted segments are matched 1-to-1
           if (matched_ids.find(id_value.first) != matched_ids.end()) {
             continue;
@@ -130,7 +122,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
           // Found the best match.
           matched = true;
           matched_id = id_value.first;
-          score = id_value.second;
+          matching_score = id_value.second;
           break;
         }
       }
@@ -139,6 +131,9 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         ++n_matched;
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
+        // Update the matched instance
+        submaps->updateTrackedInstanceInfo(matched_id, input_score,
+                                           input_class_id, matching_score);
       } else {
         // Filter segments that are too small
         bool is_new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
@@ -150,9 +145,9 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
           int panoptic_id = kInstanceIdOffset_ + instance_count_;
           // Map input panoptic id to global panoptic id
           input_to_output[input_id] = panoptic_id;
-          // Store instance info
-          tracked_instances_info_[panoptic_id] =
-              std::make_pair(input_class_id, input_score);
+          // Initialize new tracked instance info
+          submaps->updateTrackedInstanceInfo(matched_id, input_score,
+                                             input_class_id, matching_score);
           LOG_IF(INFO, config_.verbosity >= 2)
               << "Generated new instance id for class " << input_class_id;
         } else {
@@ -163,7 +158,8 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
     LOG_IF(INFO, config_.verbosity >= 1)
         << "Matched instances: " << n_matched << ". New instances: " << n_new
-        << ". Number of tracked instances: " << tracked_instances_info_.size();
+        << ". Number of tracked instances: "
+        << submaps->getTrackedInstancesInfoTable().size();
 
     // Translate the id image - this will mostly affect thing classes
     for (auto it = input->idImagePtr()->begin<int>();

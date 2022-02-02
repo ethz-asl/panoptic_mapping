@@ -94,6 +94,16 @@ void SubmapCollection::updateInstanceToSubmapIDTable() {
   }
 }
 
+void SubmapCollection::updateTrackedInstanceInfo(int instance_id,
+                                                 float instance_score,
+                                                 int class_id,
+                                                 float matching_score) {
+ 
+  TrackedInstanceInfo& tracked_instance_info =
+      tracked_instances_info_[instance_id];
+  tracked_instance_info.update(instance_score, class_id, matching_score);
+}
+
 // Save load functionality was heavily adapted from cblox.
 bool SubmapCollection::saveToFile(const std::string& file_path) const {
   CHECK(!file_path.empty());

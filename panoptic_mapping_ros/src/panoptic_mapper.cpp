@@ -53,6 +53,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("save_map_path_when_finished", &save_map_path_when_finished);
   setupParam("display_config_units", &display_config_units);
   setupParam("indicate_default_values", &indicate_default_values);
+  setupParam("is_single_tsdf", &is_single_tsdf);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -79,6 +80,10 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 void PanopticMapper::setupMembers() {
   // Map.
   submaps_ = std::make_shared<SubmapCollection>();
+
+  // Set if submap collection is in single TSDF mode
+  // TODO(albanesg): there should be a more general way to do this
+  submaps_->setIsSingleTsdf(config_.is_single_tsdf);
 
   // Threadsafe wrapper for the map.
   thread_safe_submaps_ = std::make_shared<ThreadSafeSubmapCollection>(submaps_);
@@ -218,7 +223,13 @@ void PanopticMapper::setupRos() {
 
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
   if (input_synchronizer_->hasInputData()) {
+    Timer input_lookup_timer("input_lookup");
+    ros::WallTime t0 = ros::WallTime::now();
     std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
+    ros::WallTime t1 = ros::WallTime::now();
+    input_lookup_timer.Stop();
+    LOG_IF(INFO, config_.verbosity >= 3)
+        << "Input lookup time: " << int((t1 - t0).toSec() * 1000);
     if (data) {
       processInput(data.get());
       if (config_.shutdown_when_finished) {
@@ -250,15 +261,25 @@ void PanopticMapper::processInput(InputData* input) {
   // Compute and store the validity image.
   if (compute_validity_image_) {
     Timer validity_timer("input/compute_validity_image");
+    ros::WallTime t0 = ros::WallTime::now();
     input->setValidityImage(
         globals_->camera()->computeValidityImage(input->depthImage()));
+    ros::WallTime t1 = ros::WallTime::now();
+    validity_timer.Stop();
+    LOG_IF(INFO, config_.verbosity >= 3)
+        << "Validity image: " << int((t1 - t0).toSec() * 1000) << "ms.";
   }
 
   // Compute and store the vertex map.
   if (compute_vertex_map_) {
     Timer vertex_timer("input/compute_vertex_map");
+    ros::WallTime t0 = ros::WallTime::now();
     input->setVertexMap(
         globals_->camera()->computeVertexMap(input->depthImage()));
+    ros::WallTime t1 = ros::WallTime::now();
+    vertex_timer.Stop();
+    LOG_IF(INFO, config_.verbosity >= 3)
+        << "Vertex map: " << int((t1 - t0).toSec() * 1000) << "ms.";
   }
   ros::WallTime t0 = ros::WallTime::now();
 

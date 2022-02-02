@@ -73,6 +73,9 @@ class PanopticMapper {
     // If true, indicate the default values when printing component configs.
     bool indicate_default_values = true;
 
+    // If true, the panoptic mapper is operating in single tsdf mode
+    bool is_single_tsdf = false;
+
     Config() { setConfigName("PanopticMapper"); }
 
    protected:

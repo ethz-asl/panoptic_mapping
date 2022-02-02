@@ -10,6 +10,7 @@
 #include "panoptic_mapping/3rd_party/config_utilities.hpp"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/submap.h"
+#include "panoptic_mapping/map/tracked_instance_info.h"
 
 namespace panoptic_mapping {
 
@@ -100,8 +101,16 @@ class SubmapCollection {
     return instance_to_submap_ids_;
   }
 
+  const std::unordered_map<int, TrackedInstanceInfo>&
+  getTrackedInstancesInfoTable() const {
+    return tracked_instances_info_;
+  }
+
   // Setters.
   void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
+  void setIsSingleTsdf(bool is_single_tsdf) {
+    is_single_tsdf_ = is_single_tsdf;
+  }
 
   // Tools.
 
@@ -113,10 +122,13 @@ class SubmapCollection {
   // Update the list of contained submaps for each instance.
   void updateInstanceToSubmapIDTable();
 
+  void updateTrackedInstanceInfo(int instance_id, float instance_score,
+                                 int class_id, float matching_score);
+
   // Creates a deep copy of all submaps, with new submap and instance id
   // managers. The submap ids may diverge when new submaps are added after
-  // copying so be careful to manage these appropriately if information is to be
-  // fused back to the original collection.
+  // copying so be careful to manage these appropriately if information is
+  // to be fused back to the original collection.
   std::unique_ptr<SubmapCollection> clone() const;
 
   /**
@@ -140,6 +152,10 @@ class SubmapCollection {
   std::unordered_map<int, size_t> id_to_index_;
   std::unordered_map<int, std::unordered_set<int>> instance_to_submap_ids_;
   int active_freespace_submap_id_ = -1;
+
+  // Used only in single TSDF mode
+  bool is_single_tsdf_ = false;
+  std::unordered_map<int, TrackedInstanceInfo> tracked_instances_info_;
 
  public:
   // Iterators over submaps.
