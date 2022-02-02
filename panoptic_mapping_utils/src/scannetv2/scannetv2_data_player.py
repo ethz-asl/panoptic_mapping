@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 
 import cv2
 import numpy as np
+from phonenumbers import format_number_for_mobile_dialing
 import rospy
 import tf
 from cv_bridge import CvBridge
@@ -114,6 +115,14 @@ class ScannetV2DataPlayer:
         return EmptyResponse
 
     def _load_frame_data(self, frame_id) -> FrameData:
+        pose_file_path = (
+            self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
+        )
+        pose = np.loadtxt(str(pose_file_path))
+        if np.isinf(pose).any() or np.isnan(pose).any():
+            rospy.logwarn(f"Pose at frame {frame_id} contains invalid entries.")
+            return None
+
         color_image_file_path = (
             self.scan_dir_path / _COLOR_IMAGES_DIR / "{:05d}.jpg".format(int(frame_id))
         )
@@ -132,11 +141,6 @@ class ScannetV2DataPlayer:
             interpolation=cv2.INTER_NEAREST,
         )
         depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
-
-        pose_file_path = (
-            self.scan_dir_path / _POSES_DIR / "{:05d}.txt".format(int(frame_id))
-        )
-        pose = np.loadtxt(str(pose_file_path))
 
         segmentation_file_path = (
             self.scan_dir_path / _PANOPTIC_PRED_DIR / "{:05d}.png".format(int(frame_id))
@@ -269,7 +273,11 @@ class ScannetV2DataPlayer:
 
         # Load and publish next frame data
         frame_data = self._load_frame_data(frame_id)
-        self._publish_frame_data(frame_data, now)
+        if frame_data is not None:
+            rospy.loginfo(f"Publishing data for frame {frame_id}")
+            self._publish_frame_data(frame_data, now)
+        else:
+            rospy.logwarn(f"Data for frame {frame_id} could not be loaded. Skipped.")
 
         self.current_index += 1
         if self.current_index >= len(self.ids):
