@@ -12,6 +12,7 @@
 #include "panoptic_mapping/map/classification/binary_count.h"
 #include "panoptic_mapping/map/classification/fixed_count.h"
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/panoptic_weight.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
 
@@ -52,6 +53,11 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
     case ClassVoxelType::kUncertainty: {
       result = UncertaintyLayer::loadFromStream(submap_proto, proto_file_ptr,
                                                 tmp_byte_offset_ptr);
+      break;
+    }
+    case ClassVoxelType::kPanopticWeight: {
+      result = PanopticWeightLayer::loadFromStream(submap_proto, proto_file_ptr,
+                                                   tmp_byte_offset_ptr);
       break;
     }
   }
