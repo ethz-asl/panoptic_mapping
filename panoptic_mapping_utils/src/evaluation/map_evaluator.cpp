@@ -399,12 +399,15 @@ bool MapEvaluator::evaluateMapCallback(
     submaps_.reset();
     return false;
   }
-  planning_ = std::make_unique<PlanningInterface>(submaps_);
 
-  // Evaluate.
-  output_file_ << computeReconstructionError(request_) << ","
-               << computeMeshError(request_) << "\n";
-  output_file_.flush();
+  if (request_.evaluate) {
+    planning_ = std::make_unique<PlanningInterface>(submaps_);
+
+    // Evaluate.
+    output_file_ << computeReconstructionError(request_) << ","
+                 << computeMeshError(request_) << "\n";
+    output_file_.flush();
+  }
 
   const std::string extension =
       request.file_path.substr(request.file_path.find_last_of('.'));
@@ -683,12 +686,20 @@ convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
               }
               break;
             }
+            case ClassVoxelType::kPanopticWeight:
             case ClassVoxelType::kFixedCount:
             case ClassVoxelType::kVariableCount: {
               label = class_voxel->getBelongingID();
               break;
             }
+            default: {
+              continue;
+            }
           }
+        }
+        // TODO: no label should be higher than 50000
+        if (label > 50000) {
+          continue;
         }
         pcl::PointXYZRGBL point(color.r, color.g, color.b, label);
         point.x = vertex.x();
