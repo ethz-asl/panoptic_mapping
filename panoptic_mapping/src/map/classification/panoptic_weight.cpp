@@ -69,10 +69,10 @@ bool PanopticWeightVoxel::deseriliazeVoxelFromInt(
 
   // Load data
   label = static_cast<int>(data[*data_index]);
-  weight = x32FromInt32<float>(data[*data_index + 1u]);
+  weight = x32FromInt32<float>(data[*data_index + 1]);
 
   // Advance the index
-  data_index += 2u;
+  *data_index += 2;
 
   return true;
 }
