@@ -4,6 +4,8 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
+#include <optional>
 
 #include <opencv2/core/mat.hpp>
 
@@ -23,6 +25,7 @@ struct DetectronLabel {
   int category_id = 0;
   int instance_id = 0;
   float score = 0.f;
+  std::optional<std::vector<float>> class_probs;
 };
 typedef std::unordered_map<int, DetectronLabel> DetectronLabels;  // <id-label>
 

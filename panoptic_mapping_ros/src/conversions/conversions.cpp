@@ -10,6 +10,9 @@ DetectronLabel detectronLabelFromMsg(
   result.is_thing = msg.is_thing;
   result.category_id = msg.category_id;
   result.score = msg.score;
+  if (!msg.class_probs.empty()) {
+    result.class_probs = msg.class_probs;
+  }
   return result;
 }
 

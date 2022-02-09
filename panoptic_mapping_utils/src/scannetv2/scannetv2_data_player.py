@@ -21,7 +21,6 @@ from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 _COLOR_IMAGES_DIR = "color"
 _DEPTH_IMAGES_DIR = "depth"
-_LABEL_DIVISOR = 1000
 _PANOPTIC_GROUNDTRUTH_DIR = "panoptic"
 _PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
@@ -39,7 +38,7 @@ class FrameData:
     uncertainty: Optional[np.ndarray] = None
 
 
-def make_msg_header(self, timestamp, frame_id: str):
+def make_msg_header(timestamp, frame_id: str):
     return Header(
         stamp=timestamp,
         frame_id=frame_id,
@@ -99,6 +98,9 @@ class FrameDataPublisher:
             label.is_thing = d["isthing"]
             label.category_id = d["category_id"]
             label.score = d["score"]
+            if "class_probs" in d:
+                # Round to 3 decimal
+                label.class_probs = tuple(p for p in d["class_probs"])
             label_msg.labels.append(label)
         self.label_pub.publish(label_msg)
 
@@ -265,11 +267,13 @@ class ScannetV2DataPlayer:
         self.frame_skip = rospy.get_param("~frame_skip", 0)
         self.refresh_rate = 30  # Hz
         self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
+        self.image_width = rospy.get_param("~image_width", _INPUT_IMAGE_DIMS[0])
+        self.image_height = rospy.get_param("~image_height", _INPUT_IMAGE_DIMS[1])
 
         # Configure frame data loader
         self.frame_data_loader = FrameDataLoader(
             self.scan_dir_path,
-            _INPUT_IMAGE_DIMS,
+            (self.image_width, self.image_height),
             self.use_uncertainty,
         )
 
