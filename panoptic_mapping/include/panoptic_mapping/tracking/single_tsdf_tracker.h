@@ -26,6 +26,7 @@ namespace panoptic_mapping {
 
 class TrackingInfo;
 class TrackingInfoAggregator;
+class SegmentInfo;
 
 /**
  * @brief Allocates a single submap to emulate running a monolithic TSDF grid as
@@ -99,8 +100,7 @@ class SingleTSDFTracker : public IDTrackerBase {
    * @param input
    * @return std::map<int, std::pair<int, float>>
    */
-  std::map<int, std::pair<int, float>> parseDetectronPanopticLabels(
-      InputData* input);
+  std::map<int, SegmentInfo> parseDetectronPanopticLabels(InputData* input);
 
   /**
    * @brief Render submap for tracking using approximate rendering algorithm.

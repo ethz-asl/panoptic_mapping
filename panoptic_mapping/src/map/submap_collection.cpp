@@ -94,14 +94,21 @@ void SubmapCollection::updateInstanceToSubmapIDTable() {
   }
 }
 
-void SubmapCollection::updateTrackedInstanceInfo(int instance_id,
-                                                 float instance_score,
-                                                 int class_id,
-                                                 float matching_score) {
- 
-  TrackedInstanceInfo& tracked_instance_info =
-      tracked_instances_info_[instance_id];
-  tracked_instance_info.update(instance_score, class_id, matching_score);
+void SubmapCollection::updateTrackedInstanceInfo(
+    int instance_id, const SegmentInfo& matched_segment_info,
+    float matching_score) {
+  auto it = tracked_instance_info_.find(instance_id);
+  if (it == tracked_instance_info_.end()) {
+    // Create initialize new tracked instance info
+    auto tracked_instance_info_ptr =
+        TrackedInstanceInfo::make_tracked_instance_info(
+            tracked_instance_info_type_);
+    tracked_instance_info_ptr->update(matched_segment_info, matching_score);
+    tracked_instance_info_.insert(
+        std::make_pair(instance_id, tracked_instance_info_ptr));
+  } else {
+    it->second->update(matched_segment_info, matching_score);
+  }
 }
 
 // Save load functionality was heavily adapted from cblox.

@@ -103,15 +103,20 @@ class SubmapCollection {
 
   bool isSingleTsdf() const { return is_single_tsdf_; }
 
-  const std::unordered_map<int, TrackedInstanceInfo>&
+  const std::unordered_map<int, std::shared_ptr<TrackedInstanceInfo>>&
   getTrackedInstancesInfoTable() const {
-    return tracked_instances_info_;
+    return tracked_instance_info_;
   }
 
   // Setters.
   void setActiveFreeSpaceSubmapID(int id) { active_freespace_submap_id_ = id; }
+
   void setIsSingleTsdf(bool is_single_tsdf) {
     is_single_tsdf_ = is_single_tsdf;
+  }
+
+  void setTrackedInstanceInfoType(TrackedInstanceInfo::Type type) {
+    tracked_instance_info_type_ = type;
   }
 
   // Tools.
@@ -124,8 +129,13 @@ class SubmapCollection {
   // Update the list of contained submaps for each instance.
   void updateInstanceToSubmapIDTable();
 
+  // Single-TSDF tracked instance update
   void updateTrackedInstanceInfo(int instance_id, float instance_score,
                                  int class_id, float matching_score);
+
+  void updateTrackedInstanceInfo(int instance_id,
+                                 const SegmentInfo& matched_segment_info,
+                                 float matching_score);
 
   // Creates a deep copy of all submaps, with new submap and instance id
   // managers. The submap ids may diverge when new submaps are added after
@@ -157,7 +167,10 @@ class SubmapCollection {
 
   // Used only in single TSDF mode
   bool is_single_tsdf_ = false;
-  std::unordered_map<int, TrackedInstanceInfo> tracked_instances_info_;
+  TrackedInstanceInfo::Type tracked_instance_info_type_ =
+      TrackedInstanceInfo::Type::kCount;
+  std::unordered_map<int, std::shared_ptr<TrackedInstanceInfo>>
+      tracked_instance_info_;
 
  public:
   // Iterators over submaps.

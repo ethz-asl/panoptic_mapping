@@ -106,7 +106,7 @@ void EvaluationDataWriter::storeSubmaps(const SubmapCollection& submaps) {
     // Write instance id to class id mapping
     for (const auto& tracked_instance_id_info_pair :
          tracked_instances_info_table) {
-      int class_id = tracked_instance_id_info_pair.second.current_index;
+      int class_id = tracked_instance_id_info_pair.second->getClassID();
       ofs << tracked_instance_id_info_pair.first << "," << class_id << "\n";
     }
 

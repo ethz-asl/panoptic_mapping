@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "panoptic_mapping/map/tracked_instance_info.h"
 #include "panoptic_mapping/tracking/tracking_info.h"
 
 namespace panoptic_mapping {
@@ -70,7 +71,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
 
   // Use both semantic and instance level information
   if (config_.use_detectron_panoptic) {
-    const std::map<int, std::pair<int, float>> instance_infos =
+    const std::map<int, SegmentInfo> instance_infos =
         parseDetectronPanopticLabels(input);
 
     int n_matched = 0;
@@ -89,9 +90,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         input_to_output[input_id] = input_id;
         continue;
       }
-      auto const& instance_info = id_instance_info_pair_iter->second;
-      int input_class_id = instance_info.first;
-      int input_score = instance_info.second;
+      auto const& instance_segment_info = id_instance_info_pair_iter->second;
 
       bool matched = false;
       int matched_id = 0;
@@ -132,8 +131,8 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
         // Update the matched instance
-        submaps->updateTrackedInstanceInfo(matched_id, input_score,
-                                           input_class_id, matching_score);
+        submaps->updateTrackedInstanceInfo(matched_id, instance_segment_info,
+                                           matching_score);
       } else {
         // Filter segments that are too small
         bool is_new_instance = tracking_data.getNumberOfInputPixels(input_id) >=
@@ -146,10 +145,11 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
           // Map input panoptic id to global panoptic id
           input_to_output[input_id] = panoptic_id;
           // Initialize new tracked instance info
-          submaps->updateTrackedInstanceInfo(matched_id, input_score,
-                                             input_class_id, matching_score);
+          submaps->updateTrackedInstanceInfo(matched_id, instance_segment_info,
+                                             matching_score);
           LOG_IF(INFO, config_.verbosity >= 2)
-              << "Generated new instance id for class " << input_class_id;
+              << "Generated new instance id for class "
+              << instance_segment_info.class_id;
         } else {
           input_to_output[input_id] = 0;
         }
@@ -198,11 +198,11 @@ void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
   }
 }
 
-std::map<int, std::pair<int, float>>
-SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
+std::map<int, SegmentInfo> SingleTSDFTracker::parseDetectronPanopticLabels(
+    InputData* input) {
   size_t instance_count = 0;
   std::map<int, int> detectron_to_panoptic_ids;
-  std::map<int, std::pair<int, float>> instance_infos;
+  std::map<int, SegmentInfo> instance_segments_infos;
 
   // FIXME(albanesg): this assumes that class ids range is continuous
   // e.g. classes are all the integers between 0 and 40 but this is not
@@ -224,9 +224,14 @@ SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
         detectron_to_panoptic_ids[*it] = panoptic_id;
         // Assign it to id image pixel
         *it = panoptic_id;
-        // Save instance info for this panoptic id
-        instance_infos[panoptic_id] =
-            std::make_pair(label.category_id, label.score);
+        // Save segment info for this panoptic id
+        SegmentInfo segment_info;
+        segment_info.class_id = label.category_id;
+        segment_info.instance_score = label.score;
+        if (label.class_probs.has_value()) {
+          segment_info.class_probs = label.class_probs.value();
+        }
+        instance_segments_infos[panoptic_id] = segment_info;
       }
       // For stuff labels, the panoptic id is the class id
       else {
@@ -238,7 +243,7 @@ SingleTSDFTracker::parseDetectronPanopticLabels(InputData* input) {
     }
   }
 
-  return instance_infos;
+  return instance_segments_infos;
 }
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {

@@ -32,6 +32,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/submap_id.cpp
         src/map/instance_id.cpp
         src/map/submap_bounding_volume.cpp
+        src/map/tracked_instance_info.cpp
         src/map/classification/binary_count.cpp
         src/map/classification/moving_binary_count.cpp
         src/map/classification/fixed_count.cpp
