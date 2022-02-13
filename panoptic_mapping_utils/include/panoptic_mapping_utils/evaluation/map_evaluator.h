@@ -14,6 +14,7 @@
 #include <panoptic_mapping_ros/visualization/submap_visualizer.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
 #include <ros/ros.h>
 #include <voxblox_ros/tsdf_server.h>
 
@@ -47,8 +48,8 @@ class MapEvaluator {
     bool is_single_tsdf = false;
 
     bool export_mesh = false;
-    bool export_mesh_as_point_cloud = false;
-    bool export_point_cloud_labels = false;
+    bool export_labeled_pointcloud = false;
+    bool export_coverage_pointcloud = false;
 
     EvaluationRequest() { setConfigName("MapEvaluator::EvaluationRequest"); }
 
@@ -100,13 +101,9 @@ class MapEvaluator {
   std::string computeMeshError(const EvaluationRequest& request);
   void visualizeReconstructionError(const EvaluationRequest& request);
   void buildKdTree();
-  void exportMeshAsLabeledPointCloud(const EvaluationRequest& request);
-  /**
-   * @brief Merge all the meshes into one and export as PLY
-   *
-   * @param request
-   */
   void exportMesh(const EvaluationRequest& request);
+  void exportLabeledPointcloud(const EvaluationRequest& request);
+  void exportCoveragePointcloud(const EvaluationRequest& request);
 
  private:
   // ROS.
@@ -117,7 +114,10 @@ class MapEvaluator {
   std::ofstream output_file_;
 
   // Stored data.
-  pcl::PointCloud<pcl::PointXYZ>::Ptr gt_ptcloud_;
+  static constexpr float kCoverageGridVoxelSize = 0.05f;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr gt_cloud_ptr_;
+  pcl::VoxelGrid<pcl::PointXYZ>::Ptr gt_voxel_grid_ptr_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_gt_cloud_ptr_;
   std::shared_ptr<SubmapCollection> submaps_;
   std::shared_ptr<TsdfLayer> voxblox_;
   bool use_voxblox_;

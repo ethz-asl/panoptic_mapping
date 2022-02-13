@@ -2,11 +2,11 @@
 <!-- ============ Arguments ============ -->
 
   <!-- Groundtruth -->
-  <arg name="ground_truth_pointcloud_file" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2-dvc/scans/scene0587_02/scene0587_02_vh_clean_2.pointcloud.ply"/>
+  <arg name="ground_truth_pointcloud_file" default="/home/giuliano/mt_ipp_panoptic_mapping/datasets/scannetv2/scans/scene0015_00/scene0015_00_vh_clean_2.pointcloud.ply"/>
   
   <!-- Source directory -->
-  <arg name="map_file" default="/home/giuliano/mt_ipp_panoptic_mapping/runs/scene0587_02/single_tsdf"/>
-  <arg name="output_suffix" default="single_tsdf"/>
+  <arg name="map_file" default="/home/giuliano/mt_ipp_panoptic_mapping/runs/scene0015_00/single_tsdf_panoptic_weight_iou"/>
+  <arg name="output_suffix" default="scannetv2_single_tsdf_panoptic_weight_iou"/>
   
   <!-- Evaluation Params -->
   <arg name="maximum_distance" default="10000"/>
@@ -15,7 +15,8 @@
   <arg name="is_single_tsdf" default="true"/>
   <arg name="evaluate" default="false"/>
   <arg name="export_mesh" default="true"/>
-  <arg name="export_mesh_as_point_cloud" default="true"/>
+  <arg name="export_labeled_pointcloud" default="true"/>
+  <arg name="export_coverage_pointcloud" default="true"/>
 
 <!-- ============ Evaluations ============ -->
   <node name="multi_map_evaluation" pkg="panoptic_mapping_utils" type="multi_map_evaluation" output="screen" required="true">
@@ -30,7 +31,8 @@
     <param name="ignore_truncated_points" value="$(arg ignore_truncated_points)" />
     <param name="is_single_tsdf" value="$(arg is_single_tsdf)" /> 
     <param name="export_mesh" value="$(arg export_mesh)" />
-    <param name="export_mesh_as_point_cloud" value="$(arg export_mesh_as_point_cloud)" />
+    <param name="export_labeled_pointcloud" value="$(arg export_labeled_pointcloud)" />
+    <param name="export_coverage_pointcloud" value="$(arg export_coverage_pointcloud)"/>
   </node>
   
   <node name="evaluation_manager" pkg="panoptic_mapping_utils" type="evaluation_manager.py" output="screen" required="true">

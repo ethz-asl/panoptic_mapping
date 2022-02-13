@@ -10,6 +10,7 @@
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 #include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/filters/crop_box.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/io/ply_io.h>
 #include <ros/ros.h>
 #include <voxblox/interpolator/interpolator.h>
@@ -17,6 +18,18 @@
 #include <voxblox/mesh/mesh_utils.h>
 
 #include "panoptic_mapping_utils/evaluation/progress_bar.h"
+
+namespace {
+
+pcl::PointXYZ get_voxel_centroid(const Eigen::Vector3i& voxel_coordinates,
+                                 float voxel_size) {
+  auto t = voxel_coordinates.cast<float>().normalized() * (voxel_size / 2);
+  return {voxel_coordinates.x() * voxel_size + t.x(),
+          voxel_coordinates.y() * voxel_size + t.y(),
+          voxel_coordinates.z() * voxel_size + t.z()};
+}
+
+}  // namespace
 
 namespace panoptic_mapping {
 
@@ -40,8 +53,8 @@ void MapEvaluator::EvaluationRequest::setupParamsAndPrinting() {
   setupParam("inlier_distance", &inlier_distance);
   setupParam("is_single_tsdf", &is_single_tsdf);
   setupParam("export_mesh", &export_mesh);
-  setupParam("export_mesh_as_point_cloud", &export_mesh_as_point_cloud);
-  setupParam("export_point_cloud_labels", &export_point_cloud_labels);
+  setupParam("export_labeled_pointcloud", &export_labeled_pointcloud);
+  setupParam("export_coverage_pointcloud", &export_coverage_pointcloud);
 }
 
 MapEvaluator::MapEvaluator(const ros::NodeHandle& nh,
@@ -67,9 +80,9 @@ bool MapEvaluator::setupMultiMapEvaluation() {
   use_voxblox_ = false;
 
   // Load GT cloud.
-  gt_ptcloud_ = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
+  gt_cloud_ptr_ = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
   if (pcl::io::loadPLYFile<pcl::PointXYZ>(request_.ground_truth_pointcloud_file,
-                                          *gt_ptcloud_) != 0) {
+                                          *gt_cloud_ptr_) != 0) {
     LOG(ERROR) << "Could not load ground truth point cloud from '"
                << request_.ground_truth_pointcloud_file << "'.";
     return false;
@@ -110,18 +123,18 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
   // Load the groundtruth pointcloud.
   if (request.evaluate || request.compute_coloring) {
     if (!request.ground_truth_pointcloud_file.empty()) {
-      gt_ptcloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
+      gt_cloud_ptr_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
           new pcl::PointCloud<pcl::PointXYZ>());
       if (pcl::io::loadPLYFile<pcl::PointXYZ>(
-              request.ground_truth_pointcloud_file, *gt_ptcloud_) != 0) {
+              request.ground_truth_pointcloud_file, *gt_cloud_ptr_) != 0) {
         LOG(ERROR) << "Could not load ground truth point cloud from '"
                    << request.ground_truth_pointcloud_file << "'.";
-        gt_ptcloud_.reset();
+        gt_cloud_ptr_.reset();
         return false;
       }
       LOG_IF(INFO, request.verbosity >= 2) << "Loaded ground truth pointcloud";
     }
-    if (!gt_ptcloud_) {
+    if (!gt_cloud_ptr_) {
       LOG(ERROR) << "No ground truth pointcloud loaded.";
       return false;
     }
@@ -187,8 +200,8 @@ bool MapEvaluator::evaluate(const EvaluationRequest& request) {
     exportMesh(request);
   }
 
-  if (request.export_mesh_as_point_cloud) {
-    exportMeshAsLabeledPointCloud(request);
+  if (request.export_labeled_pointcloud) {
+    exportLabeledPointcloud(request);
   }
 
   // Compute visualization if required.
@@ -218,10 +231,10 @@ std::string MapEvaluator::computeReconstructionError(
   uint64_t truncated_points = 0;
   uint64_t inliers = 0;
   std::vector<float> abserror;
-  abserror.reserve(gt_ptcloud_->size());  // Just reserve the worst case.
+  abserror.reserve(gt_cloud_ptr_->size());  // Just reserve the worst case.
 
   // Setup progress bar.
-  const uint64_t interval = gt_ptcloud_->size() / 100;
+  const uint64_t interval = gt_cloud_ptr_->size() / 100;
   uint64_t count = 0;
   ProgressBar bar;
 
@@ -232,7 +245,7 @@ std::string MapEvaluator::computeReconstructionError(
     interp.reset(new voxblox::Interpolator<voxblox::TsdfVoxel>(voxblox_.get()));
   }
 
-  for (const auto& pcl_point : *gt_ptcloud_) {
+  for (const auto& pcl_point : *gt_cloud_ptr_) {
     const Point point(pcl_point.x, pcl_point.y, pcl_point.z);
     total_points++;
 
@@ -268,7 +281,7 @@ std::string MapEvaluator::computeReconstructionError(
 
     // Progress bar.
     if (count % interval == 0) {
-      bar.display(static_cast<float>(count) / gt_ptcloud_->size());
+      bar.display(static_cast<float>(count) / gt_cloud_ptr_->size());
     }
     count++;
   }
@@ -420,8 +433,12 @@ bool MapEvaluator::evaluateMapCallback(
     exportMesh(request_);
   }
 
-  if (request_.export_mesh_as_point_cloud) {
-    exportMeshAsLabeledPointCloud(request_);
+  if (request_.export_labeled_pointcloud) {
+    exportLabeledPointcloud(request_);
+  }
+
+  if (request_.export_coverage_pointcloud) {
+    exportCoveragePointcloud(request_);
   }
 
   return true;
@@ -608,8 +625,8 @@ void MapEvaluator::visualizeReconstructionError(
 
 void MapEvaluator::buildKdTree() {
   kdtree_data_.points.clear();
-  kdtree_data_.points.reserve(gt_ptcloud_->size());
-  for (const auto& point : *gt_ptcloud_) {
+  kdtree_data_.points.reserve(gt_cloud_ptr_->size());
+  for (const auto& point : *gt_cloud_ptr_) {
     kdtree_data_.points.emplace_back(point.x, point.y, point.z);
   }
   kdtree_.reset(new KDTree(3, kdtree_data_,
@@ -641,13 +658,12 @@ void MapEvaluator::exportMesh(const EvaluationRequest& request) {
   voxblox::outputMeshAsPly(out_mesh_file, *combined_mesh);
 }
 
-pcl::PointCloud<pcl::PointXYZRGBL>::Ptr
-convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
-  // Create PCL point cloud
+void MapEvaluator::exportLabeledPointcloud(const EvaluationRequest& request) {
   pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud_ptr(
       new pcl::PointCloud<pcl::PointXYZRGBL>());
 
-  for (auto& submap : submaps) {
+  // Convert submaps collection to pointcloud with labels
+  for (auto& submap : *submaps_) {
     if (!submap.hasClassLayer()) {
       continue;
     }
@@ -697,7 +713,7 @@ convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
             }
           }
         }
-        // TODO: no label should be higher than 50000
+        // TODO: just a hack to make sure no invalid labels are exported
         if (label > 50000) {
           continue;
         }
@@ -712,45 +728,75 @@ convertSubmapCollectionToColoredPointcloud(const SubmapCollection& submaps) {
     }
   }
 
-  return cloud_ptr;
+  // Now save the point cloud as PLY
+  std::string out_pcl_file_name =
+      target_directory_ + "/" + target_map_name_ + ".pointcloud.ply";
+  pcl::PLYWriter().write(out_pcl_file_name, *cloud_ptr, true /* binary */,
+                         false /* use_camers */);
 }
 
-void MapEvaluator::exportMeshAsLabeledPointCloud(
-    const EvaluationRequest& request) {
-  // Convert submaps collection to pointcloud
-  auto cloud_ptr = convertSubmapCollectionToColoredPointcloud(*submaps_);
-
-  // Clip the pointcloud using the bounding box of the gt pointcloud
-  if (!gt_ptcloud_) {
-    gt_ptcloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
+void MapEvaluator::exportCoveragePointcloud(const EvaluationRequest& request) {
+  if (!gt_cloud_ptr_) {
+    gt_cloud_ptr_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
         new pcl::PointCloud<pcl::PointXYZ>());
     if (pcl::io::loadPLYFile<pcl::PointXYZ>(
-            request_.ground_truth_pointcloud_file, *gt_ptcloud_) == -1) {
+            request_.ground_truth_pointcloud_file, *gt_cloud_ptr_) == -1) {
+      gt_cloud_ptr_.reset();
       LOG(FATAL) << "Could not load ground truth point cloud from '"
                  << request_.ground_truth_pointcloud_file << "'.";
     }
   }
 
-  pcl::MomentOfInertiaEstimation<pcl::PointXYZ> feature_extractor;
-  feature_extractor.setInputCloud(gt_ptcloud_);
-  feature_extractor.compute();
+  if (!gt_voxel_grid_ptr_) {
+    gt_voxel_grid_ptr_ =
+        pcl::VoxelGrid<pcl::PointXYZ>::Ptr(new pcl::VoxelGrid<pcl::PointXYZ>());
+    // Save leaf layout for later access
+    gt_voxel_grid_ptr_->setSaveLeafLayout(true);
+    // Voxelize the gt poincloud to compute the coverage mask later
+    filtered_gt_cloud_ptr_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(
+        new pcl::PointCloud<pcl::PointXYZ>());
+    gt_voxel_grid_ptr_->setInputCloud(
+        boost::const_pointer_cast<const pcl::PointCloud<pcl::PointXYZ>>(
+            gt_cloud_ptr_));
+    gt_voxel_grid_ptr_->setLeafSize(
+        kCoverageGridVoxelSize, kCoverageGridVoxelSize, kCoverageGridVoxelSize);
+    gt_voxel_grid_ptr_->filter(*filtered_gt_cloud_ptr_);
+  }
 
-  pcl::PointXYZ min_AABB, max_AABB;
-  feature_extractor.getAABB(min_AABB, max_AABB);
+  auto planning_interface_ptr = std::make_unique<PlanningInterface>(submaps_);
 
-  pcl::CropBox<pcl::PointXYZRGBL> box_filter;
-  box_filter.setMin(Eigen::Vector4f(min_AABB.x, min_AABB.y, min_AABB.z, 1.f));
-  box_filter.setMax(Eigen::Vector4f(max_AABB.x, max_AABB.y, max_AABB.z, 1.f));
-  box_filter.setInputCloud(cloud_ptr);
-
-  pcl::PointCloud<pcl::PointXYZRGBL>::Ptr clipped_cloud_ptr(
-      new pcl::PointCloud<pcl::PointXYZRGBL>());
-  box_filter.filter(*clipped_cloud_ptr);
-
-  // Now save the point cloud as PLY
-  std::string out_pcl_file_name =
-      target_directory_ + "/" + target_map_name_ + ".pointcloud.ply";
-  pcl::io::savePLYFile(out_pcl_file_name, *clipped_cloud_ptr);
+  // Iterate over the gt voxel grid and add only voxel centroids that have been
+  // observed in the current submap collection to the coverage pcd
+  pcl::PointCloud<pcl::PointXYZ>::Ptr coverage_cloud_ptr(
+      new pcl::PointCloud<pcl::PointXYZ>());
+  const auto min_box_coordinates = gt_voxel_grid_ptr_->getMinBoxCoordinates();
+  const auto max_box_coordinates = gt_voxel_grid_ptr_->getMaxBoxCoordinates();
+  for (int i = min_box_coordinates.x(); i <= max_box_coordinates.x(); ++i) {
+    for (int j = min_box_coordinates.y(); j <= max_box_coordinates.y(); ++j) {
+      for (int k = min_box_coordinates.z(); k <= max_box_coordinates.z(); ++k) {
+        int centroid_index = gt_voxel_grid_ptr_->getCentroidIndexAt({i, j, k});
+        if (centroid_index == -1) {
+          auto empty_voxel_centroid =
+              get_voxel_centroid({i, j, k}, kCoverageGridVoxelSize);
+          if (planning_interface_ptr->isObserved({empty_voxel_centroid.x,
+                                                  empty_voxel_centroid.y,
+                                                  empty_voxel_centroid.z})) {
+            coverage_cloud_ptr->push_back(empty_voxel_centroid);
+          }
+        } else {
+          auto voxel_centroid = filtered_gt_cloud_ptr_->at(centroid_index);
+          if (planning_interface_ptr->isObserved(
+                  {voxel_centroid.x, voxel_centroid.y, voxel_centroid.z})) {
+            coverage_cloud_ptr->push_back(voxel_centroid);
+          }
+        }
+      }
+    }
+  }
+  std::string coverage_pcl_file_name =
+      target_directory_ + "/" + target_map_name_ + ".coverage.ply";
+  pcl::PLYWriter().write(coverage_pcl_file_name, *coverage_cloud_ptr,
+                         true /* binary_mode */, false /* use_camera */);
 }
 
 }  // namespace panoptic_mapping
