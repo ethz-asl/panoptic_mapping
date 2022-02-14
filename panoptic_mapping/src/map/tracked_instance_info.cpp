@@ -4,9 +4,6 @@ namespace panoptic_mapping {
 
 void CountTrackedInstanceInfo::update(const SegmentInfo& matched_segment_info,
                                       float matching_score) {
-  // TODO: the instance score should be weighted by the matching and normalized
-  score += matched_segment_info.instance_score;
-
   ClassificationCount new_count =
       ++(class_counts[matched_segment_info.class_id]);
   if (new_count > current_count) {

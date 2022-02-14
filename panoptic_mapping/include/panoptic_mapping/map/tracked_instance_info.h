@@ -48,7 +48,6 @@ struct TrackedInstanceInfo {
  *
  */
 struct CountTrackedInstanceInfo : public TrackedInstanceInfo {
-  double score = 0.f;
   int current_index = 0;
   ClassificationCount total_count = 0;
   ClassificationCount current_count = 0;
