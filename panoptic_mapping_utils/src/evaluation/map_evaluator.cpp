@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
+#include <panoptic_mapping/3rd_party/csv.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/voxel_grid.h>
@@ -728,8 +730,41 @@ void MapEvaluator::exportLabeledPointcloud(const EvaluationRequest& request) {
     }
   }
 
+  // If the label map csv file exists, load it and remap all the ids
+  if (request_.is_single_tsdf) {
+    // If the label map csv file exists, load it
+    const std::string label_map_file_path =
+        target_directory_ + "/" + target_map_name_ + ".csv";
+    if (std::filesystem::is_regular_file(label_map_file_path)) {
+      std::unordered_map<int, int> label_map;
+      io::CSVReader<2> in(label_map_file_path);
+      in.read_header(io::ignore_extra_column, "InstanceID", "ClassID");
+      bool read_row = true;
+      while (read_row) {
+        int inst = -1, cls = -1;
+        read_row = in.read_row(inst, cls);
+        if (inst != -1 && cls != -1) {
+          label_map[inst] = cls;
+        }
+      }
+
+      // Now remap the points in the cloud
+      for (size_t i = 0; i < cloud_ptr->size(); ++i) {
+        auto& point = (*cloud_ptr)[i];
+        auto instance_class_id_pair_it =
+            label_map.find(static_cast<int>(point.label));
+        if (instance_class_id_pair_it != label_map.end()) {
+          point.label = instance_class_id_pair_it->second * 1000 +
+                        instance_class_id_pair_it->first;
+        } else if(point.label < 256) {
+          point.label *= 1000;
+        }
+      }
+    }
+  }
+
   // Now save the point cloud as PLY
-  std::string out_pcl_file_name =
+  const std::string out_pcl_file_name =
       target_directory_ + "/" + target_map_name_ + ".pointcloud.ply";
   pcl::PLYWriter().write(out_pcl_file_name, *cloud_ptr, true /* binary */,
                          false /* use_camers */);
@@ -765,8 +800,8 @@ void MapEvaluator::exportCoveragePointcloud(const EvaluationRequest& request) {
 
   auto planning_interface_ptr = std::make_unique<PlanningInterface>(submaps_);
 
-  // Iterate over the gt voxel grid and add only voxel centroids that have been
-  // observed in the current submap collection to the coverage pcd
+  // Iterate over the gt voxel grid and add only voxel centroids that have
+  // been observed in the current submap collection to the coverage pcd
   pcl::PointCloud<pcl::PointXYZ>::Ptr coverage_cloud_ptr(
       new pcl::PointCloud<pcl::PointXYZ>());
   const auto min_box_coordinates = gt_voxel_grid_ptr_->getMinBoxCoordinates();
