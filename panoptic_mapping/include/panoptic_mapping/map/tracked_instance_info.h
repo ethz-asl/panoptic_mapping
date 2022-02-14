@@ -83,7 +83,9 @@ struct UncertaintyTrackedInstanceInfo : public TrackedInstanceInfo {
 
 struct BayesianTrackedInstanceInfo : public TrackedInstanceInfo {
   BayesianTrackedInstanceInfo()
-      : class_probs(kNumClasses + 1 /* Last entry is the void label */, 0.f) {}
+      : class_probs(kNumClasses + 1,         // Last entry is the void label
+                    1.f / (kNumClasses + 1)  // Initialize as uniform
+        ) {}
 
   void update(const SegmentInfo& matched_segment_info,
               float matching_score) override;
