@@ -19,7 +19,7 @@ struct SegmentInfo {
  *
  */
 struct TrackedInstanceInfo {
-  enum class Type { kCount = 0, kUncertainty };
+  enum class Type : int { kCount = 0, kUncertainty = 1, kBayesian = 2 };
 
   /**
    * @brief
@@ -29,6 +29,8 @@ struct TrackedInstanceInfo {
    */
   virtual void update(const SegmentInfo& matched_segment_info,
                       float matching_score) = 0;
+
+  virtual Type getType() const = 0;
 
   /**
    * @brief Get the Class ID object
@@ -55,25 +57,53 @@ struct CountTrackedInstanceInfo : public TrackedInstanceInfo {
   void update(const SegmentInfo& matched_segment_info,
               float matching_score) override;
 
+  Type getType() const override { return Type::kCount; }
+
   int getClassID() const override { return current_index; }
 };
 
+/**
+ * @brief Implements thing label integration in the PanopticFusion style
+ *
+ */
 struct UncertaintyTrackedInstanceInfo : public TrackedInstanceInfo {
-  std::vector<float> class_probs;
-  int current_index = 0;
-
-  UncertaintyTrackedInstanceInfo() : class_probs(kNumClasses) {}
+  UncertaintyTrackedInstanceInfo() {}
 
   void update(const SegmentInfo& matched_segment_info,
               float matching_score) override;
 
+  Type getType() const override { return Type::kUncertainty; }
+
   int getClassID() const override { return current_index; }
 
-  static size_t numClasses();
+ private:
+  std::unordered_map<int, std::pair<double, double>> class_probs;
+  int current_index = 0;
+  int current_max_prob = 0.0f;
+};
+
+struct BayesianTrackedInstanceInfo : public TrackedInstanceInfo {
+  BayesianTrackedInstanceInfo()
+      : class_probs(kNumClasses + 1 /* Last entry is the void label */, 0.f) {}
+
+  void update(const SegmentInfo& matched_segment_info,
+              float matching_score) override;
+
+  Type getType() const override { return Type::kBayesian; }
+
+  int getClassID() const override {
+    // The last entry represents void i.e. the ignore label
+    return (current_index + 1) % (kNumClasses + 1);
+  }
+
   static void setNumClasses(size_t num_classes);
 
  private:
   static size_t kNumClasses;
+
+  int current_index = 0;
+  float current_index_prob = 0.f;
+  std::vector<float> class_probs;
 };
 
 }  // namespace panoptic_mapping

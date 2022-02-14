@@ -54,6 +54,8 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("display_config_units", &display_config_units);
   setupParam("indicate_default_values", &indicate_default_values);
   setupParam("is_single_tsdf", &is_single_tsdf);
+  setupParam("single_tsdf_tracked_instance_type",
+             &single_tsdf_tracked_instance_type);
 }
 
 PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
@@ -100,6 +102,16 @@ void PanopticMapper::setupMembers() {
   // Setup the number of labels. TODO(schmluk): there should be a more generic
   // way to set the number of tracked labels based on the configuration.
   FixedCountVoxel::setNumCounts(label_handler->numberOfLabels());
+
+  // Set size of the prob dist to maintain when tracking instances
+  // TODO(albanesg): there should be a more generic way to set bases on config
+  BayesianTrackedInstanceInfo::setNumClasses(label_handler->numberOfLabels());
+
+  // Setup the tracked instance info type
+  // TODO(albanesg): there should be a more generic way to set bases on config
+  SubmapCollection::setTrackedInstanceInfoType(
+      static_cast<TrackedInstanceInfo::Type>(
+          config_.single_tsdf_tracked_instance_type));
 
   // Globals.
   globals_ = std::make_shared<Globals>(camera, label_handler);

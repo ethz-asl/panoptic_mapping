@@ -13,6 +13,14 @@
 
 namespace panoptic_mapping {
 
+TrackedInstanceInfo::Type SubmapCollection::tracked_instance_info_type_ =
+    TrackedInstanceInfo::Type::kCount;
+
+void SubmapCollection::setTrackedInstanceInfoType(
+    TrackedInstanceInfo::Type type) {
+  tracked_instance_info_type_ = type;
+}
+
 Submap* SubmapCollection::createSubmap(const Submap::Config& config) {
   submaps_.emplace_back(std::make_unique<Submap>(config, &submap_id_manager_,
                                                  &instance_id_manager_));

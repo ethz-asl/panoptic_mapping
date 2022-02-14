@@ -75,6 +75,7 @@ class PanopticMapper {
 
     // If true, the panoptic mapper is operating in single tsdf mode
     bool is_single_tsdf = false;
+    int single_tsdf_tracked_instance_type = 0; // default is kCount
 
     Config() { setConfigName("PanopticMapper"); }
 

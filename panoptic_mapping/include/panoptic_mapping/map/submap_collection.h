@@ -115,9 +115,7 @@ class SubmapCollection {
     is_single_tsdf_ = is_single_tsdf;
   }
 
-  void setTrackedInstanceInfoType(TrackedInstanceInfo::Type type) {
-    tracked_instance_info_type_ = type;
-  }
+  static void setTrackedInstanceInfoType(TrackedInstanceInfo::Type type);
 
   // Tools.
 
@@ -167,10 +165,10 @@ class SubmapCollection {
 
   // Used only in single TSDF mode
   bool is_single_tsdf_ = false;
-  TrackedInstanceInfo::Type tracked_instance_info_type_ =
-      TrackedInstanceInfo::Type::kCount;
   std::unordered_map<int, std::shared_ptr<TrackedInstanceInfo>>
       tracked_instance_info_;
+
+  static TrackedInstanceInfo::Type tracked_instance_info_type_;
 
  public:
   // Iterators over submaps.
