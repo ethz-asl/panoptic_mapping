@@ -64,6 +64,7 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
   CHECK_NOTNULL(input);
   CHECK_NOTNULL(globals_->camera().get());
   CHECK(inputIsValid(*input));
+  LOG_IF(INFO, config_.verbosity > 1) << "input checked";
 
   cam_config_ = &(globals_->camera()->getConfig());
   Submap* map = submaps->getSubmapPtr(submaps->getActiveFreeSpaceSubmapID());

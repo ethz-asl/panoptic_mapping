@@ -82,10 +82,10 @@ class ScannetV2DataPlayer:
     def _load_and_publish_id(self, id_filepath, timestamp):
         # Load instance and publish instance
         id_map = np.load(str(id_filepath))
-        if id_map.dtype != 'uint8':
-            rospy.logwarn(f"ID is of type {id_map.dtype}, converting to uint8.")
-            id_map = id_map.astype('uint8')
-        img_msg = self.cv_bridge.cv2_to_imgmsg(id_map, "8UC1")
+        if id_map.dtype != 'int32':
+            rospy.logwarn(f"ID is of type {id_map.dtype}, converting to int32.")
+            id_map = id_map.astype('int32')
+        img_msg = self.cv_bridge.cv2_to_imgmsg(id_map, "32SC1")
         img_msg.header.stamp = timestamp
         img_msg.header.frame_id = self.sensor_frame_name
         self.id_pub.publish(img_msg)

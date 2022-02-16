@@ -73,7 +73,9 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 
   // Setup all components of the panoptic mapper.
   setupMembers();
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << "members ready";
   setupRos();
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << "ROS ready";
 }
 
 void PanopticMapper::setupMembers() {
@@ -236,18 +238,20 @@ void PanopticMapper::inputCallback(const ros::TimerEvent&) {
       if (!config_.save_map_path_when_finished.empty()) {
         saveMap(config_.save_map_path_when_finished);
       }
-      LOG_IF(INFO, config_.verbosity >= 1) << "Finished.";
+      LOG_IF(INFO, config_.verbosity > 1) << "Finished.";
       ros::shutdown();
     }
   }
 }
 
 void PanopticMapper::processInput(InputData* input) {
+  LOG_IF(INFO, config_.verbosity > 1) << "Processing Input";
   CHECK_NOTNULL(input);
   Timer timer("input");
   frame_timer_ = std::make_unique<Timer>("frame");
 
   // Compute and store the validity image.
+  LOG_IF(INFO, config_.verbosity > 1) << "validity";
   if (compute_validity_image_) {
     Timer validity_timer("input/compute_validity_image");
     input->setValidityImage(
@@ -255,6 +259,7 @@ void PanopticMapper::processInput(InputData* input) {
   }
 
   // Compute and store the vertex map.
+  LOG_IF(INFO, config_.verbosity > 1) << "vertices";
   if (compute_vertex_map_) {
     Timer vertex_timer("input/compute_vertex_map");
     input->setVertexMap(
@@ -263,18 +268,21 @@ void PanopticMapper::processInput(InputData* input) {
   ros::WallTime t0 = ros::WallTime::now();
 
   // Track the segmentation images and allocate new submaps.
+  LOG_IF(INFO, config_.verbosity > 1) << "ID tracking";
   Timer id_timer("input/id_tracking");
   id_tracker_->processInput(submaps_.get(), input);
   ros::WallTime t1 = ros::WallTime::now();
   id_timer.Stop();
 
   // Integrate the images.
+  LOG_IF(INFO, config_.verbosity > 1) << "TSDF integration";
   Timer tsdf_timer("input/tsdf_integration");
   tsdf_integrator_->processInput(submaps_.get(), input);
   ros::WallTime t2 = ros::WallTime::now();
   tsdf_timer.Stop();
 
   // Perform all requested map management actions.
+  LOG_IF(INFO, config_.verbosity > 1) << "map management";
   Timer management_timer("input/map_management");
   map_manager_->tick(submaps_.get());
   ros::WallTime t3 = ros::WallTime::now();
