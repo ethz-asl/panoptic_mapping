@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "panoptic_mapping/tools/coloring.h"
-
 namespace panoptic_mapping {
 
 config_utilities::Factory::RegistrationRos<LabelHandlerBase, RangeLabelHandler>
@@ -19,7 +17,7 @@ void RangeLabelHandler::Config::setupParamsAndPrinting() {
 }
 
 void RangeLabelHandler::Config::checkParams() const {
-  checkParamCond(num_labels >= 0, "num_labels must not be negative.");
+  checkParamGT(num_labels, 0, "num_labels");
 }
 
 RangeLabelHandler::RangeLabelHandler(const Config& config, bool print_config)
@@ -39,9 +37,6 @@ void RangeLabelHandler::initialiseLabels() {
     label.color = voxblox::rainbowColorMap(((float)i) / config_.num_labels);
     labels_[i] = std::make_unique<LabelEntry>(label);
   }
-
-  LOG_IF(INFO, config_.verbosity >= 1)
-      << "Created " << config_.num_labels << " labels.";
 }
 
 }  // namespace panoptic_mapping

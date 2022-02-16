@@ -11,7 +11,7 @@
 namespace panoptic_mapping {
 
 /**
- * @brief This label handler reads a csv file to get the labels.
+ * @brief This basic label handler allocates labels in an integer range.
  */
 class RangeLabelHandler : public LabelHandlerBase {
  public:

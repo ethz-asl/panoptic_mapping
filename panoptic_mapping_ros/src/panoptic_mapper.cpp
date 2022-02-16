@@ -92,8 +92,7 @@ void PanopticMapper::setupMembers() {
       config_utilities::FactoryRos::create<LabelHandlerBase>(
           defaultNh("label_handler"));
 
-  // Setup the number of labels. TODO(schmluk): there should be a more generic
-  // way to set the number of tracked labels based on the configuration.
+  // Setup the number of labels.
   FixedCountVoxel::setNumCounts(label_handler->numberOfLabels());
 
   // Globals.
