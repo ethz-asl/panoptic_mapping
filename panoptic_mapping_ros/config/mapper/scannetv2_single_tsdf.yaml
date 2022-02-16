@@ -21,6 +21,10 @@ camera:
   max_range: 5  # m
   min_range: 0.1
 
+labels:
+  type: range
+  num_labels: 40
+
 id_tracker:
   type: single_tsdf
   verbosity: 3
