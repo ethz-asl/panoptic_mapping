@@ -22,7 +22,7 @@
     <param name="global_frame_name" value="$(arg global_frame_name)" />
     <param name="sensor_frame_name" value="$(arg sensor_frame_name)" />
     <param name="wait" value="$(arg wait)" />
-    <param name="play_rate" value="0.5" />
+    <param name="play_rate" value="0.2" />
 
     <remap from="~color_image" to="$(arg namespace)/color_image" />
     <remap from="~depth_image" to="$(arg namespace)/depth_image" />
