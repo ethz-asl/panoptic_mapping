@@ -49,14 +49,16 @@ float FixedCountVoxel::getBelongingProbability() const {
 int FixedCountVoxel::getBelongingID() const { return current_index; }
 
 float FixedCountVoxel::getProbability(const int id) const {
-  if (id < 0 || id > kNumCounts || counts.empty()) {
+  if (id < 0 || id >= kNumCounts || counts.empty()) {
     return 0.f;
   }
   return static_cast<float>(counts[id]) / static_cast<float>(total_count);
 }
 
 void FixedCountVoxel::incrementCount(const int id, const float weight) {
-  if (id < 0 || id > kNumCounts) {
+  if (id < 0 || id >= kNumCounts) {
+    LOG(WARNING) << "Tried to increment count for ID " << id
+                 << ", which is out of range [0-" << kNumCounts << "].";
     return;
   }
   // Check initialization lazily allocate the counts but full memory so no
