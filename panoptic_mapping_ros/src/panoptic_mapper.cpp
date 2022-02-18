@@ -29,6 +29,7 @@ const std::map<std::string, std::pair<std::string, std::string>>
         {"vis_submaps", {"visualization/submaps", "submaps"}},
         {"vis_tracking", {"visualization/tracking", ""}},
         {"vis_planning", {"visualization/planning", ""}},
+        {"vis_rendering", {"visualization/rendering", ""}},
         {"data_writer", {"data_writer", "null"}}};
 
 void PanopticMapper::Config::checkParams() const {
@@ -73,9 +74,11 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
 
   // Setup all components of the panoptic mapper.
   setupMembers();
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << "members ready";
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n"
+                                       << "members ready";
   setupRos();
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << "ROS ready";
+  LOG_IF(INFO, config_.verbosity >= 1) << "\n"
+                                       << "ROS ready";
 }
 
 void PanopticMapper::setupMembers() {
@@ -136,6 +139,12 @@ void PanopticMapper::setupMembers() {
       config_utilities::getConfigFromRos<TrackingVisualizer::Config>(
           defaultNh("vis_tracking")));
   tracking_visualizer_->registerIDTracker(id_tracker_.get());
+
+  // Pseudolabeler
+  camera_renderer_ = std::make_unique<CameraRenderer>(
+      config_utilities::getConfigFromRos<CameraRenderer::Config>(
+          defaultNh("vis_rendering")),
+      globals_, camera, submaps_, true, nh_private_);
 
   // Planning.
   setupCollectionDependentMembers();
