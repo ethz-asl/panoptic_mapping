@@ -40,6 +40,7 @@ cs_add_library(${PROJECT_NAME}
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp
+        src/labels/range_label_handler.cpp
         src/tracking/tracking_info.cpp
         src/tracking/single_tsdf_tracker.cpp
         src/tracking/ground_truth_id_tracker.cpp
