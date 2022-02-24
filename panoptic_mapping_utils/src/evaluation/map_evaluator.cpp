@@ -246,32 +246,32 @@ void MapEvaluator::visualizeReconstructionError(
   ProgressBar bar;
   for (auto& submap : *submaps_) {
     voxblox::BlockIndexList block_list;
-    submap->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
     max_counter += block_list.size();
   }
 
   // Parse all submaps
   for (auto& submap : *submaps_) {
-    if (submap->getLabel() == PanopticLabel::kFreeSpace) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
       continue;
     }
     const size_t num_voxels_per_block =
-        std::pow(submap->getTsdfLayer().voxels_per_side(), 3);
-    const float voxel_size = submap->getTsdfLayer().voxel_size();
+        std::pow(submap.getTsdfLayer().voxels_per_side(), 3);
+    const float voxel_size = submap.getTsdfLayer().voxel_size();
     const float voxel_size_sqr = voxel_size * voxel_size;
-    const float truncation_distance = submap->getConfig().truncation_distance;
+    const float truncation_distance = submap.getConfig().truncation_distance;
     const int max_number_of_neighbors =
         max_number_of_neighbors_factor / std::pow(1.f / voxel_size, 2.f);
     voxblox::Interpolator<TsdfVoxel> interpolator(
-        submap->getTsdfLayerPtr().get());
+        submap.getTsdfLayerPtr().get());
 
     // Parse all voxels.
     voxblox::BlockIndexList block_list;
-    submap->getTsdfLayer().getAllAllocatedBlocks(&block_list);
+    submap.getTsdfLayer().getAllAllocatedBlocks(&block_list);
     int block = 0;
     for (auto& block_index : block_list) {
       voxblox::Block<TsdfVoxel>& block =
-          submap->getTsdfLayerPtr()->getBlockByIndex(block_index);
+          submap.getTsdfLayerPtr()->getBlockByIndex(block_index);
       for (size_t linear_index = 0; linear_index < num_voxels_per_block;
            ++linear_index) {
         TsdfVoxel& voxel = block.getVoxelByLinearIndex(linear_index);
@@ -348,7 +348,7 @@ void MapEvaluator::visualizeReconstructionError(
       counter += 1.f;
       bar.display(counter / max_counter);
     }
-    submap->updateMesh(false);
+    submap.updateMesh(false);
   }
 
   // Store colored submaps.
@@ -361,7 +361,7 @@ void MapEvaluator::visualizeReconstructionError(
 void MapEvaluator::publishVisualization() {
   // Make sure the tfs arrive otherwise the mesh will be discarded.
   visualizer_->reset();
-  visualizer_->visualizeAll(*submaps_);
+  visualizer_->visualizeAll(submaps_.get());
 }
 
 }  // namespace panoptic_mapping
