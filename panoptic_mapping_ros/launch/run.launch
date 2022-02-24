@@ -7,7 +7,7 @@
   
   <!-- Flat Dataset args -->
   <!-- <arg name="bag_name" default="/home/junting/Downloads/dataset/flat/run1.bag"/>  -->
-  <arg name="bag_name" default="/home/junting/Downloads/dataset/large_flat/run1.bag"/> 
+  <arg name="bag_name" default="/mnt/c/Users/b-vmarty/Documents/Datasets/large_flat/run1.bag"/> 
   <arg name="bag_play_rate" default="1"/>  <!-- Realtime factor -->
   <arg name="use_sim_time" default="false"/>
   <arg name="use_detectron" default="false"/>
