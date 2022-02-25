@@ -144,7 +144,7 @@ void PanopticMapper::setupMembers() {
   camera_renderer_ = std::make_unique<CameraRenderer>(
       config_utilities::getConfigFromRos<CameraRenderer::Config>(
           defaultNh("vis_rendering")),
-      globals_, camera, submaps_, true, nh_private_);
+      globals_, camera, true, nh_private_);
 
   // Planning.
   setupCollectionDependentMembers();
@@ -201,6 +201,8 @@ void PanopticMapper::setupRos() {
   set_visualization_mode_srv_ = nh_private_.advertiseService(
       "set_visualization_mode", &PanopticMapper::setVisualizationModeCallback,
       this);
+  render_camera_view_srv_ = nh_private_.advertiseService(
+      "render_camera_view", &PanopticMapper::renderCameraViewCallback, this);
   print_timings_srv_ = nh_private_.advertiseService(
       "print_timings", &PanopticMapper::printTimingsCallback, this);
   finish_mapping_srv_ = nh_private_.advertiseService(
@@ -449,6 +451,24 @@ bool PanopticMapper::loadMapCallback(
     panoptic_mapping_msgs::SaveLoadMap::Response& response) {
   response.success = loadMap(request.file_path);
   return response.success;
+}
+
+bool PanopticMapper::renderCameraViewCallback(
+    panoptic_mapping_msgs::RenderCameraImage::Request& request,
+    panoptic_mapping_msgs::RenderCameraImage::Response& response) {
+  tf::StampedTransform transform;
+  tf::transformMsgToTF(request.T_C_M, transform);
+  // Initialize images width default valuse
+  cv::Mat rendered_image(globals_->camera()->getConfig().height,
+                         globals_->camera()->getConfig().width, CV_8UC1,
+                         cv::Scalar(255));
+  camera_renderer_->renderCameraView(submaps_.get(), transform,
+                                     &rendered_image);
+  // Assign response values
+  response.class_image =
+      *cv_bridge::CvImage(std_msgs::Header(), "mono8", rendered_image)
+           .toImageMsg();
+  return true;
 }
 
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,

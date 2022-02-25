@@ -103,6 +103,9 @@ class PanopticMapper {
       panoptic_mapping_msgs::SetVisualizationMode::Request& request,  // NOLINT
       panoptic_mapping_msgs::SetVisualizationMode::Response&          // NOLINT
           response);
+  bool renderCameraViewCallback(
+      panoptic_mapping_msgs::RenderCameraImage::Request& request,    // NOLINT
+      panoptic_mapping_msgs::RenderCameraImage::Response& response); //NOLINT
   bool printTimingsCallback(std_srvs::Empty::Request& request,      // NOLINT
                             std_srvs::Empty::Response& response);   // NOLINT
   bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
@@ -155,6 +158,7 @@ class PanopticMapper {
   ros::ServiceServer save_map_srv_;
   ros::ServiceServer set_visualization_mode_srv_;
   ros::ServiceServer set_color_mode_srv_;
+  ros::ServiceServer render_camera_view_srv_;
   ros::ServiceServer print_timings_srv_;
   ros::ServiceServer finish_mapping_srv_;
   ros::Timer visualization_timer_;

@@ -2,7 +2,7 @@
 <!-- ============ Arguments ============ -->
   <arg name="data_path" default="/media/blumh/data/scannet/valscans/scene0354_00"/>
   <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/scene0354_00/2793"/>
-  <arg name="inference_method" value="pred" />
+  <arg name="mapname" value="pred" />
   <arg name="wait" default="false"/>
   <arg name="visualize" default="false"/>
   <arg name="namespace" default="data"/>
@@ -12,35 +12,33 @@
 
 <!-- ============ Play Data ============ -->
    <node pkg="panoptic_mapping_utils"
-         type="scannetv2_data_player.py"
-         name="scannetv2_data_player"
+         type="pseudolabeler.py"
+         name="pseudolabeler"
          output="screen"
-         launch-prefix="bash -c 'sleep 1; $0 $@'"
-         required="false">
+         launch-prefix="bash -c 'sleep 2; $0 $@'"
+         required="true">
     <param name="data_path" value="$(arg data_path)" />
     <param name="inference_path" value="$(arg inference_path)" />
-    <param name="id_fileending" value="$(arg inference_method)" />
-    <param name="global_frame_name" value="$(arg global_frame_name)" />
-    <param name="sensor_frame_name" value="$(arg sensor_frame_name)" />
-    <param name="wait" value="$(arg wait)" />
-    <param name="play_rate" value="0.2" />
-
-    <remap from="~color_image" to="$(arg namespace)/color_image" />
-    <remap from="~depth_image" to="$(arg namespace)/depth_image" />
-    <remap from="~id_image" to="$(arg namespace)/segmentation_image" />
-    <remap from="~pose" to="$(arg namespace)/pose" />
+    <param name="mapname" value="$(arg mapname)" />
   </node>
 
   <!-- Mapper -->
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="true">
     <!-- Config -->
     <rosparam file="$(find panoptic_mapping_ros)/config/mapper/scannetv2_single_tsdf.yaml"/>
-    <param name="save_map_path_when_finished" value="$(arg inference_path)/$(arg inference_method)"/>
+    <param name="save_map_path_when_finished" value=""/>
 
     <!-- Input -->
     <remap from="color_image_in" to="$(arg namespace)/color_image"/>
     <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
     <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>
+  </node>
+
+  <!-- Map loader -->
+  <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" output="screen">
+     <param name="path" value="$(arg inference_path)/$(arg mapname).panmap" />
+     <param name="srv_name" value="/panoptic_mapper/load_map" />
+     <param name="delay" value="0.1" />
   </node>
 
   <!-- RVIZ Visualization-->

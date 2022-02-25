@@ -10,6 +10,7 @@
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <ros/node_handle.h>
+#include <cv_bridge/cv_bridge.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -19,7 +20,6 @@ namespace panoptic_mapping {
 
 class CameraRenderer {
  public:
-  std::shared_ptr<SubmapCollection> submaps_;
   // config
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 1;
@@ -36,15 +36,17 @@ class CameraRenderer {
   // Constructors.
   explicit CameraRenderer(const Config& config,
                           std::shared_ptr<Globals> globals,
-                          std::shared_ptr<Camera> camera,
-                          std::shared_ptr<SubmapCollection> submaps,
-                          bool print_config, ros::NodeHandle nh);
+                          std::shared_ptr<Camera> camera, bool print_config,
+                          ros::NodeHandle nh);
   virtual ~CameraRenderer() = default;
 
   // Interaction.
   void setGlobalFrameName(const std::string& frame_name) {
     global_frame_name_ = frame_name;
   }
+  void renderCameraView(SubmapCollection* submaps,
+                        const tf::StampedTransform transform,
+                        cv::Mat* rendered_image);
 
  private:
   const Config config_;
@@ -58,33 +60,9 @@ class CameraRenderer {
 
   // Publishers.
   ros::NodeHandle nh_;
-  ros::ServiceServer render_camera_view_srv_;
   tf::TransformListener tf_listener_;
 
-  // Service Callbacks
-  bool renderCameraViewCallback(
-      panoptic_mapping_msgs::RenderCameraImage::Request& request,
-      panoptic_mapping_msgs::RenderCameraImage::Response& response);
-
   // Internal methods
-  /**
-   * Projects the camera view for pose T_M_C into a semantic segmentation image,
-   * depth image and uncertainty image This method assumes the depth_image to be
-   * a valid depth image that is used to lookup coordinates for given voxels. If
-   * this is not available use 'renderImageForPose' which also calculates the
-   * depth image
-   *
-   * @param T_M_C Transform from camera to world
-   * @param rendered_image Image for which the visible classes are rendered
-   * @param uncertainty_image Image for which the uncertainty values are stored
-   * @param depth_image Image for which the current depth of the pose is stored
-   * @param uncertainty_method Which uncertainty method to use
-   * <uncertainty|voxel_entropy|voxel_probability>
-   */
-  void renderImageForPoseAndDepth(const Transformation& T_M_C,
-                                  cv::Mat* rendered_image,
-                                  cv::Mat* uncertainty_image,
-                                  const cv::Mat* depth_image) const;
   /**
    * Projects the camera view for pose T_M_C into a semantic segmentation image,
    * depth image and uncertainty image This functions does not need a valid
@@ -97,7 +75,8 @@ class CameraRenderer {
    * @param uncertainty_method Which uncertainty method to use
    * <uncertainty|voxel_entropy|voxel_probability>
    */
-  void renderImageForPose(const Transformation& T_M_C,
+  void renderImageForPose(SubmapCollection* submaps,
+                          const Transformation& T_M_C,
                           cv::Mat* rendered_image) const;
 };
 

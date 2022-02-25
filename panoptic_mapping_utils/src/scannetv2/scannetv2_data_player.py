@@ -27,7 +27,8 @@ class ScannetV2DataPlayer:
             raise RuntimeError(f"Invalid data dir path: {self.data_dir_path}")
         self.inference_dir_path = Path(rospy.get_param("~inference_path"))
         if not self.inference_dir_path.exists():
-            raise RuntimeError(f"Invalid inference dir path: {self.inference_dir_path}")
+            raise RuntimeError(
+                f"Invalid inference dir path: {self.inference_dir_path}")
         self.id_fileending = rospy.get_param("~id_fileending")
         self.id_filestart = '_'.join(
             os.listdir(self.inference_dir_path)[0].split('_')[:2])
@@ -83,7 +84,8 @@ class ScannetV2DataPlayer:
         # Load instance and publish instance
         id_map = np.load(str(id_filepath))
         if id_map.dtype != 'int32':
-            rospy.logwarn(f"ID is of type {id_map.dtype}, converting to int32.")
+            rospy.logwarn(
+                f"ID is of type {id_map.dtype}, converting to int32.")
             id_map = id_map.astype('int32')
         img_msg = self.cv_bridge.cv2_to_imgmsg(id_map, "32SC1")
         img_msg.header.stamp = timestamp
