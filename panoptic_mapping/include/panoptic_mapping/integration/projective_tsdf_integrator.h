@@ -105,6 +105,7 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
    * @param truncation_distance Truncation distance to be used.
    * @param voxel_size Voxel size of the TSDF layer.
    * @param class_voxel Optional: class voxel to be updated.
+   * @param score_voxel Optional: score voxel to be updated.
 
    * @return True if the voxel was updated.
    */
@@ -113,7 +114,8 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
                            const int submap_id, const bool is_free_space_submap,
                            const float truncation_distance,
                            const float voxel_size,
-                           ClassVoxel* class_voxel = nullptr) const;
+                           ClassVoxel* class_voxel = nullptr,
+                           ScoreVoxel* score_voxel = nullptr) const;
 
   /**
    * @brief Sets up the interpolator and computes the signed distance.
