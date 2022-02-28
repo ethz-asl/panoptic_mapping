@@ -664,6 +664,8 @@ SubmapVisualizer::ColorMode SubmapVisualizer::colorModeFromString(
     return ColorMode::kPersistent;
   } else if (color_mode == "uncertainty") {
     return ColorMode::kUncertainty;
+  } else if (color_mode == "score") {
+    return ColorMode::kScore;
   } else if (color_mode == "entropy") {
     return ColorMode::kEntropy;
   } else {
@@ -695,6 +697,8 @@ std::string SubmapVisualizer::colorModeToString(ColorMode color_mode) {
       return "entropy";
     case ColorMode::kUncertainty:
       return "uncertainty";
+    case ColorMode::kScore:
+      return "score";
     default:
       return "unknown";
   }

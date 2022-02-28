@@ -27,6 +27,9 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
     // Factor which multiplies the entropy value in order to bring it into
     // [0,1] range for visualization.
     float entropy_factor = 1.0f;
+    // Normalisation to bing Score into [0, 1] range
+    float min_score = 0.0f;
+    float max_score = 1.0f;
 
     // Standard visualizer config.
     SubmapVisualizer::Config submap_visualizer;
@@ -54,8 +57,10 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
   void setColorMode(ColorMode color_mode) override;
 
  protected:
-  void colorMeshBlock(const Submap& submap,
-                      voxblox_msgs::MeshBlock* mesh_block);
+  void colorMeshBlockFromClass(const Submap& submap,
+                               voxblox_msgs::MeshBlock* mesh_block);
+  void colorMeshBlockFromScore(const Submap& submap,
+                               voxblox_msgs::MeshBlock* mesh_block);
   std::function<Color(const ClassVoxel&)> getColoring() const;
   void updateVisInfos(const SubmapCollection& submaps) override;
 

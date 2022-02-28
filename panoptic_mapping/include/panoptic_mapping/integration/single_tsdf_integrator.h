@@ -36,6 +36,9 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
     // of type 'UncertaintyLayer'.
     bool use_uncertainty = false;
 
+    // If true require an uncertainty image and integrate it into a score layer.
+    bool use_score = false;
+
     // Decay rate in [0, 1] used to update uncertainty voxels. Only used if
     // 'use_uncertainty' is true.
     float uncertainty_decay_rate = 0.5f;
@@ -65,7 +68,8 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
                    const Point& p_C, const InputData& input,
                    const int submap_id, const bool is_free_space_submap,
                    const float truncation_distance, const float voxel_size,
-                   ClassVoxel* class_voxel = nullptr) const override;
+                   ClassVoxel* class_voxel = nullptr,
+                   ScoreVoxel* score_voxel = nullptr) const override;
 
  private:
   const Config config_;
@@ -75,6 +79,8 @@ class SingleTsdfIntegrator : public ProjectiveIntegrator {
 
   void updateClassVoxel(InterpolatorBase* interpolator, const InputData& input,
                         ClassVoxel* class_voxel) const;
+  void updateScoreVoxel(InterpolatorBase* interpolator, const InputData& input,
+                        ScoreVoxel* score_voxel) const;
 
   void updateUncertaintyVoxel(InterpolatorBase* interpolator,
                               const InputData& input,

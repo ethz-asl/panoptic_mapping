@@ -18,6 +18,9 @@
 #include "panoptic_mapping/map/classification/class_block.h"
 #include "panoptic_mapping/map/classification/class_layer.h"
 #include "panoptic_mapping/map/classification/class_voxel.h"
+#include "panoptic_mapping/map/scores/score_block.h"
+#include "panoptic_mapping/map/scores/score_layer.h"
+#include "panoptic_mapping/map/scores/score_voxel.h"
 #include "panoptic_mapping/map/instance_id.h"
 #include "panoptic_mapping/map/submap_bounding_volume.h"
 #include "panoptic_mapping/map/submap_id.h"
@@ -44,6 +47,11 @@ class Submap {
     // classification.
     config_utilities::VariableConfig<ClassLayer> classification;
 
+    // Config of the classification voxels to be used. Leave the config
+    // uninitialized (not setting the 'type' param) can be used to not use any
+    // classification.
+    config_utilities::VariableConfig<ScoreLayer> scores;
+
     // Config of the mesh integrator.
     MeshIntegrator::Config mesh;
 
@@ -51,6 +59,8 @@ class Submap {
 
     // Utility tool that checks whether a classification layer was specified.
     bool useClassLayer() const;
+    // Utility tool that checks whether a score layer was specified.
+    bool useScoreLayer() const;
 
    protected:
     void setupParamsAndPrinting() override;
@@ -76,12 +86,14 @@ class Submap {
   const std::string& getFrameName() const { return frame_name_; }
   const TsdfLayer& getTsdfLayer() const { return *tsdf_layer_; }
   const ClassLayer& getClassLayer() const { return *class_layer_; }
+  const ScoreLayer& getScoreLayer() const { return *score_layer_; }
   const voxblox::MeshLayer& getMeshLayer() const { return *mesh_layer_; }
   const Transformation& getT_M_S() const { return T_M_S_; }
   const Transformation& getT_S_M() const { return T_M_S_inv_; }
   bool isActive() const { return is_active_; }
   bool wasTracked() const { return was_tracked_; }
   bool hasClassLayer() const { return has_class_layer_; }
+  bool hasScoreLayer() const { return has_score_layer_; }
   const std::vector<IsoSurfacePoint>& getIsoSurfacePoints() const {
     return iso_surface_points_;
   }
@@ -93,6 +105,7 @@ class Submap {
   // Modifying accessors.
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
+  std::shared_ptr<ScoreLayer>& getScoreLayerPtr() { return score_layer_; }
   std::shared_ptr<voxblox::MeshLayer>& getMeshLayerPtr() { return mesh_layer_; }
   std::vector<IsoSurfacePoint>* getIsoSurfacePointsPtr() {
     return &iso_surface_points_;
@@ -236,6 +249,7 @@ class Submap {
   bool is_active_ = true;
   bool was_tracked_ = true;  // Set to true by the id tracker if matched.
   bool has_class_layer_ = false;
+  bool has_score_layer_ = false;
   ChangeState change_state_ = ChangeState::kNew;
 
   // Transformations.
@@ -246,6 +260,7 @@ class Submap {
   // Map.
   std::shared_ptr<TsdfLayer> tsdf_layer_;
   std::shared_ptr<ClassLayer> class_layer_;
+  std::shared_ptr<ScoreLayer> score_layer_;
   std::shared_ptr<voxblox::MeshLayer> mesh_layer_;
   std::vector<IsoSurfacePoint> iso_surface_points_;
   SubmapBoundingVolume bounding_volume_;

@@ -19,8 +19,13 @@ void InterpolatorNearest::computeWeights(float u, float v,
   v_ = std::round(v);
 }
 
-float InterpolatorNearest::interpolateUncertainty(const cv::Mat &uncertainty_image) {
+float InterpolatorNearest::interpolateUncertainty(
+    const cv::Mat& uncertainty_image) {
   return uncertainty_image.at<float>(v_, u_);
+}
+
+float InterpolatorNearest::interpolateFloat(const cv::Mat& image) {
+  return image.at<float>(v_, u_);
 }
 
 float InterpolatorNearest::interpolateRange(
@@ -57,11 +62,19 @@ float InterpolatorBilinear::interpolateRange(
          range_image(v_ + 1, u_ + 1) * weight_[3];
 }
 
-float InterpolatorBilinear::interpolateUncertainty(const cv::Mat &uncertainty_image) {
+float InterpolatorBilinear::interpolateUncertainty(
+    const cv::Mat& uncertainty_image) {
   return uncertainty_image.at<float>(v_, u_) * weight_[0] +
          uncertainty_image.at<float>(v_ + 1, u_) * weight_[1] +
          uncertainty_image.at<float>(v_, u_ + 1) * weight_[2] +
          uncertainty_image.at<float>(v_ + 1, u_ + 1) * weight_[3];
+}
+
+float InterpolatorBilinear::interpolateFloat(const cv::Mat& image) {
+  return image.at<float>(v_, u_) * weight_[0] +
+         image.at<float>(v_ + 1, u_) * weight_[1] +
+         image.at<float>(v_, u_ + 1) * weight_[2] +
+         image.at<float>(v_ + 1, u_ + 1) * weight_[3];
 }
 
 Color InterpolatorBilinear::interpolateColor(const cv::Mat& color_image) {
@@ -91,7 +104,6 @@ int InterpolatorBilinear::interpolateID(const cv::Mat& id_image) {
                           })
       ->first;
 }
-
 
 void InterpolatorAdaptive::computeWeights(float u, float v,
                                           const Eigen::MatrixXf& range_image) {
@@ -139,13 +151,19 @@ Color InterpolatorAdaptive::interpolateColor(const cv::Mat& color_image) {
   return Color(color_bgr[2], color_bgr[1], color_bgr[0]);
 }
 
-
-
-float InterpolatorAdaptive::interpolateUncertainty(const cv::Mat& uncertainty_image) {
+float InterpolatorAdaptive::interpolateUncertainty(
+    const cv::Mat& uncertainty_image) {
   if (use_bilinear_) {
     return InterpolatorBilinear::interpolateUncertainty(uncertainty_image);
   }
-  return uncertainty_image.at<float>(v_,u_);
+  return uncertainty_image.at<float>(v_, u_);
+}
+
+float InterpolatorAdaptive::interpolateFloat(const cv::Mat& image) {
+  if (use_bilinear_) {
+    return InterpolatorBilinear::interpolateFloat(image);
+  }
+  return image.at<float>(v_, u_);
 }
 
 int InterpolatorAdaptive::interpolateID(const cv::Mat& id_image) {

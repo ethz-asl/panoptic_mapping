@@ -23,6 +23,9 @@ void Submap::Config::checkParams() const {
   if (classification.isSetup()) {
     checkParamConfig(classification);
   }
+  if (scores.isSetup()) {
+    checkParamConfig(scores);
+  }
 }
 
 void Submap::Config::initializeDependentVariableDefaults() {
@@ -41,6 +44,10 @@ void Submap::Config::setupParamsAndPrinting() {
 
 bool Submap::Config::useClassLayer() const {
   return classification.isSetup() && classification.type() != "null";
+}
+
+bool Submap::Config::useScoreLayer() const {
+  return scores.isSetup() && scores.type() != "null";
 }
 
 Submap::Submap(const Config& config, SubmapIDManager* submap_id_manager,
@@ -81,6 +88,11 @@ void Submap::initialize() {
                                                  config_.voxels_per_side);
     has_class_layer_ = true;
   }
+  if (config_.useScoreLayer()) {
+    score_layer_ = config_.scores.create(config_.voxel_size,
+                                                 config_.voxels_per_side);
+    has_score_layer_ = true;
+  }
 
   // Setup tools.
   mesh_integrator_ = std::make_unique<MeshIntegrator>(
@@ -116,6 +128,14 @@ void Submap::getProto(SubmapProto* proto) const {
     proto->set_num_class_blocks(0);
   }
 
+  // Store classification data.
+  if (has_score_layer_) {
+    proto->set_score_voxel_type(static_cast<int>(score_layer_->getVoxelType()));
+    proto->set_num_score_blocks(score_layer_->getNumberOfAllocatedBlocks());
+  } else {
+    proto->set_num_score_blocks(0);
+  }
+
   // Store transformation data.
   auto transformation_proto_ptr = new cblox::QuatTransformationProto();
   cblox::conversions::transformKindrToProto(T_M_S_, transformation_proto_ptr);
@@ -149,6 +169,16 @@ bool Submap::saveToStream(std::fstream* outfile_ptr) const {
     if (!class_layer_->saveBlocksToStream(
             kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
       LOG(ERROR) << "Could not write submap classification blocks to stream.";
+      outfile_ptr->close();
+      return false;
+    }
+  }
+
+  // Score Layer.
+  if (has_score_layer_) {
+    if (!score_layer_->saveBlocksToStream(
+            kIncludeAllBlocks, voxblox::BlockIndexList(), outfile_ptr)) {
+      LOG(ERROR) << "Could not write submap score blocks to stream.";
       outfile_ptr->close();
       return false;
     }
@@ -199,6 +229,16 @@ std::unique_ptr<Submap> Submap::loadFromStream(
         submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
     if (!submap->class_layer_) {
       LOG(ERROR) << "Could not load the classification layer from stream.";
+      return nullptr;
+    }
+  }
+
+  // Load the score layer.
+  if (submap_proto.num_class_blocks() > 0) {
+    submap->score_layer_ = loadScoreLayerFromStream(
+        submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
+    if (!submap->score_layer_) {
+      LOG(ERROR) << "Could not load the score layer from stream.";
       return nullptr;
     }
   }
@@ -300,6 +340,7 @@ std::unique_ptr<Submap> Submap::clone(
   result->is_active_ = is_active_;
   result->was_tracked_ = was_tracked_;
   result->has_class_layer_ = has_class_layer_;
+  result->has_score_layer_ = has_score_layer_;
   result->change_state_ = change_state_;
   result->frame_name_ = frame_name_;
   result->T_M_S_ = T_M_S_;
@@ -311,6 +352,9 @@ std::unique_ptr<Submap> Submap::clone(
   result->mesh_layer_ = std::make_shared<MeshLayer>(*mesh_layer_);
   if (class_layer_) {
     result->class_layer_ = class_layer_->clone();
+  }
+  if (score_layer_) {
+    result->score_layer_ = score_layer_->clone();
   }
   result->mesh_integrator_ = std::make_unique<MeshIntegrator>(
       result->config_.mesh, result->tsdf_layer_, result->mesh_layer_,

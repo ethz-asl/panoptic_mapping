@@ -28,19 +28,21 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 # Paper
 If you find this package useful for your research, please consider citing our paper:
 
-* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" arXiv preprint arXiv:2109.10165 (2021).
-  \[[ArXiv](https://arxiv.org/abs/2109.10165)\]
+* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" in *IEEE International Conference on Robotics and Automation (ICRA)*, 2022.
+  \[[ArXiv](https://arxiv.org/abs/2109.10165) | [Video](https://www.youtube.com/watch?v=A7o2Vy7_TV4)\]
   ```bibtex
-  @ARTICLE{schmid2021panoptic,
+  @inproceedings{schmid2022panoptic,
     title={Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency},
     author={Schmid, Lukas and Delmerico, Jeffrey and Sch{\"o}nberger, Johannes and Nieto, Juan and Pollefeys, Marc and Siegwart, Roland and Cadena, Cesar},
-    journal={arXiv preprint arXiv:2109.10165},
-    year={2021}
+    booktitle={2022 IEEE International Conference on Robotics and Automation (ICRA)},
+    year={2022}
   }
   ```
   
 # Video
-A short video overview explaining the approach will be released upon publication.
+For a short overview explaining the approach check out our video on youtube:
+
+[<img src="https://user-images.githubusercontent.com/36043993/155131772-60757e47-c458-4f5b-9c6b-a6e6cbca8976.jpg" alt="youtube video">](https://www.youtube.com/watch?v=A7o2Vy7_TV4)
 
 # Installation
 Installation instructions for Linux. The repository was developed and tested on Ubuntu 18.04 with ROS melodic and Ubuntu 20.04 with ROS noetic.
