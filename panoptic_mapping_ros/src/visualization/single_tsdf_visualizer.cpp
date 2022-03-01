@@ -3,6 +3,7 @@
 #include <limits>
 #include <memory>
 #include <utility>
+#include <algorithm>
 #include <vector>
 
 #include "panoptic_mapping/map/classification/fixed_count.h"
@@ -23,6 +24,8 @@ void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("submap_visualizer", &submap_visualizer);
   setupParam("entropy_factor", &entropy_factor);
+  setupParam("min_score", &min_score);
+  setupParam("max_score", &max_score);
 }
 
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
@@ -307,8 +310,11 @@ void SingleTsdfVisualizer::colorMeshBlockFromScore(
         block_edge_length;
     const ScoreVoxel& voxel =
         score_block->getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
-    const float normalised_value = (voxel.getScore() - config_.min_score) /
+    if (!voxel.isObserverd()) continue;
+    float normalised_value = (voxel.getScore() - config_.min_score) /
                                    (config_.max_score - config_.min_score);
+    normalised_value = std::min(normalised_value, 1.f);
+    normalised_value = std::max(normalised_value, 0.f);
     const Color color = redToGreenGradient(normalised_value);
     mesh_block->r[i] = color.r;
     mesh_block->g[i] = color.g;

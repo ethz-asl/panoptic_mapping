@@ -9,7 +9,14 @@ ScoreVoxelType AverageScoreVoxel::getVoxelType() const {
 }
 
 bool AverageScoreVoxel::isObserverd() const { return accumulated_weight != 0; }
-float AverageScoreVoxel::getScore() const { return average_score; }
+
+float AverageScoreVoxel::getScore() const {
+  if (!isObserverd()) {
+    LOG(WARNING) << "Getting score of unabserved voxel";
+  }
+  return average_score;
+}
+
 void AverageScoreVoxel::addMeasurement(const float score, const float weight) {
   const float new_weight = accumulated_weight + weight;
   average_score = weight * score / new_weight +

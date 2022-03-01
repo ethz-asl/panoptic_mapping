@@ -35,10 +35,12 @@ void Submap::Config::initializeDependentVariableDefaults() {
 }
 
 void Submap::Config::setupParamsAndPrinting() {
+  setupParam("verbosity", &verbosity);
   setupParam("voxel_size", &voxel_size);
   setupParam("truncation_distance", &truncation_distance);
   setupParam("voxels_per_side", &voxels_per_side);
   setupParam("classification", &classification, "classification");
+  setupParam("scores", &scores, "scores");
   setupParam("mesh", &mesh, "mesh");
 }
 
@@ -89,8 +91,9 @@ void Submap::initialize() {
     has_class_layer_ = true;
   }
   if (config_.useScoreLayer()) {
-    score_layer_ = config_.scores.create(config_.voxel_size,
-                                                 config_.voxels_per_side);
+    LOG_IF(INFO, config_.verbosity >= 1) << "Using score layer.";
+    score_layer_ =
+        config_.scores.create(config_.voxel_size, config_.voxels_per_side);
     has_score_layer_ = true;
   }
 

@@ -32,6 +32,7 @@ class LayerManipulator;
 class Submap {
  public:
   struct Config : public config_utilities::Config<Config> {
+    int verbosity = 1;
     // Size of one voxel in meters.
     float voxel_size = 0.1;
 
