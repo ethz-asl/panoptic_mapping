@@ -325,6 +325,9 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
           if (map->hasClassLayer()) {
             map->getClassLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
           }
+          if (map->hasScoreLayer()) {
+            map->getScoreLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+          }
         }
       }
     }

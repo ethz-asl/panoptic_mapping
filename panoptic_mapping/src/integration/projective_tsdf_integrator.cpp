@@ -312,6 +312,9 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
           // layer but was added here for simplicity.
           submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
         }
+        if (submap->hasScoreLayer()) {
+          submap->getScoreLayerPtr()->allocateBlockPtrByIndex(block_index);
+        }
 
         // If required, check whether the point is on the boudnary of a block
         // and allocate the neighboring blocks.
@@ -330,6 +333,10 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                       neighbor_index);
               if (submap->hasClassLayer()) {
                 submap->getClassLayerPtr()->allocateBlockPtrByIndex(
+                    neighbor_index);
+              }
+              if (submap->hasScoreLayer()) {
+                submap->getScoreLayerPtr()->allocateBlockPtrByIndex(
                     neighbor_index);
               }
             }
