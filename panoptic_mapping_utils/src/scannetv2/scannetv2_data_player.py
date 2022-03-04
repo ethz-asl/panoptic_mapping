@@ -32,19 +32,19 @@ class ScannetV2DataPlayer:
         self.id_fileending = rospy.get_param("~id_fileending")
         self.id_filestart = '_'.join(
             os.listdir(self.inference_dir_path)[0].split('_')[:2])
+        self.score_fileending = rospy.get_param("~score_fileending")
 
         self.global_frame_name = rospy.get_param("~global_frame_name", "world")
         self.sensor_frame_name = rospy.get_param("~sensor_frame_name",
                                                  "depth_cam")
         self.play_rate = rospy.get_param("~play_rate", 1.0 / 30)
-        self.use_predicted_labels = rospy.get_param("~use_predicted_labels",
-                                                    False)
         self.wait = rospy.get_param("~wait", False)
 
         # Configure sensor data publishers
         self.color_pub = rospy.Publisher("~color_image", Image, queue_size=100)
         self.depth_pub = rospy.Publisher("~depth_image", Image, queue_size=100)
         self.id_pub = rospy.Publisher("~id_image", Image, queue_size=100)
+        self.score_pub = rospy.Publisher("~score_image", Image, queue_size=100)
         self.pose_pub = rospy.Publisher("~pub", PoseStamped, queue_size=100)
         self.tf_broadcaster = tf.TransformBroadcaster()
 
@@ -91,6 +91,18 @@ class ScannetV2DataPlayer:
         img_msg.header.stamp = timestamp
         img_msg.header.frame_id = self.sensor_frame_name
         self.id_pub.publish(img_msg)
+
+    def _load_and_publish_score(self, score_filepath, timestamp):
+        # Load instance and publish instance
+        score_map = np.load(str(score_filepath))
+        if score_map.dtype != 'float32':
+            rospy.logwarn(
+                f"ID is of type {id_map.dtype}, converting to float32.")
+            score_map = score_map.astype('float32')
+        img_msg = self.cv_bridge.cv2_to_imgmsg(score_map, "32FC1")
+        img_msg.header.stamp = timestamp
+        img_msg.header.frame_id = self.sensor_frame_name
+        self.score_pub.publish(img_msg)
 
     def _load_and_publish_pose(self, pose_file_path, timestamp):
         # Load the transformation matrix from a text file
@@ -139,8 +151,16 @@ class ScannetV2DataPlayer:
             self.inference_dir_path /
             f"{self.id_filestart}_{self.current_index:06d}_{self.id_fileending}.npy"
         )
+        score_filepath = (
+            self.inference_dir_path /
+            f"{self.id_filestart}_{self.current_index:06d}_{self.score_fileending}.npy"
+        )
         for f in [
-                color_filepath, depth_filepath, pose_filepath, idmap_filepath
+                color_filepath,
+                depth_filepath,
+                pose_filepath,
+                idmap_filepath,
+                score_filepath,
         ]:
             if not f.is_file():
                 rospy.logwarn(
@@ -150,6 +170,7 @@ class ScannetV2DataPlayer:
                 return
         self._load_and_publish_color(color_filepath, now)
         self._load_and_publish_id(idmap_filepath, now)
+        self._load_and_publish_score(score_filepath, now)
         self._load_and_publish_depth(depth_filepath, now)
         self._load_and_publish_pose(pose_filepath, now)
 

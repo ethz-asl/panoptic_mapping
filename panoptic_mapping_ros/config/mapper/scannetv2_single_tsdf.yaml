@@ -30,13 +30,15 @@ id_tracker:
   verbosity: 1
   # Single TSDF
   voxel_size: 0.03
-  truncation_distance: -2
+  truncation_distance: -3
   voxels_per_side: 16
   use_class_layer: true
   use_detectron: false
   use_instance_classification: false
   classification:
     type: fixed_count
+  #scores:
+   # type: average
 
 tsdf_integrator:
   type: single_tsdf
@@ -49,11 +51,12 @@ tsdf_integrator:
   use_color: true
   use_segmentation: true
   use_uncertainty: false
+  use_score: false
 
 visualization:
   submaps:
     type: single_tsdf
-    verbosity: 1
+    verbosity: 3
     color_mode: classes # color, normals, classes, instances, classification
     visualization_mode: all  # all
     submap_color_discretization: 20
@@ -63,6 +66,8 @@ visualization:
     visualize_bounding_volumes: true
     include_free_space: true
     mesh_min_weight: 0.000001
+    min_score: -10.0
+    max_score: 6.0
 
   planning:
     verbosity: 1
@@ -73,3 +78,6 @@ visualization:
   tracking:
     verbosity: 1
     visualize_tracking: true
+
+  rendering:
+    verbosity: 2

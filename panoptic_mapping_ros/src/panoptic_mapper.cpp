@@ -457,15 +457,13 @@ bool PanopticMapper::renderCameraViewCallback(
     panoptic_mapping_msgs::RenderCameraImage::Response& response) {
   tf::StampedTransform transform;
   tf::transformMsgToTF(request.T_C_M, transform);
-  // Initialize images width default valuse
-  cv::Mat rendered_image(globals_->camera()->getConfig().height,
-                         globals_->camera()->getConfig().width, CV_8UC1,
-                         cv::Scalar(255));
-  camera_renderer_->renderCameraView(submaps_.get(), transform,
-                                     &rendered_image);
+  // Initialize image without type or size, will be allocated by renderer
+  cv::Mat rendered_image = cv::Mat();
+  camera_renderer_->renderCameraView(submaps_.get(), transform, request.data_source,
+                                     rendered_image);
   // Assign response values
   response.class_image =
-      *cv_bridge::CvImage(std_msgs::Header(), "mono8", rendered_image)
+      *cv_bridge::CvImage(std_msgs::Header(), "", rendered_image)
            .toImageMsg();
   return true;
 }

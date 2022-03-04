@@ -4,13 +4,13 @@
 #include <memory>
 #include <string>
 
+#include <cv_bridge/cv_bridge.h>
 #include <panoptic_mapping/3rd_party/config_utilities.hpp>
 #include <panoptic_mapping/common/common.h>
 #include <panoptic_mapping/common/globals.h>
 #include <panoptic_mapping/map/submap_collection.h>
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <ros/node_handle.h>
-#include <cv_bridge/cv_bridge.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -40,13 +40,37 @@ class CameraRenderer {
                           ros::NodeHandle nh);
   virtual ~CameraRenderer() = default;
 
+  // different sources for rendering
+  enum class RenderingSource {
+    kId = 0,
+    kBlockIndex,
+    kScore,
+  };
+  RenderingSource renderingSourceFromString(
+      const std::string& rendering_source);
+  std::string renderingSourceToString(const RenderingSource rendering_source);
+  const std::map<std::string, RenderingSource> rendering_source_names = {
+      {"id", RenderingSource::kId},
+      {"blockindex", RenderingSource::kBlockIndex},
+      {"score", RenderingSource::kScore}
+  };
+
   // Interaction.
   void setGlobalFrameName(const std::string& frame_name) {
     global_frame_name_ = frame_name;
   }
-  void renderCameraView(SubmapCollection* submaps,
+  /**
+   * Projects the camera view for pose T_M_C into a semantic segmentation image,
+   * depth image and uncertainty image This functions does not need a valid
+   * depth Image and fills up the depth image with voxel centers.
+   *
+   * @param data_source the data source to be used, needs to be able to convert
+   * to RenderingSource
+   */
+  void renderCameraView(const SubmapCollection* submaps,
                         const tf::StampedTransform transform,
-                        cv::Mat* rendered_image);
+                        const std::string& data_source,
+                        cv::Mat& rendered_image);
 
  private:
   const Config config_;
@@ -68,16 +92,19 @@ class CameraRenderer {
    * depth image and uncertainty image This functions does not need a valid
    * depth Image and fills up the depth image with voxel centers.
    *
+   * @param submaps the submaps to use for rendering
    * @param T_M_C Transform from camera to world
    * @param rendered_image Image for which the visible classes are rendered
-   * @param uncertainty_image Image for which the uncertainty values are stored
-   * @param depth_image Image for which the current depth of the pose is stored
-   * @param uncertainty_method Which uncertainty method to use
-   * <uncertainty|voxel_entropy|voxel_probability>
    */
-  void renderImageForPose(SubmapCollection* submaps,
-                          const Transformation& T_M_C,
-                          cv::Mat* rendered_image) const;
+  void renderIdImageForPose(const SubmapCollection* submaps,
+                            const Transformation& T_M_C,
+                            cv::Mat& rendered_image) const;
+  void renderScoreImageForPose(const SubmapCollection* submaps,
+                               const Transformation& T_M_C,
+                               cv::Mat& rendered_image) const;
+  void renderBlockIndexImageForPose(const SubmapCollection* submaps,
+                                    const Transformation& T_M_C,
+                                    cv::Mat& rendered_image) const;
 };
 
 }  // namespace panoptic_mapping

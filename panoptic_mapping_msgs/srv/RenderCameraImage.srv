@@ -5,6 +5,7 @@
 geometry_msgs/Transform T_C_M
 # Name of the sensor frame
 string sensor_frame
+string data_source
 ---
 sensor_msgs/Image class_image
 sensor_msgs/Image depth_image
