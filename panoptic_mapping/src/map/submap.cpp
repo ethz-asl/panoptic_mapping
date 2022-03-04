@@ -212,6 +212,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
 
   // Load the submap data.
   submap->has_class_layer_ = submap_proto.num_class_blocks() > 0;
+  submap->has_score_layer_ = submap_proto.num_score_blocks() > 0;
   submap->setInstanceID(submap_proto.instance_id());
   submap->setClassID(submap_proto.class_id());
   submap->setLabel(static_cast<PanopticLabel>(submap_proto.panoptic_label()));
@@ -237,7 +238,7 @@ std::unique_ptr<Submap> Submap::loadFromStream(
   }
 
   // Load the score layer.
-  if (submap_proto.num_class_blocks() > 0) {
+  if (submap_proto.num_score_blocks() > 0) {
     submap->score_layer_ = loadScoreLayerFromStream(
         submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
     if (!submap->score_layer_) {
