@@ -59,6 +59,9 @@ class PanopticMapper {
     // persistent.
     bool load_submaps_conservative = true;
 
+    // If true, keeps the active freespace ID as set in the loaded map
+    bool loaded_freespace_stays_active = false;
+
     // If true, finish mapping and shutdown the panoptic mapper when no frames
     // are received for 3 seconds after the first frame was received.
     bool shutdown_when_finished = false;

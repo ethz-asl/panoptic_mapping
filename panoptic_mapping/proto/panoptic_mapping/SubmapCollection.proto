@@ -4,4 +4,5 @@ package panoptic_mapping;
 
 message SubmapCollectionProto {
   optional uint32 num_submaps = 1;
+  optional uint32 active_freespace_submap_id = 2;
 }

@@ -49,6 +49,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
   setupParam("ros_spinner_threads", &ros_spinner_threads);
   setupParam("check_input_interval", &check_input_interval, "s");
   setupParam("load_submaps_conservative", &load_submaps_conservative);
+  setupParam("loaded_freespace_stays_active", &loaded_freespace_stays_active);
   setupParam("shutdown_when_finished", &shutdown_when_finished);
   setupParam("save_map_path_when_finished", &save_map_path_when_finished);
   setupParam("display_config_units", &display_config_units);
@@ -350,6 +351,19 @@ bool PanopticMapper::loadMap(const std::string& file_path) {
     } else {
       submap.setChangeState(ChangeState::kPersistent);
     }
+  }
+
+  if (config_.loaded_freespace_stays_active) {
+    const int freespace_id = loaded_map->getActiveFreeSpaceSubmapID();
+    if (loaded_map->submapIdExists(freespace_id)) {
+      Submap* freespace =
+          loaded_map->getSubmapPtr(loaded_map->getActiveFreeSpaceSubmapID());
+      freespace->setIsActive(true);
+    } else {
+      LOG(WARNING) << "No active freespace submap found at loading.";
+    }
+  } else {
+    loaded_map->setActiveFreeSpaceSubmapID(-1);
   }
 
   // Set the map.

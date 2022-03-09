@@ -74,25 +74,25 @@ void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
 
 void SingleTSDFTracker::setup(SubmapCollection* submaps) {
   // Check if there is a loaded map.
-  if (submaps->size() > 0) {
-    Submap& map = *(submaps->begin());
+  if (submaps->getActiveFreeSpaceSubmapID() >= 0) {
+    const Submap& map = submaps->getSubmap(submaps->getActiveFreeSpaceSubmapID());
     if (map.getConfig().voxel_size != config_.submap.voxel_size ||
         map.getConfig().voxels_per_side != config_.submap.voxels_per_side ||
         map.getConfig().truncation_distance !=
             config_.submap.truncation_distance ||
-        map.getConfig().useClassLayer() != config_.submap.useClassLayer()) {
+        map.getConfig().useClassLayer() != config_.submap.useClassLayer() ||
+        map.getConfig().useScoreLayer() != config_.submap.useScoreLayer()) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }
-    map.setIsActive(true);
     map_id_ = map.getID();
   } else {
     // Allocate the single map.
     Submap* new_submap = submaps->createSubmap(config_.submap);
     new_submap->setLabel(PanopticLabel::kBackground);
     map_id_ = new_submap->getID();
+    submaps->setActiveFreeSpaceSubmapID(map_id_);
   }
-  submaps->setActiveFreeSpaceSubmapID(map_id_);
   is_setup_ = true;
 }
 
