@@ -756,7 +756,7 @@ void MapEvaluator::exportLabeledPointcloud(const EvaluationRequest& request) {
         if (instance_class_id_pair_it != label_map.end()) {
           point.label = instance_class_id_pair_it->second * 1000 +
                         instance_class_id_pair_it->first;
-        } else if(point.label < 256) {
+        } else {
           point.label *= 1000;
         }
       }

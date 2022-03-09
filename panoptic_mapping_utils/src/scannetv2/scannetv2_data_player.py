@@ -2,6 +2,7 @@
 
 import json
 import csv
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
@@ -21,11 +22,11 @@ from panoptic_mapping_msgs.msg import DetectronLabel, DetectronLabels
 
 _COLOR_IMAGES_DIR = "color"
 _DEPTH_IMAGES_DIR = "depth"
-_PANOPTIC_GROUNDTRUTH_DIR = "panoptic"
+_PANOPTIC_GROUND_TRUTH_DIR = "panoptic_ground_truth"
 _PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
 _DEPTH_SHIFT = 1000
-_INPUT_IMAGE_DIMS = (320, 240)
+_INPUT_IMAGE_DIMS = (640, 480)
 
 
 @dataclass
@@ -151,10 +152,16 @@ class FrameDataLoader:
         scan_dir_path: Path,
         image_size: Tuple[int, int] = _INPUT_IMAGE_DIMS,
         use_uncertainty: bool = False,
+        use_ground_truth_labels: bool = False,
     ):
         self.scan_dir_path = scan_dir_path
         self.image_size = image_size
         self.use_uncertainty = use_uncertainty
+        self.use_ground_truth_labels = use_ground_truth_labels
+        if self.use_ground_truth_labels:
+            self.pano_seg_dir = _PANOPTIC_GROUND_TRUTH_DIR
+        else:
+            self.pano_seg_dir = _PANOPTIC_PRED_DIR
 
     @staticmethod
     def load_frame_ids_and_timestamps(
@@ -212,7 +219,7 @@ class FrameDataLoader:
         depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
 
         segmentation_file_path = (
-            self.scan_dir_path / _PANOPTIC_PRED_DIR / "{:05d}.png".format(int(frame_id))
+            self.scan_dir_path / self.pano_seg_dir / "{:05d}.png".format(int(frame_id))
         )
         segmentation = cv2.resize(
             np.array(PilImage.open(segmentation_file_path)),
@@ -223,7 +230,7 @@ class FrameDataLoader:
 
         segments_info_file_path = (
             self.scan_dir_path
-            / _PANOPTIC_PRED_DIR
+            / self.pano_seg_dir
             / "{:05d}_segments_info.json".format(int(frame_id))
         )
         with segments_info_file_path.open("r") as f:
@@ -266,6 +273,9 @@ class ScannetV2DataPlayer:
         self.wait = rospy.get_param("~wait", False)
         self.frame_skip = rospy.get_param("~frame_skip", 0)
         self.refresh_rate = 30  # Hz
+        self.use_ground_truth_labels = rospy.get_param(
+            "~use_ground_truth_labels", False
+        )
         self.use_uncertainty = rospy.get_param("~use_uncertainty", False)
         self.image_width = rospy.get_param("~image_width", _INPUT_IMAGE_DIMS[0])
         self.image_height = rospy.get_param("~image_height", _INPUT_IMAGE_DIMS[1])
@@ -275,6 +285,7 @@ class ScannetV2DataPlayer:
             self.scan_dir_path,
             (self.image_width, self.image_height),
             self.use_uncertainty,
+            self.use_ground_truth_labels,
         )
 
         # Configure frame data publisher
@@ -297,9 +308,9 @@ class ScannetV2DataPlayer:
         )
 
         if self.wait:
-            self.start_srv = rospy.Service("~start", Empty, self.start)
-        else:
-            self.start(None)
+            time.sleep(10)
+
+        self.start(None)
 
     def start(self, _):
         self.running = True
@@ -323,7 +334,7 @@ class ScannetV2DataPlayer:
         # Load and publish next frame data
         frame_data = self.frame_data_loader.load(frame_id)
         if frame_data is not None:
-            rospy.logdebug(f"Publishing data for frame {frame_id}")
+            rospy.loginfo(f"Publishing data for frame {frame_id}")
             self.frame_data_publisher.publish(frame_data, now)
         else:
             rospy.logwarn(f"Data for frame {frame_id} could not be loaded. Skipped.")

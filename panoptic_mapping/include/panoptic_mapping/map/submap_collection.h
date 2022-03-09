@@ -128,9 +128,6 @@ class SubmapCollection {
   void updateInstanceToSubmapIDTable();
 
   // Single-TSDF tracked instance update
-  void updateTrackedInstanceInfo(int instance_id, float instance_score,
-                                 int class_id, float matching_score);
-
   void updateTrackedInstanceInfo(int instance_id,
                                  const SegmentInfo& matched_segment_info,
                                  float matching_score);
