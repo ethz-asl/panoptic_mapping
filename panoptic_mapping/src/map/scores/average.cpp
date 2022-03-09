@@ -12,7 +12,7 @@ bool AverageScoreVoxel::isObserverd() const { return accumulated_weight != 0; }
 
 float AverageScoreVoxel::getScore() const {
   if (!isObserverd()) {
-    LOG(WARNING) << "Getting score of unabserved voxel";
+    LOG(WARNING) << "Getting score of unobserved voxel";
   }
   return average_score;
 }
@@ -37,14 +37,18 @@ bool AverageScoreVoxel::mergeVoxel(const ScoreVoxel& other) {
 }
 
 std::vector<uint32_t> AverageScoreVoxel::serializeVoxelToInt() const {
-  std::vector<uint32_t> result(2u);
-  result.push_back(int32FromX32<float>(accumulated_weight));
-  result.push_back(int32FromX32<float>(average_score));
-  return result;
+  return {int32FromX32<float>(accumulated_weight),
+          int32FromX32<float>(average_score)};
 }
 
 bool AverageScoreVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {
+  if (*data_index >= data.size()) {
+    LOG(WARNING)
+        << "Can not deserialize voxel from integer data: Out of range (index: "
+        << *data_index << ", data: " << data.size() << ")";
+    return false;
+  }
   accumulated_weight = x32FromInt32<float>(data[*data_index]);
   average_score = x32FromInt32<float>(data[*data_index + 1]);
   *data_index += 2;

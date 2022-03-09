@@ -23,7 +23,7 @@ struct AverageScoreVoxel : public ScoreVoxel {
   ScoreVoxelType getVoxelType() const override;
   bool isObserverd() const override;
   float getScore() const override;
-  void addMeasurement(const float score, const float weight = 1.f) override;
+  void addMeasurement(const float score, const float weight = 1.0) override;
   bool mergeVoxel(const ScoreVoxel& other) override;
   std::vector<uint32_t> serializeVoxelToInt() const override;
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,

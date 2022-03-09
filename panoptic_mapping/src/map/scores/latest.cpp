@@ -8,10 +8,9 @@ ScoreVoxelType LatestScoreVoxel::getVoxelType() const {
   return ScoreVoxelType::kLatest;
 }
 
-bool LatestScoreVoxel::isObserverd() const { return observed; }
+bool LatestScoreVoxel::isObserverd() const { return latest_score != NAN; }
 float LatestScoreVoxel::getScore() const { return latest_score; }
 void LatestScoreVoxel::addMeasurement(const float score, const float weight) {
-  observed = true;
   latest_score = score;
 }
 
@@ -24,32 +23,34 @@ bool LatestScoreVoxel::mergeVoxel(const ScoreVoxel& other) {
     return false;
   }
   // both not observed -> no changes
-  if (!observed && !voxel->observed) {
+  if (!isObserverd() && !voxel->isObserverd()) {
     return true;
   }
   // both are observed -> we default to this voxel
-  if (observed && voxel->observed) {
+  if (isObserverd() && voxel->isObserverd()) {
     return true;
   }
   // only one is observed, take its value
-  if (voxel->observed) {
+  if (voxel->isObserverd()) {
     addMeasurement(voxel->latest_score);
   }
   return true;
 }
 
 std::vector<uint32_t> LatestScoreVoxel::serializeVoxelToInt() const {
-  std::vector<uint32_t> result(2u);
-  result.push_back(static_cast<uint32_t>(observed));
-  result.push_back(int32FromX32<float>(latest_score));
-  return result;
+  return {int32FromX32<float>(latest_score)};
 }
 
 bool LatestScoreVoxel::deseriliazeVoxelFromInt(
     const std::vector<uint32_t>& data, size_t* data_index) {
-  observed = data[*data_index];
-  latest_score = x32FromInt32<float>(data[*data_index + 1]);
-  *data_index += 2;
+  if (*data_index >= data.size()) {
+    LOG(WARNING)
+        << "Can not deserialize voxel from integer data: Out of range (index: "
+        << *data_index << ", data: " << data.size() << ")";
+    return false;
+  }
+  latest_score = x32FromInt32<float>(data[*data_index]);
+  *data_index += 1;
   return true;
 }
 
@@ -57,9 +58,8 @@ config_utilities::Factory::RegistrationRos<ScoreLayer, LatestScoreLayer, float,
                                            int>
     LatestScoreLayer::registration_("latest");
 
-LatestScoreLayer::LatestScoreLayer(const Config& config,
-                                     const float voxel_size,
-                                     const int voxels_per_side)
+LatestScoreLayer::LatestScoreLayer(const Config& config, const float voxel_size,
+                                   const int voxels_per_side)
     : config_(config.checkValid()),
       ScoreLayerImpl(voxel_size, voxels_per_side) {}
 
@@ -76,8 +76,8 @@ std::unique_ptr<ScoreLayer> LatestScoreLayer::loadFromStream(
     uint64_t* /* tmp_byte_offset_ptr */) {
   // Nothing special needed to configure for binary counts.
   return std::make_unique<LatestScoreLayer>(LatestScoreLayer::Config(),
-                                             submap_proto.voxel_size(),
-                                             submap_proto.voxels_per_side());
+                                            submap_proto.voxel_size(),
+                                            submap_proto.voxels_per_side());
 }
 
 }  // namespace panoptic_mapping
