@@ -10,6 +10,8 @@
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/scores/average.h"
+#include "panoptic_mapping/map/scores/latest.h"
 
 namespace panoptic_mapping {
 namespace test {
@@ -98,6 +100,20 @@ inline bool checkVoxelEqual(const UncertaintyVoxel& v1,
   EXPECT_EQ(v1.uncertainty, v2.uncertainty);
   return v1.is_ground_truth == v2.is_ground_truth &&
          v1.uncertainty == v2.uncertainty;
+}
+
+inline bool checkVoxelEqual(const AverageScoreVoxel& v1,
+                            const AverageScoreVoxel& v2) {
+  EXPECT_EQ(v1.average_score, v2.average_score);
+  EXPECT_EQ(v1.accumulated_weight, v2.accumulated_weight);
+  return v1.average_score == v2.average_score &&
+         v1.accumulated_weight == v2.accumulated_weight;
+}
+
+inline bool checkVoxelEqual(const LatestScoreVoxel& v1,
+                            const LatestScoreVoxel& v2) {
+  EXPECT_EQ(v1.latest_score, v2.latest_score);
+  return v1.latest_score == v2.latest_score;
 }
 
 template <typename T>

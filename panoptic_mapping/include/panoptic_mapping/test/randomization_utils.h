@@ -10,6 +10,8 @@
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/scores/average.h"
+#include "panoptic_mapping/map/scores/latest.h"
 
 namespace panoptic_mapping {
 namespace test {
@@ -91,6 +93,15 @@ void randomizeVoxel(UncertaintyVoxel* voxel) {
   randomizeVoxel(static_cast<FixedCountVoxel*>(voxel));
   voxel->is_ground_truth = getRandomInt(0, 1);
   voxel->uncertainty = getRandomReal<float>();
+}
+
+void randomizeVoxel(AverageScoreVoxel* voxel) {
+  voxel->accumulated_weight = getRandomReal<float>(0);
+  voxel->average_score = getRandomReal<float>();
+}
+
+void randomizeVoxel(LatestScoreVoxel* voxel) {
+  voxel->latest_score = getRandomReal<float>();
 }
 
 }  // namespace test
