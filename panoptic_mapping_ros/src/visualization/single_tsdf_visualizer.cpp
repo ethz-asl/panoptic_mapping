@@ -1,9 +1,9 @@
 #include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
-#include <algorithm>
 #include <vector>
 
 #include "panoptic_mapping/map/classification/fixed_count.h"
@@ -312,7 +312,7 @@ void SingleTsdfVisualizer::colorMeshBlockFromScore(
         score_block->getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
     if (!voxel.isObserverd()) continue;
     float normalised_value = (voxel.getScore() - config_.min_score) /
-                                   (config_.max_score - config_.min_score);
+                             (config_.max_score - config_.min_score);
     normalised_value = std::min(normalised_value, 1.f);
     normalised_value = std::max(normalised_value, 0.f);
     const Color color = redToGreenGradient(normalised_value);

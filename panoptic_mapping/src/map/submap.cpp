@@ -91,7 +91,6 @@ void Submap::initialize() {
     has_class_layer_ = true;
   }
   if (config_.useScoreLayer()) {
-    LOG_IF(INFO, config_.verbosity >= 1) << "Using score layer.";
     score_layer_ =
         config_.scores.create(config_.voxel_size, config_.voxels_per_side);
     has_score_layer_ = true;
