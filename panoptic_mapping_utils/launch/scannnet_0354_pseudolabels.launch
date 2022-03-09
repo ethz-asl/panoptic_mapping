@@ -20,6 +20,7 @@
     <param name="data_path" value="$(arg data_path)" />
     <param name="inference_path" value="$(arg inference_path)" />
     <param name="mapname" value="$(arg mapname)" />
+    <param name="rendering_source" value="id" />
   </node>
 
   <!-- Mapper -->
