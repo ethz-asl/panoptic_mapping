@@ -193,7 +193,8 @@ export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
 chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
 ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
 ```
-Additional data to run the mapper on the 3RScan dataset will follow.
+
+To run the RIO demos, the [original dataset](https://waldjohannau.github.io/RIO/) needs to be downloaded and augmented with [our supplementary data](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping). Instructions on which scenes to download and how to combine them are found on our dataset page.
 
 # Examples
 ## Running the Panoptic Mapper
@@ -256,7 +257,22 @@ Panoptic Mapping supports also the monolithic use case. This example explains ho
 Predicted classes (left) and corresponding fusion confidence (right, low to high in red to green).
 
 ## Running the RIO Dataset
-This example will follow shortly.
+This example explains how to run the Panoptic Multi-TSDF mapper on the RIO dataset. 
+
+1. First, download the [original dataset](https://waldjohannau.github.io/RIO/) and [our supplementary data](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
+
+2. Set `use_rio` in `launch/run.launch (L5)` to true, replace the `data_path` in `(L16)` and `file_name` in `config/mapper/rio_groundtruth.yaml (L15)` to the downloaded path.
+
+3. Run the mapper:
+    ```
+    roslaunch panoptic_mapping_ros run.launch
+    ```
+4. You should now see the map being incrementally built:
+
+    <img src="https://user-images.githubusercontent.com/36043993/157041619-3f683ee7-2709-4bc5-84c2-8b1188ee52c5.png" width="800">
+    
+    (Left in reconstructed color, right colored by submap)
+    
 
 # Contributing
 **panoptic_mapping** is an open-source project, any contributions are welcome! 
