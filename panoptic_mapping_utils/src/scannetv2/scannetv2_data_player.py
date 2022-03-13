@@ -342,7 +342,7 @@ class ScannetV2DataPlayer:
         # Load and publish next frame data
         frame_data = self.frame_data_loader.load(frame_id)
         if frame_data is not None:
-            rospy.loginfo(f"Publishing data for frame {frame_id}")
+            rospy.logdebug(f"Publishing data for frame {frame_id}")
             self.frame_data_publisher.publish(frame_data, now)
         else:
             rospy.logwarn(f"Data for frame {frame_id} could not be loaded. Skipped.")
