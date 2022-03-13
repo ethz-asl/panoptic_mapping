@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import json
-import csv
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +27,7 @@ _PANOPTIC_PRED_DIR = "panoptic_pred"
 _POSES_DIR = "pose"
 _DEPTH_SHIFT = 1000
 _INPUT_IMAGE_DIMS = (640, 480)
+_FRAME_PERIOD_NS = 33333333
 
 
 @dataclass
@@ -39,7 +40,7 @@ class FrameData:
     uncertainty: Optional[np.ndarray] = None
 
 
-def make_msg_header(timestamp, frame_id: str):
+def _make_msg_header(timestamp, frame_id: str):
     return Header(
         stamp=timestamp,
         frame_id=frame_id,
@@ -72,22 +73,22 @@ class FrameDataPublisher:
     def publish(self, frame_data: FrameData, timestamp):
         # Color
         color_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.color, "bgr8")
-        color_img_msg.header = make_msg_header(timestamp, self.sensor_frame_name)
+        color_img_msg.header = _make_msg_header(timestamp, self.sensor_frame_name)
         self.color_pub.publish(color_img_msg)
 
         # Depth
         depth_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.depth, "32FC1")
-        depth_img_msg.header = make_msg_header(timestamp, self.sensor_frame_name)
+        depth_img_msg.header = _make_msg_header(timestamp, self.sensor_frame_name)
         self.depth_pub.publish(depth_img_msg)
 
         # Segmentation
         id_img_msg = self.cv_bridge.cv2_to_imgmsg(frame_data.segmentation, "32SC1")
-        id_img_msg.header = make_msg_header(timestamp, self.sensor_frame_name)
+        id_img_msg.header = _make_msg_header(timestamp, self.sensor_frame_name)
         self.id_pub.publish(id_img_msg)
 
         # Segments info (Detectron labels)
         label_msg = DetectronLabels()
-        label_msg.header = make_msg_header(timestamp, self.sensor_frame_name)
+        label_msg.header = _make_msg_header(timestamp, self.sensor_frame_name)
         for d in frame_data.segments_info:
             if "instance_id" not in d:
                 d["instance_id"] = 0
@@ -118,7 +119,7 @@ class FrameDataPublisher:
         )
 
         pose_msg = PoseStamped()
-        pose_msg.header = make_msg_header(timestamp, self.global_frame_name)
+        pose_msg.header = _make_msg_header(timestamp, self.global_frame_name)
         pose_msg.pose.position = Point(
             **{
                 "x": translation[0],
@@ -163,21 +164,32 @@ class FrameDataLoader:
         else:
             self.pano_seg_dir = _PANOPTIC_PRED_DIR
 
-    @staticmethod
-    def load_frame_ids_and_timestamps(
-        timestamps_file_path: Path,
+    def _get_number_of_color_frames(self):
+        scan_info_file_path = self.scan_dir_path / (self.scan_dir_path.stem + ".txt")
+        assert (
+            scan_info_file_path.exists()
+        ), f"Scene info file not found for {self.scan_dir_path.stem}"
+        with scan_info_file_path.open("r") as f:
+            for line in f:
+                if re.search("numColorFrames", line):
+                    num_color_frames = int(line.rstrip("\n").split(" ")[2])
+                    return num_color_frames
+
+    def get_frame_ids_and_timestamps(
+        self,
         play_rate: int,
         frame_skip: int = 0,
     ):
         ids = []
         times = []
-        with timestamps_file_path.open("r") as f:
-            csv_reader = csv.reader(f)
-            for row in csv_reader:
-                if row[0] == "FrameID":
-                    continue
-                ids.append(str(row[0]))
-                times.append(float(row[1]) / 1e9)
+        num_frames = self._get_number_of_color_frames()
+        next_frame_time = time.time_ns()
+        time.time()
+
+        for i in range(num_frames):
+            ids.append(str(i))
+            times.append(float(next_frame_time) / 1e9)
+            next_frame_time += _FRAME_PERIOD_NS
 
         ids = [x for _, x in sorted(zip(times, ids))]
         times = sorted(times)
@@ -298,11 +310,7 @@ class ScannetV2DataPlayer:
         self.current_index = 0
         self.start_time = None
 
-        timestamps_file_path = self.scan_dir_path / "timestamps.csv"
-        if not timestamps_file_path.is_file():
-            rospy.logfatal("Timestamps file not found!")
-        self.ids, self.times = FrameDataLoader.load_frame_ids_and_timestamps(
-            timestamps_file_path,
+        self.ids, self.times = self.frame_data_loader.get_frame_ids_and_timestamps(
             self.play_rate,
             self.frame_skip,
         )
