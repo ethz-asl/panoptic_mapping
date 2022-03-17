@@ -4,11 +4,12 @@ MAPPER_CONFIGS=
 SCANS_DIR=
 SCANS=
 OUT_DIR=
+EXPORT_EVALUATION_DATA=false
 
 HELP_MSG="Usage: run_experiments_scannetv2.sh -c <PATH_TO_MAPPER_CONFIGS_FILE> -d <PATH_TO_SCANS_DIR> -o <OUT_DIR> -s <PATH_TO_SCANS_FILE>"
 
 # Parse CLI options
-while getopts ":hc:d:o:s:" opt
+while getopts ":hc:d:o:s:e" opt
 do
 	case ${opt} in
 		h ) 
@@ -42,6 +43,9 @@ do
             fi
 			SCANS=`cat $OPTARG`
 			;;
+        e )
+            EXPORT_EVALUATION_DATA=true
+            ;;
 		\? )
 			echo "Invalid Option: -$OPTARG" 1>&2
 			exit 1
@@ -71,18 +75,34 @@ do
         mkdir -p $RUN_OUT_DIR
         CONFIG_YAML_FILE=`find . -name ${CONFIG}.yaml`
 
+        USE_GROUND_TRUTH="false"
+        USE_UNCERTAINTY="true"
+
         run_dir=$RUN_OUT_DIR yq -i ".data_writer.log_data_writer.output_directory = env(run_dir)" $CONFIG_YAML_FILE
 
         if [[ $CONFIG == *"groundtruth"* ]]
         then
             LABELS_CSV_FILES=${SCAN_DIR}/${SCAN}_labels.csv
             labels=$LABELS_CSV_FILES yq -i ".labels.file_name = env(labels)" $CONFIG_YAML_FILE
+            USE_GROUND_TRUTH="true"
+            USE_UNCERTAINTY="false"
         fi
 
         # Run panoptic mapper
-        roslaunch panoptic_mapping_ros run.launch dataset:=scannetv2 config:=$CONFIG scan_id:=$SCAN
+        roslaunch panoptic_mapping_ros run.launch \
+            dataset:=scannetv2 \
+            config:=$CONFIG \
+            scan_id:=$SCAN \
+            use_ground_truth:=$USE_GROUND_TRUTH \
+            use_uncertainty:=$USE_UNCERTAINTY
 
         # Export labeled pointclouds
-        roslaunch panoptic_mapping_utils evaluate_series.launch map_file:=$RUN_OUT_DIR ground_truth_pointcloud_file:=${SCANS_DIR}/${SCAN}/${SCAN}.pointcloud.ply output_suffix:=$CONFIG
+        if [[ "${EXPORT_EVALUATION_DATA}" == "true" ]]
+        then
+            roslaunch panoptic_mapping_utils evaluate_series.launch \
+                map_file:=$RUN_OUT_DIR \
+                ground_truth_pointcloud_file:=${SCANS_DIR}/${SCAN}/${SCAN}.pointcloud.ply \
+                output_suffix:=$CONFIG
+        fi
     done
 done
