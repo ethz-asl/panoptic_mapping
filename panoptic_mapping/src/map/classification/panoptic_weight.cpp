@@ -15,9 +15,9 @@ ClassVoxelType PanopticWeightVoxel::getVoxelType() const {
 
 bool PanopticWeightVoxel::isObserverd() const { return label != 0; }
 
-bool PanopticWeightVoxel::belongsToSubmap() const { return false; }
+bool PanopticWeightVoxel::belongsToSubmap() const { return true; }
 
-float PanopticWeightVoxel::getBelongingProbability() const { return 0.f; }
+float PanopticWeightVoxel::getBelongingProbability() const { return 0.5f; }
 
 int PanopticWeightVoxel::getBelongingID() const { return label; }
 
