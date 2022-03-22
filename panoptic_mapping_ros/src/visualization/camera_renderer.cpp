@@ -41,6 +41,11 @@ CameraRenderer::CameraRenderer(const CameraRenderer::Config& config,
 
 CameraRenderer::RenderingSource CameraRenderer::renderingSourceFromString(
     const std::string& rendering_source) {
+  if (rendering_source_names.find(rendering_source) ==
+      rendering_source_names.end()) {
+    LOG(ERROR) << "There exists no rendering source with name "
+               << rendering_source;
+  }
   return rendering_source_names.at(rendering_source);
 }
 std::string CameraRenderer::renderingSourceToString(
@@ -68,7 +73,7 @@ void CameraRenderer::renderCameraView(const SubmapCollection* submaps,
     case RenderingSource::kId:
       rendered_image.create(globals_->camera()->getConfig().height,
                             globals_->camera()->getConfig().width, CV_8UC1);
-      rendered_image = cv::Scalar(NAN);
+      rendered_image = 255;
       renderIdImageForPose(submaps, T_M_C, rendered_image);
       break;
     case RenderingSource::kBlockIndex:
@@ -290,9 +295,8 @@ void CameraRenderer::renderBlockIndexImageForPose(
                     ->computeVoxelIndexFromCoordinates(coordinates_m);
             // Found intersection.
             //   depth_ima.ge->at<float>(v, u) = distance;
-            rendered_image.at<cv::int32_t>(v, u, 0) = idx(0);
-            rendered_image.at<cv::int32_t>(v, u, 1) = idx(1);
-            rendered_image.at<cv::int32_t>(v, u, 2) = idx(2);
+            cv::Vec3i cv_idx(idx(0), idx(1), idx(2));
+            rendered_image.at<cv::Vec3i>(v, u) = cv_idx;
             break;
           }
 

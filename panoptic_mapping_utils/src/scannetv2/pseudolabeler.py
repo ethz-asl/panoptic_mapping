@@ -42,6 +42,9 @@ class ScannetV2Pseudolabeller:
 
     def request_all_labels(self):
         current_index = 0
+        # only relevant for blockindex
+        blockindex_to_id = {}
+        next_voxel_id = 1
 
         while True:
             pose_filepath = self.data_dir_path / "pose" / f"{current_index:d}.txt"
@@ -65,10 +68,21 @@ class ScannetV2Pseudolabeller:
                                                 response.class_image.height,
                                                 response.class_image.width)
             elif self.rendering_source == 'blockindex':
-                pseudolabel = np.frombuffer(response.class_image.data,
-                                            dtype=np.int32).reshape(
-                                                response.class_image.height,
-                                                response.class_image.width, 3)
+                blockindex = np.frombuffer(response.class_image.data,
+                                           dtype=np.int32).reshape(
+                                               response.class_image.height,
+                                               response.class_image.width, 3)
+                pseudolabel = np.zeros(
+                    (response.class_image.height, response.class_image.width),
+                    dtype='uint32')
+                for u in range(response.class_image.height):
+                    for v in range(response.class_image.width):
+                        # take the blockindex in a hashable form
+                        idx = blockindex[u, v, :].data.tobytes()
+                        if idx not in blockindex_to_id:
+                            blockindex_to_id[idx] = next_voxel_id
+                            next_voxel_id += 1
+                        pseudolabel[u, v] = blockindex_to_id[idx]
 
             pseudolabel_path = (
                 self.inference_dir_path /
