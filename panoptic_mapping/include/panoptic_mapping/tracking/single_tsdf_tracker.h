@@ -50,7 +50,11 @@ class SingleTSDFTracker : public IDTrackerBase {
     // True: Only match rendered and predicted thing segments that have
     // identical class labels. False: Allow matching of thing segments of
     // different classes.
-    bool use_class_for_instance_tracking = true;
+    bool use_class_for_instance_tracking = false;
+    
+    bool use_uncertainty = false;
+
+    bool use_one_to_one_matching = false;
 
     // Count as valid iso-surface points whose projected depth is within this
     // distance in meters of the measured depth. Negative values indicate

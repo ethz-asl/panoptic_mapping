@@ -26,6 +26,8 @@ void SingleTSDFTracker::Config::setupParamsAndPrinting() {
   setupParam("use_detectron_panoptic", &use_detectron_panoptic);
   setupParam("use_class_for_instance_tracking",
              &use_class_for_instance_tracking);
+  setupParam("use_one_to_one_matching", &use_one_to_one_matching);
+  setupParam("use_uncertainty", &use_uncertainty);
   setupParam("renderer", &renderer);
   setupParam("min_new_instance_size", &min_new_instance_size);
   setupParam("match_acceptance_threshold", &match_acceptance_threshold);
@@ -41,9 +43,12 @@ SingleTSDFTracker::SingleTSDFTracker(const Config& config,
   addRequiredInput(InputData::InputType::kDepthImage);
   if (config_.submap.useClassLayer()) {
     addRequiredInput(InputData::InputType::kSegmentationImage);
-  }
-  if (config_.use_detectron) {
-    addRequiredInput(InputData::InputType::kDetectronLabels);
+    if (config_.use_detectron) {
+      addRequiredInput(InputData::InputType::kDetectronLabels);
+    }
+    if (config_.use_uncertainty) {
+      addRequiredInput(InputData::InputType::kUncertaintyImage);
+    }
   }
 }
 
@@ -92,7 +97,6 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       }
       auto const& instance_segment_info = id_instance_info_pair_iter->second;
 
-      bool matched = false;
       int matched_id = 0;
       float matching_score = 0.f;
 
@@ -114,19 +118,20 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
           }
 
           // Make sure rendered and predicted segments are matched 1-to-1
-          if (matched_ids.find(id_value.first) != matched_ids.end()) {
-            continue;
+          if (config_.use_one_to_one_matching) {
+            if (matched_ids.find(id_value.first) != matched_ids.end()) {
+              continue;
+            }
           }
 
           // Found the best match.
-          matched = true;
           matched_id = id_value.first;
           matching_score = id_value.second;
           break;
         }
       }
 
-      if (matched) {
+      if (matched_id) {
         ++n_matched;
         input_to_output[input_id] = matched_id;
         matched_ids.insert(matched_id);
@@ -174,6 +179,11 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
       visualize(rendered_vis_, "rendered");
       visualize(input->colorImage(), "color");
       visualize(tracked_vis, "tracked");
+      if (config_.use_uncertainty) {
+        cv::Mat uncertainty_vis =
+            renderer_.colorUncertaintyImage(input->uncertaintyImage());
+        visualize(uncertainty_vis, "input_uncertainty");
+      }
     }
   }
 }

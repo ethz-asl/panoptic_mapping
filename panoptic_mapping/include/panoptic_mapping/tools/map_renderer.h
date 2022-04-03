@@ -41,6 +41,7 @@ class MapRenderer {
   cv::Mat renderActiveSubmapClasses(const SubmapCollection& submaps,
                                     const Transformation& T_M_C);
   cv::Mat colorIdImage(const cv::Mat& id_image, int colors_per_revolution = 20);
+  cv::Mat colorUncertaintyImage(const cv::Mat& uncertainty_image);
 
  private:
   const Config config_;

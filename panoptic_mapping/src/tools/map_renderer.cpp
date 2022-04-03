@@ -3,6 +3,8 @@
 #include <fstream>
 #include <string>
 
+#include <opencv2/imgproc.hpp>
+
 namespace panoptic_mapping {
 
 void MapRenderer::Config::checkParams() const {}
@@ -136,6 +138,24 @@ cv::Mat MapRenderer::colorIdImage(const cv::Mat& id_image,
       }
     }
   }
+  return result;
+}
+
+cv::Mat MapRenderer::colorUncertaintyImage(const cv::Mat& uncertainty_image) {
+  cv::Mat result(uncertainty_image.rows, uncertainty_image.cols, CV_8UC3);
+  if (uncertainty_image.type() != CV_32FC1) {
+    LOG(WARNING) << "Input 'uncertainty_image' is not of type 'CV_32SC1', skipping.";
+    return result;
+  }
+
+  // Convert uncertainty image to uint8 grayscale first
+  cv::Mat uncertainty_image_grayscale(uncertainty_image.rows,
+                                      uncertainty_image.cols, CV_8UC1);
+  uncertainty_image.convertTo(uncertainty_image_grayscale, CV_8UC1, 255.0, 0.0);
+
+  // Colorize the image
+  cv::applyColorMap(uncertainty_image_grayscale, result, cv::COLORMAP_JET);
+
   return result;
 }
 
