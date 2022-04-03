@@ -39,6 +39,7 @@ cs_add_library(${PROJECT_NAME}
         src/map/classification/variable_count.cpp
         src/map/classification/uncertainty.cpp
         src/map/classification/panoptic_weight.cpp
+        src/map/classification/variable_bayesian.cpp
         src/labels/label_handler_base.cpp
         src/labels/null_label_handler.cpp
         src/labels/csv_label_handler.cpp
@@ -76,7 +77,9 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_proto stdc++fs)
 
 if (CATKIN_ENABLE_TESTING)
     catkin_add_gtest(serialization-test test/serialization.cpp)
+    catkin_add_gtest(map-tests test/map.cpp)
     target_link_libraries(serialization-test ${catkin_LIBRARIES} ${PROJECT_NAME})
+    target_link_libraries(map-tests ${catkin_LIBRARIES} ${PROJECT_NAME})
 endif()
 
 ##########

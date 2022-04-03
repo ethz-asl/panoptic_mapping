@@ -12,7 +12,22 @@
 
 #include "panoptic_mapping/common/index_getter.h"
 
+
 namespace panoptic_mapping {
+
+bool voxel_update_requires_uncertainty(ClassVoxelType type) {
+  switch (type) {
+    case ClassVoxelType::kUncertainty: {
+      return true;
+    }
+    case ClassVoxelType::kVariableBayesian: {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
 
 config_utilities::Factory::RegistrationRos<
     TsdfIntegratorBase, SingleTsdfIntegrator, std::shared_ptr<Globals>>
@@ -74,12 +89,15 @@ void SingleTsdfIntegrator::processInput(SubmapCollection* submaps,
                       "a class layer, skipping frame.";
       return;
     }
-    if (config_.use_uncertainty &&
-        map->getClassLayer().getVoxelType() != ClassVoxelType::kUncertainty) {
-      LOG(WARNING) << "Can not 'use_uncertainty' with a class layer that is "
-                      "not of type 'uncertainty', skipping frame.";
-      return;
-    }
+    // if (config_.use_uncertainty &&
+    //     map->getClassLayer().getVoxelType() !=
+    //     ClassVoxelType::kUncertainty)
+    //     {
+    //   LOG(WARNING) << "Can not 'use_uncertainty' with a class layer
+    //   that is "
+    //                   "not of type 'uncertainty', skipping frame.";
+    //   return;
+    // }
   }
 
   // Allocate all blocks in the map.
@@ -205,9 +223,15 @@ bool SingleTsdfIntegrator::updateVoxel(
     if (class_voxel) {
       // Uncertainty voxels are handled differently.
       if (config_.use_uncertainty &&
-          class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
-        updateUncertaintyVoxel(interpolator, input,
-                               static_cast<UncertaintyVoxel*>(class_voxel));
+          voxel_update_requires_uncertainty(class_voxel->getVoxelType())) {
+        if (class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
+          updateUncertaintyVoxel(interpolator, input,
+                                 static_cast<UncertaintyVoxel*>(class_voxel));
+        } else if (class_voxel->getVoxelType() == ClassVoxelType::kVariableBayesian) {
+          float obs_prob =
+              interpolator->interpolateUncertainty(input.uncertaintyImage());
+          updateClassVoxel(interpolator, input, class_voxel, obs_prob);
+        }
       } else if (class_voxel->getVoxelType() ==
                  ClassVoxelType::kPanopticWeight) {
         // For the panoptic weight voxel, use TSDF update quadric weight
@@ -226,11 +250,11 @@ void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
                                             const InputData& input,
                                             ClassVoxel* class_voxel,
                                             float weight) const {
-  // For the single TSDF case there is no belonging submap, just use the ID
-  // directly.
+  // For the single TSDF case there is no belonging submap, just use the
+  // ID directly.
   const int id = interpolator->interpolateID(input.idImage());
   // Do not increase for the unknown label
-  if(id == 0) {
+  if (id == 0) {
     return;
   }
   class_voxel->incrementCount(id, weight);
