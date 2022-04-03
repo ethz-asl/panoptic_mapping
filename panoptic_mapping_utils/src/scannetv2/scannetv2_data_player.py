@@ -216,7 +216,7 @@ class FrameDataLoader:
         )
         color = cv2.resize(
             cv2.imread(str(color_image_file_path)),
-            dsize=_INPUT_IMAGE_DIMS,
+            dsize=self.image_size,
             interpolation=cv2.INTER_AREA,
         )
 
@@ -225,7 +225,7 @@ class FrameDataLoader:
         )
         raw_depth = cv2.resize(
             np.array(PilImage.open(str(depth_image_file_path))),
-            dsize=_INPUT_IMAGE_DIMS,
+            dsize=self.image_size,
             interpolation=cv2.INTER_NEAREST,
         )
         depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
@@ -235,7 +235,7 @@ class FrameDataLoader:
         )
         segmentation = cv2.resize(
             np.array(PilImage.open(segmentation_file_path)),
-            dsize=_INPUT_IMAGE_DIMS,
+            dsize=self.image_size,
             interpolation=cv2.INTER_NEAREST,
         )
         segmentation = segmentation.astype(np.int32)
@@ -262,8 +262,10 @@ class FrameDataLoader:
                 / _PANOPTIC_PRED_DIR
                 / "{:05d}_uncertainty.tiff".format(int(frame_id))
             )
-            frame_data.uncertainty = np.array(
-                PilImage.open(str(uncertainty_image_file_path))
+            frame_data.uncertainty = cv2.resize(
+                np.array(PilImage.open(str(uncertainty_image_file_path))),
+                dsize=self.image_size,
+                interpolation=cv2.INTER_NEAREST,
             )
 
         return frame_data
