@@ -1,7 +1,9 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="data_path" default="/media/blumh/data/scannet/valscans/scene0354_00"/>
-  <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/scene0354_00/2793"/>
+  <arg name="scene"/>
+  <arg name="model"/>
+  <arg name="data_path" default="/media/blumh/data/scannet/valscans/$(arg scene)"/>
+  <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/$(arg scene)/$(arg model)"/>
   <arg name="mapname" value="pred" />
   <arg name="wait" default="false"/>
   <arg name="visualize" default="false"/>

@@ -1,7 +1,9 @@
 <launch>
 <!-- ============ Arguments ============ -->
-  <arg name="data_path" default="/media/blumh/data/scannet/valscans/scene0354_00"/>
-  <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/scene0354_00/2793"/>
+  <arg name="scene"/>
+  <arg name="model"/>
+  <arg name="data_path" default="/media/blumh/data/scannet/valscans/$(arg scene)"/>
+  <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/$(arg scene)/$(arg model)"/>
   <arg name="inference_method" value="pred" />
   <arg name="uncertainty_method" value="maxlogit-pp" />
   <arg name="wait" default="false"/>
@@ -38,23 +40,8 @@
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="true">
     <!-- Config -->
     <rosparam file="$(find panoptic_mapping_ros)/config/mapper/scannetv2_single_tsdf.yaml"/>
-    <param name="save_map_path_when_finished" value="$(arg inference_path)/$(arg uncertainty_method)"/>
     <param name="shutdown_when_finished" value="true"/>
-    <rosparam ns="id_tracker">
-    use_class_layer: false
-    classification: None
-    scores:
-      type: average
-    </rosparam>
-    <rosparam ns="tsdf_integrator">
-    use_segmentation: false
-    use_score: true
-    </rosparam>
-    <rosparam ns="visualization/submaps">
-    color_mode: score # color, normals, classes, instances, classification
-    min_score: -10.0
-    max_score: 6.0
-    </rosparam>
+    <param name="save_map_path_when_finished" value="$(arg inference_path)/$(arg inference_method)"/>
 
     <!-- Input -->
     <remap from="color_image_in" to="$(arg namespace)/color_image"/>
