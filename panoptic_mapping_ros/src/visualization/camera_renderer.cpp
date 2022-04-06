@@ -79,7 +79,7 @@ void CameraRenderer::renderCameraView(const SubmapCollection* submaps,
     case RenderingSource::kBlockIndex:
       rendered_image.create(globals_->camera()->getConfig().height,
                             globals_->camera()->getConfig().width, CV_32SC3);
-      rendered_image = cv::Scalar(NAN);
+      rendered_image = 0;
       renderBlockIndexImageForPose(submaps, T_M_C, rendered_image);
       break;
     case RenderingSource::kScore:

@@ -84,6 +84,9 @@ class ScannetV2Pseudolabeller:
                 for u in range(response.class_image.height):
                     for v in range(response.class_image.width):
                         # take the blockindex in a hashable form
+                        d = blockindex[u, v, :]
+                        if d[0] == d[1] == d[2] == 0:
+                            continue
                         idx = blockindex[u, v, :].data.tobytes()
                         if idx not in blockindex_to_id:
                             blockindex_to_id[idx] = next_voxel_id
