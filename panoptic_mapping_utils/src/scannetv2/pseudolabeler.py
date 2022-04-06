@@ -55,8 +55,14 @@ class ScannetV2Pseudolabeller:
                 rospy.signal_shutdown("Reached end of sequence.")
                 return
             transform_msg = self._load_pose(pose_filepath)
-            response = self.service_proxy(transform_msg, 'pseudolabel_frame',
-                                          self.rendering_source)
+            try:
+                response = self.service_proxy(transform_msg,
+                                              'pseudolabel_frame',
+                                              self.rendering_source)
+            except rospy.ServiceException as e:
+                rospy.logwarn(f"service exception, skipping frame {current_index}.")
+                current_index += 1
+                continue
             if self.rendering_source == 'id':
                 pseudolabel = np.frombuffer(response.class_image.data,
                                             dtype=np.uint8).reshape(

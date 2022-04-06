@@ -469,6 +469,14 @@ bool PanopticMapper::loadMapCallback(
 bool PanopticMapper::renderCameraViewCallback(
     panoptic_mapping_msgs::RenderCameraImage::Request& request,
     panoptic_mapping_msgs::RenderCameraImage::Response& response) {
+  try
+  {
+    tf::assertQuaternionValid(request.T_C_M.rotation);
+  } catch (const tf::InvalidArgument &e) {
+    LOG(ERROR) << "Invalid Pose: " << e.what();
+    return false;
+  }
+
   tf::StampedTransform transform;
   tf::transformMsgToTF(request.T_C_M, transform);
   // Initialize image without type or size, will be allocated by renderer
