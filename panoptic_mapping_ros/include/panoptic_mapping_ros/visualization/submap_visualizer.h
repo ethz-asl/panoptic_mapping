@@ -30,6 +30,7 @@ class SubmapVisualizer {
     bool visualize_mesh = true;
     bool visualize_tsdf_blocks = true;
     bool visualize_free_space = true;
+    bool visualize_surface_points = true;
     bool visualize_bounding_volumes = true;
     bool include_free_space = false;
     std::string ros_namespace;
@@ -85,6 +86,8 @@ class SubmapVisualizer {
       const SubmapCollection& submaps);
   virtual pcl::PointCloud<pcl::PointXYZI> generateFreeSpaceMsg(
       const SubmapCollection& submaps);
+  virtual pcl::PointCloud<pcl::PointXYZRGB> generateSurfacePointsMsg(
+      const SubmapCollection& submaps);
   virtual visualization_msgs::MarkerArray generateBoundingVolumeMsgs(
       const SubmapCollection& submaps);
 
@@ -93,6 +96,7 @@ class SubmapVisualizer {
   virtual void visualizeMeshes(SubmapCollection* submaps);
   virtual void visualizeTsdfBlocks(const SubmapCollection& submaps);
   virtual void visualizeFreeSpace(const SubmapCollection& submaps);
+  virtual void visualizeSurfacePoints(const SubmapCollection& submaps);
   virtual void visualizeBoundingVolume(const SubmapCollection& submaps);
   virtual void publishTfTransforms(const SubmapCollection& submaps);
 
@@ -151,6 +155,7 @@ class SubmapVisualizer {
   // ROS.
   ros::NodeHandle nh_;
   ros::Publisher freespace_pub_;
+  ros::Publisher surfacepoints_pub_;
   ros::Publisher mesh_pub_;
   ros::Publisher tsdf_blocks_pub_;
   ros::Publisher bounding_volume_pub_;

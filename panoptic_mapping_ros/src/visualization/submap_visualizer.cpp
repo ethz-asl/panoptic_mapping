@@ -31,6 +31,7 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_mesh", &visualize_mesh);
   setupParam("visualize_tsdf_blocks", &visualize_tsdf_blocks);
   setupParam("visualize_free_space", &visualize_free_space);
+  setupParam("visualize_surface_points", &visualize_surface_points);
   setupParam("visualize_bounding_volumes", &visualize_bounding_volumes);
   setupParam("include_free_space", &include_free_space);
 }
@@ -61,6 +62,10 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
   if (config_.visualize_free_space) {
     freespace_pub_ =
         nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("free_space_tsdf", 100);
+  }
+  if (config_.visualize_surface_points) {
+    surfacepoints_pub_ =
+        nh_.advertise<pcl::PointCloud<pcl::PointXYZRGB>>("surface_points", 100);
   }
   if (config_.visualize_mesh) {
     mesh_pub_ = nh_.advertise<voxblox_msgs::MultiMesh>("mesh", 1000);
@@ -102,6 +107,7 @@ void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
   visualizeMeshes(submaps);
   visualizeTsdfBlocks(*submaps);
   visualizeFreeSpace(*submaps);
+  visualizeSurfacePoints(*submaps);
   visualizeBoundingVolume(*submaps);
   vis_infos_are_updated_ = false;
 }
@@ -128,6 +134,14 @@ void SubmapVisualizer::visualizeFreeSpace(const SubmapCollection& submaps) {
     pcl::PointCloud<pcl::PointXYZI> msg = generateFreeSpaceMsg(submaps);
     msg.header.frame_id = global_frame_name_;
     freespace_pub_.publish(msg);
+  }
+}
+void SubmapVisualizer::visualizeSurfacePoints(const SubmapCollection& submaps) {
+  if (config_.visualize_surface_points &&
+      surfacepoints_pub_.getNumSubscribers() > 0) {
+    pcl::PointCloud<pcl::PointXYZRGB> msg = generateSurfacePointsMsg(submaps);
+    msg.header.frame_id = global_frame_name_;
+    surfacepoints_pub_.publish(msg);
   }
 }
 
@@ -388,6 +402,22 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
   if (submaps.submapIdExists(free_space_id)) {
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);
+  }
+  return result;
+}
+
+pcl::PointCloud<pcl::PointXYZRGB> SubmapVisualizer::generateSurfacePointsMsg(
+    const SubmapCollection& submaps) {
+  pcl::PointCloud<pcl::PointXYZRGB> result;
+  for (const auto& submap : submaps) {
+    if (submap.getLabel() == PanopticLabel::kFreeSpace &&
+        !config_.include_free_space) {
+      continue;
+    }
+    pcl::PointCloud<pcl::PointXYZRGB> layer_points;
+    createSurfacePointcloudFromTsdfLayer(
+        submap.getTsdfLayer(), submap.getConfig().voxel_size, &layer_points);
+    result += layer_points;
   }
   return result;
 }
