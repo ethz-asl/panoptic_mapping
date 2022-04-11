@@ -113,6 +113,8 @@ bool SubmapCollection::saveToFile(const std::string& file_path) const {
   // Saving the submap collection header object.
   SubmapCollectionProto submap_collection_proto;
   submap_collection_proto.set_num_submaps(submaps_.size());
+  submap_collection_proto.set_active_freespace_submap_id(
+      active_freespace_submap_id_);
   if (!voxblox::utils::writeProtoMsgToStream(submap_collection_proto,
                                              &outfile)) {
     LOG(ERROR) << "Could not write submap collection header message.";
@@ -182,6 +184,8 @@ bool SubmapCollection::loadFromFile(const std::string& file_path,
     id_to_index_[submap_ptr->getID()] = submaps_.size();
     submaps_.emplace_back(std::move(submap_ptr));
   }
+  active_freespace_submap_id_ =
+      submap_collection_proto.active_freespace_submap_id();
   proto_file.close();
 
   // Recompute data that is not stored with the submap.
