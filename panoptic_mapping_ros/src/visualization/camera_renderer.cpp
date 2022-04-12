@@ -217,7 +217,12 @@ void CameraRenderer::renderScoreImageForPose(const SubmapCollection* submaps,
           if (abs(voxel->distance) < voxel_size_) {
             const ScoreVoxel* s_voxel =
                 submap.getScoreLayer().getVoxelPtrByCoordinates(coordinates_m);
-            if (!s_voxel || !s_voxel->isObserverd()) {
+            if (!s_voxel) {
+              LOG_IF(INFO, config_.verbosity > 2) << "voxel not existing";
+              continue;
+            }
+            if (!s_voxel->isObserverd()) {
+              LOG_IF(INFO, config_.verbosity > 2) << "voxel not observed";
               continue;
             }
             LOG_IF(INFO, config_.verbosity > 2)
