@@ -25,6 +25,11 @@
     <param name="rendering_source" value="id" />
   </node>
 
+  <node name="point_cloud_writer" pkg="point_cloud_io" type="write" output="screen">
+    <param name="folder_path" value="$(arg inference_path)" />
+    <param name="topic" value="/panoptic_mapper/visualization/submaps/surface_points" />
+  </node>
+
   <!-- Mapper -->
   <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="true">
     <!-- Config -->
