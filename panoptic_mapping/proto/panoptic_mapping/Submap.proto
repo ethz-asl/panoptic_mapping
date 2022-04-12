@@ -22,7 +22,7 @@ message SubmapProto {
   optional uint32 num_class_blocks = 12;
   optional int32 class_voxel_type = 13;
 
-  // Classification Layer.
+  // Score Layer.
   optional uint32 num_score_blocks = 14;
   optional int32 score_voxel_type = 15;
 

@@ -175,7 +175,7 @@ bool loadScoreBlocksFromStream(const SubmapProto& submap_proto,
   CHECK_NOTNULL(tmp_byte_offset_ptr);
   CHECK_NOTNULL(layer);
   // Read all blocks and add them to the layer.
-  for (uint32_t block_idx = 0u; block_idx < submap_proto.num_class_blocks();
+  for (uint32_t block_idx = 0u; block_idx < submap_proto.num_score_blocks();
        ++block_idx) {
     voxblox::BlockProto block_proto;
     if (!voxblox::utils::readProtoMsgFromStream(proto_file_ptr, &block_proto,
