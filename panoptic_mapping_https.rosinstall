@@ -35,7 +35,10 @@
 - git:
     local-name: catkin_grpc
     uri: https://github.com/CogRob/catkin_grpc.git
-    
+- git:
+    local-name: point_cloud_io
+    uri: https://github.com/ANYbotics/point_cloud_io.git
+
 # Package Dependencies. Notice that voxblox requires a special branch.
 - git:
     local-name: voxblox
