@@ -5,6 +5,8 @@ import json
 import csv
 from pathlib import Path
 from time import time
+import pickle
+import open3d
 
 import cv2
 import numpy as np
@@ -15,7 +17,7 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Transform
 from sensor_msgs.msg import Image
 
-from panoptic_mapping_msgs.srv import RenderCameraImage
+from panoptic_mapping_msgs.srv import RenderCameraImage, GetBlockindex
 
 
 class ScannetV2Pseudolabeller:
@@ -36,6 +38,8 @@ class ScannetV2Pseudolabeller:
 
         self.service_proxy = rospy.ServiceProxy(
             '/panoptic_mapper/render_camera_view', RenderCameraImage)
+        self.blockidx_service_proxy = rospy.ServiceProxy(
+            '/panoptic_mapper/get_blockindex', GetBlockindex)
 
         # Setup
         self.cv_bridge = CvBridge()
@@ -45,6 +49,37 @@ class ScannetV2Pseudolabeller:
         # only relevant for blockindex
         blockindex_to_id = {}
         next_voxel_id = 1
+        if self.rendering_source == 'geofeature':
+            blockid_to_feature = {}
+            with open(self.inference_dir_path / 'blockindex_to_id.pkl',
+                      'rb') as f:
+                blockindex_to_id = pickle.load(f)
+            pointcloud = open3d.io.read_point_cloud(
+                str(self.inference_dir_path / 'point_cloud_0.ply'))
+            pointcloud = np.asarray(pointcloud.points)
+            descriptors = np.load(
+                self.inference_dir_path / 'smoothnet' / '32_dim' /
+                'pc._0.150000_16_1.750000_3DSmoothNet.npz')['data']
+            assert descriptors.shape[0] == pointcloud.shape[
+                0], "descriptor and pointcloud do not match in shape"
+            missed_count = 0
+            for i in range(descriptors.shape[0]):
+                response = self.blockidx_service_proxy(pointcloud[i, 0],
+                                                       pointcloud[i, 1],
+                                                       pointcloud[i, 2])
+                blockindex = np.array([response.x, response.y, response.z],
+                                      dtype=np.int32).data.tobytes()
+                if blockindex not in blockindex_to_id:
+                    missed_count += 1
+                    continue
+                blockid_to_feature[
+                    blockindex_to_id[blockindex]] = descriptors[i]
+            with open(self.inference_dir_path / 'blockid_to_descriptor.pkl',
+                      'wb') as f:
+                pickle.dump(blockid_to_feature, f)
+            print(f'missed {missed_count} points')
+            rospy.signal_shutdown("All features retrieved.")
+            return
 
         while True:
             pose_filepath = self.data_dir_path / "pose" / f"{current_index:d}.txt"
@@ -52,6 +87,10 @@ class ScannetV2Pseudolabeller:
                 rospy.logwarn(
                     f"Could not find file '{str(pose_filepath)}', shutting down."
                 )
+                if self.rendering_source == 'blockindex':
+                    with open(self.inference_dir_path / 'blockindex_to_id.pkl',
+                              'wb') as f:
+                        pickle.dump(blockindex_to_id, f)
                 rospy.signal_shutdown("Reached end of sequence.")
                 return
             transform_msg = self._load_pose(pose_filepath)
@@ -60,7 +99,8 @@ class ScannetV2Pseudolabeller:
                                               'pseudolabel_frame',
                                               self.rendering_source)
             except rospy.ServiceException as e:
-                rospy.logwarn(f"service exception, skipping frame {current_index}.")
+                rospy.logwarn(
+                    f"service exception, skipping frame {current_index}.")
                 current_index += 1
                 continue
             if self.rendering_source == 'id':

@@ -203,6 +203,8 @@ void PanopticMapper::setupRos() {
       this);
   render_camera_view_srv_ = nh_private_.advertiseService(
       "render_camera_view", &PanopticMapper::renderCameraViewCallback, this);
+  get_blockidx_srv_ = nh_private_.advertiseService(
+      "get_blockindex", &PanopticMapper::getBlockindexCallback, this);
   print_timings_srv_ = nh_private_.advertiseService(
       "print_timings", &PanopticMapper::printTimingsCallback, this);
   finish_mapping_srv_ = nh_private_.advertiseService(
@@ -469,10 +471,9 @@ bool PanopticMapper::loadMapCallback(
 bool PanopticMapper::renderCameraViewCallback(
     panoptic_mapping_msgs::RenderCameraImage::Request& request,
     panoptic_mapping_msgs::RenderCameraImage::Response& response) {
-  try
-  {
+  try {
     tf::assertQuaternionValid(request.T_C_M.rotation);
-  } catch (const tf::InvalidArgument &e) {
+  } catch (const tf::InvalidArgument& e) {
     LOG(ERROR) << "Invalid Pose: " << e.what();
     return false;
   }
@@ -487,6 +488,29 @@ bool PanopticMapper::renderCameraViewCallback(
   response.class_image =
       *cv_bridge::CvImage(std_msgs::Header(), "", rendered_image).toImageMsg();
   return true;
+}
+
+bool PanopticMapper::getBlockindexCallback(
+    panoptic_mapping_msgs::GetBlockindex::Request& request,
+    panoptic_mapping_msgs::GetBlockindex::Response& response) {
+  for (const Submap& submap : *submaps_.get()) {
+    // Filter out submaps.
+    if (submap.getLabel() == PanopticLabel::kFreeSpace) {
+      LOG_IF(INFO, config_.verbosity > 1)
+          << "Cannot query, submap is freespace.";
+      continue;
+    }
+    const Point query_coordinates(request.x, request.y, request.z);
+    const VoxelIndex idx =
+        submap.getTsdfLayer()
+            .getBlockPtrByCoordinates(query_coordinates)
+            ->computeVoxelIndexFromCoordinates(query_coordinates);
+    response.x = idx(0);
+    response.y = idx(1);
+    response.z = idx(2);
+    return true;
+  }
+  return false;
 }
 
 bool PanopticMapper::printTimingsCallback(std_srvs::Empty::Request& request,

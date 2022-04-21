@@ -1,0 +1,11 @@
+# This Service can be used to request labels for a given camera pose in the semantic map
+# The pose can either be infered from the given sensor frame and timestamp OR can be provided in the T_C_M transform.
+# If available, a depth image can be provided which improves accuracy and calculation speed
+
+float32 x
+float32 y
+float32 z
+---
+int32 x
+int32 y
+int32 z

@@ -19,6 +19,7 @@
 #include <panoptic_mapping/tools/planning_interface.h>
 #include <panoptic_mapping/tools/thread_safe_submap_collection.h>
 #include <panoptic_mapping/tracking/id_tracker_base.h>
+#include <panoptic_mapping_msgs/GetBlockindex.h>
 #include <panoptic_mapping_msgs/SaveLoadMap.h>
 #include <panoptic_mapping_msgs/SetVisualizationMode.h>
 #include <ros/ros.h>
@@ -107,8 +108,11 @@ class PanopticMapper {
       panoptic_mapping_msgs::SetVisualizationMode::Response&          // NOLINT
           response);
   bool renderCameraViewCallback(
-      panoptic_mapping_msgs::RenderCameraImage::Request& request,    // NOLINT
-      panoptic_mapping_msgs::RenderCameraImage::Response& response); //NOLINT
+      panoptic_mapping_msgs::RenderCameraImage::Request& request,     // NOLINT
+      panoptic_mapping_msgs::RenderCameraImage::Response& response);  // NOLINT
+  bool getBlockindexCallback(
+      panoptic_mapping_msgs::GetBlockindex::Request& request,
+      panoptic_mapping_msgs::GetBlockindex::Response& response);
   bool printTimingsCallback(std_srvs::Empty::Request& request,      // NOLINT
                             std_srvs::Empty::Response& response);   // NOLINT
   bool finishMappingCallback(std_srvs::Empty::Request& request,     // NOLINT
@@ -162,6 +166,7 @@ class PanopticMapper {
   ros::ServiceServer set_visualization_mode_srv_;
   ros::ServiceServer set_color_mode_srv_;
   ros::ServiceServer render_camera_view_srv_;
+  ros::ServiceServer get_blockidx_srv_;
   ros::ServiceServer print_timings_srv_;
   ros::ServiceServer finish_mapping_srv_;
   ros::Timer visualization_timer_;
