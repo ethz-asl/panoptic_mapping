@@ -86,8 +86,8 @@ map_management:
   
   # Frequencies
   prune_active_blocks_frequency: 0 
-  activity_management_frequency: 0 # 1
-  change_detection_frequency: 0 # 5
+  activity_management_frequency: 1
+  change_detection_frequency: 5
   
   # Behavior
   merge_deactivated_submaps_if_possible: true
