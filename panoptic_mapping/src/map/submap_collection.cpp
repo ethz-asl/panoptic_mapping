@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -155,6 +156,34 @@ bool SubmapCollection::saveToFile(const std::string& file_path) const {
     }
   }
   outfile.close();
+
+  // Serialize tracked instances info table
+  if (isSingleTsdf()) {
+    auto& tracked_instances_info_table = getTrackedInstancesInfoTable();
+
+    //
+    auto instances_info_file_path = std::filesystem::path(file_name);
+    instances_info_file_path.replace_extension(".csv");
+    std::ofstream ofs;
+    ofs.open(instances_info_file_path, std::ofstream::out);
+    if (!ofs.is_open()) {
+      LOG(ERROR) << "Could not open file " << instances_info_file_path;
+      return false;
+    }
+
+    // Write header
+    ofs << "InstanceID,ClassID\n";
+
+    // Write instance id to class id mapping
+    for (const auto& tracked_instance_id_info_pair :
+         tracked_instances_info_table) {
+      int class_id = tracked_instance_id_info_pair.second->getClassID();
+      ofs << tracked_instance_id_info_pair.first << "," << class_id << "\n";
+    }
+
+    ofs.close();
+  }
+
   return true;
 }
 
