@@ -294,6 +294,8 @@ class ScannetV2DataPlayer:
         self.image_width = rospy.get_param("~image_width", _INPUT_IMAGE_DIMS[0])
         self.image_height = rospy.get_param("~image_height", _INPUT_IMAGE_DIMS[1])
 
+        self.max_frames = rospy.get_param("~max_frames", None)
+
         # Configure frame data loader
         self.frame_data_loader = FrameDataLoader(
             self.scan_dir_path,
@@ -318,7 +320,7 @@ class ScannetV2DataPlayer:
         )
 
         if self.wait:
-            time.sleep(10)
+            time.sleep(20)
 
         self.start(None)
 
@@ -328,6 +330,9 @@ class ScannetV2DataPlayer:
         return EmptyResponse
 
     def callback(self, _):
+
+        if self.max_frames is not None and self.current_index + 1 > self.max_frames:
+            rospy.signal_shutdown("Max frames reached.")
 
         if not self.running:
             return
