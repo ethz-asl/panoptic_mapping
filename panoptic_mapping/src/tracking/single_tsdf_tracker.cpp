@@ -150,7 +150,7 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
           // Map input panoptic id to global panoptic id
           input_to_output[input_id] = panoptic_id;
           // Initialize new tracked instance info
-          submaps->updateTrackedInstanceInfo(matched_id, instance_segment_info,
+          submaps->updateTrackedInstanceInfo(panoptic_id, instance_segment_info,
                                              matching_score);
           LOG_IF(INFO, config_.verbosity >= 2)
               << "Generated new instance id for class "

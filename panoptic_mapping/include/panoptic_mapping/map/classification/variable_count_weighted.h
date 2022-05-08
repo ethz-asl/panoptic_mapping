@@ -1,5 +1,5 @@
-#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_BAYESIAN_H_
-#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_BAYESIAN_H_
+#ifndef PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_WEIGHTED_H_
+#define PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_WEIGHTED_H_
 
 #include <memory>
 #include <unordered_map>
@@ -13,9 +13,10 @@
 namespace panoptic_mapping {
 
 /**
- * @brief TODO
+ * @brief Keep track of arbitrary number of IDs in an unordered map. ID 0 is
+ * generally used to store the belonging submap and shifting other IDs by 1.
  */
-struct VariableBayesianVoxel : public ClassVoxel {
+struct VariableCountWeightedVoxel : public ClassVoxel {
  public:
   // Implement interfaces.
   ClassVoxelType getVoxelType() const override;
@@ -29,30 +30,26 @@ struct VariableBayesianVoxel : public ClassVoxel {
   std::vector<uint32_t> serializeVoxelToInt() const override;
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
-
   // Data.
-  std::unordered_map<int, float> probs;  // probs dist over ids
-
-  int current_id = 0;  // id with the highest score
-
-  static constexpr float kMinProbability = 0.05f;
-  static constexpr float kUncertaintyDecay = 0.8f;
+  std::unordered_map<int, FloatingPoint> weights;
+  int current_index = 0;
+  FloatingPoint current_max_weight = 0;
+  FloatingPoint weight_sum = 0;
 };
 
-class VariableBayesianLayer : public ClassLayerImpl<VariableBayesianVoxel> {
+class VariableCountWeightedLayer
+    : public ClassLayerImpl<VariableCountWeightedVoxel> {
  public:
   struct Config : public config_utilities::Config<Config> {
-    float new_instance_init_factor = 0.01f;
-
-    Config() { setConfigName("VariableBayesianLayer"); }
+    Config() { setConfigName("VariableCountWeightedLayer"); }
 
    protected:
     void fromRosParam() override {}
     void printFields() const override {}
   };
 
-  VariableBayesianLayer(const Config& config, const float voxel_size,
-                        const int voxels_per_side);
+  VariableCountWeightedLayer(const Config& config, const float voxel_size,
+                             const int voxels_per_side);
 
   ClassVoxelType getVoxelType() const override;
   std::unique_ptr<ClassLayer> clone() const override;
@@ -63,10 +60,10 @@ class VariableBayesianLayer : public ClassLayerImpl<VariableBayesianVoxel> {
  protected:
   const Config config_;
   static config_utilities::Factory::RegistrationRos<
-      ClassLayer, VariableBayesianLayer, float, int>
+      ClassLayer, VariableCountWeightedLayer, float, int>
       registration_;
 };
 
 }  // namespace panoptic_mapping
 
-#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_BAYESIAN_H_
+#endif  // PANOPTIC_MAPPING_MAP_CLASSIFICATION_VARIABLE_COUNT_WEIGHTED_H_

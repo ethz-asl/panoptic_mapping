@@ -14,8 +14,10 @@
 #include "panoptic_mapping/map/classification/binary_count.h"
 #include "panoptic_mapping/map/classification/fixed_count.h"
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/panoptic_weight.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/classification/variable_count_weighted.h"
 #include "panoptic_mapping/test/comparison_utils.h"
 #include "panoptic_mapping/test/randomization_utils.h"
 #include "panoptic_mapping/test/temporary_file.h"
@@ -205,6 +207,32 @@ TEST(Uncertainty, SerializeBlock) {
 
 TEST(Uncertainty, SerializeLayer) {
   testLayerSerialization<UncertaintyVoxel, UncertaintyLayer>();
+}
+
+TEST(PanopticWeight, SerializeVoxel) {
+  testVoxelSerialization<PanopticWeightVoxel>();
+}
+
+TEST(PanopticWeight, SerializeBlock) {
+  testBlockSerialization<PanopticWeightVoxel, PanopticWeightLayer>();
+}
+
+TEST(PanopticWeight, SerializeLayer) {
+  testLayerSerialization<PanopticWeightVoxel, PanopticWeightLayer>();
+}
+
+TEST(VariableCountWeighted, SerializeVoxel) {
+  testVoxelSerialization<VariableCountWeightedVoxel>();
+}
+
+TEST(VariableCountWeighted, SerializeBlock) {
+  testBlockSerialization<VariableCountWeightedVoxel,
+                         VariableCountWeightedLayer>();
+}
+
+TEST(VariableCountWeighted, SerializeLayer) {
+  testLayerSerialization<VariableCountWeightedVoxel,
+                         VariableCountWeightedLayer>();
 }
 
 }  // namespace test

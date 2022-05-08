@@ -14,7 +14,8 @@ enum class ClassVoxelType {
   kVariableCount,
   kUncertainty,
   kPanopticWeight,
-  kVariableBayesian
+  kVariableBayesian,
+  kVariableCountWeighted
 };
 
 /**

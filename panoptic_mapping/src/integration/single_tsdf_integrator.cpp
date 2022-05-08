@@ -12,7 +12,6 @@
 
 #include "panoptic_mapping/common/index_getter.h"
 
-
 namespace panoptic_mapping {
 
 bool voxel_update_requires_uncertainty(ClassVoxelType type) {
@@ -21,6 +20,9 @@ bool voxel_update_requires_uncertainty(ClassVoxelType type) {
       return true;
     }
     case ClassVoxelType::kVariableBayesian: {
+      return true;
+    }
+    case ClassVoxelType::kVariableCountWeighted: {
       return true;
     }
     default: {
@@ -227,15 +229,23 @@ bool SingleTsdfIntegrator::updateVoxel(
         if (class_voxel->getVoxelType() == ClassVoxelType::kUncertainty) {
           updateUncertaintyVoxel(interpolator, input,
                                  static_cast<UncertaintyVoxel*>(class_voxel));
-        } else if (class_voxel->getVoxelType() == ClassVoxelType::kVariableBayesian) {
+        } else if (class_voxel->getVoxelType() ==
+                       ClassVoxelType::kVariableBayesian ||
+                   class_voxel->getVoxelType() ==
+                       ClassVoxelType::kVariableCountWeighted) {
           float obs_prob =
               interpolator->interpolateUncertainty(input.uncertaintyImage());
           updateClassVoxel(interpolator, input, class_voxel, obs_prob);
         }
       } else if (class_voxel->getVoxelType() ==
                  ClassVoxelType::kPanopticWeight) {
-        // For the panoptic weight voxel, use TSDF update quadric weight
-        updateClassVoxel(interpolator, input, class_voxel, weight);
+        if (config_.use_uncertainty) {
+          float obs_prob =
+              interpolator->interpolateUncertainty(input.uncertaintyImage());
+          updateClassVoxel(interpolator, input, class_voxel, obs_prob);
+        } else {
+          updateClassVoxel(interpolator, input, class_voxel, weight);
+        }
       } else {
         updateClassVoxel(interpolator, input, class_voxel, 1.f);
       }

@@ -8,8 +8,10 @@
 #include "panoptic_mapping/map/classification/binary_count.h"
 #include "panoptic_mapping/map/classification/fixed_count.h"
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/panoptic_weight.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/classification/variable_count_weighted.h"
 
 namespace panoptic_mapping {
 namespace test {
@@ -98,6 +100,42 @@ inline bool checkVoxelEqual(const UncertaintyVoxel& v1,
   EXPECT_EQ(v1.uncertainty, v2.uncertainty);
   return v1.is_ground_truth == v2.is_ground_truth &&
          v1.uncertainty == v2.uncertainty;
+}
+
+inline bool checkVoxelEqual(const PanopticWeightVoxel& v1,
+                            const PanopticWeightVoxel& v2) {
+  EXPECT_EQ(v1.label, v2.label);
+  EXPECT_FLOAT_EQ(v1.weight, v2.weight);
+
+  return v1.label == v2.label && std::fabs(v1.weight - v2.weight) < kTol;
+}
+
+inline bool checkVoxelEqual(const VariableCountWeightedVoxel& v1,
+                            const VariableCountWeightedVoxel& v2) {
+  EXPECT_EQ(v1.weights.size(), v2.weights.size());
+  // NOTE(schmluk): We don't check the current index since this can be ambiguous
+  // for identical maximum counts.
+  EXPECT_FLOAT_EQ(v1.current_max_weight, v2.current_max_weight);
+  EXPECT_FLOAT_EQ(v1.weight_sum, v2.weight_sum);
+  for (const auto& id_count_pair : v1.weights) {
+    auto it = v2.weights.find(id_count_pair.first);
+    if (it == v2.weights.end()) {
+      // This is an ugly work around since FAIL() apparently returns void...
+      const std::string error = "ID " + std::to_string(id_count_pair.first) +
+                                " of v1 not found in v2.";
+      EXPECT_EQ(error, "");
+      return false;
+    }
+    EXPECT_EQ(id_count_pair.first, it->first);
+    EXPECT_EQ(id_count_pair.second, it->second);
+    if (id_count_pair.first != it->first ||
+        id_count_pair.second != it->second) {
+      return false;
+    }
+  }
+  return v1.weights.size() == v2.weights.size() &&
+         std::fabs(v1.current_max_weight - v2.current_max_weight) < kTol &&
+         std::fabs(v1.weight_sum - v2.weight_sum) < kTol;
 }
 
 template <typename T>

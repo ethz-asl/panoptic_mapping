@@ -14,7 +14,9 @@
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
 #include "panoptic_mapping/map/classification/panoptic_weight.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
+#include "panoptic_mapping/map/classification/variable_bayesian.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/classification/variable_count_weighted.h"
 
 namespace panoptic_mapping {
 
@@ -59,6 +61,14 @@ std::unique_ptr<ClassLayer> loadClassLayerFromStream(
       result = PanopticWeightLayer::loadFromStream(submap_proto, proto_file_ptr,
                                                    tmp_byte_offset_ptr);
       break;
+    }
+    case ClassVoxelType::kVariableBayesian: {
+      result = VariableBayesianLayer::loadFromStream(
+          submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
+    }
+    case ClassVoxelType::kVariableCountWeighted: {
+      result = VariableCountWeightedLayer::loadFromStream(
+          submap_proto, proto_file_ptr, tmp_byte_offset_ptr);
     }
   }
   if (!result) {

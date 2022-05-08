@@ -8,8 +8,10 @@
 #include "panoptic_mapping/map/classification/binary_count.h"
 #include "panoptic_mapping/map/classification/fixed_count.h"
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
+#include "panoptic_mapping/map/classification/panoptic_weight.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/classification/variable_count_weighted.h"
 
 namespace panoptic_mapping {
 namespace test {
@@ -91,6 +93,29 @@ void randomizeVoxel(UncertaintyVoxel* voxel) {
   randomizeVoxel(static_cast<FixedCountVoxel*>(voxel));
   voxel->is_ground_truth = getRandomInt(0, 1);
   voxel->uncertainty = getRandomReal<float>();
+}
+
+void randomizeVoxel(PanopticWeightVoxel* voxel) {
+  voxel->label = getRandomInt<size_t>(1, 20);
+  voxel->weight = getRandomReal<FloatingPoint>(-10.f, 10.f);
+}
+
+void randomizeVoxel(VariableCountWeightedVoxel* voxel) {
+  voxel->weights.clear();
+  for (size_t i = 0; i < getRandomInt<size_t>(0, kMaxNumClasses); ++i) {
+    voxel->weights[getRandomInt<int16_t>()] =
+        getRandomReal<FloatingPoint>(0.f, 10.f);
+  }
+  voxel->weight_sum = 0;
+  voxel->current_max_weight = 0;
+  voxel->current_index = -1;
+  for (const auto& id_count_pair : voxel->weights) {
+    voxel->weight_sum += id_count_pair.second;
+    if (id_count_pair.second > voxel->current_max_weight) {
+      voxel->current_max_weight = id_count_pair.second;
+      voxel->current_index = id_count_pair.first;
+    }
+  }
 }
 
 }  // namespace test
