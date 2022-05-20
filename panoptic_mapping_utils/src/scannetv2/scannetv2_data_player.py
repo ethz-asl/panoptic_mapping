@@ -231,7 +231,7 @@ class FrameDataLoader:
         depth = raw_depth.astype(np.float32) / _DEPTH_SHIFT
 
         segmentation_file_path = (
-            self.scan_dir_path / self.pano_seg_dir / "{:05d}.png".format(int(frame_id))
+            self.scan_dir_path / self.pano_seg_dir / "{:05d}_segmentation.png".format(int(frame_id))
         )
         segmentation = cv2.resize(
             np.array(PilImage.open(segmentation_file_path)),
