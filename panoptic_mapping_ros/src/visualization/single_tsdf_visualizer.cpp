@@ -196,20 +196,26 @@ std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
 
     case ColorMode::kUncertainty:
       return [this](const ClassVoxel& voxel) {
-        if (voxel.getVoxelType() != ClassVoxelType::kUncertainty) {
+        if (voxel.getVoxelType() == ClassVoxelType::kUncertainty) {
+          const UncertaintyVoxel& uncertainty_voxel =
+              static_cast<const UncertaintyVoxel&>(voxel);
+          if (uncertainty_voxel.is_ground_truth) {
+            return Color(0, 0, 255);
+          }
+          float probability = uncertainty_voxel.uncertainty;
+          // Well defined uncertanties should never be > 1.
+          if (probability > 1.f) {
+            probability = 1.f;
+          }
+          return redToGreenGradient(probability);
+        } else if (voxel.getVoxelType() == ClassVoxelType::kPanopticWeight ||
+                   voxel.getVoxelType() == ClassVoxelType::kUncertainty ||
+                   voxel.getVoxelType() == ClassVoxelType::kVariableBayesian) {
+            float probability = std::clamp(voxel.getBelongingProbability(), 0.f, 1.f);
+            return redToGreenGradient(probability);
+        } else {
           return kUnknownColor_;
         }
-        const UncertaintyVoxel& uncertainty_voxel =
-            static_cast<const UncertaintyVoxel&>(voxel);
-        if (uncertainty_voxel.is_ground_truth) {
-          return Color(0, 0, 255);
-        }
-        float probability = uncertainty_voxel.uncertainty;
-        // Well defined uncertanties should never be > 1.
-        if (probability > 1.f) {
-          probability = 1.f;
-        }
-        return redToGreenGradient(probability);
       };
 
     case ColorMode::kEntropy:

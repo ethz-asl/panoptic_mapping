@@ -12,6 +12,8 @@
 
 #include "panoptic_mapping/common/index_getter.h"
 
+#include "panoptic_mapping/map/classification/panoptic_weight.h"
+
 namespace panoptic_mapping {
 
 bool voxel_update_requires_uncertainty(ClassVoxelType type) {
@@ -239,12 +241,9 @@ bool SingleTsdfIntegrator::updateVoxel(
         }
       } else if (class_voxel->getVoxelType() ==
                  ClassVoxelType::kPanopticWeight) {
-        if (config_.use_uncertainty) {
-          float obs_prob =
-              interpolator->interpolateUncertainty(input.uncertaintyImage());
-          updateClassVoxel(interpolator, input, class_voxel, obs_prob);
-        } else {
-          updateClassVoxel(interpolator, input, class_voxel, weight);
+        updateClassVoxel(interpolator, input, class_voxel, weight);
+        if(PanopticWeightVoxel* v = dynamic_cast<PanopticWeightVoxel*>(class_voxel)) {
+          v->setTsdfWeight(voxel->weight);
         }
       } else {
         updateClassVoxel(interpolator, input, class_voxel, 1.f);

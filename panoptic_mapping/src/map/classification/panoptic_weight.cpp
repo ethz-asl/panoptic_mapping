@@ -17,29 +17,42 @@ bool PanopticWeightVoxel::isObserverd() const { return label != 0; }
 
 bool PanopticWeightVoxel::belongsToSubmap() const { return true; }
 
-float PanopticWeightVoxel::getBelongingProbability() const { return 0.5f; }
+float PanopticWeightVoxel::getBelongingProbability() const { return getProbability(label); }
 
 int PanopticWeightVoxel::getBelongingID() const { return label; }
 
-float PanopticWeightVoxel::getProbability(const int id) const { return 0.f; }
+void PanopticWeightVoxel::setTsdfWeight(float tsdf_weight) {
+  this->tsdf_weight = tsdf_weight;
+}
+
+float PanopticWeightVoxel::getProbability(const int id) const {
+  if (id == label) {
+    if(label == 0) {
+      return 0.f;
+    }
+    return 0.5 * (1 + label_weight / tsdf_weight);
+  } else {
+    return 0.5;
+  }
+}
 
 void PanopticWeightVoxel::incrementCount(const int id, const float weight) {
   // If the predicted id is the same as the current one increase the weight
   if (id == label) {
     // If label is unknown, no need to reinforce
     if (label == 0) {
-      this->weight = 0.f;
+      label_weight = 0.f;
     } else {
-      this->weight += weight;
+      label_weight += weight;
     }
   } else {
     // If the predicted id is different subtract the weight
-    if (this->weight < weight) {
+    if (label_weight < weight) {
       // If the weight becomes negative, swap the id to the predicted one
-      this->weight = weight - this->weight;
       label = id;
+      label_weight = weight - label_weight;
     } else {
-      this->weight -= weight;
+      label_weight -= weight;
     }
   }
 }
@@ -53,7 +66,8 @@ std::vector<uint32_t> PanopticWeightVoxel::serializeVoxelToInt() const {
   // Store the label followed by its weight
   std::vector<uint32_t> result;
   result.push_back(static_cast<uint32_t>(label));
-  result.push_back(int32FromX32<float>(weight));
+  result.push_back(int32FromX32<float>(label_weight));
+  result.push_back(int32FromX32<float>(tsdf_weight));
 
   return result;
 }
@@ -69,10 +83,11 @@ bool PanopticWeightVoxel::deseriliazeVoxelFromInt(
 
   // Load data
   label = static_cast<int>(data[*data_index]);
-  weight = x32FromInt32<float>(data[*data_index + 1]);
+  label_weight = x32FromInt32<float>(data[*data_index] + 1);
+  tsdf_weight = x32FromInt32<float>(data[*data_index] + 2);
 
   // Advance the index
-  *data_index += 2;
+  *data_index += 3;
 
   return true;
 }

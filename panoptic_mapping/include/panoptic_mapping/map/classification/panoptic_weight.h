@@ -26,9 +26,13 @@ struct PanopticWeightVoxel : public ClassVoxel {
   bool deseriliazeVoxelFromInt(const std::vector<uint32_t>& data,
                                size_t* data_index) override;
 
+
+  void setTsdfWeight(float tsdf_weight);                             
+
   // Data.
   int label = 0;
-  float weight = 0.f;
+  float label_weight = 0.f;
+  float tsdf_weight = 0.f;
 };
 
 class PanopticWeightLayer : public ClassLayerImpl<PanopticWeightVoxel> {
