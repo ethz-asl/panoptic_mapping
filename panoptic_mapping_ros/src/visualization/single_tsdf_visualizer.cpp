@@ -208,13 +208,10 @@ std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
             probability = 1.f;
           }
           return redToGreenGradient(probability);
-        } else if (voxel.getVoxelType() == ClassVoxelType::kPanopticWeight ||
-                   voxel.getVoxelType() == ClassVoxelType::kUncertainty ||
-                   voxel.getVoxelType() == ClassVoxelType::kVariableBayesian) {
-            float probability = std::clamp(voxel.getBelongingProbability(), 0.f, 1.f);
-            return redToGreenGradient(probability);
         } else {
-          return kUnknownColor_;
+          float probability =
+              std::clamp(voxel.getBelongingProbability(), 0.f, 1.f);
+          return redToGreenGradient(probability);
         }
       };
 
