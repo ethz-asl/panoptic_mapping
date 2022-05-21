@@ -22,6 +22,8 @@ void MapManager::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("prune_active_blocks_frequency", &prune_active_blocks_frequency);
   setupParam("activity_management_frequency", &activity_management_frequency);
+  setupParam("prune_tracked_instances_frequency",
+             &prune_tracked_instances_frequency);
   setupParam("change_detection_frequency", &change_detection_frequency);
   setupParam("merge_deactivated_submaps_if_possible",
              &merge_deactivated_submaps_if_possible);
@@ -61,6 +63,12 @@ MapManager::MapManager(const Config& config) : config_(config.checkValid()) {
     tickers_.emplace_back(
         config_.change_detection_frequency,
         [this](SubmapCollection* submaps) { performChangeDetection(submaps); });
+  }
+
+  if (config_.prune_tracked_instances_frequency > 0) {
+    tickers_.emplace_back(
+        config_.prune_tracked_instances_frequency,
+        [this](SubmapCollection* submaps) { pruneTrackedInstances(submaps); });
   }
 }
 
@@ -320,6 +328,68 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
        << "ms.";
   }
   return ss.str();
+}
+
+void MapManager::pruneTrackedInstances(SubmapCollection* submaps) {
+  CHECK_NOTNULL(submaps);
+
+  if (!submaps->isSingleTsdf()) {
+    LOG_IF(WARNING, config_.verbosity >= 4)
+        << "Tracked instances pruning is only done in single TSDF mode!";
+    return;
+  }
+
+  // Sanity check - there should be only one submap in single TSDF mode
+  if (submaps->size() != 1) {
+    return;
+  }
+
+  Submap& submap = *submaps->begin();
+
+  if (!submap.hasClassLayer()) {
+    LOG(WARNING) << "Tracked instance pruning requires class layer!";
+    return;
+  }
+  ClassLayer* class_layer = submap.getClassLayerPtr().get();
+
+  const int voxel_indices = std::pow(submap.getConfig().voxels_per_side, 3);
+  std::unordered_map<int, size_t> instance_id_to_voxel_count;
+
+  voxblox::BlockIndexList block_indices;
+  class_layer->getAllAllocatedBlocks(&block_indices);
+  for (const auto& block_index : block_indices) {
+    const ClassBlock::Ptr class_block =
+        class_layer->getBlockPtrByIndex(block_index);
+
+    // Check all voxels.
+    for (int voxel_index = 0; voxel_index < voxel_indices; ++voxel_index) {
+      const ClassVoxel& voxel = class_block->getVoxelByLinearIndex(voxel_index);
+      if (voxel.isObserverd() && voxel.getBelongingID() != 0) {
+        instance_id_to_voxel_count[voxel.getBelongingID()] += 1;
+      }
+    }
+  }
+
+  // TODO(albanesg): this threshold is hardcoded and should be configurable
+  size_t count = 0;
+  const size_t min_instance_voxel_count =
+      static_cast<int>(std::round(0.2 * submap.getConfig().voxel_size));
+  for (const auto& [instance_id, voxel_count] : instance_id_to_voxel_count) {
+    TrackedInstanceInfo* tracked_instance_info_ptr =
+        submaps->getTrackedInstanceInfoPtr(instance_id);
+    if (!tracked_instance_info_ptr) {
+      submaps->removeTrackedInstanceInfo(instance_id);
+      continue;
+    }
+
+    if (voxel_count < min_instance_voxel_count) {
+      submaps->removeTrackedInstanceInfo(instance_id);
+      count++;
+    }
+  }
+
+  LOG_IF(INFO, config_.verbosity >= 4)
+      << "Removed " << count << " tracked instances";
 }
 
 void MapManager::Ticker::tick(SubmapCollection* submaps) {

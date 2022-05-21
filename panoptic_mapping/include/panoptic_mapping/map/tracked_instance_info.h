@@ -22,13 +22,21 @@ struct TrackedInstanceInfo {
   enum class Type : int { kCount = 0, kUncertainty = 1, kBayesian = 2 };
 
   /**
-   * @brief
+   * @brief Increase updates stats and call updateImpl
    *
    * @param matched_segment_info
    * @param matching_score
    */
   virtual void update(const SegmentInfo& matched_segment_info,
-                      float matching_score) = 0;
+                      float matching_score) final {
+    setWasTracked(true);
+
+    updateImpl(matched_segment_info, matching_score);
+  }
+
+  virtual void setWasTracked(bool was_tracked) {
+    this->was_tracked = was_tracked;
+  }
 
   virtual Type getType() const = 0;
 
@@ -41,6 +49,13 @@ struct TrackedInstanceInfo {
 
   static std::shared_ptr<TrackedInstanceInfo> make_tracked_instance_info(
       Type type);
+
+ protected:
+  virtual void updateImpl(const SegmentInfo& matched_segment_info,
+                          float matching_score) = 0;
+
+ private:
+  bool was_tracked = false;
 };
 
 /**
@@ -48,17 +63,19 @@ struct TrackedInstanceInfo {
  *
  */
 struct CountTrackedInstanceInfo : public TrackedInstanceInfo {
-  int current_index = 0;
-  ClassificationCount total_count = 0;
-  ClassificationCount current_count = 0;
   std::unordered_map<int, ClassificationCount> class_counts;
-
-  void update(const SegmentInfo& matched_segment_info,
-              float matching_score) override;
 
   Type getType() const override { return Type::kCount; }
 
   int getClassID() const override { return current_index; }
+
+  int current_index = 0;
+  ClassificationCount total_count = 0;
+  ClassificationCount current_count = 0;
+
+ protected:
+  void updateImpl(const SegmentInfo& matched_segment_info,
+                  float matching_score) override;
 };
 
 /**
@@ -68,12 +85,13 @@ struct CountTrackedInstanceInfo : public TrackedInstanceInfo {
 struct UncertaintyTrackedInstanceInfo : public TrackedInstanceInfo {
   UncertaintyTrackedInstanceInfo() {}
 
-  void update(const SegmentInfo& matched_segment_info,
-              float matching_score) override;
-
   Type getType() const override { return Type::kUncertainty; }
 
   int getClassID() const override { return current_index; }
+
+ protected:
+  void updateImpl(const SegmentInfo& matched_segment_info,
+                  float matching_score) override;
 
  private:
   std::unordered_map<int, std::pair<double, double>> class_probs;
@@ -87,9 +105,6 @@ struct BayesianTrackedInstanceInfo : public TrackedInstanceInfo {
                     1.f / (kNumClasses + 1)  // Initialize as uniform
         ) {}
 
-  void update(const SegmentInfo& matched_segment_info,
-              float matching_score) override;
-
   Type getType() const override { return Type::kBayesian; }
 
   int getClassID() const override {
@@ -98,6 +113,10 @@ struct BayesianTrackedInstanceInfo : public TrackedInstanceInfo {
   }
 
   static void setNumClasses(size_t num_classes);
+
+ protected:
+  void updateImpl(const SegmentInfo& matched_segment_info,
+                  float matching_score) override;
 
  private:
   static size_t kNumClasses;

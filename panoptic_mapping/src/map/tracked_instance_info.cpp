@@ -2,7 +2,7 @@
 
 namespace panoptic_mapping {
 
-void CountTrackedInstanceInfo::update(const SegmentInfo& matched_segment_info,
+void CountTrackedInstanceInfo::updateImpl(const SegmentInfo& matched_segment_info,
                                       float matching_score) {
   ClassificationCount new_count =
       ++(class_counts[matched_segment_info.class_id]);
@@ -15,7 +15,7 @@ void CountTrackedInstanceInfo::update(const SegmentInfo& matched_segment_info,
   ++total_count;
 }
 
-void UncertaintyTrackedInstanceInfo::update(
+void UncertaintyTrackedInstanceInfo::updateImpl(
     const SegmentInfo& matched_segment_info, float matching_score) {
   double numerator_term =
       matched_segment_info.class_score * matched_segment_info.instance_score;
@@ -46,7 +46,7 @@ void BayesianTrackedInstanceInfo::setNumClasses(size_t num_classes) {
   kNumClasses = num_classes;
 }
 
-void BayesianTrackedInstanceInfo::update(
+void BayesianTrackedInstanceInfo::updateImpl(
     const SegmentInfo& matched_segment_info, float matching_score) {
   LOG_IF(FATAL, matched_segment_info.class_probs.size() != class_probs.size())
       << "The shape of the class distribution does not match!";

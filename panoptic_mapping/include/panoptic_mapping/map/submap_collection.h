@@ -103,6 +103,16 @@ class SubmapCollection {
 
   bool isSingleTsdf() const { return is_single_tsdf_; }
 
+  TrackedInstanceInfo* getTrackedInstanceInfoPtr(
+      int instance_id) {
+    auto it = tracked_instance_info_.find(instance_id);
+    if (it == tracked_instance_info_.end()) {
+      return nullptr;
+    }
+
+    return it->second.get();
+  }
+
   const std::unordered_map<int, std::shared_ptr<TrackedInstanceInfo>>&
   getTrackedInstancesInfoTable() const {
     return tracked_instance_info_;
@@ -131,6 +141,8 @@ class SubmapCollection {
   void updateTrackedInstanceInfo(int instance_id,
                                  const SegmentInfo& matched_segment_info,
                                  float matching_score);
+
+  void removeTrackedInstanceInfo(int instance_id);
 
   // Creates a deep copy of all submaps, with new submap and instance id
   // managers. The submap ids may diverge when new submaps are added after

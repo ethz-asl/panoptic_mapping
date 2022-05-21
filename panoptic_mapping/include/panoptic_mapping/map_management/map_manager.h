@@ -30,6 +30,9 @@ class MapManager : public MapManagerBase {
     int change_detection_frequency = 0;
     int activity_management_frequency = 0;
 
+    // Prune tracked instances in single TSDF mode with class layer
+    int prune_tracked_instances_frequency = 0;
+
     // If true, submaps that are deactivated are checked for alignment with
     // inactive maps and merged together if a match is found.
     bool merge_deactivated_submaps_if_possible = false;
@@ -38,6 +41,7 @@ class MapManager : public MapManagerBase {
     // discraded afterwards when submaps are deactivated. This saves memory at
     // the loss of classification information.
     bool apply_class_layer_when_deactivating_submaps = false;
+
 
     // Member configs.
     TsdfRegistrator::Config tsdf_registrator_config;
@@ -62,6 +66,7 @@ class MapManager : public MapManagerBase {
   void pruneActiveBlocks(SubmapCollection* submaps);
   void manageSubmapActivity(SubmapCollection* submaps);
   void performChangeDetection(SubmapCollection* submaps);
+  void pruneTrackedInstances(SubmapCollection* submaps);
 
   // Tools.
   bool mergeSubmapIfPossible(SubmapCollection* submaps, int submap_id,

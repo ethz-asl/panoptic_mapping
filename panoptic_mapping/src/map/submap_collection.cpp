@@ -120,6 +120,13 @@ void SubmapCollection::updateTrackedInstanceInfo(
   }
 }
 
+void SubmapCollection::removeTrackedInstanceInfo(int instance_id) {
+  auto it = tracked_instance_info_.find(instance_id);
+  if (it != tracked_instance_info_.end()) {
+    tracked_instance_info_.erase(it);
+  }
+}
+
 // Save load functionality was heavily adapted from cblox.
 bool SubmapCollection::saveToFile(const std::string& file_path) const {
   CHECK(!file_path.empty());
