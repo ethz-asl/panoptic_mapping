@@ -46,8 +46,6 @@ cs_add_library(${PROJECT_NAME}
         src/labels/csv_label_handler.cpp
         src/tracking/tracking_info.cpp
         src/tracking/single_tsdf_tracker.cpp
-        src/tracking/single_tsdf_panoptic_id_tracker.cpp
-        src/tracking/single_tsdf_ground_truth_id_tracker.cpp
         src/tracking/ground_truth_id_tracker.cpp
         src/tracking/projective_id_tracker.cpp
         src/tracking/detectron_id_tracker.cpp
