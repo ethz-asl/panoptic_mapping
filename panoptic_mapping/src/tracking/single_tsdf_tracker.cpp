@@ -48,9 +48,15 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
     setup(submaps);
   }
 
-  if (config_.use_detectron) {
-    parseDetectronClasses(input);
+  // Check if we should use the ClassID labels
+  if (config_.use_instance_classification) {
+    parseInstanceToClasses(input);
   }
+
+  // // The id_image is only written with classIDs instead
+  // if (config_.use_detectron) {
+  //   parseDetectronClasses(input);
+  // }
 }
 
 void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
@@ -66,6 +72,27 @@ void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
       // First time we encounter this ID, write to the map.
       const int class_id = input->detectronLabels().at(*it).category_id;
       detectron_to_class_id[*it] = class_id;
+      *it = class_id;
+    } else {
+      *it = class_it->second;
+    }
+  }
+}
+
+void SingleTSDFTracker::parseInstanceToClasses(InputData* input) {
+  std::unordered_map<int, int> instance_to_class_id;
+  for (auto it = input->idImagePtr()->begin<int>();
+       it != input->idImagePtr()->end<int>(); ++it) {
+    if (*it == 0) {
+      // Zero indicates unknown class / no prediction
+      continue;
+    }
+    auto class_it = instance_to_class_id.find(*it);
+    if (class_it == instance_to_class_id.end()) {
+      // First time we encounter this ID, write to the map.
+      const int class_id = globals_->labelHandler()->getClassID(*it);
+      std::cout << "LOOK HERE class_id from labels " << class_id << std::endl;
+      instance_to_class_id[*it] = class_id;
       *it = class_id;
     } else {
       *it = class_it->second;

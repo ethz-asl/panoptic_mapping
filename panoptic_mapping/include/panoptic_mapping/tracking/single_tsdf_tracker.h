@@ -48,6 +48,8 @@ class SingleTSDFTracker : public IDTrackerBase {
 
   void parseDetectronClasses(InputData* input);
 
+  void parseInstanceToClasses(InputData* input);
+
  private:
   static config_utilities::Factory::RegistrationRos<
       IDTrackerBase, SingleTSDFTracker, std::shared_ptr<Globals>>
