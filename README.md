@@ -24,18 +24,21 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 **Other**
 * [Contributing](#Contributing)
 
-
 # Paper
 If you find this package useful for your research, please consider citing our paper:
 
-* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" in *IEEE International Conference on Robotics and Automation (ICRA)*, 2022.
-  \[[ArXiv](https://arxiv.org/abs/2109.10165) | [Video](https://www.youtube.com/watch?v=A7o2Vy7_TV4)\]
+* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" in *IEEE International Conference on Robotics and Automation (ICRA)*, pp. 8018-8024,2022.
+  \[ [IEEE](https://ieeexplore.ieee.org/document/9811877) | [ArXiv](https://arxiv.org/abs/2109.10165) | [Video](https://www.youtube.com/watch?v=A7o2Vy7_TV4) \]
   ```bibtex
   @inproceedings{schmid2022panoptic,
     title={Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency},
     author={Schmid, Lukas and Delmerico, Jeffrey and Sch{\"o}nberger, Johannes and Nieto, Juan and Pollefeys, Marc and Siegwart, Roland and Cadena, Cesar},
     booktitle={2022 IEEE International Conference on Robotics and Automation (ICRA)},
-    year={2022}
+    year={2022},
+    volume={},
+    number={},
+    pages={8018-8024},
+    doi={10.1109/ICRA46639.2022.9811877}}
   }
   ```
   
