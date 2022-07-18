@@ -27,7 +27,7 @@ Multi-resolution 3D Reconstruction, active and inactive panoptic submaps for tem
 # Paper
 If you find this package useful for your research, please consider citing our paper:
 
-* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" in *IEEE International Conference on Robotics and Automation (ICRA)*, pp. 8018-8024,2022.
+* Lukas Schmid, Jeffrey Delmerico, Johannes Schönberger, Juan Nieto, Marc Pollefeys, Roland Siegwart, and Cesar Cadena. "**Panoptic Multi-TSDFs: a Flexible Representation for Online Multi-resolution Volumetric Mapping and Long-term Dynamic Scene Consistency**" in *IEEE International Conference on Robotics and Automation (ICRA)*, pp. 8018-8024, 2022.
   \[ [IEEE](https://ieeexplore.ieee.org/document/9811877) | [ArXiv](https://arxiv.org/abs/2109.10165) | [Video](https://www.youtube.com/watch?v=A7o2Vy7_TV4) \]
   ```bibtex
   @inproceedings{schmid2022panoptic,
