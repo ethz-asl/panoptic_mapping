@@ -1,0 +1,44 @@
+<launch>
+<!-- ============ Arguments ============ -->
+  <arg name="scene"/>
+  <arg name="model"/>
+  <arg name="data_path" default="/media/blumh/data/scannet/valscans/$(arg scene)"/>
+  <arg name="inference_path" default="/media/blumh/data/clustering_outputs/scannet_inference/$(arg scene)/$(arg model)"/>
+  <arg name="mapname" default="pred" />
+  <arg name="wait" default="5"/>
+  <arg name="namespace" default="data"/>
+  <arg name="global_frame_name" default="world"/>
+  <arg name="sensor_frame_name" default="depthcam"/>
+
+
+  <!-- Mapper -->
+  <node name="panoptic_mapper" pkg="panoptic_mapping_ros" type="panoptic_mapper_node" output="screen" required="true">
+    <!-- Config -->
+    <rosparam file="$(find panoptic_mapping_ros)/config/mapper/scannetv2_single_tsdf.yaml"/>
+    <param name="save_map_path_when_finished" value=""/>
+
+    <!-- Input -->
+    <remap from="color_image_in" to="$(arg namespace)/color_image"/>
+    <remap from="depth_image_in" to="$(arg namespace)/depth_image"/>
+    <remap from="segmentation_image_in" to="$(arg namespace)/segmentation_image"/>
+  </node>
+
+  <!-- Map loader -->
+  <node name="map_loader" pkg="panoptic_mapping_utils" type="map_loader.py" output="screen">
+     <param name="path" value="$(arg inference_path)/$(arg mapname).panmap" />
+     <param name="srv_name" value="/panoptic_mapper/load_map" />
+     <param name="delay" value="0.1" />
+  </node>
+
+   <node pkg="panoptic_mapping_utils"
+         type="mesh_saver"
+         name="mesh_saver"
+         output="screen"
+         required="true">
+    <param name="topic" value="/panoptic_mapper/visualization/submaps/mesh" />
+  </node>
+
+  <!-- RVIZ Visualization-->
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find panoptic_mapping_ros)/config/rviz/devel.rviz" output="screen"/>
+
+</launch>
