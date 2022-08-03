@@ -272,7 +272,97 @@ std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
     default:
       return [this](const ClassVoxel& voxel) {
         // This implies the visualization mode is instances or classes.
-        return id_color_map_.colorLookup(voxel.getBelongingID());
+        auto id = voxel.getBelongingID();
+        switch (id) {
+          case 0:
+            // wall
+            return Color(174, 199, 232);
+          case 1:
+            // floor
+            return Color(152, 223, 138);
+          case 2:
+            // cabinet
+            return Color(31, 119, 180);
+          case 3:
+            // bed
+            return Color(255, 187, 120);
+          case 4:
+            // chair
+            return Color(188, 189, 34);
+          case 5:
+            // sofa
+            return Color(140, 86, 75);
+          case 6:
+            return Color(255, 152, 150);
+          case 7:
+            return Color(214, 39, 40);
+          case 8:  // window
+            return Color(197, 176, 213);
+          case 9:
+            return Color(148, 103, 189);
+          case 10:
+            return Color(196, 156, 148);
+          case 11:
+            return Color(23, 190, 207);
+          case 12:
+            return Color(178, 76, 76);
+          case 13:  // desk
+            return Color(247, 182, 210);
+          case 14:
+            return Color(66, 188, 102);
+          case 15:
+            return Color(219, 219, 141);
+          case 16:
+            return Color(140, 57, 197);
+          case 17:
+            return Color(202, 185, 52);
+          case 18:
+            return Color(51, 176, 203);
+          case 19:
+            return Color(200, 54, 131);
+          case 20:
+            return Color(92, 193, 61);
+          case 21:
+            return Color(78, 71, 183);
+          case 22:
+            return Color(172, 114, 82);
+          case 23:  // refridgerator
+            return Color(255, 127, 14);
+          case 24:
+            return Color(91, 163, 138);
+          case 25:
+            return Color(153, 98, 156);
+          case 26:
+            return Color(140, 153, 101);
+          case 27:
+            return Color(158, 218, 229);
+          case 28:
+            return Color(100, 125, 154);
+          case 29:
+            return Color(178, 127, 135);
+          case 30:
+            return Color(120, 185, 128);
+          case 31:
+            return Color(146, 111, 194);
+          case 32:
+            return Color(44, 160, 44);
+          case 33:
+            return Color(112, 128, 144);
+          case 34:
+            return Color(96, 207, 209);
+          case 35:
+            return Color(227, 119, 194);
+          case 36:
+            return Color(213, 92, 176);
+          case 37:
+            return Color(94, 106, 211);
+          case 38:
+            return Color(82, 84, 163);
+          case 39:
+            return Color(100, 85, 144);
+          default:
+            return id_color_map_.colorLookup(voxel.getBelongingID());
+        }
       };
   }
 }
@@ -315,7 +405,7 @@ void SingleTsdfVisualizer::colorMeshBlockFromScore(
                              (config_.max_score - config_.min_score);
     normalised_value = std::min(normalised_value, 1.f);
     normalised_value = std::max(normalised_value, 0.f);
-    const Color color = redToGreenGradient(normalised_value);
+    const Color color = redToGreenGradient(1 - normalised_value);
     mesh_block->r[i] = color.r;
     mesh_block->g[i] = color.g;
     mesh_block->b[i] = color.b;

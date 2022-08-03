@@ -65,8 +65,8 @@ visualization:
     visualize_bounding_volumes: true
     include_free_space: true
     mesh_min_weight: 0.000001
-    min_score: -10.0
-    max_score: 6.0
+    min_score: -6.0
+    max_score: -1.0
 
   planning:
     verbosity: 1
