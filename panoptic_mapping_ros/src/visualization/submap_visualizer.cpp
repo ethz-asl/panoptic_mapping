@@ -33,6 +33,7 @@ void SubmapVisualizer::Config::setupParamsAndPrinting() {
   setupParam("visualize_free_space", &visualize_free_space);
   setupParam("visualize_bounding_volumes", &visualize_bounding_volumes);
   setupParam("include_free_space", &include_free_space);
+  setupParam("visualize_sparse_feature_points", &visualize_sparse_feature_points); // JULIA
 }
 
 void SubmapVisualizer::Config::printFields() const {
@@ -73,6 +74,11 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
     bounding_volume_pub_ =
         nh_.advertise<visualization_msgs::MarkerArray>("bounding_volumes", 100);
   }
+  // JULIA
+  if (config_.visualize_sparse_feature_points) {
+    feature_points_pub_ =
+        nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("sparse_feature_points", 100); // JULIA TODO: need to add subscriber on the other end.
+  }
 }
 
 void SubmapVisualizer::reset() {
@@ -103,6 +109,7 @@ void SubmapVisualizer::visualizeAll(SubmapCollection* submaps) {
   visualizeTsdfBlocks(*submaps);
   visualizeFreeSpace(*submaps);
   visualizeBoundingVolume(*submaps);
+  visualizeSparseFeaturePoints(*submaps); // JULIA
   vis_infos_are_updated_ = false;
 }
 
@@ -128,6 +135,17 @@ void SubmapVisualizer::visualizeFreeSpace(const SubmapCollection& submaps) {
     pcl::PointCloud<pcl::PointXYZI> msg = generateFreeSpaceMsg(submaps);
     msg.header.frame_id = global_frame_name_;
     freespace_pub_.publish(msg);
+    std::cout << "Published Free Space Tsdf Msg" << std::endl; // JULIA
+  }
+}
+
+// JULIA
+void SubmapVisualizer::visualizeSparseFeaturePoints(const SubmapCollection& submaps) {
+  if (config_.visualize_sparse_feature_points && feature_points_pub_.getNumSubscribers() > 0) {
+    pcl::PointCloud<pcl::PointXYZI> msg = generateSparseFeaturePointsMsg(submaps);
+    msg.header.frame_id = global_frame_name_;
+    feature_points_pub_.publish(msg);
+    std::cout << "Published Sparse Feature Points Msg" << std::endl; // JULIA
   }
 }
 
@@ -389,6 +407,24 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateFreeSpaceMsg(
     createDistancePointcloudFromTsdfLayer(
         submaps.getSubmap(free_space_id).getTsdfLayer(), &result);
   }
+  return result;
+}
+
+// JULIA
+pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateSparseFeaturePointsMsg(
+    const SubmapCollection& submaps) {
+  pcl::PointCloud<pcl::PointXYZI> result;
+  pcl::PointCloud<pcl::PointXYZI>::Ptr resultPtr;
+
+  // Get the point cloud, intensity hard coded to high
+  const int free_space_id = submaps.getActiveFreeSpaceSubmapID();
+  if (submaps.submapIdExists(free_space_id)) {
+    resultPtr = submaps.getSubmap(free_space_id).getSparseFeaturePointsPtr();
+  }
+  std::cout << "Generated Sparse Feature Points Msg" << std::endl;
+  std::cout << resultPtr->size() << " HAS THIS MANY POINTS " << std::endl;
+
+  result = *resultPtr;
   return result;
 }
 

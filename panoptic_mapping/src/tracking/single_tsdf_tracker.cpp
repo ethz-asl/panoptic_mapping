@@ -53,10 +53,10 @@ void SingleTSDFTracker::processInput(SubmapCollection* submaps,
     parseInstanceToClasses(input);
   }
 
-  // // The id_image is only written with classIDs instead
-  // if (config_.use_detectron) {
-  //   parseDetectronClasses(input);
-  // }
+  // The id_image is only written with classIDs instead
+  if (config_.use_detectron) {
+    parseDetectronClasses(input);
+  }
 }
 
 void SingleTSDFTracker::parseDetectronClasses(InputData* input) {
@@ -90,8 +90,9 @@ void SingleTSDFTracker::parseInstanceToClasses(InputData* input) {
     auto class_it = instance_to_class_id.find(*it);
     if (class_it == instance_to_class_id.end()) {
       // First time we encounter this ID, write to the map.
-      const int class_id = globals_->labelHandler()->getClassID(*it);
-      std::cout << "LOOK HERE class_id from labels " << class_id << std::endl;
+      // const int class_id = globals_->labelHandler()->getClassID(*it);
+      const int class_id = globals_->labelHandler()->getColor(*it).r; // hijacking the red channel
+      // std::cout << "LOOK HERE parseInstanceToClasses" << class_id << std::endl;
       instance_to_class_id[*it] = class_id;
       *it = class_id;
     } else {

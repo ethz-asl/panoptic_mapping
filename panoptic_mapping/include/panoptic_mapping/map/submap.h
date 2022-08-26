@@ -22,6 +22,9 @@
 #include "panoptic_mapping/map/submap_bounding_volume.h"
 #include "panoptic_mapping/map/submap_id.h"
 
+#include <pcl/point_types.h>
+#include <pcl_ros/point_cloud.h> // JULIA
+
 namespace panoptic_mapping {
 
 class LayerManipulator;
@@ -90,6 +93,15 @@ class Submap {
     return bounding_volume_;
   }
 
+  // Sparse Feature Points
+  // const pcl::PointCloud<pcl::PointXYZI>& getSparseFeaturePoints() const { return sparse_feature_points_; }; // JULIA
+  const pcl::PointCloud<pcl::PointXYZI>::Ptr& getSparseFeaturePointsPtr() const {
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr ptr(&sparse_feature_points_);
+    // std::cout << "from getSparseFeaturePointsPtr(), ptr has this many points " << ptr->size() << std::endl;
+    // return ptr;
+    return sparse_feature_points_ptr_;
+  }
+
   // Modifying accessors.
   std::shared_ptr<TsdfLayer>& getTsdfLayerPtr() { return tsdf_layer_; }
   std::shared_ptr<ClassLayer>& getClassLayerPtr() { return class_layer_; }
@@ -109,6 +121,11 @@ class Submap {
   void setChangeState(ChangeState state) { change_state_ = state; }
   void setIsActive(bool is_active) { is_active_ = is_active; }
   void setWasTracked(bool was_tracked) { was_tracked_ = was_tracked; }
+
+  // // Sparse Feature Points
+  // void setSparseFeaturePoints(const pcl::PointCloud<pcl::PointXYZI>::Ptr& pointCloudPtr) { // JULIA
+  //   sparse_feature_points_ = pointCloudPtr; 
+  // } 
 
   // Processing.
   /**
@@ -252,6 +269,10 @@ class Submap {
 
   // Processing.
   std::unique_ptr<MeshIntegrator> mesh_integrator_;
+
+  // Sparse Features
+  // pcl::PointCloud<pcl::PointXYZI> sparse_feature_points_; // JULIA: initialized in initialize()
+  pcl::PointCloud<pcl::PointXYZI>::Ptr sparse_feature_points_ptr_; // JULIA
 };
 
 }  // namespace panoptic_mapping

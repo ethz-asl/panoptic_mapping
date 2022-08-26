@@ -82,6 +82,9 @@ void Submap::initialize() {
     has_class_layer_ = true;
   }
 
+  // JULIA: Make the sparse_feature_points_ initializations
+  sparse_feature_points_ptr_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+
   // Setup tools.
   mesh_integrator_ = std::make_unique<MeshIntegrator>(
       config_.mesh, tsdf_layer_, mesh_layer_, class_layer_,

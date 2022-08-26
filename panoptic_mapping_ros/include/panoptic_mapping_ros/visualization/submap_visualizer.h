@@ -32,6 +32,7 @@ class SubmapVisualizer {
     bool visualize_free_space = true;
     bool visualize_bounding_volumes = true;
     bool include_free_space = false;
+    bool visualize_sparse_feature_points = true; // JULIA
     std::string ros_namespace;
 
     Config() { setConfigName("SubmapVisualizer"); }
@@ -86,6 +87,8 @@ class SubmapVisualizer {
       const SubmapCollection& submaps);
   virtual visualization_msgs::MarkerArray generateBoundingVolumeMsgs(
       const SubmapCollection& submaps);
+  virtual pcl::PointCloud<pcl::PointXYZI> generateSparseFeaturePointsMsg( // JULIA
+      const SubmapCollection& submaps);
 
   // Publish visualization requests.
   virtual void visualizeAll(SubmapCollection* submaps);
@@ -93,6 +96,7 @@ class SubmapVisualizer {
   virtual void visualizeTsdfBlocks(const SubmapCollection& submaps);
   virtual void visualizeFreeSpace(const SubmapCollection& submaps);
   virtual void visualizeBoundingVolume(const SubmapCollection& submaps);
+  virtual void visualizeSparseFeaturePoints(const SubmapCollection& submaps); // JULIA
   virtual void publishTfTransforms(const SubmapCollection& submaps);
 
   // Interaction.
@@ -153,6 +157,7 @@ class SubmapVisualizer {
   ros::Publisher mesh_pub_;
   ros::Publisher tsdf_blocks_pub_;
   ros::Publisher bounding_volume_pub_;
+  ros::Publisher feature_points_pub_; // JULIA
 
  private:
   const Config config_;
