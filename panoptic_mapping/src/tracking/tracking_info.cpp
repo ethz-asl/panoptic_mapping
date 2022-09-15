@@ -34,7 +34,7 @@ TrackingInfo::TrackingInfo(int submap_id, Camera::Config camera)
 void TrackingInfo::insertRenderedPoint(int u, int v, int size_x, int size_y) {
   // Mark the left side of the maximum vertex size for later evaluation.
   const int u_min = std::max(0, u - size_x);
-  const int width = u + 2 * size_x + 1 - u_min;
+  const int width = u - u_min + size_x + 1;  // w=2*size_x+1, cropped to left.
   const int v_max = std::min(camera_.height - 1, v + size_y);
   const int v_min = std::max(0, v - size_y);
   for (int v2 = v_min; v2 <= v_max; ++v2) {
