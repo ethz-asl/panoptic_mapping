@@ -77,7 +77,7 @@ SubmapVisualizer::SubmapVisualizer(const Config& config,
   // JULIA
   if (config_.visualize_sparse_feature_points) {
     feature_points_pub_ =
-        nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("sparse_feature_points", 100); // JULIA TODO: need to add subscriber on the other end.
+        nh_.advertise<pcl::PointCloud<pcl::PointXYZI>>("sparse_feature_points", 1000000); // JULIA TODO: need to add subscriber on the other end.
   }
 }
 
@@ -135,7 +135,6 @@ void SubmapVisualizer::visualizeFreeSpace(const SubmapCollection& submaps) {
     pcl::PointCloud<pcl::PointXYZI> msg = generateFreeSpaceMsg(submaps);
     msg.header.frame_id = global_frame_name_;
     freespace_pub_.publish(msg);
-    std::cout << "Published Free Space Tsdf Msg" << std::endl; // JULIA
   }
 }
 
@@ -145,7 +144,6 @@ void SubmapVisualizer::visualizeSparseFeaturePoints(const SubmapCollection& subm
     pcl::PointCloud<pcl::PointXYZI> msg = generateSparseFeaturePointsMsg(submaps);
     msg.header.frame_id = global_frame_name_;
     feature_points_pub_.publish(msg);
-    std::cout << "Published Sparse Feature Points Msg" << std::endl; // JULIA
   }
 }
 
@@ -421,8 +419,6 @@ pcl::PointCloud<pcl::PointXYZI> SubmapVisualizer::generateSparseFeaturePointsMsg
   if (submaps.submapIdExists(free_space_id)) {
     resultPtr = submaps.getSubmap(free_space_id).getSparseFeaturePointsPtr();
   }
-  std::cout << "Generated Sparse Feature Points Msg" << std::endl;
-  std::cout << resultPtr->size() << " HAS THIS MANY POINTS " << std::endl;
 
   result = *resultPtr;
   return result;
