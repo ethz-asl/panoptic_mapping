@@ -92,7 +92,6 @@ void SingleTSDFTracker::parseInstanceToClasses(InputData* input) {
       // First time we encounter this ID, write to the map.
       // const int class_id = globals_->labelHandler()->getClassID(*it);
       const int class_id = globals_->labelHandler()->getColor(*it).r; // hijacking the red channel
-      // std::cout << "LOOK HERE parseInstanceToClasses" << class_id << std::endl;
       instance_to_class_id[*it] = class_id;
       *it = class_id;
     } else {
