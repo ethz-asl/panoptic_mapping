@@ -49,6 +49,8 @@ cs_add_library(${PROJECT_NAME}
         src/tracking/ground_truth_id_tracker.cpp
         src/tracking/projective_id_tracker.cpp
         src/tracking/detectron_id_tracker.cpp
+        src/tracking/single_tsdf_panoptic_id_tracker.cpp
+        src/tracking/single_tsdf_ground_truth_id_tracker.cpp
         src/submap_allocation/null_submap_allocator.cpp
         src/submap_allocation/semantic_submap_allocator.cpp
         src/submap_allocation/monolithic_freespace_allocator.cpp
