@@ -38,6 +38,7 @@
 - git:
     local-name: point_cloud_io
     uri: git@github.com:ANYbotics/point_cloud_io.git
+    version: 333e1442a7cf210b7e5e88c0a396a5da3eed7cfa
 
 # Package Dependencies. Notice that voxblox requires a special branch.
 - git:
