@@ -251,8 +251,6 @@ float ProjectiveIntegrator::computeWeight(const Point& p_C,
     weight /= std::pow(p_C.z(), 2.f);
   }
 
-  // if 0 < abs(sdf) < voxel_siye: hoeheres weight
-
   // Apply weight drop-off if appropriate.
   if (config_.use_weight_dropoff) {
     const float dropoff_epsilon =

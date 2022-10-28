@@ -80,8 +80,7 @@ void SingleTSDFTracker::setup(SubmapCollection* submaps) {
         map.getConfig().voxels_per_side != config_.submap.voxels_per_side ||
         map.getConfig().truncation_distance !=
             config_.submap.truncation_distance ||
-        map.getConfig().useClassLayer() != config_.submap.useClassLayer() ||
-        map.getConfig().useScoreLayer() != config_.submap.useScoreLayer()) {
+        map.getConfig().useClassLayer() != config_.submap.useClassLayer()) {
       LOG(WARNING)
           << "Loaded submap config does not match the specified config.";
     }
