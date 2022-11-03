@@ -178,7 +178,7 @@ class PanopticMapper {
 
   // Tools.
   std::shared_ptr<Globals> globals_;
-  std::unique_ptr<InputSynchronizer> input_synchronizer_;
+  std::unique_ptr<InputQueueBase> input_queue_;
   std::unique_ptr<DataWriterBase> data_logger_;
   std::shared_ptr<PlanningInterface> planning_interface_;
 

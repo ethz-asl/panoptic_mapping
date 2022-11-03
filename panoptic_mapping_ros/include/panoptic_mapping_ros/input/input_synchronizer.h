@@ -18,6 +18,7 @@
 #include <tf/transform_listener.h>
 
 #include "panoptic_mapping_ros/input/input_subscriber.h"
+#include "panoptic_mapping_ros/input/input_queue.h"
 
 namespace panoptic_mapping {
 
@@ -25,7 +26,7 @@ namespace panoptic_mapping {
  * @brief This class subscribes to all required input types via ROS and
  * synchronizes them into an input data package to be processed.
  */
-class InputSynchronizer : public InputSynchronizerBase {
+class InputSynchronizer : public InputSynchronizerBase, public InputQueueBase {
  public:
   struct Config : public config_utilities::Config<Config> {
     int verbosity = 2;
@@ -61,7 +62,7 @@ class InputSynchronizer : public InputSynchronizerBase {
   /**
    * @brief Check whether there is any input data ready to be retrieved.
    */
-  bool hasInputData() const { return data_is_ready_; }
+  bool hasInputData() { return data_is_ready_; }
 
   /**
    * @brief Extract the most recent input data from the queue. The data will be

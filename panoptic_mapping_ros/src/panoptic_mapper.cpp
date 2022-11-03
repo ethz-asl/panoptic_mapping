@@ -48,6 +48,7 @@ void PanopticMapper::Config::setupParamsAndPrinting() {
              &use_threadsafe_submap_collection);
   setupParam("ros_spinner_threads", &ros_spinner_threads);
   setupParam("check_input_interval", &check_input_interval, "s");
+  setupParam("get_input_from_service", &get_input_from_service);
   setupParam("load_submaps_conservative", &load_submaps_conservative);
   setupParam("loaded_freespace_stays_active", &loaded_freespace_stays_active);
   setupParam("shutdown_when_finished", &shutdown_when_finished);
@@ -158,12 +159,18 @@ void PanopticMapper::setupMembers() {
       requested_inputs.find(InputData::InputType::kValidityImage) !=
       requested_inputs.end();
 
-  // Setup the input synchronizer.
-  input_synchronizer_ = std::make_unique<InputSynchronizer>(
-      config_utilities::getConfigFromRos<InputSynchronizer::Config>(
-          nh_private_),
-      nh_);
-  input_synchronizer_->requestInputs(requested_inputs);
+  // Setup the input queue.
+  if (config_.get_input_from_service) {
+    input_queue_ = std::make_unique<InputService>(
+        config_utilities::getConfigFromRos<InputService::Config>(nh_private_),
+        nh_);
+  } else {
+    input_queue_ = std::make_unique<InputSynchronizer>(
+        config_utilities::getConfigFromRos<InputSynchronizer::Config>(
+            nh_private_),
+        nh_);
+  }
+    input_queue_->requestInputs(requested_inputs);
 }
 
 void PanopticMapper::setupCollectionDependentMembers() {
@@ -180,7 +187,7 @@ void PanopticMapper::setupCollectionDependentMembers() {
 
 void PanopticMapper::setupRos() {
   // Setup all input topics.
-  input_synchronizer_->advertiseInputTopics();
+  input_queue_->advertiseInputTopics();
 
   // Services.
   save_map_srv_ = nh_private_.advertiseService(
@@ -217,8 +224,8 @@ void PanopticMapper::setupRos() {
 }
 
 void PanopticMapper::inputCallback(const ros::TimerEvent&) {
-  if (input_synchronizer_->hasInputData()) {
-    std::shared_ptr<InputData> data = input_synchronizer_->getInputData();
+  if (input_queue_->hasInputData()) {
+    std::shared_ptr<InputData> data = input_queue_->getInputData();
     if (data) {
       processInput(data.get());
       if (config_.shutdown_when_finished) {
