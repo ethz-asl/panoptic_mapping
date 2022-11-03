@@ -1,0 +1,8 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [3000],
+  "workspaceFolder": "/catkin_ws/src/panoptic_mapping",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/catkin_ws/src/panoptic_mapping,type=bind"
+}
