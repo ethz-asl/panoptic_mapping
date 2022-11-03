@@ -9,11 +9,11 @@ on:
   schedule:
     - cron: '37 1 * * *'
   push:
-    branches: [ "main", "hermann-devel" ]
+    branches: [ "main" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ "main", "hermann-devel" ]
+    branches: [ "main" ]
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+
       # get the branch name
       - name: What
         run: echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
