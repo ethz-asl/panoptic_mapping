@@ -3,7 +3,7 @@
   <name>panoptic_mapping_msgs</name>
   <version>0.0.0</version>
   <description>Utilities to setup and run data for panoptic mapping. </description>
-  
+
   <author email="schmluk@mavt.ethz.ch">Lukas Schmid</author>
   <maintainer email="schmluk@mavt.ethz.ch">Lukas Schmid</maintainer>
 
@@ -15,6 +15,8 @@
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
 
   <export>
   </export>

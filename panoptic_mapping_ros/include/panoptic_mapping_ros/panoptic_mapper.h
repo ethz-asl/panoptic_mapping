@@ -24,6 +24,9 @@
 #include <ros/ros.h>
 #include <std_srvs/Empty.h>
 
+#include "panoptic_mapping_ros/input/input_queue.h"
+#include "panoptic_mapping_ros/input/input_service.h"
+#include "panoptic_mapping_ros/input/input_subscriber.h"
 #include "panoptic_mapping_ros/input/input_synchronizer.h"
 #include "panoptic_mapping_ros/visualization/planning_visualizer.h"
 #include "panoptic_mapping_ros/visualization/submap_visualizer.h"
@@ -54,6 +57,9 @@ class PanopticMapper {
 
     // Frequency in seconds in which the input queue is queried.
     float check_input_interval = 0.01f;
+
+    // If input comes from service or real-time topics
+    bool get_input_from_service = false;
 
     // If true loaded submaps change states are set to unknown, otherwise to
     // persistent.
