@@ -1,0 +1,9 @@
+sensor_msgs/Image color_image
+sensor_msgs/Image depth_image
+sensor_msgs/Image id_image
+sensor_msgs/Image uncertainty_image
+geometry_msgs/Transform pose
+string sensor_frame_name
+bool blocking
+---
+bool success

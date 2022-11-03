@@ -13,6 +13,7 @@ catkin_package()
 cs_add_library(${PROJECT_NAME}
         src/panoptic_mapper.cpp
         src/input/input_synchronizer.cpp
+        src/input/input_service.cpp
         src/visualization/submap_visualizer.cpp
         src/visualization/single_tsdf_visualizer.cpp
         src/visualization/planning_visualizer.cpp

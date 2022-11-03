@@ -13,8 +13,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
-#include "panoptic_mapping_ros/input/input_synchronizer.h"
-
 namespace panoptic_mapping {
 
 /**
