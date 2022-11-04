@@ -1,4 +1,4 @@
-![Ubuntu 18 + ROS Melodic](https://github.com/ethz-asl/panoptic_mapping/actions/workflows/build_test_18.yml/badge.svg) ![Ubuntu 20 + ROS Noetic](https://github.com/ethz-asl/panoptic_mapping/actions/workflows/build_test_20.yml/badge.svg)
+![Ubuntu 18 + ROS Melodic](https://github.com/ethz-asl/panoptic_mapping/actions/workflows/build_test_18.yml/badge.svg) ![Ubuntu 20 + ROS Noetic](https://github.com/ethz-asl/panoptic_mapping/actions/workflows/build_test_20.yml/badge.svg) ![Docker](https://github.com/ethz-asl/panoptic_mapping/actions/workflows/docker-publish.yml/badge.svg)
 
 # Panoptic Mapping
 This package contains **panoptic_mapping**, a general framework for semantic volumetric mapping. We provide, among other, a submap-based approach that leverages panoptic scene understanding towards adaptive spatio-temporally consistent volumetric mapping, as well as regular, monolithic semantic mapping.
@@ -41,7 +41,7 @@ If you find this package useful for your research, please consider citing our pa
     doi={10.1109/ICRA46639.2022.9811877}}
   }
   ```
-  
+
 # Video
 For a short overview explaining the approach check out our video on youtube:
 
@@ -53,15 +53,15 @@ Installation instructions for Linux. The repository was developed and tested on 
 <details>
   <summary>Ubuntu 18.04 + ROS Melodic.</summary>
 <p>
-  
+
 **Prerequisites**
 
 1. If not already done so, install [ROS](http://wiki.ros.org/ROS/Installation) (Desktop-Full is recommended).
 
 2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
 
-  ```shell script    
-  sudo apt-get install python-catkin-tools  
+  ```shell script
+  sudo apt-get install python-catkin-tools
   mkdir -p ~/catkin_ws/src
   cd ~/catkin_ws
   catkin init
@@ -75,7 +75,7 @@ Installation instructions for Linux. The repository was developed and tested on 
 1. Install system dependencies:
 
   ```shell script
-  sudo apt-get install python-wstool python-catkin-tools autoconf libtool git  
+  sudo apt-get install python-wstool python-catkin-tools autoconf libtool git
   ```
 
 2. Move to your catkin workspace:
@@ -127,7 +127,7 @@ Installation instructions for Linux. The repository was developed and tested on 
 
 2. If not already done so, create a catkin workspace with [catkin tools](https://catkin-tools.readthedocs.io/en/latest/):
 
-  ```shell script    
+  ```shell script
   sudo apt-get install python3-catkin-tools
   mkdir -p ~/catkin_ws/src
   cd ~/catkin_ws
@@ -201,7 +201,7 @@ To run the RIO demos, the [original dataset](https://waldjohannau.github.io/RIO/
 
 # Examples
 ## Running the Panoptic Mapper
-This example explains how to run the Panoptic Multi-TSDF mapper on the flat dataset. 
+This example explains how to run the Panoptic Multi-TSDF mapper on the flat dataset.
 
 1. First, download the flat dataset:
     ```
@@ -217,10 +217,10 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
 4. You should now see the map being incrementally built:
 
     <img src="https://user-images.githubusercontent.com/36043993/135860249-6334cc41-5758-457b-8f65-b017e2905804.png" width="400">
-    
+
 5. After the map finished building, you can save the map:
     ```
-    rosservice call /panoptic_mapper/save_map "file_path: '/path/to/run1.panmap'" 
+    rosservice call /panoptic_mapper/save_map "file_path: '/path/to/run1.panmap'"
     ```
 6. Terminate the mapper pressing Ctrl+C. You can continue the experiment on `run2` of the flat dataset by changing the `base_path`-ending in `launch/run.launch (L10)` to `run2`, and `load_map` and `load_path` in `launch/run.launch (L26-27)` to `true` and `/path/to/run1.panmap`, respectively. Optionally, you can also change the `color_mode` in `config/mapper/flat_groundtruth.yaml (L118)` to `change` to better highlight the change detection at work.
      ```
@@ -231,7 +231,7 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
     <img src="https://user-images.githubusercontent.com/36043993/135861611-4d576750-3104-4d73-87dc-60b7a4ad1df6.png" width="400">
 
 ## Monolithic Semantic Mapping
-Panoptic Mapping supports also the monolithic use case. This example explains how to run the Panoptic Single-TSDF mapper on the flat dataset. 
+Panoptic Mapping supports also the monolithic use case. This example explains how to run the Panoptic Single-TSDF mapper on the flat dataset.
 
 1. If not already done so, download the flat dataset:
 
@@ -241,7 +241,7 @@ Panoptic Mapping supports also the monolithic use case. This example explains ho
    ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
    ```
 
-2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/single_tsdf.yaml (L15)` to the downloaded path. 
+2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/single_tsdf.yaml (L15)` to the downloaded path.
 
 3. To use the single-TSDF mapper and real segmentation predictions, set `use_detectron` in `launch/run.launch (L6)` to true and `config` in `launch/run.launch (L22)` to 'single_tsdf'.
 
@@ -251,7 +251,7 @@ Panoptic Mapping supports also the monolithic use case. This example explains ho
    roslaunch panoptic_mapping_ros run.launch
    ```
 
-5. You should now see the map being incrementally built. 
+5. You should now see the map being incrementally built.
 
 6. Varying visualization modes are supported, the `classes` (default) will color the mesh according to the predicted semantic class. Other modes, such as `classification` will show the confidence of the aggregated predictions.
 
@@ -260,7 +260,7 @@ Panoptic Mapping supports also the monolithic use case. This example explains ho
 Predicted classes (left) and corresponding fusion confidence (right, low to high in red to green).
 
 ## Running the RIO Dataset
-This example explains how to run the Panoptic Multi-TSDF mapper on the RIO dataset. 
+This example explains how to run the Panoptic Multi-TSDF mapper on the RIO dataset.
 
 1. First, download the [original dataset](https://waldjohannau.github.io/RIO/) and [our supplementary data](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping).
 
@@ -273,12 +273,12 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the RIO datas
 4. You should now see the map being incrementally built:
 
     <img src="https://user-images.githubusercontent.com/36043993/157041619-3f683ee7-2709-4bc5-84c2-8b1188ee52c5.png" width="800">
-    
+
     (Left in reconstructed color, right colored by submap)
-    
+
 
 # Contributing
-**panoptic_mapping** is an open-source project, any contributions are welcome! 
+**panoptic_mapping** is an open-source project, any contributions are welcome!
 
 For issues, bugs, or suggestions, please open a [GitHub Issue](https://github.com/ethz-asl/panoptic_mapping/issues).
 
