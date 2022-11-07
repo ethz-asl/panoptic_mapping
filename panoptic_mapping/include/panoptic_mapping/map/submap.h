@@ -48,9 +48,9 @@ class Submap {
     // classification.
     config_utilities::VariableConfig<ClassLayer> classification;
 
-    // Config of the classification voxels to be used. Leave the config
+    // Config of the score voxels to be used. Leave the config
     // uninitialized (not setting the 'type' param) can be used to not use any
-    // classification.
+    // score integration.
     config_utilities::VariableConfig<ScoreLayer> scores;
 
     // Config of the mesh integrator.
