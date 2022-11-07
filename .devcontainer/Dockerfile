@@ -1,4 +1,4 @@
-FROM ghcr.io/ethz-asl/panoptic_mapping:hermann-devel
+FROM ghcr.io/ethz-asl/panoptic_mapping:main
 WORKDIR /catkin_ws/src/
 #RUN catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
 #RUN sudo apt install -y ccache && echo 'export PATH="/usr/lib/ccache:$PATH"' | tee -a ~/.bashrc && source ~/.bashrc && echo $PATH
