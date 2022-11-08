@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include <ros/ros.h>
 
-#include "panoptic_mapping_utils/scannet/mesh_saver.h"
+#include "panoptic_mapping_utils/mesh_saver.h"
 
 int main(int argc, char** argv) {
   // Start Ros.

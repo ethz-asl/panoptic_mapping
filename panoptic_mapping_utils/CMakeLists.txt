@@ -12,7 +12,7 @@ catkin_package()
 
 cs_add_library(${PROJECT_NAME}
         src/evaluation/map_evaluator.cpp
-        src/scannetv2/mesh_saver.cpp
+        src/mesh_saver.cpp
         )
 
 ###############

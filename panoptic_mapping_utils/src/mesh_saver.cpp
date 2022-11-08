@@ -1,4 +1,4 @@
-#include "panoptic_mapping_utils/scannet/mesh_saver.h"
+#include "panoptic_mapping_utils/mesh_saver.h"
 
 namespace panoptic_mapping {
 
