@@ -9,6 +9,7 @@
 #include "panoptic_mapping/Submap.pb.h"
 #include "panoptic_mapping/common/common.h"
 #include "panoptic_mapping/map/classification/class_layer.h"
+#include "panoptic_mapping/map/scores/score_layer.h"
 #include "panoptic_mapping/map/submap.h"
 
 namespace panoptic_mapping {
@@ -73,6 +74,19 @@ bool loadClassBlocksFromStream(const SubmapProto& submap_proto,
 bool isCompatible(const voxblox::BlockProto& block_proto,
                   const ClassLayer& layer);
 
+std::unique_ptr<ScoreLayer> loadScoreLayerFromStream(
+    const SubmapProto& submap_proto, std::istream* proto_file_ptr,
+    uint64_t* tmp_byte_offset_ptr);
+
+bool saveScoreLayerToStream(const ScoreLayer& layer);
+
+bool loadScoreBlocksFromStream(const SubmapProto& submap_proto,
+                               std::istream* proto_file_ptr,
+                               uint64_t* tmp_byte_offset_ptr,
+                               ScoreLayer* layer);
+
+bool isCompatible(const voxblox::BlockProto& block_proto,
+                  const ScoreLayer& layer);
 }  // namespace panoptic_mapping
 
 #endif  // PANOPTIC_MAPPING_TOOLS_SERIALIZATION_H_

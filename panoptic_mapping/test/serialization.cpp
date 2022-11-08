@@ -16,6 +16,8 @@
 #include "panoptic_mapping/map/classification/moving_binary_count.h"
 #include "panoptic_mapping/map/classification/uncertainty.h"
 #include "panoptic_mapping/map/classification/variable_count.h"
+#include "panoptic_mapping/map/scores/average.h"
+#include "panoptic_mapping/map/scores/latest.h"
 #include "panoptic_mapping/test/comparison_utils.h"
 #include "panoptic_mapping/test/randomization_utils.h"
 #include "panoptic_mapping/test/temporary_file.h"
@@ -205,6 +207,22 @@ TEST(Uncertainty, SerializeBlock) {
 
 TEST(Uncertainty, SerializeLayer) {
   testLayerSerialization<UncertaintyVoxel, UncertaintyLayer>();
+}
+
+TEST(AverageScore, SerializeVoxel) {
+  testVoxelSerialization<AverageScoreVoxel>();
+}
+
+TEST(AverageScore, SerializeBlock) {
+  testBlockSerialization<AverageScoreVoxel, AverageScoreLayer>();
+}
+
+TEST(LatestScore, SerializeVoxel) {
+  testVoxelSerialization<LatestScoreVoxel>();
+}
+
+TEST(LatestScore, SerializeBlock) {
+  testBlockSerialization<LatestScoreVoxel, LatestScoreLayer>();
 }
 
 }  // namespace test

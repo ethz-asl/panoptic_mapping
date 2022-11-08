@@ -165,7 +165,7 @@ bool ProjectiveIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel) const {
+    const float voxel_size, ClassVoxel* class_voxel, ScoreVoxel* score_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -312,6 +312,9 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
           // layer but was added here for simplicity.
           submap->getClassLayerPtr()->allocateBlockPtrByIndex(block_index);
         }
+        if (submap->hasScoreLayer()) {
+          submap->getScoreLayerPtr()->allocateBlockPtrByIndex(block_index);
+        }
 
         // If required, check whether the point is on the boudnary of a block
         // and allocate the neighboring blocks.
@@ -330,6 +333,10 @@ void ProjectiveIntegrator::allocateNewBlocks(SubmapCollection* submaps,
                       neighbor_index);
               if (submap->hasClassLayer()) {
                 submap->getClassLayerPtr()->allocateBlockPtrByIndex(
+                    neighbor_index);
+              }
+              if (submap->hasScoreLayer()) {
+                submap->getScoreLayerPtr()->allocateBlockPtrByIndex(
                     neighbor_index);
               }
             }

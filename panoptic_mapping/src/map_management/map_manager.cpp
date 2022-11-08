@@ -267,6 +267,10 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
   if (submap->hasClassLayer()) {
     class_layer = submap->getClassLayerPtr().get();
   }
+  ScoreLayer* score_layer = nullptr;
+  if (submap->hasScoreLayer()) {
+    score_layer = submap->getScoreLayerPtr().get();
+  }
   TsdfLayer* tsdf_layer = submap->getTsdfLayerPtr().get();
   MeshLayer* mesh_layer = submap->getMeshLayerPtr().get();
   const int voxel_indices = std::pow(submap->getConfig().voxels_per_side, 3);
@@ -305,6 +309,9 @@ std::string MapManager::pruneBlocks(Submap* submap) const {
     if (!has_beloning_voxels) {
       if (class_layer) {
         class_layer->removeBlock(block_index);
+      }
+      if (score_layer) {
+        score_layer->removeBlock(block_index);
       }
       tsdf_layer->removeBlock(block_index);
       mesh_layer->removeMesh(block_index);

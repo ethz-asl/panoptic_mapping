@@ -30,6 +30,7 @@ void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("projective_integrator", &projective_integrator);
   setupParam("use_color", &use_color);
+  setupParam("use_score", &use_score);
   setupParam("use_segmentation", &use_segmentation);
   setupParam("use_uncertainty", &use_uncertainty);
   setupParam("uncertainty_decay_rate", &uncertainty_decay_rate);
@@ -53,7 +54,7 @@ SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
   if (config_.use_segmentation) {
     addRequiredInputs({InputData::InputType::kSegmentationImage});
   }
-  if (config_.use_uncertainty) {
+  if (config_.use_uncertainty || config_.use_score) {
     addRequiredInputs({InputData::InputType::kUncertaintyImage});
   }
 }
@@ -145,6 +146,10 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   ClassBlock::Ptr class_block;
   const bool use_class_layer =
       submap->hasClassLayer() && config_.use_segmentation;
+  ScoreBlock::Ptr score_block;
+  const bool use_score_layer =
+      submap->hasScoreLayer() && config_.use_score;
+
   if (use_class_layer) {
     if (!submap->getClassLayer().hasBlock(block_index)) {
       LOG_IF(WARNING, config_.verbosity >= 1)
@@ -155,6 +160,16 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     }
     class_block = submap->getClassLayerPtr()->getBlockPtrByIndex(block_index);
   }
+  if (use_score_layer) {
+    if (!submap->getScoreLayer().hasBlock(block_index)) {
+      LOG_IF(WARNING, config_.verbosity >= 1)
+          << "Tried to access inexistent score block '"
+          << block_index.transpose() << "' in submap " << submap->getID()
+          << ".";
+      return;
+    }
+    score_block = submap->getScoreLayerPtr()->getBlockPtrByIndex(block_index);
+  }
 
   // Update all voxels.
   for (size_t i = 0; i < block.num_voxels(); ++i) {
@@ -163,10 +178,14 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     if (use_class_layer) {
       class_voxel = &class_block->getVoxelByLinearIndex(i);
     }
+    ScoreVoxel* score_voxel = nullptr;
+    if (use_score_layer) {
+      score_voxel = &score_block->getVoxelByLinearIndex(i);
+    }
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
     if (updateVoxel(interpolator, &voxel, p_C, input, submap_id, true,
-                    truncation_distance, voxel_size, class_voxel)) {
+                    truncation_distance, voxel_size, class_voxel, score_voxel)) {
       was_updated = true;
     }
   }
@@ -180,7 +199,7 @@ bool SingleTsdfIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel) const {
+    const float voxel_size, ClassVoxel* class_voxel, ScoreVoxel* score_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -212,6 +231,10 @@ bool SingleTsdfIntegrator::updateVoxel(
         updateClassVoxel(interpolator, input, class_voxel);
       }
     }
+    // Update the score information if requested.
+    if (score_voxel) {
+        updateScoreVoxel(interpolator, input, score_voxel);
+    }
   } else {
     updateVoxelValues(voxel, sdf, weight);
   }
@@ -225,6 +248,13 @@ void SingleTsdfIntegrator::updateClassVoxel(InterpolatorBase* interpolator,
   // directly.
   const int id = interpolator->interpolateID(input.idImage());
   class_voxel->incrementCount(id);
+}
+
+void SingleTsdfIntegrator::updateScoreVoxel(InterpolatorBase* interpolator,
+                                            const InputData& input,
+                                            ScoreVoxel* score_voxel) const {
+  const float value = interpolator->interpolateFloat(input.uncertaintyImage());
+  score_voxel->addMeasurement(value);
 }
 
 void SingleTsdfIntegrator::updateUncertaintyVoxel(
@@ -293,6 +323,9 @@ void SingleTsdfIntegrator::allocateNewBlocks(Submap* map, InputData* input) {
           map->getTsdfLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
           if (map->hasClassLayer()) {
             map->getClassLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
+          }
+          if (map->hasScoreLayer()) {
+            map->getScoreLayerPtr()->allocateBlockPtrByCoordinates(candidate_S);
           }
         }
       }

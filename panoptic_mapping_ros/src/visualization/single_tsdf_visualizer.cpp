@@ -1,5 +1,6 @@
 #include "panoptic_mapping_ros/visualization/single_tsdf_visualizer.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -23,6 +24,8 @@ void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
   setupParam("verbosity", &verbosity);
   setupParam("submap_visualizer", &submap_visualizer);
   setupParam("entropy_factor", &entropy_factor);
+  setupParam("min_score", &min_score);
+  setupParam("max_score", &max_score);
 }
 
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
@@ -125,13 +128,27 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
 
   // Apply the submap color if necessary.
   if (color_mode_voxblox == voxblox::ColorMode::kGray) {
-    if (!submap.hasClassLayer()) {
-      LOG_IF(WARNING, config_.verbosity >= 2)
-          << "Can not create color for mode '" << colorModeToString(color_mode_)
-          << "' without existing class layer.";
+    if (color_mode_ == ColorMode::kScore) {
+      if (!submap.hasScoreLayer()) {
+        LOG_IF(WARNING, config_.verbosity >= 2)
+            << "Can not create color for mode '"
+            << colorModeToString(color_mode_)
+            << "' without existing score layer.";
+      } else {
+        for (auto& mesh_block : msg.mesh.mesh_blocks) {
+          colorMeshBlockFromScore(submap, &mesh_block);
+        }
+      }
     } else {
-      for (auto& mesh_block : msg.mesh.mesh_blocks) {
-        colorMeshBlock(submap, &mesh_block);
+      if (!submap.hasClassLayer()) {
+        LOG_IF(WARNING, config_.verbosity >= 2)
+            << "Can not create color for mode '"
+            << colorModeToString(color_mode_)
+            << "' without existing class layer.";
+      } else {
+        for (auto& mesh_block : msg.mesh.mesh_blocks) {
+          colorMeshBlockFromClass(submap, &mesh_block);
+        }
       }
     }
   }
@@ -140,8 +157,8 @@ std::vector<voxblox_msgs::MultiMesh> SingleTsdfVisualizer::generateMeshMsgs(
   return result;
 }
 
-void SingleTsdfVisualizer::colorMeshBlock(const Submap& submap,
-                                          voxblox_msgs::MeshBlock* mesh_block) {
+void SingleTsdfVisualizer::colorMeshBlockFromClass(
+    const Submap& submap, voxblox_msgs::MeshBlock* mesh_block) {
   const voxblox::BlockIndex block_index(
       mesh_block->index[0], mesh_block->index[1], mesh_block->index[2]);
   if (!submap.getClassLayer().hasBlock(block_index)) {
@@ -257,6 +274,51 @@ std::function<Color(const ClassVoxel&)> SingleTsdfVisualizer::getColoring()
         // This implies the visualization mode is instances or classes.
         return id_color_map_.colorLookup(voxel.getBelongingID());
       };
+  }
+}
+void SingleTsdfVisualizer::colorMeshBlockFromScore(
+    const Submap& submap, voxblox_msgs::MeshBlock* mesh_block) {
+  const voxblox::BlockIndex block_index(
+      mesh_block->index[0], mesh_block->index[1], mesh_block->index[2]);
+  if (!submap.getScoreLayer().hasBlock(block_index)) {
+    return;
+  }
+
+  // Setup.
+  const ScoreBlock::ConstPtr score_block =
+      submap.getScoreLayer().getBlockConstPtrByIndex(block_index);
+  const float point_conv_factor = 2.f / std::numeric_limits<uint16_t>::max();
+  const float block_edge_length = submap.getScoreLayer().block_size();
+  const size_t num_vertices = mesh_block->x.size();
+  mesh_block->r.resize(num_vertices);
+  mesh_block->g.resize(num_vertices);
+  mesh_block->b.resize(num_vertices);
+
+  for (int i = 0; i < num_vertices; ++i) {
+    // Get the vertex position in map frame.
+    const float mesh_x =
+        (static_cast<float>(mesh_block->x[i]) * point_conv_factor +
+         static_cast<float>(block_index[0])) *
+        block_edge_length;
+    const float mesh_y =
+        (static_cast<float>(mesh_block->y[i]) * point_conv_factor +
+         static_cast<float>(block_index[1])) *
+        block_edge_length;
+    const float mesh_z =
+        (static_cast<float>(mesh_block->z[i]) * point_conv_factor +
+         static_cast<float>(block_index[2])) *
+        block_edge_length;
+    const ScoreVoxel& voxel =
+        score_block->getVoxelByCoordinates({mesh_x, mesh_y, mesh_z});
+    if (!voxel.isObserverd()) continue;
+    float normalised_value = (voxel.getScore() - config_.min_score) /
+                             (config_.max_score - config_.min_score);
+    normalised_value = std::min(normalised_value, 1.f);
+    normalised_value = std::max(normalised_value, 0.f);
+    const Color color = redToGreenGradient(normalised_value);
+    mesh_block->r[i] = color.r;
+    mesh_block->g[i] = color.g;
+    mesh_block->b[i] = color.b;
   }
 }
 
