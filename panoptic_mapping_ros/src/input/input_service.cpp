@@ -104,7 +104,7 @@ bool InputService::inputCallback(
         LOG_IF(INFO, config_.verbosity >= 1)
             << "Parser for required input type "
             << InputData::inputTypeToString(type) << " not implemented.";
-        return false;
+        break;
       }
     }
   }
