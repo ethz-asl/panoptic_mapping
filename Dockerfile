@@ -14,5 +14,5 @@ WORKDIR /catkin_ws/src
 RUN wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall
 RUN wstool update
 RUN rosdep update
-RUN rosdep install --from-paths . --ignore-src -y --rosdistro noetic
+RUN apt update && rosdep install --from-paths . --ignore-src -y --rosdistro noetic
 RUN catkin build -j$(nproc) -l$(nproc) panoptic_mapping_utils
