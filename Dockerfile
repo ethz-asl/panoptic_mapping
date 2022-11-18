@@ -1,8 +1,10 @@
 FROM ros:noetic
 ENV TZ=Europe/Zurich
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
 ENV DEBIAN_FRONTEND="noninteractive"
-RUN apt update && apt install -y python3-catkin-tools git
+RUN apt update \
+    && apt install -y python3-catkin-tools git
 RUN mkdir -p /catkin_ws/src;
 WORKDIR /catkin_ws
 RUN catkin init
@@ -14,5 +16,6 @@ WORKDIR /catkin_ws/src
 RUN wstool init . ./panoptic_mapping/panoptic_mapping_https.rosinstall
 RUN wstool update
 RUN rosdep update
-RUN apt update && rosdep install --from-paths . --ignore-src -y --rosdistro noetic
+RUN apt update \
+    && rosdep install --from-paths . --ignore-src -y --rosdistro noetic
 RUN catkin build -j$(nproc) -l$(nproc) panoptic_mapping_utils
