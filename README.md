@@ -54,6 +54,17 @@ Installation instructions for Linux. The repository was developed and tested on 
   <summary>Ubuntu 18.04 + ROS Melodic.</summary>
 <p>
 
+
+**Docker**
+To run the panoptic mapper without installation, just use the docker image:
+```bash
+docker pull ghcr.io/ethz-asl/panoptic_mapping:main
+docker run -it ghcr.io/ethz-asl/panoptic_mapping:main bash
+```
+
+For development with vscode, you can just clone this repository and follow the prompts to open it in a [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers).
+
+
 **Prerequisites**
 
 1. If not already done so, install [ROS](http://wiki.ros.org/ROS/Installation) (Desktop-Full is recommended).
