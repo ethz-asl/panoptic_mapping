@@ -48,12 +48,7 @@ For a short overview explaining the approach check out our video on youtube:
 [<img src="https://user-images.githubusercontent.com/36043993/155131772-60757e47-c458-4f5b-9c6b-a6e6cbca8976.jpg" alt="youtube video">](https://www.youtube.com/watch?v=A7o2Vy7_TV4)
 
 # Installation
-Installation instructions for Linux. The repository was developed and tested on Ubuntu 18.04 with ROS melodic and Ubuntu 20.04 with ROS noetic.
-
-<details>
-  <summary>Ubuntu 18.04 + ROS Melodic.</summary>
-<p>
-
+Instructions for different installation options. The repository was developed and tested on Ubuntu 18.04 with ROS melodic and Ubuntu 20.04 with ROS noetic.
 
 **Docker**
 To run the panoptic mapper without installation, just use the docker image:
@@ -62,8 +57,15 @@ docker pull ghcr.io/ethz-asl/panoptic_mapping:main
 docker run -it ghcr.io/ethz-asl/panoptic_mapping:main bash
 ```
 
+**VSCode**
 For development with vscode, you can just clone this repository and follow the prompts to open it in a [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers).
 
+**System Installation**
+To install on linux, follow the instructions below matching your OS and ROS version:
+
+<details>
+  <summary>Ubuntu 18.04 + ROS Melodic.</summary>
+<p>
 
 **Prerequisites**
 
