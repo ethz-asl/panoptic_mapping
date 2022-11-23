@@ -99,7 +99,7 @@ void MeshSaver::gotMeshCallback(const voxblox_msgs::MultiMesh& msg) {
   }
   // save mesh
   std::string output_path =
-      nh_.param<std::string>("output path", "/tmp/map_mesh.ply");
+      nh_.param<std::string>("output_path", "/tmp/map_mesh.ply");
   voxblox::outputMeshAsPly(output_path, full_mesh);
   std::cout << "mesh saved to " << output_path << std::endl;
 }
