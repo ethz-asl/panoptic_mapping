@@ -185,7 +185,8 @@ std::vector<voxblox_msgs::MultiMesh> SubmapVisualizer::generateMeshMsgs(
     msg.header.frame_id = submap.getFrameName();
     msg.name_space = info.name_space;
 
-    // Update the mesh.
+    // NOTE(schmluk): The mesh should already be updated. Since only changed
+    // blocks will be re-meshed this double check should be cheap.
     submap.updateMesh();
 
     // Mark the whole mesh for re-publishing if requested.

@@ -238,8 +238,16 @@ bool ProjectiveIDTracker::classesMatch(int input_id, int submap_class_id) {
 TrackingInfoAggregator ProjectiveIDTracker::computeTrackingData(
     SubmapCollection* submaps, InputData* input) {
   // Render each active submap in parallel to collect overlap statistics.
-  SubmapIndexGetter index_getter(
-      globals_->camera()->findVisibleSubmapIDs(*submaps, input->T_M_C()));
+  const std::vector<int> visible_submaps =
+      globals_->camera()->findVisibleSubmapIDs(*submaps, input->T_M_C());
+
+  // Make sure the meshes of all submaps are update for tracking.
+  for (int submap_id : visible_submaps) {
+    submaps->getSubmapPtr(submap_id)->updateMesh();
+  }
+
+  // Render each submap in parallel.
+  SubmapIndexGetter index_getter(visible_submaps);
   std::vector<std::future<std::vector<TrackingInfo>>> threads;
   TrackingInfoAggregator tracking_data;
   for (int i = 0; i < config_.rendering_threads; ++i) {
