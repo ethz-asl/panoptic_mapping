@@ -12,6 +12,7 @@ catkin_package()
 
 cs_add_library(${PROJECT_NAME}
         src/evaluation/map_evaluator.cpp
+        src/mesh_saver.cpp
         )
 
 ###############
@@ -27,6 +28,11 @@ cs_add_executable(multi_map_evaluation
         app/multi_map_evaluation.cpp
         )
 target_link_libraries(multi_map_evaluation ${PROJECT_NAME})
+
+cs_add_executable(mesh_saver
+        app/mesh_saver_node.cpp
+        )
+target_link_libraries(mesh_saver ${PROJECT_NAME})
 
 ##########
 # Export #
