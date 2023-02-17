@@ -15,9 +15,9 @@ PlanningInterface::PlanningInterface(
     : submaps_(std::move(submaps)) {}
 
 bool PlanningInterface::isObserved(const Point& position,
+                                   bool consider_change_state,
                                    bool include_inactive_maps) const {
   Timer timer("planning_interface/is_observed");
-  // TODO(schmluk): Update this to latest convetions.
   for (const Submap& submap : *submaps_) {
     if (include_inactive_maps || submap.isActive()) {
       const Point position_S = submap.getT_S_M() * position;
@@ -114,7 +114,7 @@ PlanningInterface::VoxelState PlanningInterface::getVoxelState(
     return VoxelState::kExpectedFree;
   }
   return VoxelState::kUnknown;
-}  // namespace panoptic_mapping
+}
 
 bool PlanningInterface::getDistance(const Point& position, float* distance,
                                     bool consider_change_state,
@@ -166,11 +166,13 @@ bool PlanningInterface::getDistance(const Point& position, float* distance,
     const Point position_S = submap.getT_S_M() * position;
     if (submap.getBoundingVolume().contains_S(position_S)) {
       // Check classification for inactive submaps.
+      // NOTE(schmluk): Might not always be necessary, as geometry should be
+      // mostly unchanged when not being part of the submap.
       if (submap.hasClassLayer() && !submap.isActive()) {
         const ClassVoxel* class_voxel =
             submap.getClassLayer().getVoxelPtrByCoordinates(position_S);
         if (class_voxel) {
-          if (class_voxel->belongsToSubmap()) {
+          if (!class_voxel->belongsToSubmap()) {
             continue;
           }
         }
