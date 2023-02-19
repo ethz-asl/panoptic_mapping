@@ -29,9 +29,38 @@ class PlanningInterface {
   const SubmapCollection& getSubmapCollection() const { return *submaps_; }
 
   // Lookups.
-  bool isObserved(const Point& position,
+  /**
+   * @brief Check if a point is observed in the map.
+   *
+   * @param position Position of point in world frame.
+   * @param consider_change_state If false considers only submaps considered
+   * present, i.e. whose ChangeState is active or persistent.
+   * @param include_inactive_maps If false considers only active submaps.
+   * @return True if the point was observed.
+   */
+  bool isObserved(const Point& position, bool consider_change_state = true,
                   bool include_inactive_maps = true) const;
+
+  /**
+   * @brief Compute the voxel state of a point in the map for planning.
+   *
+   * @param position Position of point in world frame.
+   * @return VoxelState of the given point.
+   */
   VoxelState getVoxelState(const Point& position) const;
+
+  /**
+   * @brief Computes the truncated signed distance function (TSDF) at a point in
+   * the multi-resolution map.
+   *
+   * @param position Position of point in world frame.
+   * @param distance Pointer to value to store the distance in.
+   * @param consider_change_state If true considers only submaps considered
+   * present, i.e. whose ChangeState is active or persistent.
+   * @param include_free_space If true points lying only in free space are
+   * considered observed.
+   * @return True if the point was observed and thus a distance returned.
+   */
   bool getDistance(const Point& position, float* distance,
                    bool consider_change_state = true,
                    bool include_free_space = true) const;
