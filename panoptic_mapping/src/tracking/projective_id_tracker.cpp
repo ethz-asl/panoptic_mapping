@@ -36,13 +36,11 @@ void ProjectiveIDTracker::Config::setupParamsAndPrinting() {
 }
 
 ProjectiveIDTracker::ProjectiveIDTracker(const Config& config,
-                                         std::shared_ptr<Globals> globals,
-                                         bool print_config)
+                                         std::shared_ptr<Globals> globals)
     : IDTrackerBase(std::move(globals)),
       config_(config.checkValid()),
-      renderer_(config.renderer, globals_->camera()->getConfig(), false) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
+      renderer_(config.renderer, globals_->camera()->getConfig()) {
+
   addRequiredInputs({InputData::InputType::kColorImage,
                      InputData::InputType::kDepthImage,
                      InputData::InputType::kSegmentationImage,

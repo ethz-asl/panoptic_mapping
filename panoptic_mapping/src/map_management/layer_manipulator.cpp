@@ -17,9 +17,7 @@ void LayerManipulator::Config::setupParamsAndPrinting() {
 }
 
 LayerManipulator::LayerManipulator(const Config& config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+    : config_(config.checkValid()) {}
 
 void LayerManipulator::applyClassificationLayer(
     TsdfLayer* tsdf_layer, const ClassLayer& class_layer,

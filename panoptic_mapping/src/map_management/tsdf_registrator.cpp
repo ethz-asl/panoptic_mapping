@@ -45,9 +45,7 @@ void TsdfRegistrator::Config::setupParamsAndPrinting() {
 }
 
 TsdfRegistrator::TsdfRegistrator(const Config& config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+    : config_(config.checkValid()) {}
 
 void TsdfRegistrator::checkSubmapCollectionForChange(
     SubmapCollection* submaps) const {

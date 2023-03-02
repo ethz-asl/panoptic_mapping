@@ -12,12 +12,8 @@ void MapRenderer::Config::setupParamsAndPrinting() {
   setupParam("impaint_voxel_size", &impaint_voxel_size);
 }
 
-MapRenderer::MapRenderer(const Config& config, const Camera::Config& camera,
-                         bool print_config)
+MapRenderer::MapRenderer(const Config& config, const Camera::Config& camera)
     : config_(config.checkValid()), camera_(camera) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
-
   // Allocate range image.
   range_image_ = Eigen::MatrixXf(camera.height, camera.width);
 }

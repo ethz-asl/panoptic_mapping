@@ -42,8 +42,7 @@ class SingleTsdfVisualizer : public SubmapVisualizer {
   };
 
   // Constructors.
-  SingleTsdfVisualizer(const Config& config, std::shared_ptr<Globals> globals,
-                       bool print_config = true);
+  SingleTsdfVisualizer(const Config& config, std::shared_ptr<Globals> globals);
   ~SingleTsdfVisualizer() override = default;
 
   // Visualization message creation.

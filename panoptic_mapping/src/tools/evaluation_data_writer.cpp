@@ -24,9 +24,7 @@ void EvaluationDataWriter::Config::setupParamsAndPrinting() {
 
 EvaluationDataWriter::EvaluationDataWriter(const Config& config)
     : config_(config.checkValid()),
-      LogDataWriter(config.log_data_writer_config, false) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+      LogDataWriter(config.log_data_writer_config) {}
 
 void EvaluationDataWriter::setupLogFile() {
   const bool create_directory = config_.store_map_every_n_frames > 0;

@@ -36,8 +36,6 @@ void MapManager::Config::setupParamsAndPrinting() {
 }
 
 MapManager::MapManager(const Config& config) : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-
   // Setup members.
   activity_manager_ =
       std::make_shared<ActivityManager>(config_.activity_manager_config);

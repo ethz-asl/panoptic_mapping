@@ -11,9 +11,7 @@ void NullSubmapAllocator::Config::setupParamsAndPrinting() {
 }
 
 NullSubmapAllocator::NullSubmapAllocator(const Config& config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+    : config_(config.checkValid()) {}
 
 config_utilities::Factory::RegistrationRos<FreespaceAllocatorBase,
                                            NullFreespaceAllocator>
@@ -24,8 +22,6 @@ void NullFreespaceAllocator::Config::setupParamsAndPrinting() {
 }
 
 NullFreespaceAllocator::NullFreespaceAllocator(const Config& config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+    : config_(config.checkValid()) {}
 
 }  // namespace panoptic_mapping

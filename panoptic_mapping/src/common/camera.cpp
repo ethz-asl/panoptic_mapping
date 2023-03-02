@@ -32,8 +32,6 @@ void Camera::Config::setupParamsAndPrinting() {
 }
 
 Camera::Camera(const Config& config) : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-
   // Pre-compute the view frustum (top, right, bottom, left, plane normals).
   const float scale_factor = config_.fy / config_.fx;
   Eigen::Vector3f p1(-config_.vx, -config_.vy * scale_factor, config_.fx);

@@ -29,8 +29,7 @@ class MonolithicFreespaceAllocator : public FreespaceAllocatorBase {
   };
 
   // Construction.
-  explicit MonolithicFreespaceAllocator(const Config& config,
-                                        bool print_config = true);
+  explicit MonolithicFreespaceAllocator(const Config& config);
   ~MonolithicFreespaceAllocator() override = default;
 
   Submap* allocateSubmap(SubmapCollection* submaps,

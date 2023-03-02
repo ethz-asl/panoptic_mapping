@@ -24,9 +24,7 @@ void DetectronIDTracker::Config::setupParamsAndPrinting() {
 DetectronIDTracker::DetectronIDTracker(const Config& config,
                                        std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIDTracker(config.projective_id_tracker, std::move(globals),
-                          false) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+      ProjectiveIDTracker(config.projective_id_tracker, std::move(globals)) {
   addRequiredInput(InputData::InputType::kDetectronLabels);
 }
 

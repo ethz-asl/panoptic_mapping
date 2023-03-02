@@ -27,10 +27,9 @@ void CsvLabelHandler::Config::checkParams() const {
                  "Target file '" + file_name + "' does not exist.");
 }
 
-CsvLabelHandler::CsvLabelHandler(const Config& config, bool print_config)
+CsvLabelHandler::CsvLabelHandler(const Config& config)
     : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
+
   // Setup the labels from csv file.
   readLabelsFromFile();
 }

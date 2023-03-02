@@ -29,13 +29,11 @@ void SingleTsdfVisualizer::Config::setupParamsAndPrinting() {
 }
 
 SingleTsdfVisualizer::SingleTsdfVisualizer(const Config& config,
-                                           std::shared_ptr<Globals> globals,
-                                           bool print_config)
-    : SubmapVisualizer(config.submap_visualizer, std::move(globals), false),
+                                           std::shared_ptr<Globals> globals)
+    : SubmapVisualizer(config.submap_visualizer, std::move(globals)),
       config_(config.checkValid()) {
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
+
   // Check the visualization modes.
   setVisualizationMode(visualization_mode_);
   setColorMode(color_mode_);

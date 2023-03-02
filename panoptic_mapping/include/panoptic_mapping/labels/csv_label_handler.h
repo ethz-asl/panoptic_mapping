@@ -27,7 +27,7 @@ class CsvLabelHandler : public LabelHandlerBase {
     void checkParams() const override;
   };
 
-  explicit CsvLabelHandler(const Config& config, bool print_config = true);
+  explicit CsvLabelHandler(const Config& config);
   ~CsvLabelHandler() override = default;
 
  private:

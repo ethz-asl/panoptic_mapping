@@ -11,7 +11,6 @@ void NullLabelHandler::Config::setupParamsAndPrinting() {
 
 NullLabelHandler::NullLabelHandler(const Config& config)
     : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 }
 
 }  // namespace panoptic_mapping

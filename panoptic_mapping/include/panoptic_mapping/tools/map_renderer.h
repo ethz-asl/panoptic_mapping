@@ -30,8 +30,7 @@ class MapRenderer {
     void checkParams() const override;
   };
 
-  MapRenderer(const Config& config, const Camera::Config& camera,
-              bool print_config = true);
+  MapRenderer(const Config& config, const Camera::Config& camera);
   virtual ~MapRenderer() = default;
 
   // Tools.

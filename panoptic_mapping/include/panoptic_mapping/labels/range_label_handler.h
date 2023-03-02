@@ -27,7 +27,7 @@ class RangeLabelHandler : public LabelHandlerBase {
     void checkParams() const override;
   };
 
-  explicit RangeLabelHandler(const Config& config, bool print_config = true);
+  explicit RangeLabelHandler(const Config& config);
   ~RangeLabelHandler() override = default;
 
  private:

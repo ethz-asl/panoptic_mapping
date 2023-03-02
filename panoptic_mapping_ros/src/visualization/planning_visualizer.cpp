@@ -32,7 +32,6 @@ PlanningVisualizer::PlanningVisualizer(
       planning_interface_(std::move(planning_interface)),
       global_frame_name_("mission") {
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Setup publishers.
   nh_ = ros::NodeHandle(config_.ros_namespace);

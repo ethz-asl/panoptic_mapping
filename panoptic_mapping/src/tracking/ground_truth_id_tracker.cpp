@@ -16,11 +16,9 @@ void GroundTruthIDTracker::Config::setupParamsAndPrinting() {
 }
 
 GroundTruthIDTracker::GroundTruthIDTracker(const Config& config,
-                                           std::shared_ptr<Globals> globals,
-                                           bool print_config)
+                                           std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), IDTrackerBase(std::move(globals)) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
+
   addRequiredInputs({InputData::InputType::kSegmentationImage,
                      InputData::InputType::kValidityImage});
 }

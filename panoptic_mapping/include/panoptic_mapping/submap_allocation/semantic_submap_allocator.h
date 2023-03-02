@@ -40,8 +40,7 @@ class SemanticSubmapAllocator : public SubmapAllocatorBase {
   };
 
   // Construction.
-  explicit SemanticSubmapAllocator(const Config& config,
-                                   bool print_config = true);
+  explicit SemanticSubmapAllocator(const Config& config);
   ~SemanticSubmapAllocator() override = default;
 
   Submap* allocateSubmap(SubmapCollection* submaps, InputData* /* input */,

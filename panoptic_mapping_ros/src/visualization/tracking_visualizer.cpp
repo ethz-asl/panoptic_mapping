@@ -19,7 +19,6 @@ void TrackingVisualizer::Config::fromRosParam() {
 TrackingVisualizer::TrackingVisualizer(const Config& config)
     : config_(config.checkValid()) {
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
   // Setup nodehandle.
   nh_ = ros::NodeHandle(config_.ros_namespace);

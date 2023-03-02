@@ -27,12 +27,8 @@ void SemanticSubmapAllocator::Config::setupParamsAndPrinting() {
   setupParam("truncation_distance", &truncation_distance);
 }
 
-SemanticSubmapAllocator::SemanticSubmapAllocator(const Config& config,
-                                                 bool print_config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
-}
+SemanticSubmapAllocator::SemanticSubmapAllocator(const Config& config)
+    : config_(config.checkValid()) {}
 
 Submap* SemanticSubmapAllocator::allocateSubmap(SubmapCollection* submaps,
                                                 InputData* /* input */,

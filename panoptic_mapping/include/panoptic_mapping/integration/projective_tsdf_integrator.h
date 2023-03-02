@@ -67,8 +67,7 @@ class ProjectiveIntegrator : public TsdfIntegratorBase {
     void checkParams() const override;
   };
 
-  ProjectiveIntegrator(const Config& config, std::shared_ptr<Globals> globals,
-                       bool print_config = true);
+  ProjectiveIntegrator(const Config& config, std::shared_ptr<Globals> globals);
   ~ProjectiveIntegrator() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;

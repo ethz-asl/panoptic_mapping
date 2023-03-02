@@ -20,10 +20,8 @@ void RangeLabelHandler::Config::checkParams() const {
   checkParamGT(num_labels, 0, "num_labels");
 }
 
-RangeLabelHandler::RangeLabelHandler(const Config& config, bool print_config)
+RangeLabelHandler::RangeLabelHandler(const Config& config)
     : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
   // Setup the labels from range.
   initialiseLabels();
 }

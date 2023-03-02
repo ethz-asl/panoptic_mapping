@@ -41,11 +41,8 @@ void ProjectiveIntegrator::Config::setupParamsAndPrinting() {
 }
 
 ProjectiveIntegrator::ProjectiveIntegrator(const Config& config,
-                                           std::shared_ptr<Globals> globals,
-                                           bool print_config)
+                                           std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), TsdfIntegratorBase(std::move(globals)) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
   // Request all inputs.
   addRequiredInputs(
       {InputData::InputType::kColorImage, InputData::InputType::kDepthImage,

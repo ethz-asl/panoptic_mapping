@@ -44,12 +44,10 @@ void SubmapVisualizer::Config::fromRosParam() {
 }
 
 SubmapVisualizer::SubmapVisualizer(const Config& config,
-                                   std::shared_ptr<Globals> globals,
-                                   bool print_config)
+                                   std::shared_ptr<Globals> globals)
     : config_(config.checkValid()), globals_(std::move(globals)) {
   // Print config after setting up the modes.
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
+
 
   // Parse visualization data.
   setVisualizationMode(visualizationModeFromString(config_.visualization_mode));

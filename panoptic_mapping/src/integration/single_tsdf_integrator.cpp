@@ -41,9 +41,7 @@ void SingleTsdfIntegrator::Config::setupParamsAndPrinting() {
 SingleTsdfIntegrator::SingleTsdfIntegrator(const Config& config,
                                            std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.projective_integrator, std::move(globals),
-                           false) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
+      ProjectiveIntegrator(config.projective_integrator, std::move(globals)) {
   // Setup all needed inputs.
   setRequiredInputs({InputData::InputType::kDepthImage,
                      InputData::InputType::kVertexMap,
@@ -147,8 +145,7 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
   const bool use_class_layer =
       submap->hasClassLayer() && config_.use_segmentation;
   ScoreBlock::Ptr score_block;
-  const bool use_score_layer =
-      submap->hasScoreLayer() && config_.use_score;
+  const bool use_score_layer = submap->hasScoreLayer() && config_.use_score;
 
   if (use_class_layer) {
     if (!submap->getClassLayer().hasBlock(block_index)) {
@@ -185,7 +182,8 @@ void SingleTsdfIntegrator::updateBlock(Submap* submap,
     const Point p_C = T_C_S * block.computeCoordinatesFromLinearIndex(
                                   i);  // Voxel center in camera frame.
     if (updateVoxel(interpolator, &voxel, p_C, input, submap_id, true,
-                    truncation_distance, voxel_size, class_voxel, score_voxel)) {
+                    truncation_distance, voxel_size, class_voxel,
+                    score_voxel)) {
       was_updated = true;
     }
   }
@@ -199,7 +197,8 @@ bool SingleTsdfIntegrator::updateVoxel(
     InterpolatorBase* interpolator, TsdfVoxel* voxel, const Point& p_C,
     const InputData& input, const int submap_id,
     const bool is_free_space_submap, const float truncation_distance,
-    const float voxel_size, ClassVoxel* class_voxel, ScoreVoxel* score_voxel) const {
+    const float voxel_size, ClassVoxel* class_voxel,
+    ScoreVoxel* score_voxel) const {
   // Compute the signed distance. This also sets up the interpolator.
   float sdf;
   if (!computeSignedDistance(p_C, interpolator, &sdf)) {
@@ -233,7 +232,7 @@ bool SingleTsdfIntegrator::updateVoxel(
     }
     // Update the score information if requested.
     if (score_voxel) {
-        updateScoreVoxel(interpolator, input, score_voxel);
+      updateScoreVoxel(interpolator, input, score_voxel);
     }
   } else {
     updateVoxelValues(voxel, sdf, weight);

@@ -30,11 +30,8 @@ void LogDataWriter::Config::checkParams() const {
       "'output_directory' '" + output_directory + "' does not exist.");
 }
 
-LogDataWriter::LogDataWriter(const Config& config, bool print_config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1 && print_config) << "\n"
-                                                       << config_.toString();
-}
+LogDataWriter::LogDataWriter(const Config& config)
+    : config_(config.checkValid()) {}
 
 LogDataWriter::~LogDataWriter() {
   // NOTE(schmluk): Apparently the destructor doesn't get called from ROS usage.

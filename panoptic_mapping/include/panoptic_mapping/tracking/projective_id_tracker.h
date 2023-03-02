@@ -69,8 +69,7 @@ class ProjectiveIDTracker : public IDTrackerBase {
     void checkParams() const override;
   };
 
-  ProjectiveIDTracker(const Config& config, std::shared_ptr<Globals> globals,
-                      bool print_config = true);
+  ProjectiveIDTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~ProjectiveIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;

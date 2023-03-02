@@ -26,8 +26,7 @@ class GroundTruthIDTracker : public IDTrackerBase {
     void setupParamsAndPrinting() override;
   };
 
-  GroundTruthIDTracker(const Config& config, std::shared_ptr<Globals> globals,
-                       bool print_config = true);
+  GroundTruthIDTracker(const Config& config, std::shared_ptr<Globals> globals);
   ~GroundTruthIDTracker() override = default;
 
   void processInput(SubmapCollection* submaps, InputData* input) override;

@@ -40,7 +40,7 @@ class LogDataWriter : public DataWriterBase {
     void checkParams() const override;
   };
 
-  explicit LogDataWriter(const Config& config, bool print_config = true);
+  explicit LogDataWriter(const Config& config);
   ~LogDataWriter() override;
 
   void writeData(double time_stamp, const SubmapCollection& submaps) override;

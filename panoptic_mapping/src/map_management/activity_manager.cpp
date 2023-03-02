@@ -16,9 +16,7 @@ void ActivityManager::Config::setupParamsAndPrinting() {
 }
 
 ActivityManager::ActivityManager(const Config& config)
-    : config_(config.checkValid()) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-}
+    : config_(config.checkValid()) {}
 
 void ActivityManager::processSubmaps(SubmapCollection* submaps) {
   CHECK_NOTNULL(submaps);

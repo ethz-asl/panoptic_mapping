@@ -32,9 +32,7 @@ void ClassProjectiveIntegrator::Config::setupParamsAndPrinting() {
 ClassProjectiveIntegrator::ClassProjectiveIntegrator(
     const Config& config, std::shared_ptr<Globals> globals)
     : config_(config.checkValid()),
-      ProjectiveIntegrator(config.pi_config, std::move(globals), false) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
-
+      ProjectiveIntegrator(config.pi_config, std::move(globals)) {
   // Store class count.
   if (!config_.use_binary_classification &&
       !config_.use_instance_classification) {

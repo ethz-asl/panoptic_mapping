@@ -43,7 +43,6 @@ void InputSynchronizer::Config::setupParamsAndPrinting() {
 InputSynchronizer::InputSynchronizer(const Config& config,
                                      const ros::NodeHandle& nh)
     : config_(config.checkValid()), nh_(nh), data_is_ready_(false) {
-  LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
   if (!config_.sensor_frame_name.empty()) {
     used_sensor_frame_name_ = config_.sensor_frame_name;
   }
