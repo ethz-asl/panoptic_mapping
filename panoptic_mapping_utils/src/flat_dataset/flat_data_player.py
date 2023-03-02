@@ -29,7 +29,7 @@ class FlatDataPlayer(object):
         self.use_detectron = rospy.get_param('~use_detectron', False)
         self.play_rate = rospy.get_param('~play_rate', 1.0)
         self.wait = rospy.get_param('~wait', False)
-        self.max_frames = rospy.get_param('~max_frames', 1e9)
+        self.max_frames = rospy.get_param('~max_frames', 1000000)
         self.refresh_rate = 100  # Hz
 
         # ROS
@@ -57,7 +57,7 @@ class FlatDataPlayer(object):
                 if row[0] == "ImageID":
                     continue
                 self.ids.append(str(row[0]))
-                self.times.append(float(row[1]) / 1e9)
+                self.times.append(float(row[1]) / 1000000)
 
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
         self.times = sorted(self.times)
