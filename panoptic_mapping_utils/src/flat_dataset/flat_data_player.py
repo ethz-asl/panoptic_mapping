@@ -57,11 +57,11 @@ class FlatDataPlayer(object):
                 if row[0] == "ImageID":
                     continue
                 self.ids.append(str(row[0]))
-                self.times.append(float(row[1]) / 1000000)
+                self.times.append(float(row[1]) / 1000000000)
 
         self.ids = [x for _, x in sorted(zip(self.times, self.ids))]
-        self.times = sorted(self.times)
-        self.times = [(x - self.times[0]) / self.play_rate for x in self.times]
+        self.times = [(x - self.times[0]) /
+                      self.play_rate for x in sorted(self.times)]
         self.start_time = None
 
         if self.wait:

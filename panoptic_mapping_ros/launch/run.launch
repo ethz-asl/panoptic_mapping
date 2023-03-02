@@ -8,8 +8,8 @@
   
   <!-- Flat Dataset args -->
   <arg name="base_path" default="/home/lukas/data/flat_dataset/run1"/> 
-  <arg name="play_rate" default="2"/>  <!-- Realtime factor -->
-  <arg name="wait_time" default="0"/>  <!-- s -->
+  <arg name="play_rate" default="1"/>  <!-- Realtime factor -->
+  <arg name="wait_time" default="1"/>  <!-- s -->
   <arg name="max_frames" default="1000000"/> 
   
   <!-- Rio Dataset args -->

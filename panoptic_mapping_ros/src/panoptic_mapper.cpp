@@ -66,9 +66,9 @@ PanopticMapper::PanopticMapper(const ros::NodeHandle& nh,
   // Setup printing of configs.
   // NOTE(schmluk): These settings are global so multiple panoptic mappers in
   // the same process might interfere.
-  config_utilities::GlobalSettings().indicate_default_values =
+  config_utilities::Global::Settings().indicate_default_values =
       config_.indicate_default_values;
-  config_utilities::GlobalSettings().indicate_units =
+  config_utilities::Global::Settings().indicate_units =
       config_.display_config_units;
   LOG_IF(INFO, config_.verbosity >= 1) << "\n" << config_.toString();
 
