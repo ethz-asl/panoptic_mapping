@@ -180,7 +180,7 @@ class FlatDataPlayer(object):
 
         self.current_index += 1
         if self.current_index > self.max_frames:
-            rospy.signal_shutdown("Played reached max frames (%i)" %
+            rospy.signal_shutdown("Player reached max frames (%i)" %
                                   self.max_frames)
 
 

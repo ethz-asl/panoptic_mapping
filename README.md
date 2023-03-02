@@ -204,10 +204,9 @@ The datasets described in the paper and used for the demo can be downloaded from
 
 A utility script is provided to directly download the flat data:
 ```
-roscd panoptic_mapping_utils
-export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
-chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
-./panoptic_mapping_utils/scripts/download_flat_dataset.sh
+roscd panoptic_mapping_utils/scripts
+chmod +x download_flat_dataset.sh
+./download_flat_dataset.sh "/home/$USER/data"  # Or whichever destination you prefer.
 ```
 
 To run the RIO demos, the [original dataset](https://waldjohannau.github.io/RIO/) needs to be downloaded and augmented with [our supplementary data](https://projects.asl.ethz.ch/datasets/doku.php?id=panoptic_mapping). Instructions on which scenes to download and how to combine them are found on our dataset page.
@@ -216,12 +215,8 @@ To run the RIO demos, the [original dataset](https://waldjohannau.github.io/RIO/
 ## Running the Panoptic Mapper
 This example explains how to run the Panoptic Multi-TSDF mapper on the flat dataset.
 
-1. First, download the flat dataset:
-    ```
-    export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
-    chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
-    ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
-    ```
+1. If not already done so, download the flat dataset as explained [here](#datasets).
+
 2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/flat_groundtruth.yaml (L15)` to the downloaded path.
 3. Run the mapper:
     ```
@@ -246,13 +241,7 @@ This example explains how to run the Panoptic Multi-TSDF mapper on the flat data
 ## Monolithic Semantic Mapping
 Panoptic Mapping supports also the monolithic use case. This example explains how to run the Panoptic Single-TSDF mapper on the flat dataset.
 
-1. If not already done so, download the flat dataset:
-
-   ```
-   export FLAT_DATA_DIR="/home/$USER/Documents"  # Or whichever path you prefer.
-   chmod +x panoptic_mapping_utils/scripts/download_flat_dataset.sh
-   ./panoptic_mapping_utils/scripts/download_flat_dataset.sh
-   ```
+1. If not already done so, download the flat dataset as explained [here](#datasets).
 
 2. Replace the data `base_path` in `launch/run.launch (L10)` and `file_name` in `config/mapper/single_tsdf.yaml (L15)` to the downloaded path.
 
