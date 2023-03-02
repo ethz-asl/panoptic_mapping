@@ -7,16 +7,16 @@
   <arg name="visualize" default="true"/> 
   
   <!-- Flat Dataset args -->
-  <arg name="base_path" default="/home/lukas/Documents/Datasets/flat_dataset/run1"/> 
-  <arg name="play_rate" default="5"/>  <!-- Realtime factor -->
-  <arg name="wait_time" default="0"/>  <!-- s -->
-  <arg name="max_frames" default="1000"/> <!-- 90 -->
+  <arg name="base_path" default="/home/lukas/data/flat_dataset/run1"/> 
+  <arg name="play_rate" default="1"/>  <!-- Realtime factor -->
+  <arg name="wait_time" default="1"/>  <!-- s -->
+  <arg name="max_frames" default="1000000"/> 
   
   <!-- Rio Dataset args -->
-  <arg name="data_path" default="/home/lukas/Documents/Datasets/3RScan"/> 
-  <arg name="scene_id" default="0"/> <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
-  <arg name="scan_id" default="0"/>
-  <arg name="rio_play_rate" default="20"/>  <!-- Hz -->
+  <arg name="data_path" default="/home/lukas/data/3RScan"/> 
+  <arg name="scene_id" default="0"/>  <!-- 0, 1, 2 -->
+  <arg name="scan_id" default="0"/>  <!-- 0: 0-3, 1: 0-3, 2: 0-1 -->
+  <arg name="rio_play_rate" default="1"/>  <!-- Hz -->
     
   <!-- Mapper -->
   <arg name="config" default="flat_groundtruth"/> <!-- <flat,rio>_<groundtruth,detectron>, single_tsdf -->
@@ -24,7 +24,7 @@
   
   <!-- Save/Load maps -->
   <arg name="load_map" default = "false"/>
-  <arg name="load_file" default = "/home/lukas/Documents/PanopticMapping/Data/maps/flat/run1.panmap"/>
+  <arg name="load_file" default = "/home/lukas/data/panoptic_mapping/maps/flat/run1.panmap"/>
 
 
 <!-- ============ Run ============ -->

@@ -1,23 +1,26 @@
 # Check target dir.
-if [ -z $FLAT_DATA_DIR ]; 
+if [ -z $1 ]; 
 then 
-  echo "The download destination 'FLAT_DATA_DIR' variable is not set.";
+  echo "No target directory specified.";
+  echo "Usage: ./download_flat_dataset.sh <target_dir>";
   exit 1
 else 
-  echo "Download to '$FLAT_DATA_DIR'?"; 
+  echo "Download the Flat Dataset to '$1'?"; 
   read -p "[Y/N]? " -n 1 -r
   if [[ ! $REPLY =~ ^[Yy]$ ]]
   then
-      exit 1
+    echo "Exiting."; 
+    exit 1
   fi
 fi
 
 # Download.
-mkdir -p $FLAT_DATA_DIR
-wget http://robotics.ethz.ch/~asl-datasets/2021_Panoptic_Mapping/flat_dataset.zip -P $FLAT_DATA_DIR
-unzip $FLAT_DATA_DIR/flat_dataset.zip -d $FLAT_DATA_DIR
-rm $FLAT_DATA_DIR/flat_dataset.zip
+echo "Download and processing the dataset. This may take some time..."; 
+mkdir -p $1
+wget http://robotics.ethz.ch/~asl-datasets/2021_Panoptic_Mapping/flat_dataset.zip -P $1
+unzip $1/flat_dataset.zip -d $1
+rm $1/flat_dataset.zip
 
 # Finished.
-echo "Successfully downloaded the 'flat_dataset' to '$FLAT_DATA_DIR'.";
+echo "Successfully downloaded the 'flat_dataset' to '$1'.";
 exit 0
